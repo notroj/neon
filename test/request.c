@@ -815,6 +815,86 @@ static int reset_headers(void)
     return OK;
 }
 
+static int iterate_none(void)
+{
+    ne_session *sess;
+    ne_request *req;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.0 200 OK\r\n\r\n"));
+
+    req = ne_request_create(sess, "GET", "/");
+    ONREQ(ne_request_dispatch(req));
+
+    ONN("iterator was not NULL for no headers",
+        ne_response_header_iterate(req, NULL, NULL, NULL) != NULL);
+
+    CALL(await_server());
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
+#define MANY_HEADERS (90)
+
+static int iterate_many(void)
+{
+    ne_request *req;
+    ne_buffer *buf = ne_buffer_create();
+    ne_session *sess;
+    int n;
+    struct header {
+        char name[10], value[10];
+        int seen;
+    } hdrs[MANY_HEADERS];
+    void *cursor = NULL;
+    const char *name, *value;
+    
+    ne_buffer_czappend(buf, "HTTP/1.0 200 OK\r\n");
+
+    for (n = 0; n < MANY_HEADERS; n++) {
+        sprintf(hdrs[n].name, "x-%d", n);
+        sprintf(hdrs[n].value, "Y-%d", n);
+        hdrs[n].seen = 0;
+        
+        ne_buffer_concat(buf, hdrs[n].name, ": ", hdrs[n].value, "\r\n", NULL);
+    }
+    
+    ne_buffer_czappend(buf, "\r\n");
+
+    CALL(make_session(&sess, single_serve_string, buf->data));
+
+    req = ne_request_create(sess, "GET", "/foo");
+    ONREQ(ne_request_dispatch(req));
+
+    while ((cursor = ne_response_header_iterate(req, cursor, &name, &value))) {
+        n = -1;
+
+        ONV(strncmp(name, "x-", 2) || strncmp(value, "Y-", 2)
+            || strcmp(name + 2, value + 2)
+            || (n = atoi(name + 2)) >= MANY_HEADERS
+            || n < 0,
+            ("bad name/value pair: %s = %s", name, value));
+
+        NE_DEBUG(NE_DBG_HTTP, "iterate: got pair (%d): %s = %s\n",
+                 n, name, value);
+
+        ONV(hdrs[n].seen == 1, ("duplicate pair %d", n));
+        hdrs[n].seen = 1;
+    }
+           
+    for (n = 0; n < MANY_HEADERS; n++) {
+        ONV(hdrs[n].seen == 0, ("unseen pair %d", n));
+    }
+    
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+    CALL(await_server());
+    
+    return OK;
+}
+
 
 struct s1xx_args {
     int count;
@@ -1751,6 +1831,8 @@ ne_test tests[] = {
     T(strip_http10_connhdr2),
     T(continued_header),
     T(reset_headers),
+    T(iterate_none),
+    T(iterate_many),
     T(skip_interim_1xx),
     T(skip_many_1xx),
     T(skip_1xx_hdrs),

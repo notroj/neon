@@ -175,6 +175,8 @@ struct ne_request_s {
     /* response header fields */
     struct field *response_headers[HH_HASHSIZE];
     
+    unsigned int current_index; /* response_headers cursor for iterator */
+
     /* List of callbacks which are passed response body blocks */
     struct body_reader *body_readers;
 
@@ -612,6 +614,34 @@ const char *ne_get_response_header(ne_request *req, const char *name)
     char *value = get_response_header_hv(req, hash, lcname);
     ne_free(lcname);
     return value;
+}
+
+/* The return value of the iterator function is a pointer to the
+ * struct field of the previously returned header. */
+void *ne_response_header_iterate(ne_request *req, void *iterator,
+                                 const char **name, const char **value)
+{
+    struct field *f = iterator;
+    unsigned int n;
+
+    if (f == NULL) {
+        n = 0;
+    } else if ((f = f->next) == NULL) {
+        n = req->current_index + 1;
+    }
+
+    if (f == NULL) {
+        while (n < HH_HASHSIZE && req->response_headers[n] == NULL)
+            n++;
+        if (n == HH_HASHSIZE)
+            return NULL; /* no more headers */
+        f = req->response_headers[n];
+        req->current_index = n;
+    }
+    
+    *name = f->name;
+    *value = f->value;
+    return f;
 }
 
 /* Removes the response header 'name', which has hash value 'hash'. */
