@@ -1108,7 +1108,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     sock->ssl = ssl;
     ret = SSL_accept(ssl);
     if (ret != 1) {
-        ret = error_ossl(sock, ret);
+        return error_ossl(sock, ret);
     }
 #elif defined(HAVE_GNUTLS)
     gnutls_init(&ssl, GNUTLS_SERVER);
@@ -1119,11 +1119,11 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
     ret = gnutls_handshake(ssl);
     if (ret < 0) {
-        ret = error_gnutls(sock, ret);
+        return error_gnutls(sock, ret);
     }
 #endif
     sock->ops = &iofns_ssl;
-    return ret;
+    return 0;
 }
 
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
