@@ -87,8 +87,7 @@ struct ne_decompress_s {
 	NE_Z_POST_HEADER, /* waiting for the end of the NUL-terminated bits. */
 	NE_Z_INFLATING, /* inflating response bytes. */
 	NE_Z_AFTER_DATA, /* after data; reading CRC32 & ISIZE */
-	NE_Z_FINISHED, /* stream is finished. */
-	NE_Z_ERROR /* inflate bombed. */
+	NE_Z_FINISHED /* stream is finished. */
     } state;
 };
 
@@ -103,7 +102,7 @@ struct ne_decompress_s {
  *   HDR_DONE: all done, bytes following are raw DEFLATE data.
  *   HDR_EXTENDED: all done, expect a NUL-termianted string
  *                 before the DEFLATE data
- *   HDR_ERROR: invalid header, give up.
+ *   HDR_ERROR: invalid header, give up (session error is set).
  */
 static int parse_header(ne_decompress *ctx)
 {
@@ -113,7 +112,6 @@ static int parse_header(ne_decompress *ctx)
 	    h->id1, h->id2, h->cmeth, h->flags);
     
     if (h->id1 != ID1 || h->id2 != ID2 || h->cmeth != 8) {
-	ctx->state = NE_Z_ERROR;
 	ne_set_error(ctx->session, "Compressed stream invalid");
 	return HDR_ERROR;
     }
@@ -129,7 +127,6 @@ static int parse_header(ne_decompress *ctx)
 	ctx->state = NE_Z_POST_HEADER;
 	return HDR_EXTENDED;
     } else if (h->flags != 0) {
-	ctx->state = NE_Z_ERROR;
 	ne_set_error(ctx->session, "Compressed stream not supported");
 	return HDR_ERROR;
     }
@@ -152,7 +149,6 @@ static int process_footer(ne_decompress *ctx,
         ne_set_error(ctx->session, 
                      "Too many bytes (%" NE_FMT_SIZE_T ") in gzip footer",
                      len);
-	ctx->state = NE_Z_ERROR;
         return -1;
     } else {
 	memcpy(ctx->footer + ctx->footcount, buf, len);
@@ -169,7 +165,6 @@ static int process_footer(ne_decompress *ctx,
 			 "given %lu vs computed %lu\n", crc, ctx->checksum);
 		ne_set_error(ctx->session, 
 			     "Checksum invalid for compressed stream");
-		ctx->state = NE_Z_ERROR;
                 return -1;
 	    }
 	}
@@ -239,7 +234,6 @@ static int do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 	ctx->state = NE_Z_AFTER_DATA;
 	return process_footer(ctx, ctx->zstr.next_in, ctx->zstr.avail_in);
     } else if (ret != Z_OK) {
-	ctx->state = NE_Z_ERROR;
         set_zlib_error(ctx, _("Could not inflate data"), ret);
         return NE_ERROR;
     }
@@ -253,22 +247,39 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     const char *zbuf;
     size_t count;
 
+    if (len == 0) {
+        /* End of response: */
+        switch (ctx->state) {
+        case NE_Z_BEFORE_DATA: 
+            if (ctx->enchdr && strcasecmp(ctx->enchdr, "gzip") == 0) {
+                /* response was truncated: break out. */
+                break;
+            }
+            /* else, fall through */
+        case NE_Z_FINISHED: /* complete gzip response */
+        case NE_Z_PASSTHROUGH: /* complete uncompressed response */
+            return ctx->reader(ctx->userdata, buf, 0);
+        default:
+            /* invalid state: truncated response. */
+            break;
+        }
+	/* else: truncated response, fail. */
+	ne_set_error(ctx->session, "Compressed response was truncated");
+	return NE_ERROR;
+    }        
+
     switch (ctx->state) {
     case NE_Z_PASSTHROUGH:
 	/* move along there. */
 	return ctx->reader(ctx->userdata, buf, len);
 
-    case NE_Z_ERROR:
-	/* beyond hope. */
-	break;
-
     case NE_Z_FINISHED:
 	/* Could argue for tolerance, and ignoring trailing content;
 	 * but it could mean something more serious. */
 	if (len > 0) {
-	    ctx->state = NE_Z_ERROR;
 	    ne_set_error(ctx->session,
 			 "Unexpected content received after compressed stream");
+            return NE_ERROR;
 	}
         break;
 
@@ -320,13 +331,13 @@ static int gz_reader(void *ud, const char *buf, size_t len)
 	    if (len == 0)
 		return 0;
 	    break;
+        case HDR_ERROR:
+            return NE_ERROR;
 	case HDR_DONE:
 	    if (len > 0) {
 		return do_inflate(ctx, buf, len);
 	    }
-            /* fallthrough */
-        default:
-	    return 0;
+            break;
 	}
 
 	/* FALLTHROUGH */
@@ -363,10 +374,8 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     return 0;
 }
 
-int ne_decompress_destroy(ne_decompress *ctx)
+void ne_decompress_destroy(ne_decompress *ctx)
 {
-    int ret;
-
     if (ctx->zstrinit)
 	/* inflateEnd only fails if it's passed NULL etc; ignore
 	 * return value. */
@@ -375,25 +384,7 @@ int ne_decompress_destroy(ne_decompress *ctx)
     if (ctx->enchdr)
 	ne_free(ctx->enchdr);
 
-    switch (ctx->state) {
-    case NE_Z_BEFORE_DATA:
-    case NE_Z_PASSTHROUGH:
-    case NE_Z_FINISHED:
-	ret = NE_OK;
-	break;
-    case NE_Z_ERROR:
-	/* session error already set. */
-	ret = NE_ERROR;
-	break;
-    default:
-	/* truncated response. */
-	ne_set_error(ctx->session, "Compressed response was truncated");
-	ret = NE_ERROR;
-	break;
-    }
-
     ne_free(ctx);
-    return ret;
 }
 
 /* Wrapper for user-passed acceptor function. */
