@@ -818,9 +818,7 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
             ret = NE_ERROR;
         } else /* success! */ {
             /* update timeout for passed-in lock structure. */
-            if (ctx.active.timeout != NE_TIMEOUT_INVALID) {
-                lock->timeout = ctx.active.timeout;
-            }
+            lock->timeout = ctx.active.timeout;
         }
     }
 
