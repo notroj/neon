@@ -230,18 +230,15 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
                                                    &critical);
         switch (ret) {
         case GNUTLS_SAN_DNSNAME:
-        {
             if (identity && !found) *identity = ne_strdup(name);
             match = match_hostname(name, hostname);
             found = 1;
             break;
+        default:
+            break;
         }
-        case GNUTLS_SAN_IPADDRESS:
-        {
-            /* TODO */
-        }
-        }
-    } while (ret == 0 && ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE);
+        seq++;
+    } while (!match && ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE);
 
     /* Check against the commonName if no DNS alt. names were found,
      * as per RFC3280. */
@@ -479,7 +476,6 @@ int ne__negotiate_ssl(ne_request *req)
 		     ne_sock_error(sess->socket));
 	return NE_ERROR;
     }
-
 
     sock = ne__sock_sslsock(sess->socket);
 
