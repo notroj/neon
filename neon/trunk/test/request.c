@@ -972,19 +972,6 @@ static int send_bodies(void)
     return OK;
 }
 
-static int serve_infinite_headers(ne_socket *sock, void *userdata)
-{
-    CALL(discard_request(sock));
-
-    SEND_STRING(sock, RESP200);
-    
-    for (;;) {
-	SEND_STRING(sock, "x-foo: bar\r\n");
-    }
-
-    return 0;	
-}
-
 /* Utility function: run a request using the given server fn, and the
  * request should fail. If 'error' is non-NULL, it must be a substring
  * of the error string. */
@@ -1053,7 +1040,8 @@ static int fail_request(int with_body, server_fn fn, void *ud, int forever)
 
 static int unbounded_headers(void)
 {
-    return fail_request(0, serve_infinite_headers, NULL, 0);
+    struct infinite i = { RESP200, "x-foo: bar\r\n" };
+    return fail_request(0, serve_infinite, &i, 0);
 }
 
 static int blank_response(void)
@@ -1075,18 +1063,11 @@ static int not_http(void)
     return fail_request(0, serve_non_http, NULL, 0);
 }
 
-static int serve_infinite_folds(ne_socket *sock, void *ud)
-{
-    SEND_STRING(sock, "HTTP/1.0 200 OK\r\nFoo: bar\r\n");
-    for (;;) {
-	SEND_STRING(sock, "  hello there.\r\n");
-    }
-    return OK;
-}
-
 static int unbounded_folding(void)
 {
-    return fail_request(0, serve_infinite_folds, NULL, 0);
+    struct infinite i = { "HTTP/1.0 200 OK\r\nFoo: bar\r\n", 
+                          "  hello there.\r\n" };
+    return fail_request(0, serve_infinite, &i, 0);
 }
 
 static int serve_close(ne_socket *sock, void *ud)
