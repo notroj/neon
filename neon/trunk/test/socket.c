@@ -43,11 +43,7 @@
 #include "utils.h"
 
 #ifdef SOCKET_SSL
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-
 #include "ne_ssl.h"
-
 ne_ssl_context *server_ctx, *client_ctx;
 #endif
 
