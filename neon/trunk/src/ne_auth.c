@@ -203,9 +203,6 @@ struct auth_request {
 
     /* Used for calculation of H(entity-body) of the response */
     struct ne_md5_ctx response_body;
-
-    /* Results of response-header callbacks */
-    ne_buffer *auth_hdr, *auth_info_hdr;
 };
 
 static void clean_session(auth_session *sess) 
@@ -1109,14 +1106,6 @@ static int auth_body_reader(void *cookie, const char *block, size_t length)
     return 0;
 }
 
-/* Collect auth challenges into an ne_buffer */
-static void ah_collect_header(void *userdata, const char *value)
-{
-    ne_buffer *ar = userdata;
-    if (ne_buffer_size(ar)) ne_buffer_append(ar, ", ", 2);
-    ne_buffer_zappend(ar, value);
-}
-
 static void ah_create(ne_request *req, void *session, const char *method,
 		      const char *uri)
 {
@@ -1133,14 +1122,6 @@ static void ah_create(ne_request *req, void *session, const char *method,
         areq->method = method;
         areq->uri = uri;
         areq->request = req;
-        areq->auth_hdr = ne_buffer_create();
-        areq->auth_info_hdr = ne_buffer_create();
-        
-        ne_add_response_header_handler(req, sess->spec->resp_hdr,
-                                       ah_collect_header, areq->auth_hdr);
-	
-        ne_add_response_header_handler(req, sess->spec->resp_info_hdr,
-                                       ah_collect_header, areq->auth_info_hdr);
         
         sess->attempt = 0;
         
@@ -1202,9 +1183,20 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 {
     auth_session *sess = cookie;
     struct auth_request *areq = ne_get_request_private(req, sess->spec->id);
+    const char *auth_hdr, *auth_info_hdr;
     int ret = NE_OK;
 
     if (!areq) return NE_OK;
+
+    auth_hdr = ne_get_response_header(req, sess->spec->resp_hdr);
+    auth_info_hdr = ne_get_response_header(req, sess->spec->resp_info_hdr);
+
+    if (sess->context == AUTH_CONNECT && status->code == 401 && !auth_hdr) {
+        /* Some broken proxies issue a 401 as a proxy auth challenge
+         * to a CONNECT request; handle this here. */
+        auth_hdr = ne_get_response_header(req, "WWW-Authenticate");
+        auth_info_hdr = NULL;
+    }
 
 #ifdef HAVE_GSSAPI
     /* whatever happens: forget the GSSAPI token cached thus far */
@@ -1217,10 +1209,9 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
 	     sess->attempt, status->code, sess->spec->status_code, 
-	     sess->spec->resp_hdr, areq->auth_hdr->data);
-    if (ne_buffer_size(areq->auth_info_hdr) 
-        && sess->scheme == auth_scheme_digest) {
-        if (verify_digest_response(areq, sess, areq->auth_info_hdr->data)) {
+	     sess->spec->resp_hdr, auth_hdr);
+    if (auth_info_hdr && sess->scheme == auth_scheme_digest) {
+        if (verify_digest_response(areq, sess, auth_info_hdr)) {
             NE_DEBUG(NE_DBG_HTTPAUTH, "Response authentication invalid.\n");
             ne_set_error(sess->sess, "%s", _(sess->spec->fail_msg));
             ret = NE_ERROR;
@@ -1230,29 +1221,28 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     /* one must wonder... has Mr Brezak actually read RFC2617? */
     else if (sess->scheme == auth_scheme_gssapi 
              && (status->klass == 2 || status->klass == 3)
-             && ne_buffer_size(areq->auth_hdr)) {
-        if (verify_negotiate_response(sess, areq->auth_hdr->data)) { 
+             && auth_hdr) {
+        char *hdr = ne_strdup(auth_hdr);
+        if (verify_negotiate_response(sess, hdr)) { 
             NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Mutual auth failed.\n");
             ret = NE_ERROR;
         }
+        ne_free(hdr);
     }
 #endif /* HAVE_GSSAPI */
     else if ((status->code == sess->spec->status_code ||
               (status->code == 401 && sess->context == AUTH_CONNECT)) &&
-	       ne_buffer_size(areq->auth_hdr)) {
+	       auth_hdr) {
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got challenge (code %d).\n", status->code);
-	if (!auth_challenge(sess, areq->auth_hdr->data)) {
+	if (!auth_challenge(sess, auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
 	    clean_session(sess);
 	    ret = sess->spec->fail_code;
 	}
     }
-
-    ne_buffer_clear(areq->auth_hdr);
-    ne_buffer_clear(areq->auth_info_hdr);
 
     return ret;
 }
@@ -1263,8 +1253,6 @@ static void ah_destroy(ne_request *req, void *session)
     struct auth_request *areq = ne_get_request_private(req, sess->spec->id);
 
     if (areq) {
-        ne_buffer_destroy(areq->auth_info_hdr);
-        ne_buffer_destroy(areq->auth_hdr);
         ne_free(areq);
     }
 }

@@ -50,27 +50,21 @@
 #include "ne_dates.h"
 #include "ne_i18n.h"
 
-/* Header parser to retrieve Last-Modified date */
-static void get_lastmodified(void *userdata, const char *value) {
-    time_t *modtime = userdata;
-    *modtime = ne_httpdate_parse(value);
-}
-
 int ne_getmodtime(ne_session *sess, const char *uri, time_t *modtime) 
 {
     ne_request *req = ne_request_create(sess, "HEAD", uri);
+    const char *value;
     int ret;
 
-    ne_add_response_header_handler(req, "Last-Modified", get_lastmodified,
-				   modtime);
-
-    *modtime = -1;
-
     ret = ne_request_dispatch(req);
+
+    value = ne_get_response_header(req, "Last-Modified"); 
 
     if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	*modtime = -1;
 	ret = NE_ERROR;
+    } else if (value) {
+        *modtime = ne_httpdate_parse(value);
     }
 
     ne_request_destroy(req);
@@ -113,126 +107,70 @@ int ne_put(ne_session *sess, const char *uri, int fd)
     return ret;
 }
 
-struct get_context {
-    int error;
-    ne_session *session;
-    off_t total;
-    int fd; /* used in get_to_fd */
-    ne_content_range *range;
-};
-
-static int get_to_fd(void *userdata, const char *block, size_t length)
+/* Dispatch a GET request REQ, writing the response body to FD fd.  If
+ * RANGE is non-NULL, then it is the value of the Range request
+ * header, e.g. "bytes=1-5".  Returns an NE_* error code. */
+static int dispatch_to_fd(ne_request *req, int fd, const char *range)
 {
-    struct get_context *ctx = userdata;
-    ssize_t ret;
-    
-    if (ctx->error) {
-        return -1;
-    }
+    ne_session *const sess = ne_get_session(req);
+    const ne_status *const st = ne_get_status(req);
+    int ret;
 
-    if (!ctx->error) {
-	while (length > 0) {
-	    ret = write(ctx->fd, block, length);
-	    if (ret < 0) {
-		char err[200];
-		ne_strerror(errno, err, sizeof err);
-		ne_set_error(ctx->session, _("Could not write to file: %s"),
-			     err);
-                return -1;
-	    } else {
-		length -= ret;
-		block += ret;
-	    }
-	}
-    }
-    
-    return 0;
-}
+    do {
+        const char *value;
+        
+        ret = ne_begin_request(req);
+        if (ret != NE_OK) break;
 
-static int accept_206(void *ud, ne_request *req, const ne_status *st)
-{
-    return (st->code == 206);
-}
+        value = ne_get_response_header(req, "Content-Range");
 
-static void clength_hdr_handler(void *ud, const char *value)
-{
-    struct get_context *ctx = ud;
-    off_t len = strtol(value, NULL, 10);
-    
-    if (ctx->range->end == -1) {
-	ctx->range->end = ctx->range->start + len - 1;
-	ctx->range->total = len;
-    }
-    else if (len != ctx->total) {
-	NE_DEBUG(NE_DBG_HTTP, 
-		 "Expecting %" NE_FMT_OFF_T " bytes, "
-		 "got entity of length %" NE_FMT_OFF_T "\n", 
-		 ctx->total, len);
-	ne_set_error(ctx->session, _("Response not of expected length"));
-	ctx->error = 1;
-    }
-}
+        /* For a 206 response, check that a Content-Range header is
+         * given which matches the Range request header. */
+        if (range && st->code == 206 
+            && (value == NULL || strncmp(value, "bytes ", 6) != 0
+                || strcmp(range + 6, value + 6))) {
+            ne_set_error(sess, _("Response did not include requested range"));
+            return NE_ERROR;
+        }
 
-static void content_range_hdr_handler(void *ud, const char *value)
-{
-    struct get_context *ctx = ud;
+        if ((range && st->code == 206) || (!range && st->klass == 2)) {
+            ret = ne_read_response_to_fd(req, fd);
+        } else {
+            ret = ne_discard_response(req);
+        }
 
-    if (strncmp(value, "bytes ", 6) != 0) {
-	ne_set_error(ctx->session, ("Response range using unrecognized unit"));
-	ctx->error = 1;
-    }
+        if (ret == NE_OK) ret = ne_end_request(req);
+    } while (ret == NE_RETRY);
 
-    /* TODO: verify against requested range. */
+    return ret;
 }
 
 int ne_get_range(ne_session *sess, const char *uri, 
 		 ne_content_range *range, int fd)
 {
     ne_request *req = ne_request_create(sess, "GET", uri);
-    struct get_context ctx;
     const ne_status *status;
     int ret;
+    char brange[64];
 
     if (range->end == -1) {
-	ctx.total = -1;
-    } 
-    else {
-	ctx.total = (range->end - range->start) + 1;
-    }
-
-    NE_DEBUG(NE_DBG_HTTP, "Range total: %" NE_FMT_OFF_T "\n", ctx.total);
-
-    ctx.fd = fd;
-    ctx.error = 0;
-    ctx.range = range;
-    ctx.session = sess;
-
-    ne_add_response_header_handler(req, "Content-Length",
-				     clength_hdr_handler, &ctx);
-    ne_add_response_header_handler(req, "Content-Range",
-				     content_range_hdr_handler,
-				     &ctx);
-
-    ne_add_response_body_reader(req, accept_206, get_to_fd, &ctx);
-
-    if (range->end == -1) {
-	ne_print_request_header(req, "Range", "bytes=%" NE_FMT_OFF_T "-", 
-				range->start);
+        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF_T "-", 
+                    range->start);
     }
     else {
-	ne_print_request_header(req, "Range", 
-				"bytes=%" NE_FMT_OFF_T "-%" NE_FMT_OFF_T,
-				range->start, range->end);
+	ne_snprintf(brange, sizeof brange,
+                    "bytes=%" NE_FMT_OFF_T "-%" NE_FMT_OFF_T,
+                    range->start, range->end);
     }
+
+    ne_add_request_header(req, "Range", brange);
     ne_add_request_header(req, "Accept-Ranges", "bytes");
 
-    ret = ne_request_dispatch(req);
+    ret = dispatch_to_fd(req, fd, brange);
 
     status = ne_get_status(req);
 
-    if (ctx.error) {
-	ret = NE_ERROR;
-    } else if (status && status->code == 416) {
+    if (ret == NE_OK && status->code == 416) {
 	/* connection is terminated too early with Apache/1.3, so we check
 	 * this even if ret == NE_ERROR... */
 	ne_set_error(sess, _("Range is not satisfiable"));
@@ -258,26 +196,11 @@ int ne_get_range(ne_session *sess, const char *uri,
 int ne_get(ne_session *sess, const char *uri, int fd)
 {
     ne_request *req = ne_request_create(sess, "GET", uri);
-    struct get_context ctx;
     int ret;
 
-    ctx.total = -1;
-    ctx.fd = fd;
-    ctx.error = 0;
-    ctx.session = sess;
-
-    /* Read the value of the Content-Length header into ctx.total */
-    ne_add_response_header_handler(req, "Content-Length",
-				     ne_handle_numeric_header,
-				     &ctx.total);
+    ret = dispatch_to_fd(req, fd, NULL);
     
-    ne_add_response_body_reader(req, ne_accept_2xx, get_to_fd, &ctx);
-
-    ret = ne_request_dispatch(req);
-    
-    if (ctx.error) {
-	ret = NE_ERROR;
-    } else if (ret == NE_OK && ne_get_status(req)->klass != 2) {
+    if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;
     }
 
@@ -291,28 +214,13 @@ int ne_get(ne_session *sess, const char *uri, int fd)
 int ne_post(ne_session *sess, const char *uri, int fd, const char *buffer)
 {
     ne_request *req = ne_request_create(sess, "POST", uri);
-    struct get_context ctx;
     int ret;
-
-    ctx.total = -1;
-    ctx.fd = fd;
-    ctx.error = 0;
-    ctx.session = sess;
-
-    /* Read the value of the Content-Length header into ctx.total */
-    ne_add_response_header_handler(req, "Content-Length",
-				     ne_handle_numeric_header, &ctx.total);
-
-    ne_add_response_body_reader(req, ne_accept_2xx, get_to_fd, &ctx);
 
     ne_set_request_body_buffer(req, buffer, strlen(buffer));
 
-    ret = ne_request_dispatch(req);
+    ret = dispatch_to_fd(req, fd, NULL);
     
-    if (ctx.error) {
-	ret = NE_ERROR;
-    }
-    else if (ret == NE_OK && ne_get_status(req)->klass != 2) {
+    if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;
     }
 
@@ -321,18 +229,19 @@ int ne_post(ne_session *sess, const char *uri, int fd, const char *buffer)
     return ret;
 }
 
-void ne_content_type_handler(void *userdata, const char *value)
+int ne_get_content_type(ne_request *req, ne_content_type *ct)
 {
-    ne_content_type *ct = userdata;
+    const char *value;
     char *sep, *stype;
+
+    value = ne_get_response_header(req, "Content-Type");
+    if (value == NULL || strchr(value, '/') == NULL) {
+        return -1;
+    }
 
     ct->value = ne_strdup(value);
     
     stype = strchr(ct->value, '/');
-    if (!stype) {
-	NE_FREE(ct->value);
-	return;
-    }
 
     *stype++ = '\0';
     ct->type = ct->value;
@@ -367,12 +276,13 @@ void ne_content_type_handler(void *userdata, const char *value)
         else
             ct->charset = "ISO-8859-1";
     }
+    
+    return 0;
 }
 
-static void dav_hdr_handler(void *userdata, const char *value)
+static void parse_dav_header(const char *value, ne_server_capabilities *caps)
 {
     char *tokens = ne_strdup(value), *pnt = tokens;
-    ne_server_capabilities *caps = userdata;
     
     do {
 	char *tok = ne_qtoken(&pnt, ',',  "\"'");
@@ -390,19 +300,15 @@ static void dav_hdr_handler(void *userdata, const char *value)
     } while (pnt != NULL);
     
     ne_free(tokens);
-
 }
 
-int ne_options(ne_session *sess, const char *uri,
-		  ne_server_capabilities *caps)
+int ne_options(ne_session *sess, const char *uri, ne_server_capabilities *caps)
 {
     ne_request *req = ne_request_create(sess, "OPTIONS", uri);
+    int ret = ne_request_dispatch(req);
+    const char *header = ne_get_response_header(req, "DAV");
     
-    int ret;
-
-    ne_add_response_header_handler(req, "DAV", dav_hdr_handler, caps);
-
-    ret = ne_request_dispatch(req);
+    if (header) parse_dav_header(header, caps);
  
     if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;

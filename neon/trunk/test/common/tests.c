@@ -196,9 +196,10 @@ int main(int argc, char *argv[])
     printf("-> running `%s':\n", test_suite);
     
     for (n = 0; !aborted && tests[n].fn != NULL; n++) {
-	int result, is_xfail = 0, is_xleaky = 0;
+	int result, is_xfail = 0;
 #ifdef NEON_MEMLEAK
         size_t allocated = ne_alloc_used;
+        int is_xleaky = 0;
 #endif
 
 	test_name = tests[n].name;

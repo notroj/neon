@@ -108,29 +108,32 @@ static int run_request(ne_session *sess, int status,
     return OK;
 }
 
-/* Runs a server function 'fn', expecting to get a header 'name' with value
- * 'value' in the response. */
+/* Runs a server function 'fn', expecting to get a header 'name' with
+ * value 'value' in the response.  If 'value' is NULL, expects that
+ * *no* header of that name is present. */
 static int expect_header_value(const char *name, const char *value,
 			       server_fn fn, void *userdata)
 {
     ne_session *sess;
     ne_request *req;
-    char *gotval = NULL;
+    const char *gotval;
 
     CALL(make_session(&sess, fn, userdata));
 
     req = ne_request_create(sess, "FOO", "/bar");
-    ne_add_response_header_handler(req, name, ne_duplicate_header, &gotval);
     ONREQ(ne_request_dispatch(req));
     CALL(await_server());
     
-    ONN("no header value set", gotval == NULL);
-    ONV(strcmp(gotval, value),
-	("header value mis-match: got [%s] not [%s]", gotval, value));
+    gotval = ne_get_response_header(req, name);
+    ONV(value && !gotval, ("header '%s: %s' not sent", name, value));
+    ONV(!value && gotval, ("header '%s: %s' not expected", name, gotval));
+
+    ONV(value && gotval && strcmp(gotval, value),
+	("header '%s' mis-match: got '%s' not '%s'", 
+         name, gotval, value));
     
     ne_request_destroy(req);
     ne_session_destroy(sess);
-    ne_free(gotval);
 
     return OK;
 }
@@ -724,53 +727,55 @@ static int continued_header(void)
 			       NO_BODY);
 }
 
-static void mh_header(void *ctx, const char *value)
-{
-    int *state = ctx;
-    static const char *hdrs[] = { "jim", "jab", "jar" };
-
-    if (*state < 0 || *state > 2) {
-	/* already failed. */
-	return;
-    }
-
-    if (strcmp(value, hdrs[*state]))
-	*state = -*state;
-    else
-	(*state)++;
-}
-
 /* check headers callbacks are working correctly. */
 static int multi_header(void)
 {
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
-    ne_request *req;
-    int state = 0;
-
-    ON(sess == NULL);
-    ON(spawn_server(7777, single_serve_string, 
-		    RESP200 
-		    "X-Header: jim\r\n" 
-		    "x-header: jab\r\n"
-		    "x-Header: jar\r\n"
-		    "Content-Length: 0\r\n\r\n"));
-
-    req = ne_request_create(sess, "GET", "/");
-    ON(req == NULL);
-
-    ne_add_response_header_handler(req, "x-header", mh_header, &state);
-
-    ONREQ(ne_request_dispatch(req));
-
-    ON(await_server());
-
-    ON(state != 3);
-
-    ne_request_destroy(req);
-    ne_session_destroy(sess);
-
-    return OK;
+    return expect_header_value("X-Header", "jim, jab, jar",
+                               single_serve_string,
+                               RESP200 
+                               "X-Header: jim\r\n" 
+                               "x-header: jab\r\n"
+                               "x-Header: jar\r\n"
+                               "Content-Length: 0\r\n\r\n");
 }
+
+/* check headers callbacks are working correctly. */
+static int multi_header2(void)
+{
+    return expect_header_value("X-Header", "jim, jab, jar",
+                               single_serve_string,
+                               RESP200 
+                               "X-Header: jim  \r\n" 
+                               "x-header: jab  \r\n"
+                               "x-Header: jar  \r\n"
+                               "Content-Length: 0\r\n\r\n");
+}
+
+/* RFC 2616 14.10: headers listed in Connection must be stripped on
+ * receiving an HTTP/1.0 message in case there was a pre-1.1 proxy
+ * somewhere. */
+static int strip_http10_connhdr(void)
+{
+    return expect_header_value("X-Widget", NULL,
+                               single_serve_string,
+                               "HTTP/1.0 200 OK\r\n"
+                               "Connection: x-widget\r\n"
+                               "x-widget: blah\r\n"
+                               "Content-Length: 0\r\n"
+                               "\r\n");
+}
+
+static int strip_http10_connhdr2(void)
+{
+    return expect_header_value("X-Widget", NULL,
+                               single_serve_string,
+                               "HTTP/1.0 200 OK\r\n"
+                               "Connection: connection, x-widget\r\n"
+                               "x-widget: blah\r\n"
+                               "Content-Length: 0\r\n"
+                               "\r\n");
+}
+
 
 struct s1xx_args {
     int count;
@@ -1695,6 +1700,7 @@ ne_test tests[] = {
     T(fold_headers),
     T(fold_many_headers),
     T(multi_header),
+    T(multi_header2),
     T(empty_header),
     T(trailing_header),
     T(ignore_header_case),
@@ -1702,6 +1708,8 @@ ne_test tests[] = {
     T(ignore_header_ws2),
     T(ignore_header_ws3),
     T(ignore_header_tabs),
+    T(strip_http10_connhdr),
+    T(strip_http10_connhdr2),
     T(continued_header),
     T(skip_interim_1xx),
     T(skip_many_1xx),

@@ -68,14 +68,6 @@
 #define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
 if (sret < 0) return aborted(req, msg, sret); } while (0)
 
-/* This is called with each of the headers in the response */
-struct header_handler {
-    char *name;
-    ne_header_handler handler;
-    void *userdata;
-    struct header_handler *next;
-};
-
 /* TODO: could unify these all into a generic callback list */
 
 struct body_reader {
@@ -112,6 +104,25 @@ typedef off_t ne_off_t;
 #define ne_strtoff strtol
 #endif
 #endif /* NE_LFS */
+
+struct field {
+    char *name, *value;
+    size_t vlen, valloc;
+    struct field *next;
+};
+
+/* Maximum number of header fields per response: */
+#define MAX_HEADER_FIELDS (100)
+/* Size of hash table; 43 is the smallest prime for which the common
+ * header names hash uniquely using the *33 hash function. */
+#define HH_HASHSIZE (43)
+/* Hash iteration step: *33 known to be a good hash for ASCII, see RSE. */
+#define HH_ITERATE(hash, ch) (((hash)*33 + (unsigned char)(ch)) % HH_HASHSIZE)
+
+/* pre-calculated hash values for given header names: */
+#define HH_HV_CONNECTION        (0x14)
+#define HH_HV_CONTENT_LENGTH    (0x13)
+#define HH_HV_TRANSFER_ENCODING (0x07)
 
 struct ne_request_s {
     char *method, *uri; /* method and Request-URI */
@@ -167,26 +178,12 @@ struct ne_request_s {
         } body;
         ne_off_t progress; /* number of bytes read of response */
     } resp;
-
-    /* List of callbacks which are passed response headers */
-    struct header_handler *header_catchers;
     
     struct hook *private;
 
-    /* We store response header handlers in a hash table.  The hash is
-     * derived from the header name in lower case. */
-
-    /* FIXME: this comment is WAY out of date, and no longer in any
-     * way true. */
-	    
-    /* 53 is magic, of course.  For a standard ne_get() (with
-     * redirects), 9 header handlers are defined.  Two of these are
-     * for Content-Length (which is a bug, and should be fixed
-     * really).  Ignoring that hash clash, the 8 *different* handlers
-     * all hash uniquely into the hash table of size 53.  */
-#define HH_HASHSIZE 53
+    /* response header fields */
+    struct field *response_headers[HH_HASHSIZE];
     
-    struct header_handler *header_handlers[HH_HASHSIZE];
     /* List of callbacks which are passed response body blocks */
     struct body_reader *body_readers;
 
@@ -200,17 +197,6 @@ struct ne_request_s {
 };
 
 static int open_connection(ne_request *req);
-
-/* The iterative step used to produce the hash value.  This is DJB's
- * magic "*33" hash function.  Ralf Engelschall has done some amazing
- * statistical analysis to show that *33 really is a good hash
- * function: check the new-httpd list archives, or his 'str' library
- * source code, for the details.
- *
- * TODO: due to limited range of characters used in header names,
- * could maybe get a better hash function to use? */
- 
-#define HH_ITERATE(hash, ch) (((hash)*33 + (ch)) % HH_HASHSIZE);
 
 /* Returns hash value for header 'name', converting it to lower-case
  * in-place. */
@@ -272,18 +258,6 @@ static void notify_status(ne_session *sess, ne_conn_status status,
     if (sess->notify_cb) {
 	sess->notify_cb(sess->notify_ud, status, info);
     }
-}
-
-void ne_duplicate_header(void *userdata, const char *value)
-{
-    char **location = userdata;
-    *location = ne_strdup(value);
-}
-
-void ne_handle_numeric_header(void *userdata, const char *value)
-{
-    int *location = userdata;
-    *location = atoi(value);
 }
 
 static void *get_private(const struct hook *hk, const char *id)
@@ -510,38 +484,6 @@ int ne_accept_2xx(void *userdata, ne_request *req, const ne_status *st)
     return (st->klass == 2);
 }
 
-/* Handler for the "Transfer-Encoding" response header: treat *any*
- * such header as implying a chunked response, per the "Protocol
- * Compliance" statement in the manual. */
-static void te_hdr_handler(void *userdata, const char *value) 
-{
-    struct ne_response *resp = userdata;
-
-    resp->mode = R_CHUNKED;
-    resp->body.chunk.remain = 0;
-}
-
-/* Handler for the "Connection" response header */
-static void connection_hdr_handler(void *userdata, const char *value)
-{
-    ne_request *req = userdata;
-    if (strcasecmp(value, "close") == 0) {
-	req->can_persist = 0;
-    } else if (strcasecmp(value, "Keep-Alive") == 0) {
-	req->can_persist = 1;
-    }
-}
-
-static void clength_hdr_handler(void *userdata, const char *value)
-{
-    struct ne_response *resp = userdata;
-    ne_off_t len = ne_strtoff(value, NULL, 10);
-    if (len != NE_OFFT_MAX && len >= 0 && resp->mode == R_TILLEOF) {
-	resp->mode = R_CLENGTH;
-	resp->body.clen.total = resp->body.clen.remain = len;
-    }
-}
-
 ne_request *ne_request_create(ne_session *sess,
 			      const char *method, const char *path) 
 {
@@ -558,14 +500,6 @@ ne_request *ne_request_create(ne_session *sess,
     /* Set the standard stuff */
     req->method = ne_strdup(method);
     req->method_is_head = (strcmp(method, "HEAD") == 0);
-
-    /* Add in handlers for all the standard HTTP headers. */
-    ne_add_response_header_handler(req, "Content-Length", 
-				   clength_hdr_handler, &req->resp);
-    ne_add_response_header_handler(req, "Transfer-Encoding", 
-				   te_hdr_handler, &req->resp);
-    ne_add_response_header_handler(req, "Connection", 
-				   connection_hdr_handler, req);
 
     /* Only use an absoluteURI here when absolutely necessary: some
      * servers can't parse them. */
@@ -672,28 +606,48 @@ void ne_print_request_header(ne_request *req, const char *name,
     ne_buffer_concat(req->headers, name, ": ", buf, EOL, NULL);
 }
 
-void
-ne_add_response_header_handler(ne_request *req, const char *name, 
-			       ne_header_handler hdl, void *userdata)
+/* Returns the value of the response header 'name', for which the hash
+ * value is 'h', or NULL if the header is not found. */
+static inline char *get_response_header_hv(ne_request *req, unsigned int h,
+                                           const char *name)
 {
-    struct header_handler *new = ne_calloc(sizeof *new);
-    unsigned int hash;
-    new->name = ne_strdup(name);
-    new->handler = hdl;
-    new->userdata = userdata;
-    hash = hash_and_lower(new->name);
-    new->next = req->header_handlers[hash];
-    req->header_handlers[hash] = new;
+    struct field *f;
+
+    for (f = req->response_headers[h]; f; f = f->next)
+        if (strcmp(f->name, name) == 0)
+            return f->value;
+
+    return NULL;
 }
 
-void ne_add_response_header_catcher(ne_request *req, 
-				    ne_header_handler hdl, void *userdata)
+const char *ne_get_response_header(ne_request *req, const char *name)
 {
-    struct header_handler *new = ne_calloc(sizeof *new);
-    new->handler = hdl;
-    new->userdata = userdata;
-    new->next = req->header_catchers;
-    req->header_catchers = new;
+    char *lcname = ne_strdup(name);
+    unsigned int hash = hash_and_lower(lcname);
+    char *value = get_response_header_hv(req, hash, lcname);
+    ne_free(lcname);
+    return value;
+}
+
+/* Removes the response header 'name', which has hash value 'hash'. */
+static void remove_response_header(ne_request *req, const char *name, 
+                                   unsigned int hash)
+{
+    struct field **ptr = req->response_headers + hash;
+
+    while (*ptr) {
+        struct field *const f = *ptr;
+
+        if (strcmp(f->name, name) == 0) {
+            *ptr = f->next;
+            ne_free(f->name);
+            ne_free(f->value);
+            ne_free(f);
+            return;
+        }
+        
+        ptr = &f->next;
+    }
 }
 
 void ne_add_response_body_reader(ne_request *req, ne_accept_response acpt,
@@ -710,8 +664,8 @@ void ne_add_response_body_reader(ne_request *req, ne_accept_response acpt,
 void ne_request_destroy(ne_request *req) 
 {
     struct body_reader *rdr, *next_rdr;
-    struct header_handler *hdlr, *next_hdlr;
     struct hook *hk, *next_hk;
+    struct field *f, *f_next;
     int n;
 
     ne_free(req->uri);
@@ -722,17 +676,12 @@ void ne_request_destroy(ne_request *req)
 	ne_free(rdr);
     }
 
-    for (hdlr = req->header_catchers; hdlr != NULL; hdlr = next_hdlr) {
-	next_hdlr = hdlr->next;
-	ne_free(hdlr);
-    }
-
     for (n = 0; n < HH_HASHSIZE; n++) {
-	for (hdlr = req->header_handlers[n]; hdlr != NULL; 
-	     hdlr = next_hdlr) {
-	    next_hdlr = hdlr->next;
-	    ne_free(hdlr->name);
-	    ne_free(hdlr);
+        for (f = req->response_headers[n]; f; f = f_next) {
+            f_next = f->next;
+            ne_free(f->name);
+            ne_free(f->value);
+            ne_free(f);
 	}
     }
 
@@ -935,7 +884,7 @@ static void dump_request(const char *request)
  * remain equal to strlen(buf). */
 static inline void strip_eol(char *buf, ssize_t *len)
 {
-    char *pnt = &buf[*len-1];
+    char *pnt = buf + *len - 1;
     while (pnt >= buf && (*pnt == '\r' || *pnt == '\n')) {
 	*pnt-- = '\0';
 	(*len)--;
@@ -1120,24 +1069,49 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
     return NE_ERROR;
 }
 
-/* Apache's default is 100, seems reasonable. */
-#define MAX_HEADER_FIELDS 100
+#define MAX_HEADER_LEN (8192)
+
+/* Add a respnose header field for the given request, using
+ * precalculated hash value. */
+static void add_response_header(ne_request *req, unsigned int hash,
+                                char *name, char *value)
+{
+    struct field **nextf = &req->response_headers[hash];
+    size_t vlen = strlen(value);
+
+    while (*nextf) {
+        struct field *const f = *nextf;
+        if (strcmp(f->name, name) == 0) {
+            if (vlen + f->vlen < MAX_HEADER_LEN) {
+                /* merge the header field */
+                f->value = ne_realloc(f->value, f->vlen + vlen + 3);
+                memcpy(f->value + f->vlen, ", ", 2);
+                memcpy(f->value + f->vlen + 2, value, vlen + 1);
+                f->vlen += vlen + 2;
+            }
+            return;
+        }
+        nextf = &f->next;
+    }
+    
+    (*nextf) = ne_malloc(sizeof **nextf);
+    (*nextf)->name = ne_strdup(name);
+    (*nextf)->value = ne_strdup(value);
+    (*nextf)->vlen = vlen;
+    (*nextf)->next = NULL;
+}
 
 /* Read response headers.  Returns NE_* code, sets session error. */
 static int read_response_headers(ne_request *req) 
 {
-    char hdr[8192]; /* max header length */
+    char hdr[MAX_HEADER_LEN];
     int ret, count = 0;
     
     while ((ret = read_message_header(req, hdr, sizeof hdr)) == NE_RETRY 
 	   && ++count < MAX_HEADER_FIELDS) {
-	struct header_handler *hdl;
 	char *pnt;
 	unsigned int hash = 0;
 	
-	for (hdl = req->header_catchers; hdl != NULL; hdl = hdl->next)
-	    hdl->handler(hdl->userdata, hdr);
-
 	/* Strip any trailing whitespace */
 	pnt = hdr + strlen(hdr) - 1;
 	while (pnt > hdr && (*pnt == ' ' || *pnt == '\t'))
@@ -1167,12 +1141,7 @@ static int read_response_headers(ne_request *req)
 
 	/* pnt now points to the header value. */
 	NE_DEBUG(NE_DBG_HTTP, "Header Name: [%s], Value: [%s]\n", hdr, pnt);
-	
-	/* Iterate through the header handlers */
-	for (hdl = req->header_handlers[hash]; hdl != NULL; hdl = hdl->next) {
-	    if (strcmp(hdr, hdl->name) == 0)
-		hdl->handler(hdl->userdata, pnt);
-	}
+        add_response_header(req, hash, hdr, pnt);
     }
 
     if (count == MAX_HEADER_FIELDS)
@@ -1211,6 +1180,7 @@ int ne_begin_request(ne_request *req)
     struct host_info *host;
     ne_buffer *data;
     const ne_status *const st = &req->status;
+    const char *value;
     int ret;
 
     /* Resolve hostname if necessary. */
@@ -1244,6 +1214,47 @@ int ne_begin_request(ne_request *req)
     /* Read the headers */
     HTTP_ERR(read_response_headers(req));
 
+    /* check the Connection header */
+    value = get_response_header_hv(req, HH_HV_CONNECTION, "connection");
+    if (value) {
+        char *vcopy = ne_strdup(value), *ptr = vcopy;
+
+        do {
+            char *token = ne_shave(ne_token(&ptr, ','), " \t");
+            unsigned int hash = hash_and_lower(token);
+
+            if (strcmp(token, "close") == 0) {
+                req->can_persist = 0;
+            } else if (strcmp(token, "keep-alive") == 0) {
+                req->can_persist = 1;
+            } else if (!req->session->is_http11
+                       && strcmp(token, "connection")) {
+                /* Strip the header per 2616§14.10, last para.  Avoid
+                 * danger from "Connection: connection". */
+                remove_response_header(req, token, hash);
+            }
+        } while (ptr);
+        
+        ne_free(vcopy);
+    }
+
+    /* check for T-E and C-L headers */
+    if (get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
+                               "transfer-encoding")) {
+        /* Treat *any* t-e header as implying a chunked response
+         * regardless of value, per the "Protocol Compliance"
+         * statement in the manual. */
+        req->resp.mode = R_CHUNKED;
+        req->resp.body.chunk.remain = 0;
+    } else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
+                                               "content-length")) != NULL) {
+        ne_off_t len = ne_strtoff(value, NULL, 10);
+        if (len != NE_OFFT_MAX && len >= 0 && req->resp.mode == R_TILLEOF) {
+            req->resp.mode = R_CLENGTH;
+            req->resp.body.clen.total = req->resp.body.clen.remain = len;
+        }
+    }
+    
 #ifdef NE_HAVE_SSL
     /* Special case for CONNECT handling: the response has no body,
      * and the connection can persist. */
@@ -1336,26 +1347,11 @@ int ne_discard_response(ne_request *req)
 int ne_request_dispatch(ne_request *req) 
 {
     int ret;
-
-    /* Loop sending the request:
-     * Retry whilst authentication fails and we supply it. */
     
     do {
-	ssize_t len;
-	
 	HTTP_ERR(ne_begin_request(req));
-	
-	do {
-	    len = ne_read_response_block(req, req->respbuf,
-					 sizeof req->respbuf);
-	} while (len > 0);
-
-	if (len < 0) {
-	    return NE_ERROR;
-	}
-
+        HTTP_ERR(ne_discard_response(req));
 	ret = ne_end_request(req);
-
     } while (ret == NE_RETRY);
 
     NE_DEBUG(NE_DBG_HTTP | NE_DBG_FLUSH, 
