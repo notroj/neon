@@ -14,7 +14,8 @@ Changes in release 0.25.0:
 * Use a per-request flag to enable "Expect: 100-continue" support:
  - ne_set_request_expect100() replaces ne_set_expect100()
 * Fix handling of multiple Authentication challenges per request.
-* Fix timezone handling on Win32 (Jiang Lei).
+* Win32: Fix timezone handling (Jiang Lei).
+* Win32: Add IPv6 support using ENABLE_IPV6 flag (Kai Sommerfeld).
 
 Changes in release 0.24.7:
 * Compression interface fixes:

@@ -116,6 +116,16 @@ ZLIB_DLL parameter
   nmake /f neon.mak ZLIB_SRC=\path\to\zlib ZLIB_DLL=yes
 
 
+Build neon with IPv6 support
+____________________________
+
+To build neon with support for IPv6, use parameter ENABLE_IPV6.
+
+  nmake /f neon.mak ENABLE_IPV6=yes
+
+This requires a copy of the Platform SDK which contains the IPv6
+headers and libraries.
+
 Build neon with debugging support
 _________________________________
 
