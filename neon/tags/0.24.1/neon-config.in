@@ -1,0 +1,105 @@
+#! /bin/sh
+# Originally from libxml, Copyright (C) Daniel Veillard
+# Modifications for neon Copyright (C) 2000-2002 Joe Orton.
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+libdir=@libdir@
+
+usage()
+{
+    cat <<EOF
+Usage: neon-config [OPTION]
+
+Known values for OPTION are:
+
+  --prefix=DIR		change neon prefix [default $prefix]
+  --libs		print library linking information
+  --la-file		print location of libtool .la file
+  --cflags		print pre-processor and compiler flags
+  --help		display this help and exit
+  --version		output version information
+  --support FEATURE     exit with success if feature is supported
+ Known features: dav [@NEON_SUPPORTS_DAV@], ssl [@NEON_SUPPORTS_SSL@], zlib [@NEON_SUPPORTS_ZLIB@]
+
+EOF
+
+    exit $1
+}
+
+support()
+{
+    if test "$1" = "yes"; then
+	exit 0
+    else
+	exit 1
+    fi
+}
+
+if test $# -eq 0; then
+    usage 1
+fi
+
+while test $# -gt 0; do
+    case "$1" in
+    -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
+    esac
+
+    case "$1" in
+    --prefix=*)
+	prefix=$optarg
+	;;
+
+    --prefix)
+	echo $prefix
+	;;
+
+    --version)
+	echo neon @NEON_VERSION@
+	exit 0
+	;;
+
+    --help)
+	usage 0
+	;;
+
+    --cflags)
+       	echo -I${includedir}/neon @NEON_CFLAGS@
+       	;;
+
+    --libs)
+	LIBS="-lneon @NEON_LIBS@"
+	# Don't add standard library paths
+	case "${libdir}" in
+	/usr/lib|/lib) ;;
+	*) LIBS="-L${libdir} ${LIBS}" ;;
+	esac
+	echo @user_LDFLAGS@ ${LIBS}
+	;;
+
+    --la-file)
+	echo ${libdir}/libneon.la
+	;;
+
+    --support)
+	shift
+
+	case "$1" in
+	ssl|SSL) support @NEON_SUPPORTS_SSL@ ;;
+	zlib|ZLIB) support @NEON_SUPPORTS_ZLIB@ ;;
+	dav|DAV) support @NEON_SUPPORTS_DAV@ ;;
+	*) support no ;;
+	esac
+	;;
+
+    *)
+	usage
+	exit 1
+	;;
+    esac
+    shift
+done
+
+exit 0
