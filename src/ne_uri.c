@@ -189,24 +189,27 @@ char *ne_path_unescape(const char *uri)
 #define SL (0) /* forward-slash = "/" */
 #define UN (0) /* unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" */
 
+#define OT (1) /* others */
+
 /* Lookup table for percent-encoding logic: value is non-zero if
  * character should be percent-encoded. */
 static const unsigned char uri_chars[128] = {
 /* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
-/*   0x */  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-/*   1x */  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-/*   2x */  0, SD,  0, GD, SD,  0, SD, SD, SD, SD, SD, SD, SD, UN, UN, SL,
-/*   3x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, SD,  0, SD,  0, GD,
+/*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   2x */ OT, SD, OT, GD, SD, OT, SD, SD, SD, SD, SD, SD, SD, UN, UN, SL,
+/*   3x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, SD, OT, SD, OT, GD,
 /*   4x */ GD, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
-/*   5x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD,  0, GD,  0,  0,
-/*   6x */  0, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
-/*   7x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,  0,  0,  0, UN,  0 
+/*   5x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, OT, GD, OT, OT,
+/*   6x */ OT, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
+/*   7x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, OT, OT, OT, UN, OT 
 };
 
 #undef SD
 #undef GD
 #undef SL
 #undef UN
+#undef OT
 
 /* CH must be an unsigned char; evaluates to 1 if CH should be
  * percent-encoded. */
