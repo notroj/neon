@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -711,13 +711,13 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     /* Try parsing with no password. */
     if (PKCS12_parse(p12, NULL, &pkey, &cert, NULL) == 1) {
         /* Success - no password needed for decryption. */
-        unsigned int len = 0;
+        int len = 0;
         unsigned char *name = X509_alias_get0(cert, &len);
         
         cc = ne_calloc(sizeof *cc);
         cc->pkey = pkey;
         cc->decrypted = 1;
-        if (name && len)
+        if (name && len > 0)
             cc->friendly_name = ne_strndup((char *)name, len);
         populate_cert(&cc->cert, cert);
         PKCS12_free(p12);
@@ -856,6 +856,7 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 {
     int len;
     unsigned char *der, *p;
+    char *ret;
     
     /* find the length of the DER encoding. */
     len = i2d_X509(cert->subject, NULL);
@@ -863,9 +864,9 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
     p = der = ne_malloc(len);
     i2d_X509(cert->subject, &p); /* p is incremented */
 
-    p = ne_base64(der, len);
+    ret = ne_base64(der, len);
     ne_free(der);
-    return p;
+    return ret;
 }
 
 #if SHA_DIGEST_LENGTH != 20
