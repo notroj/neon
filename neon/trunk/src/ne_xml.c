@@ -467,24 +467,19 @@ void ne_xml_push_handler(ne_xml_parser *p,
 int ne_xml_parse_v(void *userdata, const char *block, size_t len) 
 {
     ne_xml_parser *p = userdata;
-    /* FIXME: The two XML parsers break all our nice abstraction by
-     * choosing different char *'s. The swine. This cast will come
-     * back and bite us someday, no doubt. */
-    ne_xml_parse(p, block, len);
-    return 0;
+    return ne_xml_parse(p, (const ne_xml_char *)block, len);
 }
 
 #define BOM_UTF8 "\xEF\xBB\xBF" /* UTF-8 BOM */
 
-/* Parse the given block of input of length len */
-void ne_xml_parse(ne_xml_parser *p, const char *block, size_t len) 
+int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len) 
 {
     int ret, flag;
     /* duck out if it's broken */
     if (p->failure) {
 	NE_DEBUG(NE_DBG_XML, "Not parsing %" NE_FMT_SIZE_T " bytes.\n", 
 		 len);
-	return;
+	return p->failure;
     }
     if (len == 0) {
 	flag = -1;
@@ -504,13 +499,12 @@ void ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
             p->bom_pos++;
         }
         if (len == 0)
-            return;
+            return 0;
         if (p->bom_pos == 0) {
             p->bom_pos = 3; /* no BOM */
         } else if (p->bom_pos > 0 && p->bom_pos < 3) {
             strcpy(p->error, _("Invalid Byte Order Mark"));
-            p->failure = 1;
-            return;
+            return p->failure = 1;
         }
     }
 
@@ -538,6 +532,7 @@ void ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
         NE_DEBUG(NE_DBG_XMLPARSE, "XML parse error: %s\n", p->error);
     }
 #endif
+    return p->failure;
 }
 
 int ne_xml_failed(ne_xml_parser *p)
