@@ -82,22 +82,20 @@ static int multi_init(void)
     return OK;
 }
 
-/* Create and connect *sock to address addr on given port. */
-static int do_connect(ne_socket **sock, ne_sock_addr *addr, unsigned int port)
+static ne_socket *do_connect(ne_sock_addr *addr, unsigned int port)
 {
+    ne_socket *sock = ne_sock_create();
     const ne_inet_addr *ia;
 
-    *sock = ne_sock_create();
-    ONN("could not create socket", *sock == NULL);
+    if (!sock) return NULL;
 
     for (ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr)) {
-	if (ne_sock_connect(*sock, ia, port) == 0)
-            return OK;
+	if (ne_sock_connect(sock, ia, port) == 0)
+            return sock;
     }
     
-    t_context("could not connect to server: %s", ne_sock_error(*sock));
-    ne_sock_close(*sock);
-    return FAIL;
+    ne_sock_close(sock);
+    return NULL;
 }
 
 #ifdef SOCKET_SSL
@@ -189,7 +187,8 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
     pair.fn = fn;
     pair.userdata = ud;
     CALL(spawn_server(7777, wrap_serve, &pair));
-    CALL(do_connect(sock, localhost, 7777));
+    *sock = do_connect(localhost, 7777);
+    ONN("could not connect to localhost:7777", *sock == NULL);
     ONV(ne_sock_connect_ssl(*sock, client_ctx),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
     return OK;
@@ -200,7 +199,9 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
     CALL(spawn_server(7777, fn, ud));
-    return do_connect(sock, localhost, 7777);
+    *sock = do_connect(localhost, 7777);
+    ONN("could not connect to localhost:7777", *sock == NULL);
+    return OK;
 }
 #endif
 

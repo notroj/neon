@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,8 +35,6 @@
 #include "child.h"
 #include "utils.h"
 
-#define ABORT (-42) /* magic code for abort handlers */
-
 /* A set of SAX handlers which serialize SAX events back into a 
  * pseudo-XML-like string. */
 static int startelm(void *userdata, int state,
@@ -62,7 +60,7 @@ static int chardata(void *userdata, int state, const char *cdata, size_t len)
 {
     ne_buffer *buf = userdata;
     ne_buffer_append(buf, cdata, len);
-    return strncmp(cdata, "!ABORT!", len) == 0 ? ABORT : NE_XML_DECLINE;
+    return !strncmp(cdata, "!ABORT!", len);
 }
 
 static int endelm(void *userdata, int state,
@@ -141,7 +139,7 @@ static int startelm_abort(void *buf, int parent,
 {
     if (strcmp(name, "abort-start") == 0) {
         ne_buffer_zappend(buf, "ABORT");
-        return ABORT;
+        return NE_XML_ABORT;
     } else
         return startelm(buf, parent, nspace, name, atts);
 }
@@ -151,7 +149,7 @@ static int endelm_abort(void *buf, int state,
 {
     if (strcmp(name, "abort-end") == 0) {
         ne_buffer_zappend(buf, "ABORT");
-        return ABORT;
+        return -1;
     } else
         return 0;
 }
@@ -180,11 +178,9 @@ static int parse_match(const char *doc, const char *result, enum match_type t)
     ne_xml_parse(p, "", 0);
     
     if (t == match_invalid)
-        ONV(ne_xml_failed(p) != ABORT, 
-            ("parse got %d not abort failure: %s", 
-             ne_xml_failed(p), buf->data));
+        ONV(ne_xml_valid(p), ("parse did not fail: %s", buf->data));
     else
-        ONV(ne_xml_failed(p), ("parse failed: %s", ne_xml_get_error(p)));
+        ONV(!ne_xml_valid(p), ("parse failed: %s", ne_xml_get_error(p)));
     
     if (t == match_encoding) {
         const char *enc = ne_xml_doc_encoding(p);
@@ -218,9 +214,6 @@ static int matches(void)
 	/* test for cdata between elements. */
 	{ PFX "<hello>\r\n<wide>  world</wide></hello>",
 	  "<{}hello>\n<{}wide>  world</{}wide></{}hello>"},
-
-        /* UTF-8 XML Byte Order Mark */
-        { "\xEF\xBB\xBF" PFX "<hello/>", "<{}hello></{}hello>" },
 
 	/*** Tests for namespace handling. ***/
 #define NSA "xmlns:foo='bar'"
@@ -336,26 +329,7 @@ static int fail_parse(void)
         /* malformed namespace declarations */
         PFX "<foo xmlns:D=''/>",
         PFX "<foo xmlns:='fish'/>",
-        PFX "<foo xmlns:.bar='fish'/>",
-        PFX "<foo xmlns:-bar='fish'/>",
-        PFX "<foo xmlns:0bar='fish'/>",
-        PFX "<fee xmlns:8baz='bar'/>",
-        /* element names which are not valid QNames. */
-        PFX "<foo:bar:baz xmlns:foo='bar'/>",
         PFX "<foo: xmlns:foo='bar'/>",
-        PFX "<:fee/>",
-        PFX "<0fish/>",
-        PFX "<foo:0fish xmlns:foo='bar'/>",
-        PFX "<foo:9fish xmlns:foo='bar'/>",
-        PFX "<foo:-fish xmlns:foo='bar'/>",
-        PFX "<foo:.fish xmlns:foo='bar'/>",
-
-#if 0 /* currently disabled for SVN */
-        PFX "<fee xmlns:baz:bar='bar'/>",
-        PFX "<fee xmlns::bar='bar'/>",
-        PFX "<foo::fish xmlns:foo='bar'/>",
-#endif
-
 #if 0
         /* 2-byte encoding of '.': */
         PFX "<foo>" "\x2F\xC0\xAE\x2E\x2F" "</foo>",
@@ -367,14 +341,9 @@ static int fail_parse(void)
         PFX "<foo>" "\x2F\xF8\x80\x80\x80\xAE\x2E\x2F" "</foo>",
         /* 6-byte encoding of '.': */
         PFX "<foo>" "\x2F\xFC\x80\x80\x80\x80\xAE\x2E\x2F" "</foo>",
-#endif
         /* two-byte encoding of '<' must not be parsed as a '<': */
         PFX "\xC0\xBC" "foo></foo>",
-
-        /* Invalid UTF-8 XML Byte Order Marks */
-        "\xEF\xBB" PFX "<hello/>",
-        "\xEF" PFX "<hello/>",
-
+#endif
         NULL
     };
     int n;
@@ -385,13 +354,10 @@ static int fail_parse(void)
 
         ne_xml_parse(p, docs[n], strlen(docs[n]));
         ne_xml_parse(p, "", 0);
-        ONV(ne_xml_failed(p) <= 0, 
-            ("`%s' did not get positive parse error", docs[n]));
+        ONV(ne_xml_valid(p), ("`%s' was valid", docs[n]));
 
         err = ne_xml_get_error(p);
-        NE_DEBUG(NE_DBG_HTTP, "Parse error for '%s': %s\n", docs[n], err);
-        ONV(strstr(err, "parse error") == NULL
-            && strstr(err, "Invalid Byte Order Mark") == NULL,
+        ONV(strstr(err, "parse error") == NULL,
             ("bad error %s", err));
         
         ne_xml_destroy(p);
@@ -460,7 +426,7 @@ static int attributes(void)
 
     ne_xml_parse_v(p, doc, strlen(doc));
 
-    ONV(ne_xml_failed(p), ("parse error: %s", ne_xml_get_error(p)));
+    ONV(!ne_xml_valid(p), ("parse error: %s", ne_xml_get_error(p)));
 
     ne_xml_destroy(p);
     return OK;

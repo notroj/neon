@@ -263,8 +263,8 @@ static int run_207_response(char *resp, const char *expected)
 
     CALL(await_server());
 
-    ONV(ne_xml_failed(p),
-        ("parse error in response body: %s", ne_xml_get_error(p)));
+    ONV(!ne_xml_valid(p),
+        ("response body was invalid: %s", ne_xml_get_error(p)));
 
     ONV(strcmp(buf->data, expected),
         ("comparison failed.\n"
@@ -521,14 +521,7 @@ static int pfind_simple(void)
                                        STAT_207("256 Second is OK")))),
           "results(/alpha,prop:[{DAV:,fishbone}='strike one':{234 First is OK}];)//"
           "results(/beta,prop:[{DAV:,fishbone}='strike two':{256 Second is OK}];)//",
-          0, 0},
-
-        /* whitespace handling. */
-        { MULTI_207(RESP_207("\r\nhttp://localhost:7777/alpha ",
-                             PSTAT_207(PROPS_207(APROP_207("alpha", "beta"))
-                                       "<D:status>\r\nHTTP/1.1 200 OK </D:status>"))),
-          "results(http://localhost:7777/alpha,prop:[{DAV:,alpha}='beta':{200 OK}];)//",
-          0, 0}
+          0, 0}          
     };
     const ne_propname pset1[] = {
         { "DAV:", "fishbone", },

@@ -33,7 +33,9 @@
 #include "ne_utils.h"
 #include "ne_i18n.h"
 
-#ifdef NE_HAVE_ZLIB
+#include "ne_private.h"
+
+#ifdef NEON_ZLIB
 
 #include <zlib.h>
 
@@ -393,6 +395,31 @@ int ne_decompress_destroy(ne_decompress *ctx)
     return ret;
 }
 
+/* Prepare for a compressed response */
+static void gz_pre_send(ne_request *r, void *ud, ne_buffer *req)
+{
+    ne_decompress *ctx = ud;
+
+    NE_DEBUG(NE_DBG_HTTP, "compress: Initialization.\n");
+
+    /* (Re-)Initialize the context */
+    ctx->state = NE_Z_BEFORE_DATA;
+    if (ctx->zstrinit) inflateEnd(&ctx->zstr);
+    ctx->zstrinit = 0;
+    ctx->incount = ctx->footcount = 0;
+    ctx->checksum = crc32(0L, Z_NULL, 0);
+    if (ctx->enchdr) {
+        ne_free(ctx->enchdr);
+        ctx->enchdr = NULL;
+    }
+}
+
+/* Kill the pre-send hook */
+static void gz_destroy(ne_request *req, void *userdata)
+{
+    ne_kill_pre_send(ne_get_session(req), gz_pre_send, userdata);
+}
+
 /* Wrapper for user-passed acceptor function. */
 static int gz_acceptor(void *userdata, ne_request *req, const ne_status *st)
 {
@@ -412,18 +439,18 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 
     ne_add_response_body_reader(req, gz_acceptor, gz_reader, ctx);
 
-    ctx->state = NE_Z_BEFORE_DATA;
     ctx->reader = rdr;
     ctx->userdata = userdata;
     ctx->session = ne_get_session(req);
-    /* initialize the checksum. */
-    ctx->checksum = crc32(0L, Z_NULL, 0);
     ctx->acceptor = acpt;
+
+    ne_hook_pre_send(ctx->session, gz_pre_send, ctx);
+    ne_hook_destroy_request(ctx->session, gz_destroy, ctx);
 
     return ctx;    
 }
 
-#else /* !NE_HAVE_ZLIB */
+#else /* !NEON_ZLIB */
 
 /* Pass-through interface present to provide ABI compatibility. */
 
@@ -440,4 +467,4 @@ int ne_decompress_destroy(ne_decompress *dc)
     return 0;
 }
 
-#endif /* NE_HAVE_ZLIB */
+#endif /* NEON_ZLIB */

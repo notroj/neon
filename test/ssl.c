@@ -39,7 +39,7 @@
 #include "child.h"
 #include "utils.h"
 
-#ifndef NE_HAVE_SSL
+#ifndef NEON_SSL
 /* this file shouldn't be built if SSL is not enabled. */
 #error SSL not supported
 #endif

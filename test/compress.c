@@ -130,15 +130,7 @@ static int do_fetch(const char *realfn, const char *gzipfn,
     req = ne_request_create(sess, "GET", "/");
     dc = ne_decompress_reader(req, ne_accept_2xx, reader, &body);
 
-#ifdef NE_DEBUGGING
-    ne_debug_init(ne_debug_stream, ne_debug_mask & ~NE_DBG_HTTPBODY);
-#endif
-
     ONREQ(ne_request_dispatch(req));
-
-#ifdef NE_DEBUGGING
-    ne_debug_init(ne_debug_stream, ne_debug_mask | NE_DBG_HTTPBODY);
-#endif
 
     ONN("file not served", ne_get_status(req)->code != 200);
 
@@ -360,7 +352,7 @@ ne_test tests[] = {
     T(chunked_20b),
     T(chunked_10b),
     T(chunked_10b_wn),
-    T_XFAIL(retry_notcompress),
-    T_XFAIL(retry_compress),
+    T(retry_notcompress),
+    T(retry_compress),
     T(NULL)
 };

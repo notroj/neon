@@ -323,7 +323,7 @@ static ne_ssl_certificate *make_chain(STACK_OF(X509) *chain)
     for (n = 0; n < count; n++) {
         ne_ssl_certificate *cert = ne_malloc(sizeof *cert);
         populate_cert(cert, X509_dup(sk_X509_value(chain, n)));
-#ifdef NE_DEBUGGING
+#if NE_DEBUGGING
         if (ne_debug_mask & NE_DBG_SSL) {
             fprintf(ne_debug_stream, "Cert #%d:\n", n);
             X509_print_fp(ne_debug_stream, cert->subject);
@@ -502,7 +502,7 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
 }
 
 /* For internal use only. */
-int ne__negotiate_ssl(ne_request *req)
+int ne_negotiate_ssl(ne_request *req)
 {
     ne_session *sess = ne_get_session(req);
     ne_ssl_context *ctx = sess->ssl_context;

@@ -50,7 +50,7 @@
 #include <windows.h> /* for GetCurrentThreadId() etc */
 #endif
 
-#ifdef NE_HAVE_SSL
+#ifdef NEON_SSL
 #include <openssl/rand.h>
 #endif
 
@@ -161,11 +161,8 @@ typedef struct {
     /* This used for Basic auth */
     char *basic; 
 #ifdef HAVE_GSSAPI
-    /* for the GSSAPI/Negotiate scheme: */
+    /* This used for GSSAPI auth */
     char *gssapi_token;
-    gss_ctx_id_t gssctx;
-    gss_name_t gssname;
-    gss_OID gssmech;
 #endif
     /* These all used for Digest auth */
     char *realm;
@@ -205,7 +202,7 @@ struct auth_request {
     struct ne_md5_ctx response_body;
 
     /* Results of response-header callbacks */
-    ne_buffer *auth_hdr, *auth_info_hdr;
+    char *auth_hdr, *auth_info_hdr;
 };
 
 static void clean_session(auth_session *sess) 
@@ -217,17 +214,6 @@ static void clean_session(auth_session *sess)
     NE_FREE(sess->opaque);
     NE_FREE(sess->realm);
 #ifdef HAVE_GSSAPI
-    {
-        int major;
-
-        if (sess->gssctx != GSS_C_NO_CONTEXT)
-            gss_delete_sec_context(&major, sess->gssctx, GSS_C_NO_BUFFER);
-        
-        if (sess->gssmech != GSS_C_NO_OID) {
-            gss_release_oid(&major, &sess->gssmech);
-            sess->gssmech = GSS_C_NO_OID;
-        }
-    }
     NE_FREE(sess->gssapi_token);
 #endif
 }
@@ -241,7 +227,7 @@ static char *get_cnonce(void)
 
     ne_md5_init_ctx(&hash);
 
-#ifdef NE_HAVE_SSL
+#ifdef NEON_SSL
     if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
 	ne_md5_process_bytes(data, sizeof data, &hash);
     else {
@@ -274,7 +260,7 @@ static char *get_cnonce(void)
 	ne_md5_process_bytes(&pid, sizeof pid, &hash);
     }
 
-#ifdef NE_HAVE_SSL
+#ifdef NEON_SSL
     }
 #endif
     
@@ -335,162 +321,69 @@ static char *request_basic(auth_session *sess)
 /* Add GSSAPI authentication credentials to a request */
 static char *request_gssapi(auth_session *sess) 
 {
-    if (sess->gssapi_token) 
-        return ne_concat("Negotiate ", sess->gssapi_token, "\r\n", NULL);
-    else
-        return NULL;
+    return ne_concat("Negotiate ", sess->gssapi_token, "\r\n", NULL);
 }
 
-/* Create an GSSAPI name for server HOSTNAME; returns non-zero on
- * error. */
-static void get_gss_name(gss_name_t *server, const char *hostname)
+static int get_gss_name(gss_name_t *server, auth_session *sess)
 {
-    unsigned int major, minor;
+    unsigned int major_status, minor_status;
     gss_buffer_desc token = GSS_C_EMPTY_BUFFER;
 
-    token.value = ne_concat("HTTP@", hostname, NULL);
+    token.value = ne_concat("HTTP@", sess->sess->server.hostname, NULL);
     token.length = strlen(token.value);
 
-    major = gss_import_name(&minor, &token, GSS_C_NT_HOSTBASED_SERVICE,
-                            server);
-    ne_free(token.value);
-    
-    if (GSS_ERROR(major)) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: gss_import_name failed.\n");
-        *server = GSS_C_NO_NAME;
-    }
+    major_status = gss_import_name(&minor_status, &token,
+                                   GSS_C_NT_HOSTBASED_SERVICE,
+                                   server);
+    return GSS_ERROR(major_status) ? -1 : 0;
 }
 
-/* Append GSSAPI error(s) for STATUS of type TYPE to BUF; prepending
- * ": " to each error if *FLAG is non-zero, setting *FLAG after an
- * error has been appended. */
-static void make_gss_error(ne_buffer *buf, int *flag,
-                           unsigned int status, int type)
+/* Examine a GSSAPI auth challenge; returns 0 if a valid challenge,
+ * else non-zero. */
+static int 
+gssapi_challenge(auth_session *sess, struct auth_challenge *parms) 
 {
-    int major, minor;
-    int context = 0;
-    
-    do {
-        gss_buffer_desc msg;
-        major = gss_display_status(&minor, status, type,
-                                   GSS_C_NO_OID, &context, &msg);
-        if (major == GSS_S_COMPLETE && msg.length) {
-            if ((*flag)++) ne_buffer_append(buf, ": ", 2);
-            ne_buffer_append(buf, msg.value, msg.length);
-        }
-        if (msg.length) gss_release_buffer(&minor, &msg);
-    } while (context);
-}
+    gss_ctx_id_t context;
+    gss_name_t server_name;
+    unsigned int major_status, minor_status;
+    gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
 
-/* Continue a GSS-API Negotiate exchange, using input TOKEN if
- * non-NULL.  Returns non-zero on error. */
-static int continue_negotiate(auth_session *sess, const char *token)
-{
-    unsigned int major, minor;
-    gss_buffer_desc input = GSS_C_EMPTY_BUFFER;
-    gss_buffer_desc output = GSS_C_EMPTY_BUFFER;
-    unsigned char *bintoken = NULL;
-    int ret;
-    gss_OID mech = sess->gssmech;
+    clean_session(sess);
 
-    if (token) {
-        input.length = ne_unbase64(token, &bintoken);
-        if (input.length == 0) {
-            NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Invalid input [%s].\n",
-                     token);
-            return -1;
-        }
-        input.value = bintoken;
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Continuation token [%s]\n", token);
-    }
-    else if (sess->gssctx != GSS_C_NO_CONTEXT) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Reset incomplete context.\n");
-        gss_delete_sec_context(&minor, &sess->gssctx, GSS_C_NO_BUFFER);
-    }
-
-    major = gss_init_sec_context(&minor, GSS_C_NO_CREDENTIAL, &sess->gssctx,
-                                 sess->gssname, mech, 
-                                 GSS_C_MUTUAL_FLAG, GSS_C_INDEFINITE, 
-                                 GSS_C_NO_CHANNEL_BINDINGS,
-                                 &input, &sess->gssmech, &output, NULL, NULL);
-
-    /* done with the input token. */
-    if (bintoken) ne_free(bintoken);
-
-    if (GSS_ERROR(major)) {
-        ne_buffer *err = ne_buffer_create();
-        int flag = 0;
-
-        make_gss_error(err, &flag, major, GSS_C_GSS_CODE);
-        make_gss_error(err, &flag, minor, GSS_C_MECH_CODE);
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Error: %s\n", err->data);
-        ne_set_error(sess->sess, _("GSSAPI authentication error (%s)"), 
-                     err->data);
-        ne_buffer_destroy(err);
+    if (get_gss_name(&server_name, sess))
         return -1;
-    }
 
-    if (major == GSS_S_CONTINUE_NEEDED || major == GSS_S_COMPLETE) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: init_sec_context OK. (major=%d)\n",
-                 major);
-        ret = 0;
-    } 
-    else {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Init failure %d.\n", major);
-        ret = -1;
-    }
+    major_status = gss_init_sec_context(&minor_status,
+                                        GSS_C_NO_CREDENTIAL,
+                                        &context,
+                                        server_name,
+                                        GSS_C_NO_OID,
+                                        0,
+                                        GSS_C_INDEFINITE,
+                                        GSS_C_NO_CHANNEL_BINDINGS,
+                                        &input_token,
+                                        NULL,
+                                        &output_token,
+                                        NULL,
+                                        NULL);
+    gss_release_name(&minor_status, &server_name);
 
-    if (major != GSS_S_CONTINUE_NEEDED) {
-        /* context no longer needed: destroy it */
-        gss_delete_sec_context(&minor, &sess->gssctx, GSS_C_NO_BUFFER);
-    }
-
-    if (output.length) {
-        sess->gssapi_token = ne_base64(output.value, output.length);
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Output token: [%s]\n", 
-                 sess->gssapi_token);
-        gss_release_buffer(&minor, &output);
-    } else {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: No output token.\n");
-    }
-
-    return ret;
-}
-
-/* Process a Negotiate challange CHALL in session SESS; returns zero
- * if challenge is accepted. */
-static int gssapi_challenge(auth_session *sess, struct auth_challenge *chall) 
-{
-    int ret = continue_negotiate(sess, chall->opaque);
-    if (ret == 0) 
-        sess->scheme = auth_scheme_gssapi;
-    return ret;
-}
-
-/* Verify the header HDR in a Negotiate response. */
-static int verify_negotiate_response(auth_session *sess, char *hdr)
-{
-    char *sep, *ptr = strchr(hdr, ' ');
-
-    if (strncmp(hdr, "Negotiate", ptr - hdr) != 0) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Not a Negotiate response!\n");
+    if (GSS_ERROR(major_status)) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "gss_init_sec_context failed.\n");
         return -1;
     }
     
-    ptr++;
+    if (output_token.length == 0)
+        return -1;
 
-    if (strlen(ptr) == 0) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: No token in Negotiate response!\n");
-        return 0;
-    }
+    sess->gssapi_token = ne_base64(output_token.value, output_token.length);
+    gss_release_buffer(&major_status, &output_token);
 
-    if ((sep = strchr(ptr, ',')) != NULL)
-        *sep = '\0';
-    if ((sep = strchr(ptr, ' ')) != NULL)
-        *sep = '\0';
-
-    NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Negotiate response token [%s]\n", ptr);
-    return continue_negotiate(sess, ptr);
+    NE_DEBUG(NE_DBG_HTTPAUTH, 
+             "Base64 encoded GSSAPI challenge: %s.\n", sess->gssapi_token);
+    sess->scheme = auth_scheme_gssapi;
+    return 0;
 }
 #endif
 
@@ -639,7 +532,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 	 * where-ever it is coming from, and calculate the digest. */
 	
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Digesting request body...\n");
-	ne__pull_request_body(req->request, digest_body, &body);
+	ne_pull_request_body(req->request, digest_body, &body);
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Digesting request body done.\n");
 		
 	ne_md5_finish_ctx(&body, tmp_md5);
@@ -744,8 +637,7 @@ static int tokenize(char **hdr, char **key, char **value, int ischall)
 		*pnt = '\0';
 		*value = pnt + 1;
 		state = AFTER_EQ;
-	    } else if ((*pnt == ' ' || *pnt == ',') 
-                       && ischall && *key != NULL) {
+	    } else if (*pnt == ' ' && ischall && *key != NULL) {
 		*value = NULL;
 		*pnt = '\0';
 		*hdr = pnt + 1;
@@ -787,8 +679,8 @@ static int tokenize(char **hdr, char **key, char **value, int ischall)
  *    0 if it gives a valid authentication for the server 
  *    non-zero otherwise (don't believe the response in this case!).
  */
-static int verify_digest_response(struct auth_request *req, auth_session *sess,
-                                  const char *value) 
+static int verify_response(struct auth_request *req, auth_session *sess,
+			   const char *value) 
 {
     char *hdr, *pnt, *key, *val;
     auth_qop qop = auth_qop_none;
@@ -950,39 +842,36 @@ static int auth_challenge(auth_session *sess, const char *value)
     while (!tokenize(&pnt, &key, &val, 1)) {
 
 	if (val == NULL) {
-            auth_scheme scheme;
+	    /* We have a new challenge */
+	    NE_DEBUG(NE_DBG_HTTPAUTH, "New challenge for scheme [%s]\n", key);
+	    chall = ne_calloc(sizeof *chall);
 
+	    chall->next = challenges;
+	    challenges = chall;
+	    /* Initialize the challenge parameters */
+	    /* Which auth-scheme is it (case-insensitive matching) */
 	    if (strcasecmp(key, "basic") == 0) {
-		scheme = auth_scheme_basic;
+		NE_DEBUG(NE_DBG_HTTPAUTH, "Basic scheme.\n");
+		chall->scheme = auth_scheme_basic;
 	    } else if (strcasecmp(key, "digest") == 0) {
-		scheme = auth_scheme_digest;
-            }
-#ifdef HAVE_GSSAPI
-            /* cope with a Negotiate parameter which doesn't match the
-             * auth-param due to the broken spec. */
-            else if (chall && chall->scheme == auth_scheme_gssapi
-                     && chall->opaque == NULL) {
-                chall->opaque = key;
-                continue;
+		NE_DEBUG(NE_DBG_HTTPAUTH, "Digest scheme.\n");
+		chall->scheme = auth_scheme_digest;
+#ifdef HAVE_GSSAPI		
 	    } else if (strcasecmp(key, "negotiate") == 0) {
-		scheme = auth_scheme_gssapi;
-            }
+		NE_DEBUG(NE_DBG_HTTPAUTH, "GSSAPI scheme.\n");
+		chall->scheme = auth_scheme_gssapi;
 #endif
-            else {
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Ignoring challenge '%s'.\n", key);
-                chall = NULL;
-                continue;
+	    } else {
+		NE_DEBUG(NE_DBG_HTTPAUTH, "Unknown scheme.\n");
+		ne_free(chall);
+		challenges = NULL;
+		break;
 	    }
-            
-            NE_DEBUG(NE_DBG_HTTPAUTH, "New '%s' challenge.\n", key);
-            chall = ne_calloc(sizeof *chall);
-            chall->scheme = scheme;
-            chall->next = challenges;
-            challenges = chall;
 	    continue;
 	} else if (chall == NULL) {
-	    /* Ignore pairs for an unknown challenge. */
-            NE_DEBUG(NE_DBG_HTTPAUTH, "Ignored pair: %s = %s\n", key, val);
+	    /* If we haven't got an auth-scheme, and we're
+	     * haven't yet found a challenge, skip this pair.
+	     */
 	    continue;
 	}
 
@@ -1035,17 +924,15 @@ static int auth_challenge(auth_session *sess, const char *value)
     success = 0;
 
 #ifdef HAVE_GSSAPI
-    /* Ignore Negotiate challenges from origin servers which don't
-     * come over SSL. */
-    if (sess->spec == &ah_proxy_class || sess->context != AUTH_ANY) {
+    if (strcmp(ne_get_scheme(sess->sess), "https") == 0) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for GSSAPI.\n");
         /* Try a GSSAPI challenge */
         for (chall = challenges; chall != NULL; chall = chall->next) {
             if (chall->scheme == auth_scheme_gssapi) {
-                if (!gssapi_challenge(sess, chall)) {
-                    success = 1;
-                    break;
-                }
+	    if (!gssapi_challenge(sess, chall)) {
+		success = 1;
+		break;
+	    }
             }
         }
     }
@@ -1106,14 +993,6 @@ static void auth_body_reader(void *cookie, const char *block, size_t length)
     ne_md5_process_bytes(block, length, ctx);
 }
 
-/* Collect auth challenges into an ne_buffer */
-static void ah_collect_header(void *userdata, const char *value)
-{
-    ne_buffer *ar = userdata;
-    if (ne_buffer_size(ar)) ne_buffer_append(ar, ", ", 2);
-    ne_buffer_zappend(ar, value);
-}
-
 static void ah_create(ne_request *req, void *session, const char *method,
 		      const char *uri)
 {
@@ -1130,14 +1009,14 @@ static void ah_create(ne_request *req, void *session, const char *method,
         areq->method = method;
         areq->uri = uri;
         areq->request = req;
-        areq->auth_hdr = ne_buffer_create();
-        areq->auth_info_hdr = ne_buffer_create();
         
         ne_add_response_header_handler(req, sess->spec->resp_hdr,
-                                       ah_collect_header, areq->auth_hdr);
+                                       ne_duplicate_header, &areq->auth_hdr);
+        
 	
         ne_add_response_header_handler(req, sess->spec->resp_info_hdr,
-                                       ah_collect_header, areq->auth_info_hdr);
+                                       ne_duplicate_header, 
+                                       &areq->auth_info_hdr);
         
         sess->attempt = 0;
         
@@ -1156,7 +1035,7 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
     } else {
 	char *value;
 
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Handling auth session.\n");
+	NE_DEBUG(NE_DBG_HTTPAUTH, "Handling.");
 	req->will_handle = 1;
 
 	if (sess->qop == auth_qop_auth_int) {
@@ -1203,44 +1082,22 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 
     if (!areq) return NE_OK;
 
-#ifdef HAVE_GSSAPI
-    /* whatever happens: forget the GSSAPI token cached thus far */
-    if (sess->gssapi_token) {
-        ne_free(sess->gssapi_token);
-        sess->gssapi_token = NULL;
-    }
-#endif
-
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
 	     sess->attempt, status->code, sess->spec->status_code, 
-	     sess->spec->resp_hdr, areq->auth_hdr->data);
-    if (ne_buffer_size(areq->auth_info_hdr) 
-        && sess->scheme == auth_scheme_digest) {
-        if (verify_digest_response(areq, sess, areq->auth_info_hdr->data)) {
-            NE_DEBUG(NE_DBG_HTTPAUTH, "Response authentication invalid.\n");
-            ne_set_error(sess->sess, "%s", _(sess->spec->fail_msg));
-            ret = NE_ERROR;
-        }
-    }
-#ifdef HAVE_GSSAPI
-    /* one must wonder... has Mr Brezak actually read RFC2617? */
-    else if (sess->scheme == auth_scheme_gssapi 
-             && (status->klass == 2 || status->klass == 3)
-             && ne_buffer_size(areq->auth_hdr)) {
-        if (verify_negotiate_response(sess, areq->auth_hdr->data)) { 
-            NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Mutual auth failed.\n");
-            ret = NE_ERROR;
-        }
-    }
-#endif /* HAVE_GSSAPI */
-    else if ((status->code == sess->spec->status_code ||
-              (status->code == 401 && sess->context == AUTH_CONNECT)) &&
-	       ne_buffer_size(areq->auth_hdr)) {
+	     sess->spec->resp_hdr, SAFELY(areq->auth_hdr));
+    if (areq->auth_info_hdr != NULL && 
+	verify_response(areq, sess, areq->auth_info_hdr)) {
+	NE_DEBUG(NE_DBG_HTTPAUTH, "Response authentication invalid.\n");
+	ne_set_error(sess->sess, "%s", _(sess->spec->fail_msg));
+	ret = NE_ERROR;
+    } else if ((status->code == sess->spec->status_code ||
+                (status->code == 401 && sess->context == AUTH_CONNECT)) &&
+	       areq->auth_hdr != NULL) {
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Got challenge (code %d).\n", status->code);
-	if (!auth_challenge(sess, areq->auth_hdr->data)) {
+	NE_DEBUG(NE_DBG_HTTPAUTH, "Got challenge with code %d.\n", status->code);
+	if (!auth_challenge(sess, areq->auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
 	    clean_session(sess);
@@ -1248,9 +1105,9 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 	}
     }
 
-    ne_buffer_clear(areq->auth_hdr);
-    ne_buffer_clear(areq->auth_info_hdr);
-
+    NE_FREE(areq->auth_info_hdr);
+    NE_FREE(areq->auth_hdr);
+    
     return ret;
 }
 
@@ -1258,24 +1115,12 @@ static void ah_destroy(ne_request *req, void *session)
 {
     auth_session *sess = session;
     struct auth_request *areq = ne_get_request_private(req, sess->spec->id);
-
-    if (areq) {
-        ne_buffer_destroy(areq->auth_info_hdr);
-        ne_buffer_destroy(areq->auth_hdr);
-        ne_free(areq);
-    }
+    if (areq) ne_free(areq);
 }
 
 static void free_auth(void *cookie)
 {
     auth_session *sess = cookie;
-
-#ifdef HAVE_GSSAPI
-    if (sess->gssname != GSS_C_NO_NAME) {
-        int major;
-        gss_release_name(&major, sess->gssname);
-    }
-#endif
 
     clean_session(sess);
     ne_free(sess);
@@ -1292,19 +1137,10 @@ static void auth_register(ne_session *sess, int isproxy,
     ahs->sess = sess;
     ahs->spec = ahc;
 
-    if (strcmp(ne_get_scheme(sess), "https") == 0) {
+    if (strcmp(ne_get_scheme(sess), "https") == 0)
         ahs->context = isproxy ? AUTH_CONNECT : AUTH_NOTCONNECT;
-#ifdef HAVE_GSSAPI
-        {
-            get_gss_name(&ahs->gssname, (isproxy ? sess->proxy.hostname 
-                                         : sess->server.hostname));
-            ahs->gssctx = GSS_C_NO_CONTEXT;
-            ahs->gssmech = GSS_C_NO_OID;
-        }
-#endif
-    } else {
+    else
         ahs->context = AUTH_ANY;
-    }
     
     /* Register hooks */
     ne_hook_create_request(sess, ah_create, ahs);
