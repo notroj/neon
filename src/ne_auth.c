@@ -217,7 +217,7 @@ static void clean_session(auth_session *sess)
     NE_FREE(sess->realm);
 #ifdef HAVE_GSSAPI
     {
-        int major;
+        unsigned int major;
 
         if (sess->gssctx != GSS_C_NO_CONTEXT)
             gss_delete_sec_context(&major, sess->gssctx, GSS_C_NO_BUFFER);
@@ -371,8 +371,8 @@ static void get_gss_name(gss_name_t *server, const char *hostname)
 static void make_gss_error(ne_buffer *buf, int *flag,
                            unsigned int status, int type)
 {
-    int major, minor;
-    int context = 0;
+    unsigned int major, minor;
+    unsigned int context = 0;
     
     do {
         gss_buffer_desc msg;
@@ -1296,7 +1296,7 @@ static void free_auth(void *cookie)
 
 #ifdef HAVE_GSSAPI
     if (sess->gssname != GSS_C_NO_NAME) {
-        int major;
+        unsigned int major;
         gss_release_name(&major, sess->gssname);
     }
 #endif
