@@ -1036,7 +1036,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
  * Returns:
  *   NE_RETRY: Success, read a header into buf.
  *   NE_OK: End of headers reached.
- *   NE_ERROR: Error (session error is set).
+ *   NE_ERROR: Error (session error is set, connection closed).
  */
 static int read_message_header(ne_request *req, char *buf, size_t buflen)
 {
@@ -1127,7 +1127,8 @@ static void add_response_header(ne_request *req, unsigned int hash,
     (*nextf)->next = NULL;
 }
 
-/* Read response headers.  Returns NE_* code, sets session error. */
+/* Read response headers.  Returns NE_* code, sets session error and
+ * closes connection on error. */
 static int read_response_headers(ne_request *req) 
 {
     char hdr[MAX_HEADER_LEN];
