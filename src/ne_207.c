@@ -142,8 +142,12 @@ static int start_element(void *userdata, int parent,
         state != ELM_href)
         return NE_XML_DECLINE;
 
-    if (state == ELM_propstat && p->start_propstat)
+    if (state == ELM_propstat && p->start_propstat) {
         p->propstat = p->start_propstat(p->userdata, p->response);
+        if (p->propstat == NULL) {
+            return NE_XML_ABORT;
+        }
+    }
 
     ne_buffer_clear(p->cdata);
 
