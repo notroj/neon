@@ -1,3 +1,26 @@
+Wed Oct 22 22:19:19 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_request.c (read_response_block): Treat an EOF without clean
+	SSL closure as a valid request body delimiter in any case.
+
+Wed Oct 22 21:44:48 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_defs.h (ne_attribute): New macro.
+
+	* ne_request.h, ne_session.h, ne_utils.h: Use ne_attribute instead
+	of littering #ifdef __GNUC__ and __attribute__ everywhere.
+
+Tue Oct 21 20:03:47 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	Fix various strict signedness bugs:
+	
+	* ne_auth.c (auth_session): Make nonce_count argument unsigned.
+	(get_cnonce): Use unsigned data buffer.
+	(get_gss_name, gssapi_challenge): Use unsigned integers for status
+	variables.
+	(request_digest): Print nonce count as unsigned.
+	(verify_response): Make nonce_count unsigned.
+
 Tue Oct  7 20:52:06 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	When using SSL via a proxy, don't leak server auth credentials to

@@ -33,6 +33,10 @@ AC_DEFINE(NEON_IS_LIBRARY, 1, [Define when building neon as a library])
 
 AC_PROG_INSTALL
 
+dnl Avoid libtool 1.5 bug where configure fails if a C++ compiler
+dnl is not available.
+m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
+
 AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
 

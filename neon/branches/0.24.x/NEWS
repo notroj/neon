@@ -1,3 +1,9 @@
+Changes in release 0.24.4:
+* Ignore unclean SSL closure when response body is delimited by EOF
+ ("Could not read response body: Secure connection truncated" errors
+ with some buggy SSL servers).
+* Fix test/ssl.c syntax errors with C89 compilers (Radu Greab).
+
 Changes in release 0.24.3:
 * Respect configure's --datadir argument (Max Bowsher).
 * Fix build on Windows when OpenSSL is not used.

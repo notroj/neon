@@ -384,7 +384,7 @@ static int load_client_cert(void)
 static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
 {
     ne_session *sess = ne_session_create("https", hostname, 7777);
-    struct ssl_server_args args= {cert, 0};
+    struct ssl_server_args args = {cert, 0};
     /* no verify callback needed. */
     CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
@@ -447,30 +447,6 @@ static int empty_truncated_eof(void)
     
     CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
 
-    ne_session_destroy(sess);
-    return OK;
-}
-
-static int fail_truncated_eof(void)
-{
-    ne_session *sess = DEFSESS;
-    int ret;
-    struct ssl_server_args args = {0};
-
-    args.cert = SERVER_CERT;
-    args.response = "HTTP/1.0 200 OK\r\n" "\r\n"
-        "This is some content\n"
-        "Followed by a truncation attack!\n";
-    args.unclean = 1;
-
-    ne_ssl_trust_cert(sess, def_ca_cert);
-    CALL(spawn_server(7777, ssl_server, &args));
-    
-    ret = any_request(sess, "/foo");
-    CALL(await_server());
-    
-    ONV(ret != NE_ERROR,
-	("request failed with %d not error: `%s'", ret, ne_get_error(sess)));
     ne_session_destroy(sess);
     return OK;
 }
@@ -1029,8 +1005,9 @@ static int serve_tunnel(ne_socket *sock, void *ud)
 static int fail_tunnel(void)
 {
     ne_session *sess = ne_session_create("https", "example.com", 443);
-    ne_session_proxy(sess, "localhost", 7777);
     struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    ne_session_proxy(sess, "localhost", 7777);
 
     ONN("server cert verification didn't fail",
 	any_ssl_request(sess, serve_tunnel, &args, CA_CERT,
@@ -1043,8 +1020,9 @@ static int fail_tunnel(void)
 static int proxy_tunnel(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 443);
-    ne_session_proxy(sess, "localhost", 7777);
     struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    ne_session_proxy(sess, "localhost", 7777);
     
     /* CA cert is trusted, so no verify callback should be needed. */
     CALL(any_ssl_request(sess, serve_tunnel, &args, CA_CERT,
@@ -1511,7 +1489,6 @@ ne_test tests[] = {
     T(simple_sslv2),
     T(simple_eof),
     T(empty_truncated_eof),
-    T(fail_truncated_eof),
     T(fail_not_ssl),
     T(cache_cert),
 

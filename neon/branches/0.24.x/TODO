@@ -49,9 +49,6 @@ Longer term
    URI parsing support). Need to tell the auth layer the server
    details.
 
-4. Better cnonce generation for authentication: use /dev/{u}random or
-   whatever like mod_auth_digest.
-
 6. PUT with ranges... ne_put_range
 
 9. DeltaV support (http://www.webdav.org/deltav/). See also the

@@ -1,3 +1,7 @@
+Sat Oct 25 10:37:59 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* configure.in: Use AC_LIBTOOL_TAGS if available.
+
 Mon Sep 22 20:56:21 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* Makefile.in: Respect @datadir@ from configure (Max Bowsher).

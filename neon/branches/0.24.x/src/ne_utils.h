@@ -95,11 +95,7 @@ extern FILE *ne_debug_stream;
 
 /* Produce debug output if any of channels 'ch' is enabled for
  * debugging. */
-void ne_debug(int ch, const char *, ...)
-#ifdef __GNUC__
-                __attribute__ ((format (printf, 2, 3)))
-#endif /* __GNUC__ */
-;
+void ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
 
 /* Storing an HTTP status result */
 typedef struct {

@@ -33,3 +33,9 @@
 #if defined(WIN32) && !defined(ssize_t)
 #define ssize_t int
 #endif
+
+#ifdef __GNUC__
+#define ne_attribute(x) __attribute__(x)
+#else
+#define ne_attribute(x)
+#endif

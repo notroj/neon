@@ -23,7 +23,7 @@
 #define NE_REQUEST_H
 
 #include "ne_utils.h" /* For ne_status */
-#include "ne_string.h" /* For sbuffer */
+#include "ne_string.h" /* For ne_buffer */
 #include "ne_session.h"
 
 BEGIN_NEON_DECLS
@@ -161,11 +161,8 @@ void ne_add_request_header(ne_request *req, const char *name,
 /* Adds a header to the request with given name, using printf-like
  * format arguments for the value. */
 void ne_print_request_header(ne_request *req, const char *name,
-			     const char *format, ...)
-#ifdef __GNUC__
-                __attribute__ ((format (printf, 3, 4)))
-#endif /* __GNUC__ */
-;
+			     const char *format, ...) 
+    ne_attribute((format(printf, 3, 4)));
 
 /* ne_request_dispatch: Sends the given request, and reads the
  * response. Response-Status information can be retrieve with
@@ -181,17 +178,9 @@ void ne_print_request_header(ne_request *req, const char *name,
  */
 int ne_request_dispatch(ne_request *req);
 
-/* Returns a pointer to the response status information for the
- * given request. */
-const ne_status *ne_get_status(const ne_request *req)
-/* Declare this with attribute const, since we often call it >1 times
- * with the same argument, and it will return the same thing each
- * time. This lets the compiler optimize away any subsequent calls
- * (theoretically).  */
-#ifdef __GNUC__
-                __attribute__ ((const))
-#endif /* __GNUC__ */
-    ;
+/* Returns a pointer to the response status information for the given
+ * request; pointer is valid until request object is destroyed. */
+const ne_status *ne_get_status(const ne_request *req) ne_attribute((const));
 
 /* Returns pointer to session associated with request. */
 ne_session *ne_get_session(const ne_request *req);

@@ -169,7 +169,7 @@ typedef struct {
     char *opaque;
     auth_qop qop;
     auth_algorithm alg;
-    int nonce_count;
+    unsigned int nonce_count;
     /* The ASCII representation of the session's H(A1) value */
     char h_a1[33];
 
@@ -219,8 +219,8 @@ static void clean_session(auth_session *sess)
 /* Returns client nonce string. */
 static char *get_cnonce(void) 
 {
-    char data[256], ret[33];
-    unsigned char tmp[16];
+    char ret[33];
+    unsigned char data[256], tmp[16];
     struct ne_md5_ctx hash;
 
     ne_md5_init_ctx(&hash);
@@ -324,7 +324,7 @@ static char *request_gssapi(auth_session *sess)
 
 static int get_gss_name(gss_name_t *server, auth_session *sess)
 {
-    int major_status, minor_status;
+    unsigned int major_status, minor_status;
     gss_buffer_desc token = GSS_C_EMPTY_BUFFER;
 
     token.value = ne_concat("khttp@", sess->sess->server.hostname, NULL);
@@ -343,7 +343,7 @@ gssapi_challenge(auth_session *sess, struct auth_challenge *parms)
 {
     gss_ctx_id_t context;
     gss_name_t server_name;
-    int major_status, minor_status;
+    unsigned int major_status, minor_status;
     gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
     gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
 
@@ -504,7 +504,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     if (sess->qop != auth_qop_none) {
 	sess->nonce_count++;
 	ne_snprintf(nc_value, 9, "%08x", sess->nonce_count);
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Nonce count is %d, nc is [%s]\n", 
+	NE_DEBUG(NE_DBG_HTTPAUTH, "Nonce count is %u, nc is [%s]\n", 
 		 sess->nonce_count, nc_value);
     }
 
@@ -684,7 +684,8 @@ static int verify_response(struct auth_request *req, auth_session *sess,
 	*cnonce = NULL, /* for the cnonce= value */
 	*nc = NULL, /* for the nc= value */
 	*qop_value = NULL;
-    int nonce_count, okay;
+    unsigned int nonce_count;
+    int okay;
     
     if (!req->will_handle) {
 	/* Ignore it */
@@ -724,7 +725,7 @@ static int verify_response(struct auth_request *req, auth_session *sess,
 	    if (sscanf(val, "%x", &nonce_count) != 1) {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Couldn't find nonce count.\n");
 	    } else {
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Got nonce_count: %d\n", nonce_count);
+		NE_DEBUG(NE_DBG_HTTPAUTH, "Got nonce_count: %u\n", nonce_count);
 	    }
 	}
     }
