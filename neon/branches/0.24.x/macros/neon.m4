@@ -122,7 +122,7 @@ AC_DEFUN([NEON_VERSIONS], [
 # Define the current versions.
 NEON_VERSION_MAJOR=0
 NEON_VERSION_MINOR=24
-NEON_VERSION_RELEASE=1
+NEON_VERSION_RELEASE=2
 NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
@@ -501,6 +501,15 @@ ne_enable_gai=yes
 NE_CHECK_FUNCS(getaddrinfo gai_strerror inet_ntop,,[ne_enable_gai=no; break])
 if test $ne_enable_gai = yes; then
    AC_DEFINE(USE_GETADDRINFO, 1, [Define if getaddrinfo() should be used])
+   AC_CACHE_CHECK([for working AI_ADDRCONFIG], [ne_cv_gai_addrconfig], [
+   AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <netdb.h>],
+[struct addrinfo hints = {0}, *result;
+hints.ai_flags = AI_ADDRCONFIG;
+if (getaddrinfo("localhost", NULL, &hints, &result) != 0) return 1;])],
+   ne_cv_gai_addrconfig=yes, ne_cv_gai_addrconfig=no)])
+   if test $ne_cv_gai_addrconfig = yes; then
+      AC_DEFINE(USE_GAI_ADDRCONFIG, 1, [Define if getaddrinfo supports AI_ADDRCONFIG])
+   fi
 else
    # Checks for non-getaddrinfo() based resolver interfaces.
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
@@ -771,11 +780,15 @@ dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
 AC_PATH_PROG([KRB5_CONFIG], krb5-config, none, $PATH:/usr/kerberos/bin)
 if test "x$KRB5_CONFIG" != "xnone"; then
+   ne_save_CPPFLAGS=$CPPFLAGS
+   ne_save_LIBS=$NEON_LIBS
    NEON_LIBS="$NEON_LIBS `${KRB5_CONFIG} --libs gssapi`"
    CPPFLAGS="$CPPFLAGS `${KRB5_CONFIG} --cflags gssapi`"
    # MIT and Heimdal put gssapi.h in different places
    AC_CHECK_HEADERS(gssapi/gssapi.h gssapi.h, [
      NE_CHECK_FUNCS(gss_init_sec_context, [
+      ne_save_CPPFLAGS=$CPPFLAGS
+      ne_save_LIBS=$NEON_LIBS
       AC_MSG_NOTICE([GSSAPI authentication support enabled])
       AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
       # MIT Kerberos lacks GSS_C_NT_HOSTBASED_SERVICE
@@ -789,6 +802,8 @@ if test "x$KRB5_CONFIG" != "xnone"; then
 #endif])])
      break
    ])
+   CPPFLAGS=$ne_save_CPPFLAGS
+   NEON_LIBS=$ne_save_LIBS
 fi])
 
 dnl Adds an --enable-warnings argument to configure to allow enabling

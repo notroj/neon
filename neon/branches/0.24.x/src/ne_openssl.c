@@ -168,8 +168,8 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
 }
 
 /* Return non-zero if hostname from certificate (cn) matches hostname
- * used for session (hostname). TODO: could do more advanced wildcard
- * matching using fnmatch() here, if fnmatch is present. */
+ * used for session (hostname).  (Wildcard matching is no longer
+ * mandated by RFC3280, but certs are deployed which use wildcards) */
 static int match_hostname(char *cn, const char *hostname)
 {
     const char *dot;
@@ -192,35 +192,57 @@ static int match_hostname(char *cn, const char *hostname)
 /* Check certificate identity.  Returns zero if identity matches; 1 if
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
- * *identity. */
-static int check_identity(const char *hostname, X509 *cert, char **identity)
+ * *identity.  If 'server' is non-NULL, it must be the network address
+ * of the server in use, and identity must be NULL. */
+static int check_identity(const char *hostname, X509 *cert, char **identity,
+                          const ne_inet_addr *server)
 {
     STACK_OF(GENERAL_NAME) *names;
     int match = 0, found = 0;
     
     names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (names) {
-	/* Got a subject alt. name extension. */
 	int n;
 
+        /* subjectAltName contains a sequence of GeneralNames */
 	for (n = 0; n < sk_GENERAL_NAME_num(names) && !match; n++) {
 	    GENERAL_NAME *nm = sk_GENERAL_NAME_value(names, n);
 	    
-	    /* only care about this if it is a DNS name. */
+            /* handle dNSName and iPAddress name extensions only. */
 	    if (nm->type == GEN_DNS) {
 		char *name = ne_strndup(nm->d.ia5->data, nm->d.ia5->length);
                 if (identity && !found) *identity = ne_strdup(name);
 		match = match_hostname(name, hostname);
 		ne_free(name);
 		found = 1;
-	    }
+            } else if (nm->type == GEN_IPADD && server) {
+                /* compare IP address with server IP address. */
+                ne_inet_addr *ia;
+                if (nm->d.ip->length == 4)
+                    ia = ne_iaddr_make(ne_iaddr_ipv4, nm->d.ip->data);
+                else if (nm->d.ip->length == 16)
+                    ia = ne_iaddr_make(ne_iaddr_ipv6, nm->d.ip->data);
+                else
+                    ia = NULL;
+                /* ne_iaddr_make returns NULL if address type is unsupported */
+                if (ia != NULL) { /* address type was supported. */
+                    match = ne_iaddr_cmp(server, ia) == 0;
+                    found = 1;
+                    ne_iaddr_free(ia);
+                } else {
+                    NE_DEBUG(NE_DBG_SSL, "iPAddress name with unsupported "
+                             "address type (length %d), skipped.\n",
+                             nm->d.ip->length);
+                }
+            } /* TODO: handle uniformResourceIdentifier too */
+
 	}
         /* free the whole stack. */
         sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
     }
     
     /* Check against the commonName if no DNS alt. names were found,
-     * as per RFC2818. */
+     * as per RFC3280. */
     if (!found) {
 	X509_NAME *subj = X509_get_subject_name(cert);
 	X509_NAME_ENTRY *entry;
@@ -260,7 +282,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
     cert->subject = x5;
     /* Retrieve the cert identity; pass a dummy hostname to match. */
     cert->identity = NULL;
-    check_identity("", x5, &cert->identity);
+    check_identity("", x5, &cert->identity, NULL);
     return cert;
 }
 
@@ -307,8 +329,10 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
     else if (X509_cmp_current_time(notAfter) <= 0)
 	failures |= NE_SSL_EXPIRED;
 
-    /* Check certificate was issued to this server. */
-    ret = check_identity(sess->server.hostname, cert, NULL);
+    /* Check certificate was issued to this server; pass network
+     * address of server if a proxy is not in use. */
+    ret = check_identity(sess->server.hostname, cert, NULL, 
+                         sess->use_proxy ? NULL : sess->server.current);
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));

@@ -36,21 +36,23 @@ OBJDEPS = $(srcdir)/common/tests.h $(srcdir)/common/child.h $(srcdir)/utils.h \
 DEPS = $(LIBTEST)
 
 LIBTEST = libtest.la
+LIBNEON = $(top_builddir)/src/libneon.la
 
 LIBTOOL = @LIBTOOL@ --silent
 LINK = $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -no-install
 COMPILE = $(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 
+.SUFFIXES:
 .SUFFIXES: .lo .c
 
 # By default, compile but don't run the tests.
 all: $(TESTS)
 
 clean:
-	rm -f $(TESTS) $(HELPERS) *.o *.lo common/*.o libtest.a *.log
+	rm -f $(TESTS) $(HELPERS) *.*o common/*.*o libtest.a *.log
 	rm -rf ca .libs
 	rm -f ca-stamp client.key *.csr ssigned.pem wrongcn.pem \
-	   server.cert client.cert client.p12
+	   server.cert client.cert client.p12 *.cert
 
 check: $(TESTS) $(HELPERS)
 	@SRCDIR=$(srcdir) $(SHELL) $(srcdir)/run.sh $(TESTS)
@@ -100,12 +102,12 @@ Makefile: $(srcdir)/Makefile.in
 LIBOBJS = common/tests.lo common/child.lo utils.lo
 
 $(LIBTEST): $(LIBOBJS)
-	$(LINK) -o $(LIBTEST) $(LIBOBJS) $(top_builddir)/src/libneon.la
+	$(LINK) -o $(LIBTEST) $(LIBOBJS) $(LIBNEON)
 
 .c.lo:
 	$(COMPILE) -c $< -o $@
 
-%:%.lo
+.lo:
 	$(LINK) -o $@ $< $(LIBS)
 
 # Recompile socket.c with SOCKET_SSL defined
@@ -114,6 +116,9 @@ socket-ssl.lo: $(srcdir)/socket.c $(HDRS)
 
 socket-ssl: socket-ssl.lo $(LIBTEST)
 	$(LINK) -o $@ socket-ssl.lo $(LIBS)
+
+resolve: resolve.lo $(LIBNEON)
+	$(LINK) -o $@ resolve.lo $(LIBNEON)
 
 auth.lo: $(srcdir)/auth.c $(OBJDEPS)
 uri-tests.lo: $(srcdir)/uri-tests.c $(OBJDEPS)
@@ -134,6 +139,7 @@ basic.lo: $(srcdir)/basic.c $(OBJDEPS)
 ssl.lo: $(srcdir)/ssl.c $(OBJDEPS)
 
 auth: auth.lo $(DEPS)
+basic: basic.lo $(DEPS)
 uri-tests: uri-tests.lo $(DEPS)
 util-tests: util-tests.lo $(DEPS)
 string-tests: string-tests.lo $(DEPS)

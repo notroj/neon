@@ -116,9 +116,7 @@ typedef struct addrinfo ne_inet_addr;
 /* To avoid doing AAAA queries unless absolutely necessary, either use
  * AI_ADDRCONFIG where available, or a run-time check for working IPv6
  * support; the latter is only known to work on Linux. */
-#if defined(AI_ADDRCONFIG) && defined(EAI_BADFLAGS)
-#define USE_ADDRCONFIG
-#elif defined(__linux__)
+#if !defined(USE_GAI_ADDRCONFIG) && defined(__linux__)
 #define USE_CHECK_IPV6
 #endif
 
@@ -663,18 +661,14 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 	addr->errnum = getaddrinfo(hn, NULL, &hints, &addr->result);
 	ne_free(hn);
     } else {
-#ifdef USE_ADDRCONFIG /* added in the RFC3493 API */
+#ifdef USE_GAI_ADDRCONFIG /* added in the RFC3493 API */
         hints.ai_flags = AI_ADDRCONFIG;
         hints.ai_family = AF_UNSPEC;
         addr->errnum = getaddrinfo(hostname, NULL, &hints, &addr->result);
-        if (addr->errnum != EAI_BADFLAGS)
-            return addr;
-        /* Retry without AI_ADDRCONFIG if this libc doesn't grok it */
-        hints.ai_flags = 0;
 #else
         hints.ai_family = ipv6_disabled ? AF_INET : AF_UNSPEC;
-#endif
 	addr->errnum = getaddrinfo(hostname, NULL, &hints, &addr->result);
+#endif
     }
 #else /* Use gethostbyname() */
     unsigned long laddr;

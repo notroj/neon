@@ -58,7 +58,7 @@ csr_fields "Upper Case Dept" lOcALhost | \
 ${REQ} -new -key ${srcdir}/server.key -out caseless.csr
 
 csr_fields "Use AltName Dept" nowhere.example.com | \
-${REQ} -new -key ${srcdir}/server.key -out altname.csr
+${REQ} -new -key ${srcdir}/server.key -out altname1.csr
 
 csr_fields "Two AltName Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname2.csr
@@ -68,6 +68,9 @@ ${REQ} -new -key ${srcdir}/server.key -out altname3.csr
 
 csr_fields "Fourth AltName Dept" localhost | \
 ${REQ} -new -key ${srcdir}/server.key -out altname4.csr
+
+csr_fields "Fifth Altname Dept" localhost | \
+${REQ} -new -key ${srcdir}/server.key -out altname5.csr
 
 csr_fields "Self-Signed" | \
 ${MKCERT} -key ${srcdir}/server.key -out ssigned.pem
@@ -126,10 +129,10 @@ for f in server client twocn caseless cnfirst missingcn justmail; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
-${CA} -extensions altExt -days 900 -in altname.csr -out altname.cert
-${CA} -extensions altExt2 -days 900 -in altname2.csr -out altname2.cert
-${CA} -extensions altExt3 -days 900 -in altname3.csr -out altname3.cert
-${CA} -extensions altExt4 -days 900 -in altname4.csr -out altname4.cert
+for n in 1 2 3 4 5; do
+ ${CA} -extensions altExt${n} -days 900 \
+     -in altname${n}.csr -out altname${n}.cert
+done
 
 # generate a PKCS12 cert from the client cert: -passOUT because it's the
 # passphrase on the OUTPUT cert, confusing...

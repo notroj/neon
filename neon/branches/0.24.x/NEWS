@@ -1,3 +1,10 @@
+Changes in release 0.24.2:
+* Fix name resolver with some old versions of glibc.
+* Fix problems with configure's "time_t format string" detection.
+* Fix problems when a broken Kerberos installation is found.
+* When verifying SSL certificates, check iPaddress names in the
+ subjectAltName extension.
+
 Changes in release 0.24.1:
 * Add support for "GSS-Negotiate" Kerberos authentication scheme (from
  Risko Gergely and Burjan Gabor).

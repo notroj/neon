@@ -86,9 +86,9 @@
     more than once using different passwords.</para>
 
     <para>A client certificate can be given a "friendly name" when it
-    is created; <function>ne_ssl_clicert_owner</function> will return
+    is created; <function>ne_ssl_clicert_name</function> will return
     this name (or &null; if no friendly name was specified).
-    <function>ne_ssl_clicert_owner</function> can be used when the
+    <function>ne_ssl_clicert_name</function> can be used when the
     client certificate is in either the encrypted or decrypted state,
     and will return the same string for the lifetime of the
     object.</para>

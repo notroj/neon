@@ -85,7 +85,12 @@ int ne_accept_207(void *userdata, ne_request *req, const ne_status *status);
 void *ne_207_get_current_propstat(ne_207_parser *p);
 void *ne_207_get_current_response(ne_207_parser *p);
 
-/* Dispatch a DAV request and handle a 207 error response appropriately */
+/* Dispatch request 'req', returning:
+ *  NE_ERROR: for a dispatch error, or a non-2xx response, or a
+ *            207 response which contained a non-2xx propstat
+ *  NE_OK: for a 2xx response or a 207 response which contained
+ *            only 2xx-class propstats.
+ * The request object is destroyed in both cases. */
 int ne_simple_request(ne_session *sess, ne_request *req);
 
 END_NEON_DECLS
