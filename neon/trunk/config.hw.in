@@ -37,10 +37,6 @@
 #define HAVE_MEMCPY
 #define HAVE_SETSOCKOPT
 
-#ifndef NEON_NODAV
-#define USE_DAV_LOCKS
-#endif
-
 #define NE_FMT_SIZE_T "u"
 #define NE_FMT_SSIZE_T "d"
 #define NE_FMT_OFF_T "ld"
