@@ -61,13 +61,13 @@ check: subdirs
 # Useful for doing coverage analysis; use e.g.:
 #   make TESTS=string-tests MODULE=ne_string cover
 cover: subdirs
-	@rm -f src/$(MODULE).*da
+	@rm -f src/$(MODULE).*da test/common/*.*da test/*.*da
 	@cd test && $(MAKE) check
 	@cd src && $(GCOV) -cb $(MODULE)
 
 # as per 'cover' target; prints list of functions without 100% coverage 
 uncover: subdirs
-	@rm -f src/$(MODULE).*da
+	@rm -f src/*.*da test/common/*.*da test/*.*da
 	@cd test && $(MAKE) check
 	@cd src && $(GCOV) -cb $(MODULE)
 	@grep ^function src/$(MODULE).gcov | grep -v 'executed 100' | sort -nr -k 9,9
