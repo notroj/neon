@@ -140,17 +140,23 @@ typedef int (*ne_block_reader)(void *userdata, const char *buf, size_t len);
 void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
 				 ne_block_reader reader, void *userdata);
 
-/* Retrieve the value of the a response header field with given name;
- * returns NULL if response header with given name was not found. */
+/* Retrieve the value of the response header field with given name;
+ * returns NULL if no response header with given name was found.  The
+ * return value is valid only until the next call to either
+ * ne_request_create or ne_begin_request for this request. */
 const char *ne_get_response_header(ne_request *req, const char *name);
 
 /* Iterator interface for response headers: if passed a NULL cursor,
  * returns the first header; if passed a non-NULL cursor pointer,
- * returns the next header.  Return value is a cursor pointer.  If
- * return value is non-NULL, *name and *value are set to the name and
- * value of the header field.  If return value is NULL, no more
- * headers are found, *name and *value are undefined.  The order in
- * which response headers is returned is undefined. */
+ * returns the next header.  The return value is a cursor pointer: if
+ * it is non-NULL, *name and *value are set to the name and value of
+ * the header field.  If the return value is NULL, no more headers are
+ * found, *name and *value are undefined.
+ *
+ * The order in which response headers is returned is undefined.  Both
+ * the cursor and name/value pointers are valid only until the next
+ * call to either ne_request_destroy or ne_begin_request for this
+ * request.*/
 void *ne_response_header_iterate(ne_request *req, void *cursor,
                                  const char **name, const char **value);
 
