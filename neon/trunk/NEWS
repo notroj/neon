@@ -13,7 +13,8 @@ Changes in release 0.25.0:
  - ne_buffer_czappend(), convenience wrapper for ne_buffer_append.
 * Interface changes:
  - ne_set_request_body_fd takes offset and length arguments and returns void
- - ne_set_request_body_provider takes length as off_t rather than size_t.
+ - ne_set_request_body_provider takes length as off_t rather than size_t;
+   provider callbacks now MUST set session error string if returning an error
  - ne_xml_failed() replaces ne_xml_valid(), with different return value logic
  - ne_path_escape() now escapes all but unreserved characters
 * Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
