@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2002, 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -91,6 +91,10 @@ void ne_buffer_zappend(ne_buffer *buf, const char *str);
  * NUL-terminated. The resultant string will have a NUL-terminator,
  * either way.  */
 void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
+
+/* Append a literal constant string 'str' to buffer 'buf'. */
+#define ne_buffer_czappend(buf, str) \
+ne_buffer_append((buf), (str), sizeof((str)) - 1)
 
 /* Empties the contents of buf; makes the buffer zero-length. */
 void ne_buffer_clear(ne_buffer *buf);
