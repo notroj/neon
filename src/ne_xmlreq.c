@@ -1,6 +1,6 @@
 /* 
    XML/HTTP response handling
-   Copyright (C) 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2004-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -22,21 +22,39 @@
 #include "config.h"
 
 #include "ne_xmlreq.h"
+#include "ne_i18n.h"
+
+/* Handle an XML response parse error, setting session error string
+ * and closing the connection. */
+static int parse_error(ne_session *sess, ne_xml_parser *parser)
+{
+    ne_set_error(sess, _("Could not parse response: %s"),
+                 ne_xml_get_error(parser));
+    ne_close_connection(sess);
+    return NE_ERROR;
+}
 
 int ne_xml_parse_response(ne_request *req, ne_xml_parser *parser)
 {
     char buf[8000];
     ssize_t bytes;
+    int ret = 0;
 
     while ((bytes = ne_read_response_block(req, buf, sizeof buf)) > 0) {
-        int ret = ne_xml_parse(parser, buf, bytes);
-        if (ret) {
-            ne_close_connection(ne_get_session(req));
-            return NE_ERROR;
-        }
+        ret = ne_xml_parse(parser, buf, bytes);
+        if (ret)
+            return parse_error(ne_get_session(req), parser);
     }
-        
-    return bytes == 0 ? NE_OK : NE_ERROR;
+
+    if (bytes == 0) {
+        /* Tell the parser that end of document was reached: */
+        if (ne_xml_parse(parser, NULL, 0) == 0)
+            return NE_OK;
+        else
+            return parse_error(ne_get_session(req), parser);
+    } else {
+        return NE_ERROR;
+    }    
 }
 
 int ne_xml_dispatch_request(ne_request *req, ne_xml_parser *parser)
