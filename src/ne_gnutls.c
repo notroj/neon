@@ -433,7 +433,7 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data)
     buffer.data = der;
     buffer.size = len;
 
-    ret = gnutls_x509_crt_import(x5, &buffer, GNUTLS_X509_FMT_PEM);
+    ret = gnutls_x509_crt_import(x5, &buffer, GNUTLS_X509_FMT_DER);
     if (ret < 0) {
         gnutls_x509_crt_deinit(x5);
         return NULL;
@@ -445,15 +445,25 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data)
 char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 {
     int ret;
-    unsigned char der[10*1024];
-    int len = sizeof der;
+    unsigned char *der;
+    size_t len = 0;
+    char *ret;
 
     /* find the length of the DER encoding. */
-    ret = gnutls_x509_crt_export(cert->subject, GNUTLS_X509_FMT_DER, der, &len);
-    if (ret < 0)
+    if (gnutls_x509_crt_export(cert->subject, GNUTLS_X509_FMT_DER, NULL, &len) != 
+        GNUTLS_E_SHORT_MEMORY_BUFFER) {
         return NULL;
-
-    return ne_base64(der, len);
+    }
+    
+    der = ne_malloc(len);
+    if (gnutls_x509_crt_export(cert->subject, GNUTLS_X509_FMT_DER, der, &len)) {
+        ne_free(der);
+        return NULL;
+    }
+    
+    ret = ne_base64(der, len);
+    ne_free(der);
+    return ret;
 }
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
