@@ -1563,6 +1563,11 @@ static int fail_on_invalid(void)
         /* chunk with CR then notLF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcde\rZZZ",
           "delimiter was invalid" },
+        /* chunk size overflow */
+        { RESP200 TE_CHUNKED "\r\n" "800000000\r\n" "abcde\r\n",
+          "Could not parse chunk size" },
+        /* EOF at chunk size */
+        { RESP200 TE_CHUNKED "\r\n", "Could not read chunk size" },
 
         /* negative C-L */
         { RESP200 "Content-Length: -1\r\n" "\r\n" "abcde",
