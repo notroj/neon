@@ -958,14 +958,8 @@ static int auth_challenge(auth_session *sess, const char *value)
 		scheme = auth_scheme_digest;
             }
 #ifdef HAVE_GSSAPI
-            /* cope with a Negotiate parameter which doesn't match the
-             * auth-param due to the broken spec. */
-            else if (chall && chall->scheme == auth_scheme_gssapi
-                     && chall->opaque == NULL) {
-                chall->opaque = key;
-                continue;
-	    } else if (strcasecmp(key, "negotiate") == 0) {
-		scheme = auth_scheme_gssapi;
+            else if (strcasecmp(key, "negotiate") == 0) {
+                scheme = auth_scheme_gssapi;
             }
 #endif
             else {
@@ -979,6 +973,13 @@ static int auth_challenge(auth_session *sess, const char *value)
             chall->scheme = scheme;
             chall->next = challenges;
             challenges = chall;
+
+            if (scheme == auth_scheme_gssapi) {
+                /* Cope with the fact that the unquoted base64
+                 * paramater token doesn't match the 2617 auth-param
+                 * grammar: */
+                chall->opaque = ne_shave(ne_token(&pnt, ','), " \t");
+            }
 	    continue;
 	} else if (chall == NULL) {
 	    /* Ignore pairs for an unknown challenge. */
