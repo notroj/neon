@@ -1,0 +1,13 @@
+*.?
+*.html
+*.pdf
+*.ps
+*.tex
+*.sgml
+*.junk
+html
+man
+man3
+man1
+version.xml
+date.xml
