@@ -46,7 +46,8 @@
 #include "ne_privssl.h"
 
 struct ne_ssl_dname_s {
-    char *dn;
+    int subject; /* non-zero if this is the subject DN object */
+    gnutls_x509_crt cert;
 };
 
 struct ne_ssl_certificate_s {
@@ -63,14 +64,54 @@ struct ne_ssl_client_cert_s {
     char *friendly_name;
 };
 
+/* Appends the value of RDN with given oid from certitifcate x5
+ * subject (if subject is non-zero), or issuer DN to buffer 'buf': */
+static void append_rdn(ne_buffer *buf, gnutls_x509_crt x5, int subject, const char *oid)
+{
+    char rdn[50];
+    size_t rdnlen = sizeof rdn;
+    int ret;
+
+    if (subject)
+        ret = gnutls_x509_crt_get_dn_by_oid(x5, oid, 0, 0, rdn, &rdnlen);
+    else
+        ret = gnutls_x509_crt_get_issuer_dn_by_oid(x5, oid, 0, 0, rdn, &rdnlen);
+
+    if (ret < 0)
+        return;
+
+    if (buf->used > 1) {
+        ne_buffer_append(buf, ", ", 2);
+    }
+
+    ne_buffer_append(buf, rdn, rdnlen);
+}
+
+
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 {
-    return name->dn;
+    ne_buffer *buf = ne_buffer_create();
+
+#define APPEND_RDN(x) append_rdn(buf, name->cert, name->subject, GNUTLS_OID_##x)
+
+    APPEND_RDN(X520_ORGANIZATIONAL_UNIT_NAME);
+    APPEND_RDN(X520_ORGANIZATION_NAME);
+    APPEND_RDN(X520_LOCALITY_NAME);
+    APPEND_RDN(X520_STATE_OR_PROVINCE_NAME);
+    APPEND_RDN(X520_COUNTRY_NAME);
+
+    if (buf->used == 1) APPEND_RDN(X520_COMMON_NAME);
+    if (buf->used == 1) APPEND_RDN(PKCS9_EMAIL);
+
+#undef APPEND_RDN
+
+    return ne_buffer_finish(buf);
 }
 
 int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
 {
-    return strcmp(dn1->dn, dn2->dn);
+#warning incomplete
+    return 1;
 }
 
 void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
@@ -90,30 +131,6 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
         time_t t = gnutls_x509_crt_get_expiration_time(cert->subject);
         strftime(until, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
     }
-}
-
-/* Returns a new buffer with X509 subject's (or issuer) distinguished name. */
-static char *x509_get_dn(gnutls_x509_crt x5, int subject)
-{
-    int ret, len;
-    char *dn;
-
-    if (subject)
-        ret = gnutls_x509_crt_get_dn(x5, NULL, &len);
-    else
-        ret = gnutls_x509_crt_get_issuer_dn(x5, NULL, &len);
-
-    if (ret < 0 && ret != GNUTLS_E_SHORT_MEMORY_BUFFER)
-        return NULL;
-
-    len++;
-    dn = ne_calloc(len);
-    if (subject)
-        gnutls_x509_crt_get_dn(x5, dn, &len);
-    else
-        gnutls_x509_crt_get_issuer_dn(x5, dn, &len);
-
-    return dn;
 }
 
 /* Return non-zero if hostname from certificate (cn) matches hostname
@@ -148,8 +165,9 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
 {
     char name[255];
     unsigned int critical;
-    int ret, len, seq = 0;
+    int ret, seq = 0;
     int match = 0, found = 0;
+    size_t len;
 
     do {
         len = sizeof name;
@@ -173,7 +191,24 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
     /* Check against the commonName if no DNS alt. names were found,
      * as per RFC3280. */
     if (!found) {
-        /* TODO */
+        seq = -1;
+        
+        do {
+            len = 0;
+            ret = gnutls_x509_crt_get_dn_by_oid(cert, GNUTLS_OID_X520_COMMON_NAME,
+                                                ++seq, 0, NULL, &len);
+        } while (ret == GNUTLS_E_SHORT_MEMORY_BUFFER);
+
+        if (seq > 0) {
+            len = sizeof name;
+            name[0] = '\0';
+            ret = gnutls_x509_crt_get_dn_by_oid(cert, GNUTLS_OID_X520_COMMON_NAME,
+                                                seq - 1, 0, name, &len);
+            if (ret == 0) {
+                if (identity) *identity = ne_strdup(name);
+                match = match_hostname(name, hostname);
+            }
+        }
     }
 
     NE_DEBUG(NE_DBG_SSL, "Identity match: %s\n", match ? "good" : "bad");
@@ -184,8 +219,10 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
 static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
                                          gnutls_x509_crt x5)
 {
-    cert->subj_dn.dn = x509_get_dn(x5, 1);
-    cert->issuer_dn.dn = x509_get_dn(x5, 0);
+    cert->subj_dn.cert = x5;
+    cert->subj_dn.subject = 1;
+    cert->issuer_dn.cert = x5;
+    cert->issuer_dn.subject = 0;
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
@@ -356,13 +393,13 @@ ne_ssl_certificate *ne_ssl_cert_read(const char *filename)
         gnutls_x509_crt_deinit(x5);
         return NULL;
     }
-
+    munmap_file(data);
+    
     return populate_cert(ne_calloc(sizeof(struct ne_ssl_certificate_s)), x5);
 }
 
 int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
 {
-    int ret;
     unsigned char buffer[10*1024];
     int len = sizeof buffer;
 
@@ -390,14 +427,8 @@ int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
 void ne_ssl_cert_free(ne_ssl_certificate *cert)
 {
     gnutls_x509_crt_deinit(cert->subject);
-    if (cert->subj_dn.dn) ne_free(cert->subj_dn.dn);
-    if (cert->issuer_dn.dn) ne_free(cert->issuer_dn.dn);
     if (cert->identity) ne_free(cert->identity);
-
-    if (cert->issuer)
-        ne_ssl_cert_free(cert->issuer);
-    if (cert->identity)
-        ne_free(cert->identity);
+    if (cert->issuer) ne_ssl_cert_free(cert->issuer);
     ne_free(cert);
 }
 
@@ -434,6 +465,8 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data)
     buffer.size = len;
 
     ret = gnutls_x509_crt_import(x5, &buffer, GNUTLS_X509_FMT_DER);
+    ne_free(der);
+
     if (ret < 0) {
         gnutls_x509_crt_deinit(x5);
         return NULL;
@@ -444,7 +477,6 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data)
 
 char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 {
-    int ret;
     unsigned char *der;
     size_t len = 0;
     char *ret;
@@ -468,7 +500,7 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
-    int ret, j, len = 20;
+    int j, len = 20;
     char sha1[20], *p;
 
     if (gnutls_x509_crt_get_fingerprint(cert->subject, GNUTLS_DIG_SHA,
