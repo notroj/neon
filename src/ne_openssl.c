@@ -441,13 +441,9 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
 
-        if (ca_list == NULL) {
-            /* no list of acceptable CA names provided. */
-            dnames = NULL;
-            count = 0;
-        } else {
-            count = sk_X509_NAME_num(ca_list);
+        count = ca_list ? sk_X509_NAME_num(ca_list) : 0;
 
+        if (count > 0) {
             dnames = ne_malloc(count * sizeof(ne_ssl_dname *));
             
             for (n = 0; n < count; n++) {
@@ -771,6 +767,7 @@ int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
     if (fp == NULL) return -1;
 
     if (PEM_write_X509(fp, cert->subject) != 1) {
+        ERR_clear_error();
         fclose(fp);
         return -1;
     }

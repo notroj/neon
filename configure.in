@@ -3,7 +3,8 @@ dnl cross-compiling.
 AC_PREREQ(2.53)
 
 dnl Extract the version (sans LF) from .version, created at release-time.
-m4_define(ne_version, [esyscmd([echo -n `cat .version`])])
+m4_define(ne_version, [m4_translit(m4_include(.version), [
+])])
 
 AC_INIT(neon, ne_version, [neon@webdav.org])
 

@@ -1,3 +1,9 @@
+Changes in release 0.24.6:
+* SECURITY (CVE CAN-2004-0398): Fix sscanf overflow in ne_rfc1036_parse,
+ thanks to Stefan Esser.
+* Link libneon against libexpat during Subversion build using bundled neon.
+* Win32 build script update (Jon Foster).
+
 Changes in release 0.24.5:
 * SECURITY (CVE CAN-2004-0179): Fix format string vulnerabilities in
  XML/207 response handling, reported by greuff@void.at.

@@ -1,3 +1,27 @@
+Sun May  2 21:14:14 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	Fix buffer overflow in RFC1036 date parser, CVE CAN-2004-0389.
+	
+	* ne_dates.c (RFC1036_FORMAT): Specify maximum field with for day
+	name.
+	(ne_rfc1123_parse, ne_rfc1036_parse, ne_asctime_parse): Make
+	thread-safe; remove static buffers.
+
+Thu Mar 11 23:38:01 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_openssl.c (provide_client_cert): Avoid malloc(0) when server
+	sends no CA names in CertificateRequest.
+	(ne_ssl_cert_write): Be paranoid and clear the OpenSSL error stack
+	on write failures.
+
+Sun May  2 16:59:39 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_dates.c [RFC1123_TEST] (main): Remove embedded test cases.
+
+Fri Apr 16 11:44:34 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in (LIBS): Include NEON_LTLIBS.
+
 Wed Apr 14 10:39:53 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	Fix format string vulnerabilities, CVE CAN-2004-0179:

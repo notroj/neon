@@ -10,19 +10,33 @@ NULL=nul
 
 ########
 # Support for Expat integration
-# IF EXPAT_SRC is set, then assume compiling against a pre-built
-# binary Expat 1.95.X.  If EXPAT_SRC is not set, then the user can
+#
+# If EXPAT_SRC or EXPAT_INC are set, then assume compiling against a
+# pre-built binary Expat 1.95.X.  You can use either EXPAT_SRC 
+# to specify the top-level Expat directory, or EXPAT_INC to directly
+# specify the Expat include directory.  (If both are set, EXPAT_SRC
+# is ignored).
+#
+# If EXPAT_SRC and EXPAT_INC are not set, then the user can
 # still set EXPAT_FLAGS to specify very specific compile behavior.
-# If both EXPAT_SRC and EXPAT_FLAGS are not set, disable WebDAV
-# support.
+#
+# If none of EXPAT_SRC, EXPAT_INC and EXPAT_FLAGS are set, disable
+# WebDAV support.
+
+!IF "$(EXPAT_INC)" == ""
+!IF "$(EXPAT_SRC)" != ""
+EXPAT_INC = $(EXPAT_SRC)\Source\Lib
+!ENDIF
+!ENDIF
+
 BUILD_EXPAT = 1
-!IF "$(EXPAT_SRC)" == ""
-!IF "$(EXPAT_FLAGS)" == ""
+!IF "$(EXPAT_INC)" == ""
+!IFNDEF EXPAT_FLAGS
 EXPAT_FLAGS = /D NEON_NODAV
 BUILD_EXPAT =
 !ENDIF
 !ELSE
-EXPAT_FLAGS = /I "$(EXPAT_SRC)\Source\Lib" /D HAVE_EXPAT /D HAVE_EXPAT_H
+EXPAT_FLAGS = /I "$(EXPAT_INC)" /D HAVE_EXPAT /D HAVE_EXPAT_H
 !ENDIF
 
 
@@ -99,11 +113,11 @@ LIB32_OBJS= \
 !IF "$(OPENSSL_SRC)" != ""
 LIB32_OBJS = $(LIB32_OBJS) "$(INTDIR)\ne_openssl.obj"
 !IFDEF OPENSSL_STATIC
-LIB32_OBJS = $(LIB32_OBJS) $(OPENSSL_SRC)\out32\libeay32.lib \
-			   $(OPENSSL_SRC)\out32\ssleay32.lib
+LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\out32\libeay32.lib" \
+			   "$(OPENSSL_SRC)\out32\ssleay32.lib"
 !ELSE
-LIB32_OBJS = $(LIB32_OBJS) $(OPENSSL_SRC)\out32dll\libeay32.lib \
-			   $(OPENSSL_SRC)\out32dll\ssleay32.lib
+LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\out32dll\libeay32.lib" \
+			   "$(OPENSSL_SRC)\out32dll\ssleay32.lib"
 !ENDIF
 !ELSE
 # Provide ABI-compatibility stubs for SSL interface

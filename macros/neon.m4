@@ -122,7 +122,7 @@ AC_DEFUN([NEON_VERSIONS], [
 # Define the current versions.
 NEON_VERSION_MAJOR=0
 NEON_VERSION_MINOR=24
-NEON_VERSION_RELEASE=5
+NEON_VERSION_RELEASE=6
 NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
@@ -545,6 +545,7 @@ NEON_GSSAPI()
 
 AC_SUBST(NEON_CFLAGS)
 AC_SUBST(NEON_LIBS)
+AC_SUBST(NEON_LTLIBS)
 
 ])
 
@@ -819,7 +820,7 @@ AC_HELP_STRING(--enable-warnings, [enable compiler warnings]))
 if test "$enable_warnings" = "yes"; then
    case $GCC:`uname` in
    yes:*)
-      CFLAGS="$CFLAGS -Wall -ansi-pedantic -Wmissing-declarations -Winline -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wcast-align -Wbad-function-cast -Wimplicit-prototypes"
+      CFLAGS="$CFLAGS -Wall -ansi-pedantic -Wmissing-declarations -Winline -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wcast-align -Wbad-function-cast -Wimplicit-prototypes -Wformat-security"
       if test -z "$with_ssl" -o "$with_ssl" = "no"; then
 	 # OpenSSL headers fail strict prototypes checks
 	 CFLAGS="$CFLAGS -Wstrict-prototypes"

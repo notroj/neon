@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2002 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2004 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -110,8 +110,12 @@ if test "$NEON_NEED_XML_PARSER" = "yes"; then
        ne_expdir=`echo $with_expat | sed 's:/libexpat.la$::'`
        AC_DEFINE(HAVE_EXPAT)
        CPPFLAGS="$CPPFLAGS -I$ne_expdir"
-       # no dependency on libexpat => crippled libneon, so do partial install
-       ALLOW_INSTALL=lib
+       if test "x${NEON_TARGET}" = "xlibneon.la"; then
+         NEON_LTLIBS=$with_expat
+       else
+         # no dependency on libexpat => crippled libneon, so do partial install
+         ALLOW_INSTALL=lib
+       fi
        neon_xml_parser=expat
        neon_xml_parser_message="expat in $ne_expdir"
        ;;
