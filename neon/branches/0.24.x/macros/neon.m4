@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2002 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2003 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -312,16 +312,16 @@ AC_DEFUN([NE_SEARCH_LIBS], [
 
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
 AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="none needed"], [
-ne_save_LIBS=$LIBS
+ne_sl_save_LIBS=$LIBS
 ne_cv_libsfor_$1="not found"
 for lib in $2; do
-    LIBS="$ne_save_LIBS -l$lib $NEON_LIBS"
+    LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
     AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="-l$lib"; break])
     m4_if($3, [], [], dnl If $3 is specified, then...
-              [LIBS="$ne_save_LIBS -l$lib $3 $NEON_LIBS"
+              [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
                AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="-l$lib $3"; break])])
 done
-LIBS=$ne_save_LIBS])])
+LIBS=$ne_sl_save_LIBS])])
 
 if test "$ne_cv_libsfor_$1" = "not found"; then
    m4_if($4, [], [AC_MSG_ERROR([could not find library containing $1])], [$4])
@@ -465,10 +465,10 @@ AC_DEFINE_UNQUOTED([NE_FMT_]translit($1, a-z, A-Z), "$ne_cv_fmt_$1",
 
 dnl Wrapper for AC_CHECK_FUNCS; uses libraries from $NEON_LIBS.
 AC_DEFUN([NE_CHECK_FUNCS], [
-ne_save_LIBS=$LIBS
+ne_cf_save_LIBS=$LIBS
 LIBS="$LIBS $NEON_LIBS"
 AC_CHECK_FUNCS($@)
-LIBS=$ne_save_LIBS])
+LIBS=$ne_cf_save_LIBS])
 
 dnl Checks needed when compiling the neon source.
 AC_DEFUN([LIBNEON_SOURCE_CHECKS], [

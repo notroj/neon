@@ -486,6 +486,7 @@ int ne_negotiate_ssl(ne_request *req)
     ne_ssl_context *ctx = sess->ssl_context;
     ne_ssl_socket *sock;
     STACK_OF(X509) *chain;
+    int freechain = 0; /* non-zero if chain should be free'd. */
 
     NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
 
@@ -507,13 +508,24 @@ int ne_negotiate_ssl(ne_request *req)
     sock = ne_sock_sslsock(sess->socket);
 
     chain = SSL_get_peer_cert_chain(sock->ssl);
+    /* For an SSLv2 connection, the cert chain will always be NULL. */
+    if (chain == NULL) {
+        X509 *cert = SSL_get_peer_certificate(sock->ssl);
+        if (cert) {
+            chain = sk_X509_new_null();
+            sk_X509_push(chain, cert);
+        }
+    }
+
     if (chain == NULL || sk_X509_num(chain) == 0) {
 	ne_set_error(sess, _("SSL server did not present certificate"));
 	return NE_ERROR;
     }
 
     if (sess->server_cert) {
-	if (X509_cmp(sk_X509_value(chain, 0), sess->server_cert->subject)) {
+        int diff = X509_cmp(sk_X509_value(chain, 0), sess->server_cert->subject);
+        if (freechain) sk_X509_free(chain); /* no longer need the chain */
+	if (diff) {
 	    /* This could be a MITM attack: fail the request. */
 	    ne_set_error(sess, _("Server certificate changed: "
 				 "connection intercepted?"));
@@ -524,6 +536,8 @@ int ne_negotiate_ssl(ne_request *req)
     } else {
 	/* new connection: create the chain. */
         ne_ssl_certificate *cert = make_chain(chain);
+
+        if (freechain) sk_X509_free(chain); /* no longer need the chain */
 
 	if (check_certificate(sess, sock->ssl, cert)) {
 	    NE_DEBUG(NE_DBG_SSL, "SSL certificate checks failed: %s\n",

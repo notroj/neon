@@ -31,7 +31,7 @@ AC_BEFORE([$0], [NEON_XML_PARSER])
 
 AC_CHECK_HEADERS(sys/time.h)
 
-AC_CHECK_FUNCS(pipe isatty usleep)
+AC_CHECK_FUNCS(pipe isatty usleep shutdown)
 
 AC_REQUIRE([NE_FIND_AR])
 

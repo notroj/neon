@@ -75,9 +75,13 @@ static int parsing(void)
 	const char *hdr, *name, *value;
     } cookies[] = {
 	{ "Set-Cookie: alpha=bar", "alpha", "bar" },
+#if 0
 	{ "Set-Cookie2: alpha=bar", "alpha", "bar" },
+#endif
 	{ "Set-Cookie: beta = bar", "beta", "bar" },
 	{ "Set-Cookie: delta = bar; norman=fish", "delta", "bar" },
+        /* parsing bug in <0.24.1 */
+        { "Set-Cookie: alpha=beta; path", "alpha", "beta" },
 	{ NULL, NULL, NULL }
     };
     int n;

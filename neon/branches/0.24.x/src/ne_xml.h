@@ -33,11 +33,11 @@ BEGIN_NEON_DECLS
  * (start-element, char-data, end-element).  Each start-element event
  * is passed to each handler in the stack in turn until one until one
  * accepts the element.  This handler then receives subsequent
- * char-data and end-element events.
+ * char-data and end-element events for the element.
  *
- * For each new start-element, the search up the handler stack begins
- * with the handler for the parent element (for the root element, at
- * the base of the stack). 
+ * For each new start-element event, the search up the handler stack
+ * begins with the handler for the parent element (for the root
+ * element, at the base of the stack).
  *
  * For each accepted element, a "state" integer is stored, which is
  * passed to the corresponding char-data and end-element callbacks for
@@ -50,12 +50,15 @@ BEGIN_NEON_DECLS
 #define NE_XML_DECLINE (0)
 #define NE_XML_ABORT (-1)
 
-/* The startelm callback may return:
- *   <0 =>  abort the parse (NE_XML_ABORT)
- *    0 =>  decline this element  (NE_XML_DECLINE)
- *   >0 =>  accept this element; value is state for this element.
+/* A start-element callback for element with given namespace/name.
+ * The callback may return:
+ *   <0  =>  abort the parse (NE_XML_ABORT)
+ *    0  =>  decline this element (NE_XML_DECLINE)
+ *   >0  =>  accept this element; value is state for this element.
+ *
  * The 'parent' integer is the state returned by the handler of the 
- * parent element. */
+ * parent element.   The attributes array gives name/value pairs
+ * in atts[n] and atts[n+1] from n=0 up to atts[n]==NULL. */
 typedef int ne_xml_startelm_cb(void *userdata, int parent,
                                const char *nspace, const char *name,
                                const char **atts);
@@ -102,9 +105,10 @@ void ne_xml_parse_v(void *userdata, const char *block, size_t len);
 /* Return current parse line for errors */
 int ne_xml_currentline(ne_xml_parser *p);
 
-/* Set error message for parser */
+/* Set error string for parser. */
 void ne_xml_set_error(ne_xml_parser *p, const char *msg);
 
+/* Return the error string for the parser and never NULL. */
 const char *ne_xml_get_error(ne_xml_parser *p);
 
 /* From a start_element callback which was passed 'attrs' using given
@@ -115,11 +119,11 @@ const char *ne_xml_get_attr(ne_xml_parser *parser,
 			    const char *name);
 
 /* Return the encoding of the document being parsed.  May return NULL
- * if no encoding is defined or if the XML declaration has not been
- * parsed. */
+ * if no encoding is defined or if the XML declaration has not yet
+ * been parsed. */
 const char *ne_xml_doc_encoding(const ne_xml_parser *p);
 
-/* A utility interface for mapping {nspace, name} onto an int. */
+/* A utility interface for mapping {nspace, name} onto an integer. */
 struct ne_xml_idmap {
     const char *nspace, *name;
     int id;

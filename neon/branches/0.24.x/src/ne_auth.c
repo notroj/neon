@@ -46,6 +46,10 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
+#ifdef WIN32
+#include <windows.h> /* for GetCurrentThreadId() etc */
+#endif
+
 #ifdef NEON_SSL
 #include <openssl/rand.h>
 #endif
@@ -128,6 +132,13 @@ static const struct auth_class {
 /* Authentication session state. */
 typedef struct {
     ne_session *sess;
+
+    /* Which context will auth challenges be accepted? */
+    enum {
+        AUTH_ANY, /* ignore nothing. */
+        AUTH_CONNECT, /* only in response to a CONNECT request. */
+        AUTH_NOTCONNECT /* only in non-CONNECT responsees */
+    } context;
     
     /* Specifics for server/proxy auth. FIXME: need a better field
      * name! */
@@ -976,25 +987,31 @@ static void ah_create(ne_request *req, void *session, const char *method,
 		      const char *uri)
 {
     auth_session *sess = session;
-    struct auth_request *areq = ne_calloc(sizeof *areq);
+    int is_connect = strcmp(method, "CONNECT") == 0;
 
-    NE_DEBUG(NE_DBG_HTTPAUTH, "ah_create, for %s\n", sess->spec->resp_hdr);
-
-    areq->method = method;
-    areq->uri = uri;
-    areq->request = req;
-
-    ne_add_response_header_handler(req, sess->spec->resp_hdr,
-				   ne_duplicate_header, &areq->auth_hdr);
-
+    if (sess->context == AUTH_ANY ||
+        (is_connect && sess->context == AUTH_CONNECT) ||
+        (!is_connect && sess->context == AUTH_NOTCONNECT)) {
+        struct auth_request *areq = ne_calloc(sizeof *areq);
+        
+        NE_DEBUG(NE_DBG_HTTPAUTH, "ah_create, for %s\n", sess->spec->resp_hdr);
+        
+        areq->method = method;
+        areq->uri = uri;
+        areq->request = req;
+        
+        ne_add_response_header_handler(req, sess->spec->resp_hdr,
+                                       ne_duplicate_header, &areq->auth_hdr);
+        
 	
-    ne_add_response_header_handler(req, sess->spec->resp_info_hdr,
-				   ne_duplicate_header, 
-				   &areq->auth_info_hdr);
-    
-    sess->attempt = 0;
-
-    ne_set_request_private(req, sess->spec->id, areq);
+        ne_add_response_header_handler(req, sess->spec->resp_info_hdr,
+                                       ne_duplicate_header, 
+                                       &areq->auth_info_hdr);
+        
+        sess->attempt = 0;
+        
+        ne_set_request_private(req, sess->spec->id, areq);
+    }
 }
 
 
@@ -1003,7 +1020,7 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
     auth_session *sess = cookie;
     struct auth_request *req = ne_get_request_private(r, sess->spec->id);
 
-    if (!sess->can_handle) {
+    if (!sess->can_handle || !req) {
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Not handling session.\n");
     } else {
 	char *value;
@@ -1053,6 +1070,8 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     struct auth_request *areq = ne_get_request_private(req, sess->spec->id);
     int ret = NE_OK;
 
+    if (!areq) return NE_OK;
+
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
 	     sess->attempt, status->code, sess->spec->status_code, 
@@ -1083,7 +1102,7 @@ static void ah_destroy(ne_request *req, void *session)
 {
     auth_session *sess = session;
     struct auth_request *areq = ne_get_request_private(req, sess->spec->id);
-    ne_free(areq);
+    if (areq) ne_free(areq);
 }
 
 static void free_auth(void *cookie)
@@ -1094,7 +1113,7 @@ static void free_auth(void *cookie)
     ne_free(sess);
 }
 
-static void auth_register(ne_session *sess,
+static void auth_register(ne_session *sess, int isproxy,
 			  const struct auth_class *ahc, const char *id, 
 			  ne_auth_creds creds, void *userdata) 
 {
@@ -1105,6 +1124,11 @@ static void auth_register(ne_session *sess,
     ahs->sess = sess;
     ahs->spec = ahc;
 
+    if (strcmp(ne_get_scheme(sess), "https") == 0)
+        ahs->context = isproxy ? AUTH_CONNECT : AUTH_NOTCONNECT;
+    else
+        ahs->context = AUTH_ANY;
+    
     /* Register hooks */
     ne_hook_create_request(sess, ah_create, ahs);
     ne_hook_pre_send(sess, ah_pre_send, ahs);
@@ -1117,12 +1141,12 @@ static void auth_register(ne_session *sess,
 
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, &ah_server_class, HOOK_SERVER_ID, creds, userdata);
+    auth_register(sess, 0, &ah_server_class, HOOK_SERVER_ID, creds, userdata);
 }
 
 void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, &ah_proxy_class, HOOK_PROXY_ID, creds, userdata);
+    auth_register(sess, 1, &ah_proxy_class, HOOK_PROXY_ID, creds, userdata);
 }
 
 void ne_forget_auth(ne_session *sess)

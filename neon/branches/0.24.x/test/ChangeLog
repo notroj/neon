@@ -1,3 +1,27 @@
+Tue Oct  7 20:23:35 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c (ssl_server): Handle several requests if required.
+	(tunnel_header): New function.
+	(serve_tunnel): Fail with a 500 if the request included
+	an Authenticate header; take an ssl_server_args pointer
+	as userdata.
+	(fail_tunnel, proxy_tunnel): Adjust accordingly.
+	(apt_post_send): Adjust for 401 check.
+	(auth_tunnel_creds): New test.	
+
+Wed Oct  1 00:30:25 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c (simple_sslv2): Regression test.
+	(ssl_server): Create SSL_CTX locally; optionally create an
+	SSLv2-only server.
+	(init_ssl): Do not create the SSL_CTX.
+
+Wed Sep 17 19:57:22 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c: Refactor around single SSL server function.
+	(ssl_server): Combination of do_ssl_response and old serve_*
+	functions.  All callers updated.
+
 Sun Sep 14 12:27:22 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* socket.c (write_reset, read_reset): Skip if no RESET was
