@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     printf("-> running `%s':\n", test_suite);
     
     for (n = 0; !aborted && tests[n].fn != NULL; n++) {
-	int result, is_xfail = 0;
+	int result, is_xfail = 0, is_xleaky = 0;
 #ifdef NEON_MEMLEAK
         size_t allocated = ne_alloc_used;
 #endif
@@ -227,7 +227,11 @@ int main(int argc, char *argv[])
                    ne_alloc_used == allocated) {
             t_context("expected memory leak not detected");
             result = FAIL;
-        }
+        } else if (tests[n].flags & T_EXPECT_LEAKS && result == OK) {
+            fprintf(debug, "Blocks leaked (expected): ");
+            ne_alloc_dump(debug);
+            is_xleaky = 1;
+        } 
 #endif
 
         if (tests[n].flags & T_EXPECT_FAIL) {
@@ -258,6 +262,10 @@ int main(int argc, char *argv[])
 	    if (warned) {
 		printf(" (with %d warning%s)", warned, (warned > 1)?"s":"");
 	    }
+            if (is_xleaky) {
+                printf(" (with expected leak, %" NE_FMT_SIZE_T " bytes)",
+                       ne_alloc_used - allocated);
+            }
 	    putchar('\n');
 	    passes++;
 	    break;
