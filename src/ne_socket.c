@@ -1,6 +1,6 @@
 /* 
    socket handling routines
-   Copyright (C) 1998-2003, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2004, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
    This library is free software; you can redistribute it and/or
@@ -224,15 +224,18 @@ static void print_error(int errnum, char *buffer, size_t buflen)
 #endif
 
 #ifdef NEON_SSL
-static int prng_seeded = 0;
 
-/* Initialize SSL library; returns non-zero on failure. */
-static int init_ssl(void)
+/* Initialize SSL library. */
+static void init_ssl(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
     PKCS12_PBE_add();  /* ### not sure why this is needed. */
+}
 
+/* Seed the SSL PRNG, if necessary; returns non-zero on failure. */
+static int seed_ssl_prng(void)
+{
     /* Check whether the PRNG has already been seeded. */
     if (RAND_status() == 1)
 	return 0;
@@ -317,11 +320,7 @@ int ne_sock_init(void)
 #endif
 
 #ifdef NEON_SSL
-    if (init_ssl()) {
-	NE_DEBUG(NE_DBG_SOCKET, "SSL initialization failed; lacking PRNG?\n");
-    } else {
-        prng_seeded = 1;
-    }
+    init_ssl();
 #endif
 
     init_result = 1;
@@ -973,7 +972,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
     SSL *ssl;
     int ret;
 
-    if (!prng_seeded && RAND_status() != 1) {
+    if (seed_ssl_prng()) {
 	set_error(sock, _("SSL disabled due to lack of entropy"));
 	return NE_SOCK_ERROR;
     }

@@ -1,6 +1,6 @@
 /* 
    HTTP utility functions
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -30,10 +30,6 @@
 #include <stdio.h>
 #include <ctype.h> /* isdigit() for ne_parse_statusline */
 
-#include "ne_utils.h"
-#include "ne_string.h" /* for ne_strdup */
-#include "ne_dates.h"
-
 #ifdef NEON_SSL
 #include <openssl/opensslv.h>
 #endif
@@ -48,6 +44,10 @@
 #ifdef NEON_ZLIB
 #include <zlib.h>
 #endif
+
+#include "ne_utils.h"
+#include "ne_string.h" /* for ne_strdup */
+#include "ne_dates.h"
 
 int ne_debug_mask = 0;
 FILE *ne_debug_stream = NULL;

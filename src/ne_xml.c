@@ -1,6 +1,6 @@
 /* 
    Higher Level Interface to XML Parsers.
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -539,7 +539,7 @@ void ne_xml_destroy(ne_xml_parser *p)
 
 void ne_xml_set_error(ne_xml_parser *p, const char *msg)
 {
-    ne_snprintf(p->error, ERR_SIZE, msg);
+    ne_snprintf(p->error, ERR_SIZE, "%s", msg);
 }
 
 #ifdef HAVE_LIBXML

@@ -1,6 +1,6 @@
 /* 
    Tests for property handling
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -81,6 +81,14 @@ static int regress(void)
 	"<D:propstat/>"
 	"<D:status>HTTP/1.1 404 Not Found</D:status>"
 	"</D:multistatus>",
+
+	/* format string handling with neon <= 0.24.4 */
+	RESP207 "<?xml version=\"1.0\"?><D:multistatus xmlns:D=\"DAV:\">"
+	"<D:response><D:href>/foo/</D:href>"
+	"<D:propstat/>"
+	"<D:status>%s%s%s%s</D:status>"
+	"</D:response></D:multistatus>",
+
 	NULL,
     };
     ne_session *sess;
@@ -89,6 +97,40 @@ static int regress(void)
     for (n = 0; bodies[n] != NULL; n++) {
 	CALL(make_session(&sess, single_serve_string, (void *)bodies[n]));
 	ne_simple_propfind(sess, "/", 0, NULL, dummy_results, NULL);
+	ne_session_destroy(sess);
+	CALL(await_server());
+    }
+
+    return OK;
+}
+
+static int patch_regress(void)
+{
+    static const char *bodies[] = { 
+	/* format string handling bugs with neon <= 0.24.4 */
+	RESP207 "<?xml version=\"1.0\"?><D:multistatus xmlns:D=\"DAV:\">"
+	"<D:response><D:href>/foo/</D:href>"
+	"<D:status>HTTP/1.1 500 Bad Voodoo</D:status>"
+	"<D:responsedescription>%s%s%s%s</D:responsedescription>"
+        "</D:response></D:multistatus>",
+
+	RESP207 "<?xml version=\"1.0\"?><D:multistatus xmlns:D=\"DAV:\">"
+	"<D:response><D:href>/foo/</D:href>"
+	"<D:status>HTTP/1.1 %s%s%s%s</D:status>",
+
+        NULL
+    };
+    ne_session *sess;
+    int n;
+    static const ne_propname pn = { "DAV:", "foobar" };
+    ne_proppatch_operation pops[] = { 
+        { &pn, ne_propset, "fish" },
+        { NULL, ne_propset, NULL }
+    };
+
+    for (n = 0; bodies[n] != NULL; n++) {
+	CALL(make_session(&sess, single_serve_string, (void *)bodies[n]));
+	ne_proppatch(sess, "/", pops);
 	ne_session_destroy(sess);
 	CALL(await_server());
     }
@@ -503,6 +545,7 @@ ne_test tests[] = {
     T(patch_simple),
     T(pfind_simple),
     T(regress),
+    T(patch_regress),
     T(NULL) 
 };
 

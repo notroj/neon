@@ -1,3 +1,7 @@
+Fri Mar 26 12:07:04 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in (distclean): Clean more.
+
 Sat Oct 25 10:37:59 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* configure.in: Use AC_LIBTOOL_TAGS if available.

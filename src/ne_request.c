@@ -124,7 +124,7 @@ struct ne_request_s {
 	/* how the message length is detemined: */
 	enum {
 	    R_TILLEOF = 0, /* read till eof */
-	    R_NO_BODY, /* implicitly no body (HEAD, 204, 304) */
+	    R_NO_BODY, /* implicitly no body (HEAD, 204, 205, 304) */
 	    R_CHUNKED, /* using chunked transfer-encoding */
 	    R_CLENGTH  /* using given content-length */
 	} mode;
@@ -1187,9 +1187,9 @@ int ne_begin_request(ne_request *req)
     }
 #endif
 
-    /* HEAD requests and 204, 304 responses have no response body,
+    /* HEAD requests and 204, 205, 304 responses have no response body,
      * regardless of what headers are present. */
-    if (req->method_is_head || st->code==204 || st->code==304)
+    if (req->method_is_head || st->code==204 || st->code==205 || st->code==304)
     	req->resp.mode = R_NO_BODY;
 
     /* Prepare for reading the response entity-body.  Call each of the

@@ -1,6 +1,6 @@
 /* 
    SSL/TLS abstraction layer for neon
-   Copyright (C) 2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -34,8 +34,8 @@ typedef struct ne_ssl_dname_s ne_ssl_dname;
 
 /* Returns a single-line string representation of a distinguished
  * name, intended to be human-readable (e.g. "Acme Ltd., Norfolk,
- * GB").  Return value is malloc-allocated and must be free'd by the
- * caller. */
+ * GB").  Return value is a UTF-8-encoded malloc-allocated string and
+ * must be free'd by the caller. */
 char *ne_ssl_readable_dname(const ne_ssl_dname *dn);
 
 /* Returns zero if 'dn1' and 'dn2' refer to same name, or non-zero if
@@ -81,7 +81,7 @@ const ne_ssl_dname *ne_ssl_cert_subject(const ne_ssl_certificate *cert);
 
 #define NE_SSL_DIGESTLEN (60)
 
-/* Calculate the digest ("fingerprint") and format it as a
+/* Calculate the certificate digest ("fingerprint") and format it as a
  * NUL-terminated hex string in 'digest', of the form "aa:bb:...:ff".
  * Returns zero on success or non-zero if there was an internal error
  * whilst calculating the digest.  'digest' must be at least 
@@ -113,8 +113,8 @@ typedef struct ne_ssl_client_cert_s ne_ssl_client_cert;
 ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
 
 /* Returns the "friendly name" given for the client cert, or NULL if
- * none given.  (this can be called before the client cert has been
- * decrypted). */
+ * none given.  This can be called before or after the client cert has
+ * been decrypted.  Returns a NUL-terminated string. */
 const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert);
 
 /* Returns non-zero if client cert is encrypted. */
