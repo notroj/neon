@@ -1,6 +1,6 @@
 /* 
    WebDAV property manipulation
-   Copyright (C) 2000-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2000-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -37,6 +37,8 @@
 
 /* don't store flat props with a value > 10K */
 #define MAX_FLATPROP_LEN (102400)
+
+#define EOL "\r\n"
 
 struct ne_propfind_handler_s {
     ne_session *sess;

@@ -49,6 +49,8 @@
 
 #define HOOK_ID "http://webdav.org/neon/hooks/webdav-locking"
 
+#define EOL "\r\n"
+
 /* A list of lock objects. */
 struct lock_list {
     struct ne_lock *lock;

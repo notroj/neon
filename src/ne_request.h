@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -38,9 +38,6 @@ BEGIN_NEON_DECLS
 #define NE_FAILED (7) /* The precondition failed */
 #define NE_RETRY (8) /* Retry request (ne_end_request ONLY) */
 #define NE_REDIRECT (9) /* See ne_redirect.h */
-
-/* FIXME: remove this */
-#define EOL "\r\n"
 
 /* Opaque object representing a single HTTP request. */
 typedef struct ne_request_s ne_request;

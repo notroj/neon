@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -45,6 +45,8 @@
 #if defined(NE_HAVE_ZLIB) && defined(NE_HAVE_SSL)
 #define NO_TESTS 1
 #endif
+
+#define EOL "\r\n"
 
 #ifndef NE_HAVE_ZLIB
 static int sd_result = OK;

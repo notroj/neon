@@ -61,6 +61,8 @@
 #define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
 if (sret < 0) return aborted(req, msg, sret); } while (0)
 
+#define EOL "\r\n"
+
 struct body_reader {
     ne_block_reader handler;
     ne_accept_response accept_response;

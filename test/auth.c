@@ -1,6 +1,6 @@
 /* 
    Authentication tests
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -42,6 +42,8 @@ static int auth_failed;
 
 #define BASIC_WALLY "Basic realm=WallyWorld"
 #define CHAL_WALLY "WWW-Authenticate: " BASIC_WALLY
+
+#define EOL "\r\n"
 
 static int auth_cb(void *userdata, const char *realm, int tries, 
 		   char *un, char *pw)
