@@ -388,7 +388,7 @@ ne_test tests[] = {
     T(chunked_20b),
     T(chunked_10b),
     T(chunked_10b_wn),
-    T_XFAIL(retry_notcompress),
+    T(retry_notcompress),
     T_XFAIL(retry_compress),
     T(NULL)
 };
