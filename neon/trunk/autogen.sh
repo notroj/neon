@@ -14,7 +14,7 @@ set -e
 echo -n "libtoolize... "
 ${LIBTOOLIZE:-libtoolize} --copy --force >/dev/null
 echo -n "aclocal... "
-${ACLOCAL:-aclocal} -I macros 2>&1 | grep -v "warning: underquoted definition"
+${ACLOCAL:-aclocal} -I macros
 echo -n "autoheader... "
 ${AUTOHEADER:-autoheader}
 echo -n "autoconf... "
