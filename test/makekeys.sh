@@ -134,20 +134,17 @@ for n in 1 2 3 4 5; do
      -in altname${n}.csr -out altname${n}.cert
 done
 
+MKPKCS12="${OPENSSL} pkcs12 -export -passout stdin -in client.cert -inkey client.key"
+
 # generate a PKCS12 cert from the client cert: -passOUT because it's the
 # passphrase on the OUTPUT cert, confusing...
-echo foobar | ${OPENSSL} pkcs12 -export -passout stdin \
-   -name "Just A Neon Client Cert" \
-   -in client.cert -inkey client.key -out client.p12
+echo foobar | ${MKPKCS12} -name "Just A Neon Client Cert" -out client.p12
 
-# generate a PKCS12 cert with no password
-echo | ${OPENSSL} pkcs12 -export -passout stdin \
-   -name "An Unencrypted Neon Client Cert" \
-   -in client.cert -inkey client.key -out unclient.p12
+# generate a PKCS#12 cert with no password and a friendly name
+echo | ${MKPKCS12} -name "An Unencrypted Neon Client Cert" -out unclient.p12
 
-# generate a PKCS12 cert with no friendly name
-echo | ${OPENSSL} pkcs12 -export -passout stdin \
-   -in client.cert -inkey client.key -out noclient.p12
+# generate a PKCS#12 cert with no friendly name
+echo | ${MKPKCS12} -out noclient.p12
 
 ### a file containing a complete chain
 

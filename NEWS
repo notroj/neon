@@ -1,3 +1,10 @@
+Changes in release 0.24.3:
+* Respect configure's --datadir argument (Max Bowsher).
+* Fix build on Windows when OpenSSL is not used.
+* Fix use of SSLv2 (spurious "Server did not present certificate" error).
+* When using SSL via a proxy, prevent leaking server auth credentials
+ to the proxy, or proxy auth credentials to the server.
+
 Changes in release 0.24.2:
 * Fix name resolver with some old versions of glibc.
 * Fix problems with configure's "time_t format string" detection.

@@ -288,16 +288,16 @@ static int parse(void)
 
     for (n = 0; uritests[n].uri != NULL; n++) {
 	ne_uri res;
-	const struct test_uri *exp = &uritests[n];
-	ONV(ne_uri_parse(exp->uri, &res) != 0,
-	    ("%s: parse failed", exp->uri));
-	ONV(res.port != exp->port,
-	    ("%s: parsed port was %d not %d", exp->uri, res.port, exp->port));
-	ONCMP(exp->scheme, res.scheme, exp->uri, "scheme");
-	ONCMP(exp->host, res.host, exp->uri, "host");
-	ONV(strcmp(res.path, exp->path),
-	    ("%s: parsed path was %s not %s", exp->uri, res.path, exp->path));
-        ONCMP(exp->authinfo, res.authinfo, exp->uri, "authinfo");
+	const struct test_uri *e = &uritests[n];
+	ONV(ne_uri_parse(e->uri, &res) != 0,
+	    ("%s: parse failed", e->uri));
+	ONV(res.port != e->port,
+	    ("%s: parsed port was %d not %d", e->uri, res.port, e->port));
+	ONCMP(e->scheme, res.scheme, e->uri, "scheme");
+	ONCMP(e->host, res.host, e->uri, "host");
+	ONV(strcmp(res.path, e->path),
+	    ("%s: parsed path was %s not %s", e->uri, res.path, e->path));
+        ONCMP(e->authinfo, res.authinfo, e->uri, "authinfo");
 	ne_uri_free(&res);
     }
 

@@ -1,3 +1,8 @@
+Tue Oct  7 21:19:56 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* child.c (close_socket): New function.
+	(server_child, spawn_server_repeat): Use it.
+
 Fri Jul 25 12:13:59 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	Add support for test type which is expected to fail

@@ -57,9 +57,8 @@
                      "Cambridge, Cambridgeshire, GB"
 #define CACERT_DNAME "Random Dept, Neosign, Oakland, California, US"
 
-static SSL_CTX *server_ctx = NULL;
-
 static char *srcdir = ".";
+static char *server_key = NULL; 
 
 static ne_ssl_certificate *def_ca_cert = NULL, *def_server_cert;
 static ne_ssl_client_cert *def_cli_cert;
@@ -77,44 +76,139 @@ static int s_strwrite(SSL *s, const char *buf)
     return OK;
 }
 
-/* Do an SSL response over socket given context; returning ssl session
- * structure in *sess if sess is non-NULL. */
-static int do_ssl_response(ne_socket *sock, SSL_CTX *ctx, SSL_SESSION **sess,
-			   const char *resp, int unclean)
+/* Arguments for running the SSL server */
+struct ssl_server_args {
+    char *cert; /* the server cert to present. */
+    const char *response; /* the response to send. */
+    int unclean; /* use an unclean shutdown if non-NULL */
+    int numreqs; /* number of request/responses to handle over the SSL connection. */
+
+    /* client cert handling: */
+    int require_cc; /* require a client cert if non-NULL */
+    const char *ca_list; /* file of CA certs to verify client cert against */
+    const char *send_ca; /* file of CA certs to send in client cert request */
+    
+    /* session caching: */
+    int cache; /* use the session cache if non-zero */
+    SSL_SESSION *session; /* use to store copy of cached session. */
+    int count; /* internal use. */
+
+    int use_ssl2; /* force use of SSLv2 only */
+};
+
+/* default response string if args->response is NULL */
+#define DEF_RESP "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n"
+
+/* An SSL server inna bun. */
+static int ssl_server(ne_socket *sock, void *userdata)
 {
+    struct ssl_server_args *args = userdata;
     int fd = ne_sock_fd(sock), ret;
     /* we don't want OpenSSL to close this socket for us. */
     BIO *bio = BIO_new_socket(fd, BIO_NOCLOSE);
     char buf[BUFSIZ];
-    SSL *ssl = SSL_new(ctx);
+    SSL *ssl;
+    static SSL_CTX *ctx = NULL;
 
+    if (ctx == NULL) {
+        ctx = SSL_CTX_new(args->use_ssl2 ? SSLv2_server_method()
+                          : SSLv23_server_method());
+    }
+
+    ONV(ctx == NULL,
+	("could not create SSL_CTX: %s", ERROR_SSL_STRING));
+    ONV(!SSL_CTX_use_PrivateKey_file(ctx, server_key, SSL_FILETYPE_PEM),
+         ("failed to load private key: %s", ERROR_SSL_STRING));
+
+    NE_DEBUG(NE_DBG_HTTP, "using server cert %s\n", args->cert);
+    ONN("failed to load certificate",
+	!SSL_CTX_use_certificate_file(ctx, args->cert, SSL_FILETYPE_PEM));
+
+    if (args->require_cc) {
+        /* require a client cert. */
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | 
+                           SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+ 
+        if (args->send_ca) {
+            /* the list of issuer DNs of these CAs is included in the
+            * certificate request message sent to the client */
+            SSL_CTX_set_client_CA_list(ctx, 
+                                       SSL_load_client_CA_file(args->send_ca));
+        }
+
+        /* set default ca_list */
+        if (!args->ca_list) args->ca_list = CA_CERT;
+    }
+    
+    if (args->ca_list) {
+        /* load the CA used to verify the client cert; also sent in the
+         * certificate exchange message. */
+        ONN("failed to load CA cert",
+            SSL_CTX_load_verify_locations(ctx, args->ca_list, NULL) != 1);
+    }
+
+    if (args->cache && args->count == 0) {
+	/* enable OpenSSL's internal session cache, enabling the
+	 * negotiation to re-use a session if both sides support it. */
+	SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
+    }
+
+    ssl = SSL_new(ctx);
     ONN("SSL_new failed", ssl == NULL);
+
+    args->count++;
 
     SSL_set_bio(ssl, bio, bio);
 
     ONV(SSL_accept(ssl) != 1,
 	("SSL_accept failed: %s", ERROR_SSL_STRING));
 
-    ret = SSL_read(ssl, buf, BUFSIZ - 1);
-    if (ret == 0)
-	return 0; /* connection closed by parent; give up. */
-    ONV(ret < 0, ("SSL_read failed (%d): %s", ret, ERROR_SSL_STRING));
+    /* loop handling requests: */
+    do {
+        const char *response = args->response ? args->response : DEF_RESP;
 
-    buf[ret] = '\0';
-
-    NE_DEBUG(NE_DBG_HTTP, "Request over SSL was: [%s]\n", buf);
-
-    ONN("request over SSL contained Proxy-Authorization header",
-        strstr(buf, "Proxy-Authorization:") != NULL);
-
-    CALL(s_strwrite(ssl, resp));
+        ret = SSL_read(ssl, buf, BUFSIZ - 1);
+        if (ret == 0)
+            return 0; /* connection closed by parent; give up. */
+        ONV(ret < 0, ("SSL_read failed (%d): %s", ret, ERROR_SSL_STRING));
+        
+        buf[ret] = '\0';
+        
+        NE_DEBUG(NE_DBG_HTTP, "Request over SSL was: [%s]\n", buf);
+        
+        if (strstr(buf, "Proxy-Authorization:") != NULL) {
+            NE_DEBUG(NE_DBG_HTTP, "Got Proxy-Auth header over SSL!\n");
+            response = "HTTP/1.1 500 Client Leaks Credentials\r\n"
+                "Content-Length: 0\r\n" "\r\n";
+        }
+        
+        CALL(s_strwrite(ssl, response));
+        
+    } while (--args->numreqs > 0);
 
     /* copy out the session if requested. */
-    if (sess) {
-	*sess = SSL_get1_session(ssl);
+    if (args->session) {
+        SSL_SESSION *sess = SSL_get1_session(ssl);
+
+#if NE_DEBUGGING
+        /* dump session to child.log for debugging. */
+        SSL_SESSION_print_fp(ne_debug_stream, sess);
+#endif
+
+        if (args->count == 0) {
+            /* save the session */
+            args->session = sess;
+        } else {
+            /* could just to do this with SSL_CTX_sess_hits really,
+             * but this is a more thorough test. */
+            ONN("cached SSL session not used",
+                SSL_SESSION_cmp(args->session, sess));
+            SSL_SESSION_free(args->session);
+            SSL_SESSION_free(sess);
+        }
     }	
     
-    if (!unclean) {
+    if (!args->unclean) {
 	/* Erk, shutdown is messy! See Eric Rescorla's article:
 	 * http://www.linuxjournal.com/article.php?sid=4822 ; we'll just
 	 * hide our heads in the sand here. */
@@ -125,79 +219,13 @@ static int do_ssl_response(ne_socket *sock, SSL_CTX *ctx, SSL_SESSION **sess,
     return 0;
 }
 
-#define DEF_RESP "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n"
-
-/* Standard server callback to send an HTTP response; SSL negotiated
- * using certificate passed as userdata. */
-static int serve_ssl(ne_socket *sock, void *ud)
-{
-    const char *cert = ud;
-
-    NE_DEBUG(NE_DBG_HTTP, "using server cert %s\n", cert);
-
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(server_ctx, cert, SSL_FILETYPE_PEM));
-
-    CALL(do_ssl_response(sock, server_ctx, NULL, DEF_RESP, 0));
-
-    return OK;
-}
-
-static int serve_response_unclean(ne_socket *sock, void *ud)
-{
-    const char *resp = ud;
-
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(server_ctx, 
-				      SERVER_CERT, SSL_FILETYPE_PEM));
-
-    CALL(do_ssl_response(sock, server_ctx, NULL, resp, 1));
-
-    return OK;
-}    
-
-/* Server function which requires the use of a client cert.
- * 'userdata' must be the name of the file giving acceptable CA
- * certificates. */
-static int serve_ccert(ne_socket *sock, void *ud)
-{
-    const char *calist = ud;
-
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(server_ctx, SERVER_CERT, SSL_FILETYPE_PEM));
-    
-    /* require a client cert. */
-    SSL_CTX_set_verify(server_ctx, SSL_VERIFY_PEER | 
-		       SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-
-    /* load the CA used to verify the client cert. */
-    ONN("failed to load CA cert",
-	SSL_CTX_load_verify_locations(server_ctx, CA_CERT, NULL) != 1);
-
-    if (calist) {
-        /* send acceptable CA cert list to the client */
-        SSL_CTX_set_client_CA_list(server_ctx, SSL_load_client_CA_file(calist));
-    }
-
-    CALL(do_ssl_response(sock, server_ctx, NULL, DEF_RESP, 0));
-
-    return OK;
-}
-
 /* serve_ssl wrapper which ignores server failure and always succeeds */
 static int fail_serve(ne_socket *sock, void *ud)
 {
-    serve_ssl(sock, ud);
+    struct ssl_server_args args = {0};
+    args.cert = ud;
+    ssl_server(sock, &args);
     return OK;
-}
-
-/* Wrapper for serve_ssl which registers the verify location, so that
- * the CA cert will be sent along with the server cert itself in the
- * certificate exchange. */
-static int serve_ssl_chained(ne_socket *sock, void *ud)
-{
-    SSL_CTX_load_verify_locations(server_ctx, "ca/cert.pem", NULL);
-    return serve_ssl(sock, ud);
 }
 
 #define DEFSESS  (ne_session_create("https", "localhost", 7777))
@@ -232,8 +260,6 @@ static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
 
 static int init(void)
 {
-    char *server_key;
- 
     /* take srcdir as argv[1]. */
     if (test_argc > 1) {
 	srcdir = test_argv[1];
@@ -244,16 +270,6 @@ static int init(void)
     
     if (ne_sock_init()) {
 	t_context("could not initialize socket/SSL library.");
-	return FAILHARD;
-    }
-
-    server_ctx = SSL_CTX_new(SSLv23_server_method());
-    if (server_ctx == NULL) {
-	t_context("could not create SSL_CTX: %s", ERROR_SSL_STRING);
-	return FAILHARD;
-    } else if (!SSL_CTX_use_PrivateKey_file(server_ctx, server_key, 
-					    SSL_FILETYPE_PEM)) {
-	t_context("failed to load private key: %s", ERROR_SSL_STRING);
 	return FAILHARD;
     }
 
@@ -368,8 +384,9 @@ static int load_client_cert(void)
 static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
 {
     ne_session *sess = ne_session_create("https", hostname, 7777);
+    struct ssl_server_args args= {cert, 0};
     /* no verify callback needed. */
-    CALL(any_ssl_request(sess, serve_ssl, cert, CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     return OK;
 }
@@ -385,24 +402,29 @@ static int simple(void)
     return accept_signed_cert(SERVER_CERT);
 }
 
+/* Test for SSL operation when server uses SSLv2 */
+static int simple_sslv2(void)
+{
+    ne_session *sess = ne_session_create("https", "localhost", 7777);
+    struct ssl_server_args args = {SERVER_CERT, 0};
+    args.use_ssl2 = 1;
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
+    ne_session_destroy(sess);
+    return OK;
+}
+
 /* Serves using HTTP/1.0 get-till-EOF semantics. */
 static int serve_eof(ne_socket *sock, void *ud)
 {
-    const char *cert = ud;
+    struct ssl_server_args args = {0};
 
-    NE_DEBUG(NE_DBG_HTTP, "using server cert %s\n", cert);
+    args.cert = ud;
+    args.response = "HTTP/1.0 200 OK\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "This is a response body, like it or not.";
 
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(server_ctx, cert, SSL_FILETYPE_PEM));
-
-    CALL(do_ssl_response(sock, server_ctx, NULL,
-			 "HTTP/1.0 200 OK\r\n"
-			 "Connection: close\r\n"
-			 "\r\n"
-			 "This is a response body, like it or not.",
-			 0));
-
-    return OK;
+    return ssl_server(sock, &args);
 }
 
 /* Test read-til-EOF behaviour with SSL. */
@@ -418,10 +440,12 @@ static int simple_eof(void)
 static int empty_truncated_eof(void)
 {
     ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {0};
+
+    args.cert = SERVER_CERT;
+    args.response = "HTTP/1.0 200 OK\r\n" "\r\n";
     
-    CALL(any_ssl_request(sess, serve_response_unclean,
-			 "HTTP/1.0 200 OK\r\n" "\r\n",
-			 CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
 
     ne_session_destroy(sess);
     return OK;
@@ -431,12 +455,16 @@ static int fail_truncated_eof(void)
 {
     ne_session *sess = DEFSESS;
     int ret;
-    
+    struct ssl_server_args args = {0};
+
+    args.cert = SERVER_CERT;
+    args.response = "HTTP/1.0 200 OK\r\n" "\r\n"
+        "This is some content\n"
+        "Followed by a truncation attack!\n";
+    args.unclean = 1;
+
     ne_ssl_trust_cert(sess, def_ca_cert);
-    CALL(spawn_server(7777, serve_response_unclean,
-		      "HTTP/1.0 200 OK\r\n" "\r\n"
-		      "This is some content\n"
-		      "Followed by a truncation attack!\n"));
+    CALL(spawn_server(7777, ssl_server, &args));
     
     ret = any_request(sess, "/foo");
     CALL(await_server());
@@ -490,13 +518,13 @@ static int wildcard_init(void)
 static int wildcard_match(void)
 {
     ne_session *sess;
+    struct ssl_server_args args = {"wildcard.cert", 0};
 
     PRECOND(wildcard_ok);
     
     sess = ne_session_create("https", local_hostname, 7777);
 
-    CALL(any_ssl_request(sess, serve_ssl, 
-			 "wildcard.cert", CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     
     return OK;
@@ -599,10 +627,11 @@ static int parse_cert(void)
 {
     ne_session *sess = DEFSESS;
     int ret = 0;
+    struct ssl_server_args args = {SERVER_CERT, 0};
 
     /* don't give a CA cert; should force the verify callback to be
      * used. */
-    CALL(any_ssl_request(sess, serve_ssl, SERVER_CERT, NULL, 
+    CALL(any_ssl_request(sess, ssl_server, &args, NULL, 
 			 check_cert, &ret));
     ne_session_destroy(sess);
 
@@ -645,10 +674,13 @@ static int parse_chain(void)
 {
     ne_session *sess = DEFSESS;
     int ret = 0;
+    struct ssl_server_args args = {SERVER_CERT, 0};
+
+    args.ca_list = "ca/cert.pem";    
 
     /* don't give a CA cert; should force the verify callback to be
      * used. */
-    CALL(any_ssl_request(sess, serve_ssl_chained, SERVER_CERT, NULL, 
+    CALL(any_ssl_request(sess, ssl_server, &args, NULL, 
 			 check_chain, &ret));
     ne_session_destroy(sess);
 
@@ -672,8 +704,9 @@ static int no_verify(void)
 {
     ne_session *sess = DEFSESS;
     int count = 0;
+    struct ssl_server_args args = {SERVER_CERT, 0};
 
-    CALL(any_ssl_request(sess, serve_ssl, SERVER_CERT, CA_CERT, count_vfy,
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, count_vfy,
 			 &count));
 
     ONN("verify callback called unnecessarily", count != 0);
@@ -687,12 +720,13 @@ static int cache_verify(void)
 {
     ne_session *sess = DEFSESS;
     int ret, count = 0;
+    struct ssl_server_args args = {SERVER_CERT, 0};
     
     /* force verify cert. */
-    ret = any_ssl_request(sess, serve_ssl, SERVER_CERT, NULL, count_vfy,
+    ret = any_ssl_request(sess, ssl_server, &args, NULL, count_vfy,
 			  &count);
 
-    CALL(spawn_server(7777, serve_ssl, SERVER_CERT));
+    CALL(spawn_server(7777, ssl_server, &args));
     ret = any_request(sess, "/foo2");
     CALL(await_server());
 
@@ -805,65 +839,19 @@ static int fail_missing_CN(void)
     return OK;
 }                            
 
-struct scache_args {
-    SSL_CTX *ctx;
-    char *cert;
-    int count;
-    SSL_SESSION *sess;
-};
-
-/* FIXME: factor out shared code with serve_ssl */
-static int serve_scache(ne_socket *sock, void *ud)
-{
-    struct scache_args *args = ud;
-    SSL_SESSION *sess;
-    
-    if (args->count == 0) {
-	/* enable OpenSSL's internal session cache, enabling the
-	 * negotiation to re-use a session if both sides support it. */
-	SSL_CTX_set_session_cache_mode(args->ctx, SSL_SESS_CACHE_SERVER);
-	
-	ONN("failed to load certificate",
-	    !SSL_CTX_use_certificate_file(args->ctx, 
-					  args->cert, SSL_FILETYPE_PEM));
-    }
-
-    args->count++;
-
-    CALL(do_ssl_response(sock, args->ctx, &sess, DEF_RESP, 0));
-
-    /* dump session to child.log for debugging. */
-    SSL_SESSION_print_fp(ne_debug_stream, sess);
-
-    if (args->count == 1) {
-	/* save the session. */
-	args->sess = sess;
-    } else {
-	/* could just to do this with SSL_CTX_sess_hits really,
-	 * but this is a more thorough test. */
-	ONN("cached SSL session not used",
-	    SSL_SESSION_cmp(args->sess, sess));
-	SSL_SESSION_free(args->sess);
-	SSL_SESSION_free(sess);
-    }
-
-    return 0;
-}
-
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
 {
-    struct scache_args args;
+    struct ssl_server_args args = {0};
     ne_session *sess = ne_session_create("https", "localhost", 7777);
     
-    args.ctx = server_ctx;
-    args.count = 0;
     args.cert = SERVER_CERT;
+    args.cache = 1;
 
     ne_ssl_trust_cert(sess, def_ca_cert);
 
     /* have spawned server listen for several connections. */
-    CALL(spawn_server_repeat(7777, serve_scache, &args, 4));
+    CALL(spawn_server_repeat(7777, ssl_server, &args, 4));
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
@@ -891,6 +879,9 @@ static int client_cert_provided(void)
 {
     ne_session *sess = DEFSESS;
     ne_ssl_client_cert *cc;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    args.require_cc = 1;
 
     cc = ne_ssl_clicert_read("client.p12");
     ONN("could not load client.p12", cc == NULL);
@@ -898,7 +889,7 @@ static int client_cert_provided(void)
         ne_ssl_clicert_decrypt(cc, "foobar"));
     
     ne_ssl_provide_clicert(sess, ccert_provider, cc);
-    CALL(any_ssl_request(sess, serve_ccert, NULL, CA_CERT,
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT,
                          NULL, NULL));
 
     ne_session_destroy(sess);
@@ -944,12 +935,16 @@ static int cc_provided_dnames(void)
 {
     int check = 0;
     ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    args.require_cc = 1;
+    args.send_ca = "calist.pem";
 
     PRECOND(def_cli_cert);
 
     ne_ssl_provide_clicert(sess, cc_check_dnames, &check);
 
-    CALL(any_ssl_request(sess, serve_ccert, "calist.pem", CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
 
     ne_session_destroy(sess);
 
@@ -962,11 +957,14 @@ static int cc_provided_dnames(void)
 static int client_cert_pkcs12(void)
 {
     ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    args.require_cc = 1;
 
     PRECOND(def_cli_cert);
 
     ne_ssl_set_clicert(sess, def_cli_cert);
-    CALL(any_ssl_request(sess, serve_ccert, NULL, CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
 
     ne_session_destroy(sess);    
     return OK;
@@ -978,24 +976,51 @@ static int ccert_unencrypted(void)
 {
     ne_session *sess = DEFSESS;
     ne_ssl_client_cert *ccert;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    args.require_cc = 1;
 
     ccert = ne_ssl_clicert_read("unclient.p12");
     ONN("unclient.p12 was encrypted", ne_ssl_clicert_encrypted(ccert));
 
     ne_ssl_set_clicert(sess, ccert);
-    CALL(any_ssl_request(sess, serve_ccert, NULL, CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
 
     ne_ssl_clicert_free(ccert);
     ne_session_destroy(sess);
     return OK;
 }
 
+/* non-zero if a server auth header was received */
+static int got_server_auth; 
+
+/* Utility function which accepts the 'tunnel' header. */
+static void tunnel_header(char *value)
+{
+    got_server_auth = 1;
+}
+
+/* Server which acts as a proxy accepting a CONNECT request. */
 static int serve_tunnel(ne_socket *sock, void *ud)
 {
+    struct ssl_server_args *args = ud;
+
+    /* check for a server auth function */
+    want_header = "Authorization";
+    got_header = tunnel_header;
+    got_server_auth = 0;
+
+    /* give the plaintext tunnel reply, acting as the proxy */
     CALL(discard_request(sock));
- 
-    SEND_STRING(sock, "HTTP/1.1 200 OK\r\nServer: Fish\r\n\r\n");
-    return serve_ssl(sock, ud);
+
+    if (got_server_auth) {
+        SEND_STRING(sock, "HTTP/1.1 500 Leaked Server Auth Creds\r\n"
+                    "Content-Length: 0\r\n" "Server: serve_tunnel\r\n\r\n");
+        return 0;
+    } else {
+        SEND_STRING(sock, "HTTP/1.1 200 OK\r\nServer: serve_tunnel\r\n\r\n");
+        return ssl_server(sock, args);
+    }
 }
 
 /* neon versions <= 0.21.2 segfault here because ne_sock_close would
@@ -1005,9 +1030,10 @@ static int fail_tunnel(void)
 {
     ne_session *sess = ne_session_create("https", "example.com", 443);
     ne_session_proxy(sess, "localhost", 7777);
+    struct ssl_server_args args = {SERVER_CERT, NULL};
 
     ONN("server cert verification didn't fail",
-	any_ssl_request(sess, serve_tunnel, SERVER_CERT, CA_CERT,
+	any_ssl_request(sess, serve_tunnel, &args, CA_CERT,
 			NULL, NULL) != NE_ERROR);
     
     ne_session_destroy(sess);
@@ -1018,24 +1044,34 @@ static int proxy_tunnel(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 443);
     ne_session_proxy(sess, "localhost", 7777);
+    struct ssl_server_args args = {SERVER_CERT, NULL};
     
     /* CA cert is trusted, so no verify callback should be needed. */
-    CALL(any_ssl_request(sess, serve_tunnel, SERVER_CERT, CA_CERT,
+    CALL(any_ssl_request(sess, serve_tunnel, &args, CA_CERT,
 			 NULL, NULL));
 
     ne_session_destroy(sess);
     return OK;
 }
 
+#define RESP_0LENGTH "HTTP/1.1 200 OK\r\n" "Content-Length: 0\r\n" "\r\n"
+
 /* a tricky test which requires spawning a second server process in
  * time for a new connection after a 407. */
 static int apt_post_send(ne_request *req, void *ud, const ne_status *st)
 {
-    if (st->code == 407) {
-        NE_DEBUG(NE_DBG_HTTP, "Got 407, awaiting server...\n");
+    int *code = ud;
+    if (st->code == *code) {
+        struct ssl_server_args args = {SERVER_CERT, NULL};
+    
+        if (*code == 407) args.numreqs = 2;
+        args.response = RESP_0LENGTH;
+
+        NE_DEBUG(NE_DBG_HTTP, "Got challenge, awaiting server...\n");
         CALL(await_server());
         NE_DEBUG(NE_DBG_HTTP, "Spawning proper tunnel server...\n");
-        CALL(spawn_server(7777, serve_tunnel, SERVER_CERT));
+        /* serve *two* 200 OK responses. */
+        CALL(spawn_server(7777, serve_tunnel, &args));
         NE_DEBUG(NE_DBG_HTTP, "Spawned.\n");
     }
     return OK;
@@ -1046,7 +1082,7 @@ static int apt_creds(void *userdata, const char *realm, int attempt,
 {
     strcpy(username, "foo");
     strcpy(password, "bar");
-    return 0;
+    return attempt;
 }
 
 /* Test for using SSL over a CONNECT tunnel via a proxy server which
@@ -1055,29 +1091,55 @@ static int apt_creds(void *userdata, const char *realm, int attempt,
 static int auth_proxy_tunnel(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 443);
-    int ret;
+    int ret, code = 407;
     
     ne_session_proxy(sess, "localhost", 7777);
-    ne_hook_post_send(sess, apt_post_send, NULL);
+    ne_hook_post_send(sess, apt_post_send, &code);
     ne_set_proxy_auth(sess, apt_creds, NULL);
+    ne_ssl_trust_cert(sess, def_ca_cert);
     
     CALL(spawn_server(7777, single_serve_string,
                       "HTTP/1.0 407 I WANT MORE BISCUITS\r\n"
                       "Proxy-Authenticate: Basic realm=\"bigbluesea\"\r\n"
                       "Connection: close\r\n" "\r\n"));
     
-    /* trust the CA */
-    ne_ssl_trust_cert(sess, def_ca_cert);
-    /* run the dreaded request. */
-    ret = any_request(sess, "/foobar");
+    /* run two requests over the tunnel. */
+    ret = any_2xx_request(sess, "/foobar");
+    if (!ret) ret = any_2xx_request(sess, "/foobar2");
     CALL(await_server());
-    ONREQ(ret);
+    CALL(ret);
 
     ne_session_destroy(sess);
     return 0;
 }
 
-/* Compare against known digest of notvalid.pem.  Via:
+/* Regression test to check that server credentials aren't sent to the
+ * proxy in a CONNECT request. */
+static int auth_tunnel_creds(void)
+{
+    ne_session *sess = ne_session_create("https", "localhost", 443);
+    int ret, code = 401;
+    struct ssl_server_args args = {SERVER_CERT, 0};
+    
+    ne_session_proxy(sess, "localhost", 7777);
+    ne_hook_post_send(sess, apt_post_send, &code);
+    ne_set_server_auth(sess, apt_creds, NULL);
+    ne_ssl_trust_cert(sess, def_ca_cert);
+    
+    args.response = "HTTP/1.1 401 I want a Shrubbery\r\n"
+        "WWW-Authenticate: Basic realm=\"bigredocean\"\r\n"
+        "Server: Python\r\n" "Content-Length: 0\r\n" "\r\n";
+    
+    CALL(spawn_server(7777, serve_tunnel, &args));
+    ret = any_2xx_request(sess, "/foobar");
+    CALL(await_server());
+    CALL(ret);
+
+    ne_session_destroy(sess);
+    return OK;    
+}
+
+/* compare against known digest of notvalid.pem.  Via:
  *   $ openssl x509 -fingerprint -sha1 -noout -in notvalid.pem */
 #define THE_DIGEST "cf:5c:95:93:76:c6:3c:01:8b:62:" \
                    "b1:6f:f7:7f:42:32:ac:e6:69:1b"
@@ -1386,8 +1448,12 @@ static int cache_cert(void)
     ne_session *sess = DEFSESS;
     char *cache = NULL;
     ne_ssl_certificate *cert;
+    struct ssl_server_args args = {0};
 
-    ONREQ(any_ssl_request(sess, serve_ssl, "ssigned.pem", CA_CERT,
+    args.cert = "ssigned.pem";
+    args.cache = 1;
+
+    ONREQ(any_ssl_request(sess, ssl_server, &args, CA_CERT,
                           verify_cache, &cache));
     ne_session_destroy(sess);
 
@@ -1404,7 +1470,7 @@ static int cache_cert(void)
     ne_ssl_trust_cert(sess, cert);
     ne_ssl_cert_free(cert);
     /* now, the request should succeed without manual verification */
-    ONREQ(any_ssl_request(sess, serve_ssl, "ssigned.pem", CA_CERT,
+    ONREQ(any_ssl_request(sess, ssl_server, &args, CA_CERT,
                           NULL, NULL));
     ne_session_destroy(sess);
     return OK;
@@ -1442,6 +1508,7 @@ ne_test tests[] = {
     T(load_client_cert),
 
     T(simple),
+    T(simple_sslv2),
     T(simple_eof),
     T(empty_truncated_eof),
     T(fail_truncated_eof),
@@ -1483,6 +1550,7 @@ ne_test tests[] = {
     T(fail_tunnel),
     T(proxy_tunnel),
     T(auth_proxy_tunnel),
+    T(auth_tunnel_creds),
 
     T(NULL) 
 };

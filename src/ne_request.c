@@ -878,13 +878,17 @@ static inline void strip_eol(char *buf, ssize_t *len)
     }
 }
 
-/* For persistent connection handling: if the first socket operation
- * on an already-open connection fails with an EOF error, then presume
- * a persistent connection timeout has occurred, and the request
- * should be retried.  The 'retry' flag is zero once a socket
- * operation has succeeded on the connection.  RETRY_RET() crafts the
- * appropriate return value given a 'retry' flag, the socket error
- * 'code', and the return value 'acode' from the aborted() function. */
+/* For accurate persistent connection handling, for any write() or
+ * read() operation for a new request on an already-open connection,
+ * an EOF or RST error MUST be treated as a persistent connection
+ * timeout, and the request retried on a new connection.  Once a
+ * read() operation has succeeded, any subsequent error MUST be
+ * treated as fatal.  A 'retry' flag is used; retry=1 represents the
+ * first case, retry=0 the latter. */
+
+/* RETRY_RET() crafts a function return value given the 'retry' flag,
+ * the socket error 'code', and the return value 'acode' from the
+ * aborted() function. */
 #define RETRY_RET(retry, code, acode) \
 ((((code) == NE_SOCK_CLOSED || (code) == NE_SOCK_RESET || \
  (code) == NE_SOCK_TRUNC) && retry) ? NE_RETRY : (acode))
@@ -938,7 +942,8 @@ static int send_request(ne_request *req, const ne_buffer *request)
 {
     ne_session *sess = req->session;
     ssize_t ret = NE_OK;
-    int sentbody = 0, retry;
+    int sentbody = 0; /* zero until body has been sent. */
+    int retry; /* non-zero whilst the request should be retried */
     ne_status *status = &req->status;
 
     /* Send the Request-Line and headers */
@@ -956,9 +961,6 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	return RETRY_RET(retry, ret, aret);
     }
     
-    /* FIXME: probably due to Nagle, the write above may or may not
-     * have been delayed, so retry is left at 1 here. */
-    
     if (!req->use_expect100 && req->body_size > 0) {
 	/* Send request body, if not using 100-continue. */
 	ret = send_request_body(req);
@@ -968,14 +970,14 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	}
     }
     
-    NE_DEBUG(NE_DBG_HTTP, "Request sent; retry is %d\n", retry);
+    NE_DEBUG(NE_DBG_HTTP, "Request sent; retry is %d.\n", retry);
 
     /* Loop eating interim 1xx responses (RFC2616 says these MAY be
      * sent by the server, even if 100-continue is not used). */
     while ((ret = read_status_line(req, status, retry)) == NE_OK 
 	   && status->klass == 1) {
 	NE_DEBUG(NE_DBG_HTTP, "Interim %d response.\n", status->code);
-	retry = 0;
+	retry = 0; /* successful read() => never retry now. */
 	/* Discard headers with the interim response. */
 	if ((ret = discard_headers(req)) != NE_OK) break;
 

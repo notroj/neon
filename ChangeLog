@@ -1,3 +1,7 @@
+Mon Sep 22 20:56:21 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in: Respect @datadir@ from configure (Max Bowsher).
+
 Sun Sep 14 11:13:36 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* configure.in: Run NEON_TEST before LIBNEON_SOURCE_CHECKS, to

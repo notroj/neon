@@ -1,3 +1,12 @@
+Tue Oct  7 21:20:16 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon-test.m4 (NEON_TEST): Check for shutdown.
+
+Mon Sep 22 21:20:37 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.m4 (NE_CHECK_FUNCS, NE_SEARCH_LIBS): Avoid clobbering
+	ne_save_{LIBS,CPPFLAGS}.
+
 Sun Sep 14 10:51:34 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* neon.m4 (LIBNEON_SOURCE_CHECKS): Check for working AI_ADDRCONFIG

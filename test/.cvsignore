@@ -33,6 +33,7 @@ core*
 props
 socket-ssl
 resolve
+cookies
 *.bb
 *.da
 *.bbg

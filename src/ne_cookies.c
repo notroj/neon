@@ -70,7 +70,7 @@ static void set_cookie_hdl(void *userdata, const char *value)
 	NE_DEBUG(NE_DBG_HTTP, "New cookie.\n");
 	cook = ne_malloc(sizeof *cook);
 	memset(cook, 0, sizeof *cook);
-	cook->name = ne_strdup(pairs[0]);
+	cook->name = ne_strdup(ne_shave(pairs[0], " \t\r\n"));
 	cook->next = cache->cookies;
 	cache->cookies = cook;
     } else {
@@ -78,7 +78,7 @@ static void set_cookie_hdl(void *userdata, const char *value)
 	ne_free(cook->value);
     }
 
-    cook->value = ne_strdup(pairs[1]);
+    cook->value = ne_strdup(ne_shave(pairs[1], " \t\r\n"));
 
     for (n = 2; pairs[n] != NULL; n+=2) {
         if (!pairs[n+1]) continue;

@@ -131,6 +131,19 @@ void minisleep(void)
 #endif
 }
 
+/* close 'sock', performing lingering close to avoid premature RST. */
+static int close_socket(ne_socket *sock)
+{
+#ifdef HAVE_SHUTDOWN
+    char buf[20];
+    int fd = ne_sock_fd(sock);
+    
+    shutdown(fd, 0);
+    while (ne_sock_read(sock, buf, sizeof buf) > 0);
+#endif
+    return ne_sock_close(sock);
+}
+
 /* This runs as the child process. */
 static int server_child(int readyfd, struct in_addr addr, int port,
 			server_fn callback, void *userdata)
@@ -153,7 +166,7 @@ static int server_child(int readyfd, struct in_addr addr, int port,
 
     ret = callback(s, userdata);
 
-    ne_sock_close(s);
+    close_socket(s);
 
     return ret;
 }
@@ -258,7 +271,7 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	    NE_DEBUG(NE_DBG_HTTP, "child awaiting connection #%d.\n", count);
 	    ONN("accept failed", ne_sock_accept(sock, listener));
 	    ret = fn(sock, userdata);
-	    ne_sock_close(sock);
+	    close_socket(sock);
 	    NE_DEBUG(NE_DBG_HTTP, "child served request, %d.\n", ret);
 	    if (ret) {
 		printf("server child failed: %s\n", test_context);

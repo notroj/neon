@@ -197,7 +197,7 @@ static int parse_match(const char *doc, const char *result, enum match_type t)
 
 static int matches(void)
 {
-#define PFX "<?xml version='1.0'?>\r\n"
+#define PFX "<?xml version='1.0' encoding='utf-8'?>\r\n"
 #define E(ns, n) "<{" ns "}" n "></{" ns "}" n ">"
     static const struct {
 	const char *in, *out;
@@ -330,6 +330,20 @@ static int fail_parse(void)
         PFX "<foo xmlns:D=''/>",
         PFX "<foo xmlns:='fish'/>",
         PFX "<foo: xmlns:foo='bar'/>",
+#if 0
+        /* 2-byte encoding of '.': */
+        PFX "<foo>" "\x2F\xC0\xAE\x2E\x2F" "</foo>",
+        /* 3-byte encoding of '.': */
+        PFX "<foo>" "\x2F\xE0\x80\xAE\x2E\x2F" "</foo>",
+        /* 4-byte encoding of '.': */
+        PFX "<foo>" "\x2F\xF0\x80\x80\xAE\x2E\x2F" "</foo>",
+        /* 5-byte encoding of '.': */
+        PFX "<foo>" "\x2F\xF8\x80\x80\x80\xAE\x2E\x2F" "</foo>",
+        /* 6-byte encoding of '.': */
+        PFX "<foo>" "\x2F\xFC\x80\x80\x80\x80\xAE\x2E\x2F" "</foo>",
+        /* two-byte encoding of '<' must not be parsed as a '<': */
+        PFX "\xC0\xBC" "foo></foo>",
+#endif
         NULL
     };
     int n;
@@ -424,6 +438,9 @@ static int errors(void)
     ne_xml_parser *p = ne_xml_create();
     const char *err;
     
+    ONV(strcmp(ne_xml_get_error(p), "Unknown error") != 0,
+        ("initial error string unspecified"));
+
     ne_xml_set_error(p, "Fish food");
     err = ne_xml_get_error(p);
     
