@@ -46,12 +46,21 @@
 #include <expat.h>
 #endif
 typedef XML_Char ne_xml_char;
+
+#if !defined(XML_MAJOR_VERSION) || (XML_MAJOR_VERSION < 2 \
+                                    && XML_MINOR_VERSION == 95 \
+                                    && XML_MICRO_VERSION < 2)
+#define NEED_BOM_HANDLING
+#endif
+
 #elif defined(HAVE_LIBXML)
 /* libxml2 support: */
 #include <libxml/xmlversion.h>
 #include <libxml/parser.h>
 typedef xmlChar ne_xml_char;
-
+/* libxml-2.6.18 should have the fix:
+ * http://bugzilla.gnome.org/show_bug.cgi?id=162613 */
+#define NEED_BOM_HANDLING
 #else /* not HAVE_LIBXML */
 #  error need an XML parser
 #endif /* not HAVE_EXPAT */
@@ -99,7 +108,9 @@ struct ne_xml_parser_s {
     int failure; /* zero whilst parse should continue */
     int prune; /* if non-zero, depth within a dead branch */
 
+#ifdef NEED_BOM_HANDLING
     int bom_pos;
+#endif
 
 #ifdef HAVE_EXPAT
     XML_Parser parser;
@@ -491,7 +502,9 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
 	flag = 0;
     }
 
+#ifdef NEED_BOM_HANDLING
     if (p->bom_pos < 3) {
+        NE_DEBUG(NE_DBG_XML, "Checking for UTF-8 BOM.\n");
         while (len > 0 && p->bom_pos < 3 && 
                block[0] == BOM_UTF8[p->bom_pos]) {
             block++;
@@ -507,6 +520,7 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
             return p->failure = 1;
         }
     }
+#endif
 
     /* Note, don't write a parser error if p->failure, since an error
      * will already have been written in that case. */
