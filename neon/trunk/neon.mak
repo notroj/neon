@@ -9,6 +9,18 @@ NULL=nul
 !ENDIF
 
 ########
+# Debug vs. Release build
+!IF "$(DEBUG_BUILD)" == ""
+INTDIR = Release
+CFLAGS = /MD /W3 /GX /O2 /D "NDEBUG"
+TARGET = .\libneon.lib
+!ELSE
+INTDIR = Debug
+CFLAGS = /MDd /W3 /Gm /GX /Zi /Od /D "_DEBUG"
+TARGET = .\libneonD.lib
+!ENDIF
+
+########
 # Support for Expat integration
 #
 # If EXPAT_SRC or EXPAT_INC are set, then assume compiling against a
@@ -39,7 +51,6 @@ BUILD_EXPAT =
 EXPAT_FLAGS = /I "$(EXPAT_INC)" /D HAVE_EXPAT /D HAVE_EXPAT_H
 !ENDIF
 
-
 ########
 # Support for OpenSSL integration
 !IF "$(OPENSSL_SRC)" == ""
@@ -53,13 +64,26 @@ OPENSSL_FLAGS = /I "$(OPENSSL_SRC)\inc32" /D NEON_SSL
 !IF "$(ZLIB_SRC)" == ""
 ZLIB_FLAGS =
 ZLIB_LIBS =
+ZLIB_CLEAN =
 !ELSE
+ZLIB_CLEAN = ZLIB_CLEAN
+!IF "$(DEBUG_BUILD)" == ""
+ZLIB_STATICLIB = zlib.lib
+ZLIB_SHAREDLIB = zlib1.dll
+ZLIB_IMPLIB    = zdll.lib
+ZLIB_LDFLAGS   = /nologo /release
+!ELSE
+ZLIB_STATICLIB = zlib_d.lib
+ZLIB_SHAREDLIB = zlib1_d.dll
+ZLIB_IMPLIB    = zdll_d.lib
+ZLIB_LDFLAGS   = /nologo /debug
+!ENDIF
 ZLIB_FLAGS = /I "$(ZLIB_SRC)" /D NEON_ZLIB
 !IF "$(ZLIB_DLL)" == ""
-ZLIB_LIBS = "$(ZLIB_SRC)\zlibstat.lib"
+ZLIB_LIBS = "$(ZLIB_SRC)\$(ZLIB_STATICLIB)"
 !ELSE
 ZLIB_FLAGS = $(ZLIB_FLAGS) /D ZLIB_DLL
-ZLIB_LIBS = "$(ZLIB_SRC)\zlibdll.lib"
+ZLIB_LIBS = "$(ZLIB_SRC)\$(ZLIB_IMPLIB)"
 !ENDIF
 !ENDIF
 
@@ -69,15 +93,6 @@ ZLIB_LIBS = "$(ZLIB_SRC)\zlibdll.lib"
 IPV6_FLAGS = /D USE_GETADDRINFO
 !ENDIF
 
-!IF "$(DEBUG_BUILD)" == ""
-INTDIR = Release
-CFLAGS = /MD /W3 /GX /O2 /D "NDEBUG"
-TARGET = .\libneon.lib
-!ELSE
-INTDIR = Debug
-CFLAGS = /MDd /W3 /Gm /GX /Zi /Od /D "_DEBUG"
-TARGET = .\libneonD.lib
-!ENDIF
 
 # Exclude stuff we don't need from the Win32 headers
 WIN32_DEFS = /D WIN32_LEAN_AND_MEAN /D NOUSER /D NOGDI /D NONLS /D NOCRYPT
@@ -135,7 +150,7 @@ LIB32_OBJS = $(LIB32_OBJS) $(ZLIB_LIBS)
 
 ALL: ".\src\config.h" "$(TARGET)"
 
-CLEAN:
+CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_207.obj"
 	-@erase "$(INTDIR)\ne_alloc.obj"
 	-@erase "$(INTDIR)\ne_acl.obj"
@@ -203,3 +218,24 @@ CLEAN:
 "$(INTDIR)\ne_uri.obj":      .\src\ne_uri.c
 "$(INTDIR)\ne_utils.obj":    .\src\ne_utils.c
 "$(INTDIR)\ne_xml.obj":      .\src\ne_xml.c
+
+"$(ZLIB_SRC)\$(ZLIB_STATICLIB)":
+	<<tempfile.bat
+  @echo off
+  cd /d "$(ZLIB_SRC)"
+  "$(MAKE)" /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" STATICLIB=$(ZLIB_STATICLIB) $(ZLIB_STATICLIB)
+<<
+
+"$(ZLIB_SRC)\$(ZLIB_IMPLIB)":
+	<<tempfile.bat
+  @echo off
+  cd /d "$(ZLIB_SRC)"
+  "$(MAKE)" /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) $(ZLIB_SHAREDLIB) $(ZLIB_IMPLIB)
+<<
+
+ZLIB_CLEAN:
+	<<tempfile.bat
+  @echo off
+  cd /d "$(ZLIB_SRC)"
+  "$(MAKE)" /nologo /f win32\Makefile.msc STATICLIB=$(ZLIB_STATICLIB) SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) clean
+<<
