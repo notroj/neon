@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -77,6 +77,10 @@
 #endif
 #endif
 
+#ifdef HAVE_SSPI
+#include "ne_sspi.h"
+#endif
+
 /* TODO: should remove this eventually. Need it for
  * ne_pull_request_body. */
 #include "ne_private.h"
@@ -88,7 +92,9 @@
 typedef enum {
     auth_scheme_basic,
     auth_scheme_digest,
-    auth_scheme_gssapi
+    auth_scheme_gssapi,
+    auth_scheme_sspi_negotiate,
+    auth_scheme_sspi_ntlm
 } auth_scheme;
 
 typedef enum { 
@@ -167,6 +173,11 @@ typedef struct {
     gss_name_t gssname;
     gss_OID gssmech;
 #endif
+#ifdef HAVE_SSPI
+    /* This is used for SSPI (Negotiate/NTLM) auth */
+    char *sspi_token;
+    void *sspi_context;
+#endif
     /* These all used for Digest auth */
     char *realm;
     char *nonce;
@@ -226,6 +237,11 @@ static void clean_session(auth_session *sess)
         }
     }
     NE_FREE(sess->gssapi_token);
+#endif
+#ifdef HAVE_SSPI
+    NE_FREE(sess->sspi_token);
+    ne_sspi_destroy_context(sess->sspi_context);
+    sess->sspi_context = NULL;
 #endif
 }
 
@@ -488,6 +504,53 @@ static int verify_negotiate_response(auth_session *sess, char *hdr)
 
     NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Negotiate response token [%s]\n", ptr);
     return continue_negotiate(sess, ptr);
+}
+#endif
+
+#ifdef HAVE_SSPI
+static char *request_sspi(auth_session *sess) 
+{
+    const char *mechanism;
+    
+    if (ne_sspi_get_mechanism(sess->sspi_context, &mechanism)) {
+        return NULL;
+    }
+
+    return ne_concat(mechanism, " ", sess->sspi_token, "\r\n", NULL);
+}
+
+static int sspi_challenge(auth_session *sess, struct auth_challenge *parms,
+                          int ntlm) 
+{
+    int status;
+    char *response = NULL;
+    
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge.\n");
+    
+    if (!sess->sspi_context) {
+        status = ne_sspi_create_context(&sess->sspi_context,
+                                        sess->sess->server.hostname, ntlm);
+        if (status) {
+            return status;
+        }
+    }
+    
+    status = ne_sspi_authenticate(sess->sspi_context, parms->opaque, &response);
+    if (status) {
+        return status;
+    }
+    
+    sess->sspi_token = response;
+    
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge [%s]\n", sess->sspi_token);
+
+    if (ntlm) {
+        sess->scheme = auth_scheme_sspi_ntlm;
+    } else {
+        sess->scheme = auth_scheme_sspi_negotiate;
+    }
+    
+    return 0;
 }
 #endif
 
@@ -963,6 +1026,14 @@ static int auth_challenge(auth_session *sess, const char *value)
             else if (strcasecmp(key, "negotiate") == 0) {
                 scheme = auth_scheme_gssapi;
             }
+#else
+#ifdef HAVE_SSPI
+            else if (strcasecmp(key, "negotiate") == 0) {
+                scheme = auth_scheme_sspi_negotiate;
+            } else if (strcasecmp(key, "ntlm") == 0) {
+                scheme = auth_scheme_sspi_ntlm;
+            }
+#endif
 #endif
             else {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Ignoring challenge '%s'.\n", key);
@@ -976,7 +1047,10 @@ static int auth_challenge(auth_session *sess, const char *value)
             chall->next = challenges;
             challenges = chall;
 
-            if (scheme == auth_scheme_gssapi && sep == ' ') {
+            if (sep == ' ' && 
+                (scheme == auth_scheme_gssapi 
+                 || scheme == auth_scheme_sspi_negotiate 
+                 || scheme == auth_scheme_sspi_ntlm) ) {
                 /* Cope with the fact that the unquoted base64
                  * paramater token doesn't match the 2617 auth-param
                  * grammar: */
@@ -1049,6 +1123,32 @@ static int auth_challenge(auth_session *sess, const char *value)
         for (chall = challenges; chall != NULL; chall = chall->next) {
             if (chall->scheme == auth_scheme_gssapi) {
                 if (!gssapi_challenge(sess, chall)) {
+                    success = 1;
+                    break;
+                }
+            }
+        }
+    }
+#endif
+
+#ifdef HAVE_SSPI
+    if (!success) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for SSPI/Negotiate.\n");
+        for (chall = challenges; chall != NULL; chall = chall->next)  {
+            if (chall->scheme == auth_scheme_sspi_negotiate) {
+                if (!sspi_challenge(sess, chall, 0)) {
+                    success = 1;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!success) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for SSPI/NTLM.\n");
+        for (chall = challenges; chall != NULL; chall = chall->next) {
+            if (chall->scheme == auth_scheme_sspi_ntlm) {
+                if (!sspi_challenge(sess, chall, 1)) {
                     success = 1;
                     break;
                 }
@@ -1170,7 +1270,13 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	    value = request_gssapi(sess);
 	    break;
 #endif
-	default:
+#ifdef HAVE_SSPI
+        case auth_scheme_sspi_negotiate:
+        case auth_scheme_sspi_ntlm:
+	    value = request_sspi(sess);
+	    break;
+#endif
+        default:
 	    value = NULL;
 	    break;
 	}
