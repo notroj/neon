@@ -738,14 +738,15 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 	    unsigned long chunk_len;
 	    char *ptr;
 
-            /* The start of a new chunk. */
-	    SOCK_ERR(req, ne_sock_readline(sock, buffer, *buflen),
-		     _("Could not read chunk size"));
-	    NE_DEBUG(NE_DBG_HTTP, "[chunk] < %s", buffer);
-	    chunk_len = strtoul(buffer, &ptr, 16);
+            /* Read the chunk size line into a temporary buffer. */
+            SOCK_ERR(req,
+                     ne_sock_readline(sock, req->respbuf, sizeof req->respbuf),
+                     _("Could not read chunk size"));
+            NE_DEBUG(NE_DBG_HTTP, "[chunk] < %s", req->respbuf);
+            chunk_len = strtoul(req->respbuf, &ptr, 16);
 	    /* limit chunk size to <= UINT_MAX, so it will probably
 	     * fit in a size_t. */
-	    if (ptr == buffer || 
+	    if (ptr == req->respbuf || 
 		chunk_len == ULONG_MAX || chunk_len > UINT_MAX) {
 		return aborted(req, _("Could not parse chunk size"), 0);
 	    }
