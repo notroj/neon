@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2004 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2005 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -570,16 +570,12 @@ AH_BOTTOM([#if defined(HAVE_STPCPY) && defined(HAVE_DECL_STPCPY) && !HAVE_DECL_S
 char *stpcpy(char *, const char *);
 #endif])
 
-# Enable getaddrinfo support if it, gai_strerror and inet_ntop are
-# all available.  Solaris etc hide things in -lsocket, use that too.
-
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
-# QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
-# CygWin/Winsock2 has it in -lws2_32, allegedly.
 NE_SEARCH_LIBS(socket, socket inet ws2_32)
-NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
 
+# Enable getaddrinfo support if it, gai_strerror and inet_ntop are
+# all available.
 NE_SEARCH_LIBS(getaddrinfo, nsl,,
   [ne_enable_gai=no],
   [# HP-UX boxes commonly get into a state where getaddrinfo is present
@@ -607,7 +603,9 @@ if (getaddrinfo("localhost", NULL, &hints, &result) != 0) return 1;])],
    fi
 else
    # Checks for non-getaddrinfo() based resolver interfaces.
-   NE_SEARCH_LIBS(gethostbyname, nsl bind)
+   # QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
+   # CygWin/Winsock2 has it in -lws2_32, allegedly.
+   NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
