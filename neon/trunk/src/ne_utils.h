@@ -43,7 +43,8 @@ const char *ne_version_string(void);
 
 /* Returns non-zero if library version is not of major version
  * 'major', or if minor version is not greater than or equal to
- * 'minor'. */
+ * 'minor'.  For neon versions with major == 0, all minor versions are
+ * presumed to be incompatible.  */
 int ne_version_match(int major, int minor);
 
 #define NE_FEATURE_SSL (1) /* SSL/TLS support */

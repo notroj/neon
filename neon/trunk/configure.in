@@ -59,8 +59,8 @@ fi
 # into the 'src' directory.
 NEON_BUILD_BUNDLED=yes
 
-# Define NEON_VERSION* and make the appropriate substitutions.
-NEON_VERSIONS
+# Define NEON_VERSION etc and make the appropriate substitutions.
+NE_VERSIONS_BUNDLED
 
 # Pass the interface version on to libtool when linking libneon.la
 NEON_LINK_FLAGS="-version-info ${NEON_INTERFACE_VERSION}"
