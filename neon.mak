@@ -21,6 +21,12 @@ TARGET = .\libneonD.lib
 !ENDIF
 
 ########
+# Whether to build SSPI
+!IF "$(SSPI_BUILD)" != ""
+CFLAGS = $(CFLAGS) /D HAVE_SSPI
+!ENDIF
+
+########
 # Support for Expat integration
 #
 # If EXPAT_SRC or EXPAT_INC are set, then assume compiling against a
