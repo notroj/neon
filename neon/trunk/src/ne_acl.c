@@ -111,7 +111,7 @@ int ne_acl_set(ne_session *sess, const char *uri,
     ne_request *req = ne_request_create(sess, "ACL", uri);
     ne_buffer *body = acl_body(entries, numentries);
 
-#ifdef USE_DAV_LOCKS
+#ifdef NE_HAVE_DAV
     ne_lock_using_resource(req, uri, 0);
 #endif
 

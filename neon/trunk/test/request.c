@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -248,6 +248,12 @@ static int no_body_304(void)
 static int no_body_204(void)
 {
     return expect_no_body("GET", "HTTP/1.1 204 Not Modified\r\n"
+			  "Content-Length: 5\r\n\r\n");
+}
+
+static int no_body_205(void)
+{
+    return expect_no_body("GET", "HTTP/1.1 205 Reset Content\r\n"
 			  "Content-Length: 5\r\n\r\n");
 }
 
@@ -824,17 +830,12 @@ static int skip_1xx_hdrs(void)
 
 #undef sess
 
-/* server for expect_100_once: eats a dummy request, then serves a
- * 100-continue request, and fails if the request body is sent
- * twice. */
+/* server for expect_100_once: serves a 100-continue request, and
+ * fails if the request body is sent twice. */
 static int serve_100_once(ne_socket *sock, void *ud)
 {
     struct s1xx_args args = {2, 0};
     char ch;
-    /* dummy first request. */
-    CALL(discard_request(sock));
-    CALL(SEND_STRING(sock, RESP200 "Content-Length: 0\r\n\r\n"));
-    /* now the real 1xx request. */
     CALL(serve_1xx(sock, &args));
     CALL(discard_body(sock));
     ONN("body was served twice", ne_sock_read(sock, &ch, 1) == 1);
@@ -851,22 +852,33 @@ static int expect_100_once(void)
     char body[BUFSIZ];
 
     CALL(make_session(&sess, serve_100_once, NULL));
-    ne_set_expect100(sess, 1);
 
-    /* 100-continue is only used if the server is known to claim
-     * HTTP/1.1 compliance; make a dummy request on the socket first,
-     * to trigger that logic. */
-    CALL(any_request(sess, "/foo"));
-    
-    /* now the real request. */
     req = ne_request_create(sess, "GET", "/foo");
+    ne_set_request_expect100(req, 1);
     memset(body, 'A', sizeof(body));
     ne_set_request_body_buffer(req, body, sizeof(body));
-    ONN("request failed", ne_request_dispatch(req));
+    ONREQ(ne_request_dispatch(req));
     ne_request_destroy(req);
     ne_session_destroy(sess);
     CALL(await_server());
     return OK;
+}
+
+/* regression test for enabling 100-continue without sending a body. */
+static int expect_100_nobody(void)
+{
+    ne_session *sess;
+    ne_request *req;
+
+    CALL(make_session(&sess, serve_100_once, NULL));
+    
+    req = ne_request_create(sess, "GET", "/foo");
+    ne_set_request_expect100(req, 1);
+    ONREQ(ne_request_dispatch(req));
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return await_server();
 }
 
 struct body {
@@ -1160,11 +1172,13 @@ static enum {
 
 static off_t prog_last = -1, prog_total;
 
+#define FOFF "%" NE_FMT_OFF_T
+
 /* callback for send_progress. */
 static void s_progress(void *userdata, off_t prog, off_t total)
 {
     NE_DEBUG(NE_DBG_HTTP, 
-	     "progress callback: %" NE_FMT_OFF_T "/%" NE_FMT_OFF_T ".\n",
+	     "progress callback: " FOFF "/" FOFF ".\n",
 	     prog, total);
 
     switch (prog_state) {
@@ -1173,19 +1187,19 @@ static void s_progress(void *userdata, off_t prog, off_t total)
 	return;
     case prog_transfer:
 	if (total != prog_total) {
-	    t_context("total unexpected: %ld not %ld", total, prog_total);
+	    t_context("total unexpected: " FOFF " not " FOFF "", total, prog_total);
 	    prog_state = prog_error;
 	}
 	else if (prog > total) {
-	    t_context("first progress was invalid (%ld/%ld)", prog, total);
+	    t_context("first progress was invalid (" FOFF "/" FOFF ")", prog, total);
 	    prog_state = prog_error;
 	}
 	else if (prog_last != -1 && prog_last > prog) {
-	    t_context("progess went backwards: %ld to %ld", prog_last, prog);
+	    t_context("progess went backwards: " FOFF " to " FOFF, prog_last, prog);
 	    prog_state = prog_error;
 	}
 	else if (prog_last == prog) {
-	    t_context("no progress made! %ld to %ld", prog_last, prog);
+	    t_context("no progress made! " FOFF " to " FOFF, prog_last, prog);
 	    prog_state = prog_error;
 	}
 	else if (prog == total) {
@@ -1196,6 +1210,8 @@ static void s_progress(void *userdata, off_t prog, off_t total)
 	    
     prog_last = prog;
 }
+
+#undef FOFF
 
 static ssize_t provide_progress(void *userdata, char *buf, size_t bufsiz)
 {
@@ -1574,12 +1590,66 @@ static int dup_method(void)
     return OK;
 }
 
+#ifdef NE_HAVE_IDNA
+
+/* "ħêłłø.com" in UTF-8 and ACE form. */
+#define HELLO_DOT_COM "\xc4\xa7" "\xc3\xaa" "\xc5\x82" "\xc5\x82" "\xc3\xb8" ".com"
+#define HELLO_IDNA_ACE "xn--bda2a5j8da.com"
+
+static char *host_hdr = NULL;
+
+static void dup_header(char *hdr)
+{
+    host_hdr = strdup(hdr);
+}
+
+static int serve_check_host(ne_socket *sock, void *userdata)
+{
+    const char *host = userdata;
+
+    want_header = "Host";
+    got_header = dup_header;
+    
+    CALL(discard_request(sock));
+
+    if (host_hdr == NULL) {
+        CALL(SEND_STRING(sock, "HTTP/1.0 500 No Host header!?\r\n\r\n"));
+    } else if (strcmp(host_hdr, host) != 0) {
+        CALL(SEND_STRING(sock, "HTTP/1.0 500 Bad Host Header\r\n\r\n"));
+    } else {
+        CALL(SEND_STRING(sock, "HTTP/1.0 200 Good Host Header\r\n\r\n"));
+    }
+
+    return OK;
+}        
+
+static int idna_hostname(void)
+{
+    ne_session *sess = ne_session_create("http", HELLO_DOT_COM, 80);
+
+    ne_session_proxy(sess, "localhost", 7777);
+
+    CALL(spawn_server(7777, serve_check_host, HELLO_IDNA_ACE));
+    CALL(any_2xx_request(sess, "/idnafoo"));
+    CALL(await_server());
+
+    ne_session_destroy(sess);
+    return OK;
+#else
+static int idna_hostname(void)
+{
+    t_context("IDNA support not enabled");
+    return SKIP;
+#endif
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
     T(single_get_eof),
     T(single_get_chunked),
     T(no_body_204),
+    T(no_body_205),
     T(no_body_304),
     T(no_body_HEAD),
     T(no_body_empty_clength),
@@ -1623,6 +1693,7 @@ ne_test tests[] = {
     T(skip_1xx_hdrs),
     T(send_bodies),
     T(expect_100_once),
+    T(expect_100_nobody),
     T(unbounded_headers),
     T(unbounded_folding),
     T(blank_response),
@@ -1645,5 +1716,6 @@ ne_test tests[] = {
     T(dup_method),
     T(versions),
     T(hook_create_req),
+    T(idna_hostname),
     T(NULL)
 };

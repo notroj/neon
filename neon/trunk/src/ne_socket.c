@@ -1,6 +1,6 @@
 /* 
    socket handling routines
-   Copyright (C) 1998-2003, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2004, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
    This library is free software; you can redistribute it and/or
@@ -29,10 +29,6 @@
 #ifdef __hpux
 /* pick up hstrerror */
 #define _XOPEN_SOURCE_EXTENDED 1
-/* don't use the broken getaddrinfo shipped in HP-UX 11.11 */
-#ifdef USE_GETADDRINFO
-#undef USE_GETADDRINFO
-#endif
 #endif
 
 #include <sys/types.h>
@@ -40,11 +36,14 @@
 #include <sys/time.h>
 #endif
 #include <sys/stat.h>
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+
+#ifdef NE_USE_POLL
+#include <sys/poll.h>
+#elif defined(HAVE_SYS_SELECT_H)
+#include <sys/select.h>
 #endif
 
 #ifdef HAVE_NETINET_IN_H
@@ -65,7 +64,7 @@
 #include <stddef.h>
 #endif
 
-#if defined(NEON_SSL) && defined(HAVE_LIMITS_H)
+#if defined(NE_HAVE_SSL) && defined(HAVE_LIMITS_H)
 #include <limits.h> /* for INT_MAX */
 #endif
 #ifdef HAVE_STRING_H
@@ -91,11 +90,12 @@
 #include <socks.h>
 #endif
 
-#ifdef NEON_SSL
+#ifdef NE_HAVE_SSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/pkcs12.h> /* for PKCS12_PBE_add */
 #include <openssl/rand.h>
+#include <openssl/opensslv.h> /* for OPENSSL_VERSION_NUMBER */
 
 #include "ne_privssl.h"
 #endif
@@ -129,18 +129,12 @@ typedef struct in_addr ne_inet_addr;
 
 #if defined(__BEOS__) && !defined(BONE_VERSION)
 /* pre-BONE */
-#define ne_write(a,b,c) send(a,b,c,0)
-#define ne_read(a,b,c) recv(a,b,c,0)
 #define ne_close(s) closesocket(s)
 #define ne_errno errno
 #elif defined(WIN32)
-#define ne_write(a,b,c) send(a,b,c,0)
-#define ne_read(a,b,c) recv(a,b,c,0)
 #define ne_close(s) closesocket(s)
 #define ne_errno WSAGetLastError()
 #else /* really Unix! */
-#define ne_write(a,b,c) write(a,b,c)
-#define ne_read(a,b,c) read(a,b,c)
 #define ne_close(s) close(s)
 #define ne_errno errno
 #endif
@@ -179,7 +173,7 @@ struct ne_socket_s {
     void *progress_ud;
     int rdtimeout; /* read timeout. */
     const struct iofns *ops;
-#ifdef NEON_SSL
+#ifdef NE_HAVE_SSL
     ne_ssl_socket ssl;
 #endif
     /* The read buffer: ->buffer stores byte which have been read; as
@@ -223,16 +217,19 @@ static void print_error(int errnum, char *buffer, size_t buflen)
 #define set_strerror(s, e) ne_strerror((e), (s)->error, sizeof (s)->error)
 #endif
 
-#ifdef NEON_SSL
-static int prng_seeded = 0;
+#ifdef NE_HAVE_SSL
 
-/* Initialize SSL library; returns non-zero on failure. */
-static int init_ssl(void)
+/* Initialize SSL library. */
+static void init_ssl(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
     PKCS12_PBE_add();  /* ### not sure why this is needed. */
+}
 
+/* Seed the SSL PRNG, if necessary; returns non-zero on failure. */
+static int seed_ssl_prng(void)
+{
     /* Check whether the PRNG has already been seeded. */
     if (RAND_status() == 1)
 	return 0;
@@ -257,7 +254,7 @@ static int init_ssl(void)
     NE_DEBUG(NE_DBG_SOCKET, "No entropy source found; could not seed PRNG.\n");
     return -1;
 }
-#endif /* NEON_SSL */
+#endif /* NE_HAVE_SSL */
 
 #ifdef USE_CHECK_IPV6
 static int ipv6_disabled = 0;
@@ -304,7 +301,7 @@ int ne_sock_init(void)
 
 #endif
 
-#ifdef NEON_SOCKS
+#ifdef NE_HAVE_SOCKS
     SOCKSinit("neon");
 #endif
 
@@ -316,12 +313,8 @@ int ne_sock_init(void)
     init_ipv6();
 #endif
 
-#ifdef NEON_SSL
-    if (init_ssl()) {
-	NE_DEBUG(NE_DBG_SOCKET, "SSL initialization failed; lacking PRNG?\n");
-    } else {
-        prng_seeded = 1;
-    }
+#ifdef NE_HAVE_SSL
+    init_ssl();
 #endif
 
     init_result = 1;
@@ -345,9 +338,6 @@ int ne_sock_block(ne_socket *sock, int n)
 
 /* Cast address object AD to type 'sockaddr_TY' */ 
 #define SACAST(ty, ad) ((struct sockaddr_##ty *)(ad))
-
-#define SOCK_ERR(x) do { ssize_t _sock_err = (x); \
-if (_sock_err < 0) return _sock_err; } while(0)
 
 ssize_t ne_sock_read(ne_socket *sock, char *buffer, size_t buflen)
 {
@@ -412,7 +402,20 @@ ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t buflen)
 /* Await data on raw fd in socket. */
 static int readable_raw(ne_socket *sock, int secs)
 {
-    int fdno = sock->fd, ret;
+    int ret;
+#ifdef NE_USE_POLL
+    struct pollfd fds;
+    int timeout = secs > 0 ? secs * 1000 : -1;
+
+    fds.fd = sock->fd;
+    fds.events = POLLIN;
+    fds.revents = 0;
+
+    do {
+        ret = poll(&fds, 1, timeout);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+#else
+    int fdno = sock->fd;
     fd_set rdfds;
     struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
 
@@ -426,6 +429,8 @@ static int readable_raw(ne_socket *sock, int secs)
 	}
 	ret = select(fdno + 1, &rdfds, NULL, NULL, tvp);
     } while (ret < 0 && NE_ISINTR(ne_errno));
+#endif
+
     if (ret < 0) {
 	set_strerror(sock, ne_errno);
 	return NE_SOCK_ERROR;
@@ -441,7 +446,7 @@ static ssize_t read_raw(ne_socket *sock, char *buffer, size_t len)
     if (ret) return ret;
 
     do {
-	ret = ne_read(sock->fd, buffer, len);
+	ret = recv(sock->fd, buffer, len, 0);
     } while (ret == -1 && NE_ISINTR(ne_errno));
 
     if (ret == 0) {
@@ -464,7 +469,7 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
     ssize_t wrote;
     
     do {
-	wrote = ne_write(sock->fd, data, length);
+	wrote = send(sock->fd, data, length, 0);
         if (wrote > 0) {
             data += wrote;
             length -= wrote;
@@ -482,7 +487,7 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
 
 static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw };
 
-#ifdef NEON_SSL
+#ifdef NE_HAVE_SSL
 /* OpenSSL I/O function implementations. */
 static int readable_ossl(ne_socket *sock, int secs)
 {
@@ -501,6 +506,7 @@ static int readable_ossl(ne_socket *sock, int secs)
 static int error_ossl(ne_socket *sock, int sret)
 {
     int err = SSL_get_error(sock->ssl.ssl, sret), ret = NE_SOCK_ERROR;
+    const char *str;
     
     switch (err) {
     case SSL_ERROR_ZERO_RETURN:
@@ -521,13 +527,15 @@ static int error_ossl(ne_socket *sock, int sret)
 		ret = MAP_ERR(err);
 	    }
 	} else {
-	    ne_snprintf(sock->error, sizeof sock->error, 
-			_("SSL error: %s"), ERR_reason_error_string(err));
+            str = ERR_reason_error_string(err);
+	    ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"), 
+                        str ? str : _("unknown error code"));
 	}
 	break;
     default:
+        str = ERR_reason_error_string(ERR_get_error());
 	ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"), 
-		    ERR_reason_error_string(ERR_get_error()));
+		    str ? str : _("unknown error code"));
 	break;
     }
     return ret;
@@ -569,7 +577,7 @@ static const struct iofns iofns_ossl = {
     readable_ossl
 };
 
-#endif /* NEON_SSL */
+#endif /* NE_HAVE_SSL */
 
 int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t len)
 {
@@ -855,6 +863,14 @@ int ne_sock_connect(ne_socket *sock,
 	return -1;
     }
     
+#ifndef NE_USE_POLL
+    if (fd > FD_SETSIZE) {
+        close(fd);
+        set_error(sock, _("Socket descriptor number exceeds FD_SETSIZE"));
+        return NE_SOCK_ERROR;
+    }
+#endif
+
 #if defined(TCP_NODELAY) && defined(HAVE_SETSOCKOPT) && defined(IPPROTO_TCP)
     { /* Disable the Nagle algorithm; better to add write buffering
        * instead of doing this. */
@@ -909,6 +925,15 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
     return ia;
 }
 
+ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia)
+{
+#ifdef USE_GETADDRINFO
+    return ia->ai_family == AF_INET6 ? ne_iaddr_ipv6 : ne_iaddr_ipv4;
+#else
+    return ne_iaddr_ipv4;
+#endif
+}
+
 int ne_iaddr_cmp(const ne_inet_addr *i1, const ne_inet_addr *i2)
 {
 #ifdef USE_GETADDRINFO
@@ -960,7 +985,7 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout)
     sock->rdtimeout = timeout;
 }
 
-#ifdef NEON_SSL
+#ifdef NE_HAVE_SSL
 
 void ne_sock_switch_ssl(ne_socket *sock, void *ssl)
 {
@@ -973,9 +998,16 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
     SSL *ssl;
     int ret;
 
-    if (!prng_seeded && RAND_status() != 1) {
+    if (seed_ssl_prng()) {
 	set_error(sock, _("SSL disabled due to lack of entropy"));
 	return NE_SOCK_ERROR;
+    }
+
+    /* If runtime library version differs from compile-time version
+     * number in major/minor/fix level, abort soon. */
+    if ((SSLeay() ^ OPENSSL_VERSION_NUMBER) & 0xFFFFF000) {
+        set_error(sock, _("SSL disabled due to library version mismatch"));
+        return NE_SOCK_ERROR;
     }
 
     sock->ssl.ssl = ssl = SSL_new(ctx->ctx);
@@ -1019,7 +1051,7 @@ const char *ne_sock_error(const ne_socket *sock)
 int ne_sock_close(ne_socket *sock)
 {
     int ret;
-#ifdef NEON_SSL
+#ifdef NE_HAVE_SSL
     if (sock->ssl.ssl) {
 	SSL_shutdown(sock->ssl.ssl);
 	SSL_free(sock->ssl.ssl);

@@ -11,7 +11,8 @@ CA="${OPENSSL} ca -config ${CONF} -batch"
 MKCERT="${REQ} -x509 -new -days 900"
 
 REQDN=reqDN
-export REQDN
+STRMASK=default
+export REQDN STRMASK
 
 set -ex
 
@@ -77,6 +78,20 @@ ${MKCERT} -key ${srcdir}/server.key -out ssigned.pem
 
 csr_fields "Bad Hostname Department" nohost.example.com | \
 ${MKCERT} -key ${srcdir}/server.key -out wrongcn.pem
+
+# default => T61String
+csr_fields "`echo -e 'H\350llo World'`" localhost |
+${MKCERT} -key ${srcdir}/server.key -out t61subj.cert
+
+STRMASK=pkix # => BMPString
+csr_fields "`echo -e 'H\350llo World'`" localhost |
+${MKCERT} -key ${srcdir}/server.key -out bmpsubj.cert
+
+STRMASK=utf8only # => UTF8String
+csr_fields "`echo -e 'H\350llo World'`" localhost |
+${MKCERT} -key ${srcdir}/server.key -out utf8subj.cert
+
+STRMASK=default
 
 ### produce a set of CA certs
 

@@ -1,6 +1,6 @@
 /* 
    Tests for high-level HTTP interface (ne_basic.h)
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,8 +46,10 @@ static int content_type(void)
 	{ "foo/bar", "foo", "bar", NULL },
 	{ "foo/bar  ", "foo", "bar", NULL },
 	{ "application/xml", "application", "xml", NULL },
-	/* text/ subtypes default to charset ISO-8859-1. */
+	/* text/ subtypes default to charset ISO-8859-1, per 2616. */
 	{ "text/lemon", "text", "lemon", "ISO-8859-1" },
+        /* text/xml defaults to charset us-ascii, per 3280 */
+        { "text/xml", "text", "xml", "us-ascii" },        
 #undef TXU
 #define TXU "text", "xml", "utf-8"
 	/* 2616 doesn't *say* that charset can be quoted, but bets are
@@ -122,7 +124,7 @@ static int do_range(off_t start, off_t end, const char *fail,
 #if 0
 	t_warning("error was %s", ne_get_error(sess));
 #endif
-	ONN(fail, ret == NE_OK);
+	ONV(ret == NE_OK, ("%s", fail));
     } else {
 	ONREQ(ret);
     }

@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -725,7 +725,7 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
 
     ne_buffer_destroy(body);
     ne_buffer_destroy(ctx.cdata);
-    parse_failed = !ne_xml_valid(parser);
+    parse_failed = ne_xml_failed(parser);
     
     if (ret == NE_OK && ne_get_status(req)->klass == 2) {
 	if (ctx.token == NULL) {
@@ -734,7 +734,7 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
 	}
 	else if (parse_failed) {
 	    ret = NE_ERROR;
-	    ne_set_error(sess, ne_xml_get_error(parser));
+	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	}
 	else if (ne_get_status(req)->code == 207) {
 	    ret = NE_ERROR;
@@ -780,9 +780,13 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
     ne_request *req = ne_request_create(sess, "LOCK", lock->uri.path);
     ne_xml_parser *parser = ne_xml_create();
     int ret, parse_failed;
+    struct lock_ctx ctx;
+
+    memset(&ctx, 0, sizeof ctx);
+    ctx.cdata = ne_buffer_create();
 
     /* Handle the response and update *lock appropriately. */
-    ne_xml_push_handler(parser, lk_startelm, NULL, lk_endelm, lock);
+    ne_xml_push_handler(parser, lk_startelm, lk_cdata, lk_endelm, &ctx);
     
     ne_add_response_body_reader(req, ne_accept_2xx, 
 				ne_xml_parse_v, parser);
@@ -797,12 +801,12 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
 
     ret = ne_request_dispatch(req);
 
-    parse_failed = !ne_xml_valid(parser);
+    parse_failed = ne_xml_failed(parser);
     
     if (ret == NE_OK && ne_get_status(req)->klass == 2) {
 	if (parse_failed) {
 	    ret = NE_ERROR;
-	    ne_set_error(sess, ne_xml_get_error(parser));
+	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	}
 	else if (ne_get_status(req)->code == 207) {
 	    ret = NE_ERROR;
@@ -812,6 +816,7 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
 	ret = NE_ERROR;
     }
 
+    ne_buffer_destroy(ctx.cdata);
     ne_request_destroy(req);
     ne_xml_destroy(parser);
 
