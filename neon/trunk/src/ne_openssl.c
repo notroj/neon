@@ -570,6 +570,7 @@ int ne__negotiate_ssl(ne_request *req)
         if (cert) {
             chain = sk_X509_new_null();
             sk_X509_push(chain, cert);
+            freechain = 1;
         }
     }
 
