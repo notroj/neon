@@ -776,6 +776,45 @@ static int strip_http10_connhdr2(void)
                                "\r\n");
 }
 
+static int post_send_retry(ne_request *req, void *userdata, 
+                           const ne_status *status)
+{
+    return status->code == 400 ? NE_RETRY : NE_OK;    
+}
+
+/* Test that the stored response headers are forgotten if the request
+ * is retried. */
+static int reset_headers(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    const char *value;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 400 Hit me again\r\n"
+                      "Content-Length: 0\r\n"
+                      "X-Foo: bar\r\n" "\r\n"
+
+                      "HTTP/1.1 200 Thank you kindly\r\n"
+                      "Connection: close\r\n"
+                      "X-Foo: hello fair world\r\n" "\r\n"));
+
+    ne_hook_post_send(sess, post_send_retry, NULL);
+    
+    req = ne_request_create(sess, "GET", "/foo");
+
+    ONREQ(ne_request_dispatch(req));
+
+    value = ne_get_response_header(req, "X-Foo");
+    ONCMP("hello fair world", value, "response header", "X-Foo");
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    return OK;
+}
+
 
 struct s1xx_args {
     int count;
@@ -1711,6 +1750,7 @@ ne_test tests[] = {
     T(strip_http10_connhdr),
     T(strip_http10_connhdr2),
     T(continued_header),
+    T(reset_headers),
     T(skip_interim_1xx),
     T(skip_many_1xx),
     T(skip_1xx_hdrs),
