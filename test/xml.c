@@ -356,8 +356,8 @@ static int fail_parse(void)
         PFX "<foo xmlns:-bar='fish'/>",
         PFX "<foo xmlns:0bar='fish'/>",
         PFX "<fee xmlns:8baz='bar'/>",
+
         /* element names which are not valid QNames. */
-        PFX "<foo:bar:baz xmlns:foo='bar'/>",
         PFX "<foo: xmlns:foo='bar'/>",
         PFX "<:fee/>",
         PFX "<0fish/>",
@@ -366,7 +366,8 @@ static int fail_parse(void)
         PFX "<foo:-fish xmlns:foo='bar'/>",
         PFX "<foo:.fish xmlns:foo='bar'/>",
 
-#if 0 /* currently disabled for SVN */
+#if 0 /* currently disabled to allow SVN to work */
+        PFX "<foo:bar:baz xmlns:foo='bar'/>",
         PFX "<fee xmlns:baz:bar='bar'/>",
         PFX "<fee xmlns::bar='bar'/>",
         PFX "<foo::fish xmlns:foo='bar'/>",
