@@ -145,7 +145,7 @@ static int parse_header(ne_decompress *ctx)
 
 /* Process extra 'len' bytes of 'buf' which were received after the
  * DEFLATE data. */
-static void process_footer(ne_decompress *ctx, 
+static int process_footer(ne_decompress *ctx, 
 			   const unsigned char *buf, size_t len)
 {
     if (len + ctx->footcount > 8) {
@@ -153,6 +153,7 @@ static void process_footer(ne_decompress *ctx,
                      "Too many bytes (%" NE_FMT_SIZE_T ") in gzip footer",
                      len);
 	ctx->state = NE_Z_ERROR;
+        return -1;
     } else {
 	memcpy(ctx->footer + ctx->footcount, buf, len);
 	ctx->footcount += len;
@@ -169,9 +170,11 @@ static void process_footer(ne_decompress *ctx,
 		ne_set_error(ctx->session, 
 			     "Checksum invalid for compressed stream");
 		ctx->state = NE_Z_ERROR;
+                return -1;
 	    }
 	}
     }
+    return 0;
 }
 
 /* A zlib function failed with 'code'; set the session error string
@@ -195,7 +198,7 @@ static void set_zlib_error(ne_decompress *ctx, const char *msg, int code)
 }
 
 /* Inflate response buffer 'buf' of length 'len'. */
-static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
+static int do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 {
     int ret;
 
@@ -234,11 +237,13 @@ static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 		 ctx->zstr.avail_in);
 	/* process the footer. */
 	ctx->state = NE_Z_AFTER_DATA;
-	process_footer(ctx, ctx->zstr.next_in, ctx->zstr.avail_in);
+	return process_footer(ctx, ctx->zstr.next_in, ctx->zstr.avail_in);
     } else if (ret != Z_OK) {
 	ctx->state = NE_Z_ERROR;
         set_zlib_error(ctx, _("Could not inflate data"), ret);
+        return NE_ERROR;
     }
+    return 0;
 }
 
 /* Callback which is passed blocks of the response body. */
@@ -317,8 +322,9 @@ static int gz_reader(void *ud, const char *buf, size_t len)
 	    break;
 	case HDR_DONE:
 	    if (len > 0) {
-		do_inflate(ctx, buf, len);
+		return do_inflate(ctx, buf, len);
 	    }
+            /* fallthrough */
         default:
 	    return 0;
 	}
@@ -348,12 +354,10 @@ static int gz_reader(void *ud, const char *buf, size_t len)
 	/* FALLTHROUGH */
 
     case NE_Z_INFLATING:
-	do_inflate(ctx, buf, len);
-	break;
+	return do_inflate(ctx, buf, len);
 
     case NE_Z_AFTER_DATA:
-	process_footer(ctx, (unsigned char *)buf, len);
-	break;
+	return process_footer(ctx, (unsigned char *)buf, len);
     }
 
     return 0;

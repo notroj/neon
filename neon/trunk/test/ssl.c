@@ -1287,7 +1287,9 @@ static int dname_readable(void)
         { "justmail.cert", "blah@example.com", NULL },
         { "t61subj.cert", I18N_DNAME, NULL },
         { "bmpsubj.cert", I18N_DNAME, NULL },
-        { "utf8subj.cert", I18N_DNAME, NULL }
+        { "utf8subj.cert", I18N_DNAME, NULL },
+        { "twoou.cert", "First OU Dept, Second OU Dept, Neon Hackers Ltd, "
+          "Cambridge, Cambridgeshire, GB" }
     };
     size_t n;
 
