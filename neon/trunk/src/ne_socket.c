@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2004, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2005, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -134,6 +134,7 @@ typedef struct in_addr ne_inet_addr;
 #include "ne_string.h"
 #include "ne_socket.h"
 #include "ne_alloc.h"
+#include "ne_sspi.h"
 
 #if defined(__BEOS__) && !defined(BONE_VERSION)
 /* pre-BONE */
@@ -320,6 +321,13 @@ int ne_sock_init(void)
 
 #endif
 
+#ifdef HAVE_SSPI
+    if (ne_sspi_init() < 0) {
+        init_result = -1;
+        return init_result;
+    }
+#endif
+
 #ifdef NE_HAVE_SOCKS
     SOCKSinit("neon");
 #endif
@@ -348,6 +356,11 @@ void ne_sock_exit(void)
 #ifdef HAVE_GNUTLS
     gnutls_global_deinit();
 #endif
+
+#ifdef HAVE_SSPI
+    ne_sspi_deinit();
+#endif
+
     init_result = 0;
 }
 
