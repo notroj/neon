@@ -154,13 +154,15 @@ typedef struct in_addr ne_inet_addr;
 #define NE_ISCLOSED(e) ((e) == WSAESHUTDOWN || (e) == WSAENOTCONN)
 #define NE_ISINTR(e) (0)
 #else /* Unix */
-/* ECONNABORTED shouldn't really be returned by anything but accept()
- * but apparently nobody told CygWin that... */
-#ifdef ECONNABORTED
-#define NE_ISRESET(e) ((e) == ECONNRESET || (e) == ECONNABORTED)
-#else
-#define NE_ISRESET(e) ((e) == ECONNRESET)
+/* Also treat ECONNABORTED and ENOTCONN as "connection reset" errors;
+ * both can be returned by Winsock-based sockets layers e.g. CygWin */
+#ifndef ECONNABORTED
+#define ECONNABORTED ECONNRESET
 #endif
+#ifndef ENOTCONN
+#define ENOTCONN ECONNRESET
+#endif
+#define NE_ISRESET(e) ((e) == ECONNRESET || (e) == ECONNABORTED || (e) == ENOTCONN)
 #define NE_ISCLOSED(e) ((e) == EPIPE)
 #define NE_ISINTR(e) ((e) == EINTR)
 #endif
