@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -1215,8 +1215,6 @@ int ne_begin_request(ne_request *req)
         ret = lookup_host(req->session, host);
         if (ret) return ret;
     }    
-
-    req->resp.mode = R_TILLEOF;
     
     /* Build the request string, and send it */
     data = build_request(req);
@@ -1271,9 +1269,23 @@ int ne_begin_request(ne_request *req)
         ne_free(vcopy);
     }
 
-    /* check for T-E and C-L headers */
-    if (get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
-                               "transfer-encoding")) {
+    /* Decide which method determines the response message-length per
+     * 2616§4.4 (multipart/byteranges is not supported): */
+
+#ifdef NE_HAVE_SSL
+    /* Special case for CONNECT handling: the response has no body,
+     * and the connection can persist. */
+    if (req->session->in_connect && st->klass == 2) {
+	req->resp.mode = R_NO_BODY;
+	req->can_persist = 1;
+    } else
+#endif
+    /* HEAD requests and 204, 304 responses have no response body,
+     * regardless of what headers are present. */
+    if (req->method_is_head || st->code == 204 || st->code == 304) {
+    	req->resp.mode = R_NO_BODY;
+    } else if (get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
+                                      "transfer-encoding")) {
         /* Treat *any* t-e header as implying a chunked response
          * regardless of value, per the "Protocol Compliance"
          * statement in the manual. */
@@ -1282,26 +1294,17 @@ int ne_begin_request(ne_request *req)
     } else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
                                                "content-length")) != NULL) {
         ne_off_t len = ne_strtoff(value, NULL, 10);
-        if (len != NE_OFFT_MAX && len >= 0 && req->resp.mode == R_TILLEOF) {
+        if (len != NE_OFFT_MAX && len >= 0) {
             req->resp.mode = R_CLENGTH;
             req->resp.body.clen.total = req->resp.body.clen.remain = len;
-        }
+        } else {
+            /* fail for an invalid content-length header. */
+            return aborted(req, _("Invalid Content-Length in response"), 0);
+        }            
+    } else {
+        req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
     
-#ifdef NE_HAVE_SSL
-    /* Special case for CONNECT handling: the response has no body,
-     * and the connection can persist. */
-    if (req->session->in_connect && st->klass == 2) {
-	req->resp.mode = R_NO_BODY;
-	req->can_persist = 1;
-    }
-#endif
-
-    /* HEAD requests and 204, 304 responses have no response body,
-     * regardless of what headers are present. */
-    if (req->method_is_head || st->code == 204 || st->code == 304)
-    	req->resp.mode = R_NO_BODY;
-
     /* Prepare for reading the response entity-body.  Call each of the
      * body readers and ask them whether they want to accept this
      * response or not. */
