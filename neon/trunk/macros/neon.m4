@@ -756,7 +756,7 @@ AC_CHECK_FUNCS(snprintf vsnprintf,,[
     NEON_LIBS="$NEON_LIBS -ltrio -lm"
     AC_DEFINE(HAVE_TRIO, 1, [Use trio printf replacement library])],
    [AC_MSG_NOTICE([no vsnprintf/snprintf detected in C library])
-    AC_MSG_ERROR([Install the trio library from http://daniel.haxx.se/trio/])])
+    AC_MSG_ERROR([Install the trio library from http://daniel.haxx.se/projects/trio/])])
    LIBS=$ne_save_LIBS
    break
 ])])
