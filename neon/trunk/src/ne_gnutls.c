@@ -134,17 +134,7 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 ne_ssl_context *ne_ssl_context_create(int flags)
 {
     ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
-
-    gnutls_dh_params_init(&ctx->dh_params);
-    gnutls_dh_params_generate2(ctx->dh_params, 1024);
-
-    gnutls_rsa_params_init(&ctx->rsa_params);
-    gnutls_rsa_params_generate2(ctx->rsa_params, 1024);
-
     gnutls_certificate_allocate_credentials(&ctx->cred);
-    gnutls_certificate_set_dh_params(ctx->cred, ctx->dh_params);
-    gnutls_certificate_set_rsa_params(ctx->cred, ctx->rsa_params);
-
     return ctx;
 }
 
@@ -158,12 +148,7 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx,
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
-    if (ctx->dh_params)
-        gnutls_dh_params_deinit(ctx->dh_params);
-    if (ctx->rsa_params)
-        gnutls_rsa_params_deinit(ctx->rsa_params);
-    if (ctx->cred)
-        gnutls_certificate_free_credentials(ctx->cred);
+    gnutls_certificate_free_credentials(ctx->cred);
     ne_free(ctx);
 }
 

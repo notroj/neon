@@ -50,9 +50,8 @@ typedef SSL *ne_ssl_socket;
 #include <gnutls/gnutls.h>
 
 struct ne_ssl_context_s {
-    gnutls_dh_params dh_params;
-    gnutls_rsa_params rsa_params;
     gnutls_certificate_credentials cred;
+    /* TODO: store session here too */
 };
 
 typedef gnutls_session ne_ssl_socket;
