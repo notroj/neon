@@ -1,7 +1,6 @@
 /* 
    Date manipulation routines
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
-   Copyright (C) 2004 Jiang Lei <tristone@deluxe.ocn.ne.jp>
+   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -36,7 +35,7 @@
 
 #include "ne_alloc.h"
 #include "ne_dates.h"
-#include "ne_string.h"
+#include "ne_utils.h"
 
 /* Generic date manipulation routines. */
 
@@ -48,7 +47,7 @@
 /* RFC1123: Sun, 06 Nov 1994 08:49:37 GMT */
 #define RFC1123_FORMAT "%3s, %02d %3s %4d %02d:%02d:%02d GMT"
 /* RFC850:  Sunday, 06-Nov-94 08:49:37 GMT */
-#define RFC1036_FORMAT "%10s %2d-%3s-%2d %2d:%2d:%2d GMT"
+#define RFC1036_FORMAT "%s %2d-%3s-%2d %2d:%2d:%2d GMT"
 /* asctime: Wed Jun 30 21:49:08 1993 */
 #define ASCTIME_FORMAT "%3s %3s %2d %2d:%2d:%2d %4d"
 
@@ -62,33 +61,9 @@ static const char *short_months[12] = {
 
 #if defined(HAVE_STRUCT_TM_TM_GMTOFF)
 #define GMTOFF(t) ((t).tm_gmtoff)
-#elif defined(HAVE_STRUCT_TM___TM_GMTOFF)
-#define GMTOFF(t) ((t).__tm_gmtoff)
-#elif defined(WIN32)
-#define GMTOFF(t) (gmt_to_local_win32())
 #else
 /* FIXME: work out the offset anyway. */
 #define GMTOFF(t) (0)
-#endif
-
-#ifdef WIN32
-time_t gmt_to_local_win32(void)
-{
-    TIME_ZONE_INFORMATION tzinfo;
-    DWORD dwStandardDaylight;
-    long bias;
-
-    dwStandardDaylight = GetTimeZoneInformation(&tzinfo);
-    bias = tzinfo.Bias;
-
-    if (dwStandardDaylight == TIME_ZONE_ID_STANDARD)
-        bias += tzinfo.StandardBias;
-    
-    if (dwStandardDaylight == TIME_ZONE_ID_DAYLIGHT)
-        bias += tzinfo.DaylightBias;
-    
-    return (- bias * 60);
-}
 #endif
 
 /* Returns the time/date GMT, in RFC1123-type format: eg
@@ -158,7 +133,7 @@ time_t ne_iso8601_parse(const char *date)
 time_t ne_rfc1123_parse(const char *date) 
 {
     struct tm gmt = {0};
-    char wkday[4], mon[4];
+    static char wkday[4], mon[4];
     int n;
 /*  it goes: Sun, 06 Nov 1994 08:49:37 GMT */
     n = sscanf(date, RFC1123_FORMAT,
@@ -181,7 +156,7 @@ time_t ne_rfc1036_parse(const char *date)
 {
     struct tm gmt = {0};
     int n;
-    char wkday[11], mon[4];
+    static char wkday[10], mon[4];
     /* RFC850/1036 style dates: Sunday, 06-Nov-94 08:49:37 GMT */
     n = sscanf(date, RFC1036_FORMAT,
 		wkday, &gmt.tm_mday, mon, &gmt.tm_year,
@@ -214,7 +189,7 @@ time_t ne_asctime_parse(const char *date)
 {
     struct tm gmt = {0};
     int n;
-    char wkday[4], mon[4];
+    static char wkday[4], mon[4];
     n = sscanf(date, ASCTIME_FORMAT,
 		wkday, mon, &gmt.tm_mday, 
 		&gmt.tm_hour, &gmt.tm_min, &gmt.tm_sec,
@@ -242,3 +217,35 @@ time_t ne_httpdate_parse(const char *date)
     }
     return tmp;
 }
+
+#undef RFC1036_FORMAT
+#undef ASCTIME_FORMAT
+#undef RFC1123_FORMAT
+
+#ifdef RFC1123_TEST
+
+int main(int argc, char **argv) {
+    time_t now, in;
+    char *out;
+    if (argc > 1) {
+	printf("Got: %s\n", argv[1]);
+	in = ne_rfc1123_parse(argv[1]);
+	printf("Parsed: %d\n", in);
+	out = ne_rfc1123_date(in);
+	printf("Back again: %s\n", out);
+    } else {
+	now = time(NULL);
+	out = ne_rfc1123_date(now);
+	in = ne_rfc1123_parse(out);
+	printf("time(NULL) = %d\n", now);
+	printf("RFC1123 Time: [%s]\n", out);
+	printf("Parsed = %d\n", in);
+	out = ne_rfc1123_date(in);
+	printf("Back again: [%s]\n", out);
+    }
+    return 0;
+}
+
+#endif
+
+

@@ -42,11 +42,11 @@
 #include "child.h"
 #include "utils.h"
 
-#if defined(NE_HAVE_ZLIB) && defined(NE_HAVE_SSL)
+#if defined(NEON_ZLIB) && defined(NEON_SSL)
 #define NO_TESTS 1
 #endif
 
-#ifndef NE_HAVE_ZLIB
+#ifndef NEON_ZLIB
 static int sd_result = OK;
 
 static void sd_reader(void *ud, const char *block, size_t len)
@@ -90,7 +90,7 @@ static int stub_decompress(void)
 }
 #endif
 
-#ifndef NE_HAVE_SSL
+#ifndef NEON_SSL
 static int stub_ssl(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 7777);
@@ -156,10 +156,10 @@ static int null_test(void) { return OK; }
 #endif
 
 ne_test tests[] = {
-#ifndef NE_HAVE_ZLIB
+#ifndef NEON_ZLIB
     T(stub_decompress),
 #endif
-#ifndef NE_HAVE_SSL
+#ifndef NEON_SSL
     T(stub_ssl),
 #endif
 /* to prevent failure when SSL and zlib are supported. */

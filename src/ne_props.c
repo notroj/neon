@@ -141,7 +141,7 @@ static int propfind(ne_propfind_handler *handler,
 
     if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;
-    } else if (ne_xml_failed(handler->parser)) {
+    } else if (!ne_xml_valid(handler->parser)) {
 	ne_set_error(handler->sess, "%s", ne_xml_get_error(handler->parser));
 	ret = NE_ERROR;
     }
@@ -220,7 +220,7 @@ int ne_proppatch(ne_session *sess, const char *uri,
     ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
     ne_add_request_header(req, "Content-Type", NE_XML_MEDIA_TYPE);
     
-#ifdef NE_HAVE_DAV
+#ifdef USE_DAV_LOCKS
     ne_lock_using_resource(req, uri, NE_DEPTH_ZERO);
 #endif
 

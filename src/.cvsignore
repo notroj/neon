@@ -14,4 +14,3 @@ checkincl.c
 *.da
 *.bbg
 *.[is]
-*.gcno

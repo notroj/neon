@@ -39,7 +39,7 @@
 #include "child.h"
 #include "utils.h"
 
-#ifndef NE_HAVE_SSL
+#ifndef NEON_SSL
 /* this file shouldn't be built if SSL is not enabled. */
 #error SSL not supported
 #endif
@@ -746,7 +746,7 @@ static int fail_ssl_request(char *cert, char *cacert,
 	("verification flags were %d not %d", gotf, failures));
 
     /* and check that the request was failed too. */
-    ONV(ret == NE_OK, ("%s", msg));
+    ONN(msg, ret == NE_OK);
 
     ne_session_destroy(sess);
 

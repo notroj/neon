@@ -24,6 +24,18 @@
 #include "child.h"
 #include "utils.h"
 
+#ifdef NEON_NODAV
+
+static int skip(void)
+{ 
+    t_context("built without WebDAV support");
+    return SKIP;
+}
+
+ne_test tests[] = { T(skip), T(NULL) };
+
+#else
+
 /**** DUMMY TESTS: just makes sure the stuff doesn't dump core. */
 
 static int test_acl(const char *uri, ne_acl_entry *es, int nume)
@@ -99,3 +111,5 @@ ne_test tests[] = {
     T(deny_byprop),
     T(NULL)
 };
+
+#endif /* NEON_NODAV */

@@ -323,7 +323,7 @@ static ne_ssl_certificate *make_chain(STACK_OF(X509) *chain)
     for (n = 0; n < count; n++) {
         ne_ssl_certificate *cert = ne_malloc(sizeof *cert);
         populate_cert(cert, X509_dup(sk_X509_value(chain, n)));
-#ifdef NE_DEBUGGING
+#if NE_DEBUGGING
         if (ne_debug_mask & NE_DBG_SSL) {
             fprintf(ne_debug_stream, "Cert #%d:\n", n);
             X509_print_fp(ne_debug_stream, cert->subject);
@@ -441,9 +441,13 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
 
-        count = ca_list ? sk_X509_NAME_num(ca_list) : 0;
+        if (ca_list == NULL) {
+            /* no list of acceptable CA names provided. */
+            dnames = NULL;
+            count = 0;
+        } else {
+            count = sk_X509_NAME_num(ca_list);
 
-        if (count > 0) {
             dnames = ne_malloc(count * sizeof(ne_ssl_dname *));
             
             for (n = 0; n < count; n++) {
@@ -502,7 +506,7 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
 }
 
 /* For internal use only. */
-int ne__negotiate_ssl(ne_request *req)
+int ne_negotiate_ssl(ne_request *req)
 {
     ne_session *sess = ne_get_session(req);
     ne_ssl_context *ctx = sess->ssl_context;
@@ -767,7 +771,6 @@ int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
     if (fp == NULL) return -1;
 
     if (PEM_write_X509(fp, cert->subject) != 1) {
-        ERR_clear_error();
         fclose(fp);
         return -1;
     }
