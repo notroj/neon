@@ -57,7 +57,8 @@ void ne_session_proxy(ne_session *sess,
 void ne_set_persist(ne_session *sess, int flag);
 
 /* Bypass the normal name resolution; force the use of specific set of
- * addresses for this session, addrs[0]...addrs[n-1]. */
+ * addresses for this session, addrs[0]...addrs[n-1].  The addrs array
+ * must remain valid until the session is destroyed. */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
 /* Progress callback. */
