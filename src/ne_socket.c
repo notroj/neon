@@ -175,10 +175,10 @@ typedef struct in_addr ne_inet_addr;
 struct iofns {
     /* Read up to 'len' bytes into 'buf' from socket.  Return <0 on
      * error or EOF, or >0; number of bytes read. */
-    ssize_t (*read)(ne_socket *s, char *buf, size_t len);
+    ssize_t (*sread)(ne_socket *s, char *buf, size_t len);
     /* Write up to 'len' bytes from 'buf' to socket.  Return number of
      * bytes written on success, or <0 on error. */
-    ssize_t (*write)(ne_socket *s, const char *buf, size_t len);
+    ssize_t (*swrite)(ne_socket *s, const char *buf, size_t len);
     /* Wait up to 'n' seconds for socket to become readable.  Returns
      * 0 when readable, otherwise NE_SOCK_TIMEOUT or NE_SOCK_ERROR. */
     int (*readable)(ne_socket *s, int n);
@@ -395,10 +395,10 @@ ssize_t ne_sock_read(ne_socket *sock, char *buffer, size_t buflen)
 	return buflen;
     } else if (buflen >= sizeof sock->buffer) {
 	/* No need for read buffer. */
-	return sock->ops->read(sock, buffer, buflen);
+	return sock->ops->sread(sock, buffer, buflen);
     } else {
 	/* Fill read buffer. */
-	bytes = sock->ops->read(sock, sock->buffer, sizeof sock->buffer);
+	bytes = sock->ops->sread(sock, sock->buffer, sizeof sock->buffer);
 	if (bytes <= 0)
 	    return bytes;
 
@@ -420,7 +420,7 @@ ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t buflen)
 	bytes = sock->bufavail;
     } else {
 	/* fill the buffer. */
-	bytes = sock->ops->read(sock, sock->buffer, sizeof sock->buffer);
+	bytes = sock->ops->sread(sock, sock->buffer, sizeof sock->buffer);
 	if (bytes <= 0)
 	    return bytes;
 
@@ -701,7 +701,7 @@ int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t len)
     ssize_t ret;
 
     do {
-        ret = sock->ops->write(sock, data, len);
+        ret = sock->ops->swrite(sock, data, len);
         if (ret > 0) {
             data += ret;
             len -= ret;
@@ -728,8 +728,8 @@ ssize_t ne_sock_readline(ne_socket *sock, char *buf, size_t buflen)
 	 * buffered so far, and there is still buffer space available */ 
 	do {
 	    /* Read more data onto end of buffer. */
-	    ssize_t ret = sock->ops->read(sock, sock->buffer + sock->bufavail,
-					  RDBUFSIZ - sock->bufavail);
+	    ssize_t ret = sock->ops->sread(sock, sock->buffer + sock->bufavail,
+                                           RDBUFSIZ - sock->bufavail);
 	    if (ret < 0) return ret;
 	    sock->bufavail += ret;
 	} while ((lf = memchr(sock->buffer, '\n', sock->bufavail)) == NULL
