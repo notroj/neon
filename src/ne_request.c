@@ -68,8 +68,6 @@
 #define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
 if (sret < 0) return aborted(req, msg, sret); } while (0)
 
-/* TODO: could unify these all into a generic callback list */
-
 struct body_reader {
     ne_block_reader handler;
     ne_accept_response accept_response;
@@ -489,8 +487,6 @@ ne_request *ne_request_create(ne_session *sess,
 {
     ne_request *req = ne_calloc(sizeof *req);
 
-    NE_DEBUG(NE_DBG_HTTP, "Creating request...\n");
-
     req->session = sess;
     req->headers = ne_buffer_create();
 
@@ -512,15 +508,11 @@ ne_request *ne_request_create(ne_session *sess,
     {
 	struct hook *hk;
 
-	NE_DEBUG(NE_DBG_HTTP, "Running request create hooks.\n");
-
 	for (hk = sess->create_req_hooks; hk != NULL; hk = hk->next) {
 	    ne_create_request_fn fn = (ne_create_request_fn)hk->fn;
 	    fn(req, hk->userdata, method, req->uri);
 	}
     }
-
-    NE_DEBUG(NE_DBG_HTTP, "Request created.\n");
 
     return req;
 }
