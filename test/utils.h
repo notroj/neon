@@ -1,6 +1,6 @@
 /* 
    neon-specific test utils
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 #define UTILS_H 1
 
 #include "ne_request.h"
+
+#include "child.h"
 
 #define ONREQ(x) do { int _ret = (x); if (_ret) { t_context("line %d: HTTP error:\n%s", __LINE__, ne_get_error(sess)); return FAIL; } } while (0);
 
