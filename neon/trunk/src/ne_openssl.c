@@ -72,6 +72,50 @@ struct ne_ssl_client_cert_s {
     char *friendly_name;
 };
 
+/* Append an ASN.1 DirectoryString STR to buffer BUF as UTF-8.
+ * Returns zero on success or non-zero on error. */
+static int append_dirstring(ne_buffer *buf, ASN1_STRING *str)
+{
+    unsigned char *tmp = (unsigned char *)""; /* initialize to workaround 0.9.6 bug */
+    int len;
+
+    switch (str->type) {
+    case V_ASN1_UTF8STRING:
+    case V_ASN1_IA5STRING: /* definitely ASCII */
+    case V_ASN1_VISIBLESTRING: /* probably ASCII */
+    case V_ASN1_PRINTABLESTRING: /* subset of ASCII */
+        ne_buffer_append(buf, (char *)str->data, str->length);
+        break;
+    case V_ASN1_UNIVERSALSTRING:
+    case V_ASN1_T61STRING: /* let OpenSSL convert it as ISO-8859-1 */
+    case V_ASN1_BMPSTRING: 
+        len = ASN1_STRING_to_UTF8(&tmp, str);
+        if (len > 0) {
+            ne_buffer_append(buf, (char *)tmp, len);
+            OPENSSL_free(tmp);
+            break;
+        } else {
+            ERR_clear_error();
+            return -1;
+        }
+        break;
+    default:
+        NE_DEBUG(NE_DBG_SSL, "Could not convert DirectoryString type %d\n",
+                 str->type);
+        return -1;
+    }
+    return 0;
+}
+
+/* Returns a malloc-allocate version of IA5 string AS.  Really only
+ * here to prevent char * vs unsigned char * type mismatches without
+ * losing all hope at type-safety. */
+static char *dup_ia5string(const ASN1_IA5STRING *as)
+{
+    unsigned char *data = as->data;
+    return ne_strndup((char *)data, as->length);
+}
+
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 {
     int n, flag = 0;
@@ -89,33 +133,8 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
  	    if (flag++)
 		ne_buffer_append(dump, ", ", 2);
 
-            switch (ent->value->type) {
-            case V_ASN1_UTF8STRING:
-            case V_ASN1_IA5STRING: /* definitely ASCII */
-            case V_ASN1_VISIBLESTRING: /* probably ASCII */
-            case V_ASN1_PRINTABLESTRING: /* subset of ASCII */
-                ne_buffer_append(dump, ent->value->data, ent->value->length);
-                break;
-            case V_ASN1_UNIVERSALSTRING:
-            case V_ASN1_T61STRING: /* let OpenSSL convert it as ISO-8859-1 */
-            case V_ASN1_BMPSTRING: {
-                unsigned char *tmp = ""; /* initialize to workaround 0.9.6 bug */
-                int len;
-
-                len = ASN1_STRING_to_UTF8(&tmp, ent->value);
-                if (len > 0) {
-                    ne_buffer_append(dump, tmp, len);
-                    OPENSSL_free(tmp);
-                    break;
-                } else {
-                    ERR_clear_error();
-                    /* and fall through */
-                }
-            }
-            default:
-                ne_buffer_zappend(dump, "???");
-                break;
-            }                
+            if (append_dirstring(dump, ent->value))
+                ne_buffer_czappend(dump, "???");
 	}
     }
 
@@ -234,7 +253,7 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	    
             /* handle dNSName and iPAddress name extensions only. */
 	    if (nm->type == GEN_DNS) {
-		char *name = ne_strndup(nm->d.ia5->data, nm->d.ia5->length);
+		char *name = dup_ia5string(nm->d.ia5);
                 if (identity && !found) *identity = ne_strdup(name);
 		match = match_hostname(name, hostname);
 		ne_free(name);
@@ -273,9 +292,8 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
     if (!found) {
 	X509_NAME *subj = X509_get_subject_name(cert);
 	X509_NAME_ENTRY *entry;
-	ASN1_STRING *str;
+	ne_buffer *cname = ne_buffer_ncreate(30);
 	int idx = -1, lastidx;
-	char *name;
 
 	/* find the most specific commonName attribute. */
 	do {
@@ -287,13 +305,13 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	    return -1;
 
 	/* extract the string from the entry */
-	entry = X509_NAME_get_entry(subj, lastidx);
-	str = X509_NAME_ENTRY_get_data(entry);
-
-	name = ne_strndup(str->data, str->length);
-        if (identity) *identity = ne_strdup(name);
-	match = match_hostname(name, hostname);
-	ne_free(name);
+        entry = X509_NAME_get_entry(subj, lastidx);
+        if (append_dirstring(cname, X509_NAME_ENTRY_get_data(entry))) {
+            return -1;
+        }
+        if (identity) *identity = ne_strdup(cname->data);
+        match = match_hostname(cname->data, hostname);
+        ne_buffer_destroy(cname);
     }
 
     NE_DEBUG(NE_DBG_SSL, "Identity match for '%s': %s\n", hostname, 
@@ -890,6 +908,6 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
         *p++ = ':';
     }
 
-    *--p = '\0';
+    p[-1] = '\0';
     return 0;
 }
