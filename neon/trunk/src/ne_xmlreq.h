@@ -1,6 +1,6 @@
 /* 
    XML/HTTP response handling
-   Copyright (C) 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2004-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -30,12 +30,16 @@ BEGIN_NEON_DECLS
 /* Read the HTTP response body using calls to ne_read_response_block
  * (so must be enclosed by ne_begin_request/ne_end_request calls), and
  * parse it as an XML document, using the given parser.  Returns NE_*
- * error codes. */
+ * error codes.  If an XML parse error occurs, the session error
+ * string is set to the XML parser's error string, and NE_ERROR is
+ * returned. */
 int ne_xml_parse_response(ne_request *req, ne_xml_parser *parser);
 
 /* Dispatch the HTTP request, parsing the response body as an XML
  * document using * the given parser, if the response status class is
- * 2xx.  Returns NE_* error codes. */ 
+ * 2xx.  Returns NE_* error codes.  If an XML parse error occurs, the
+ * session error string is set to the XML parser's error string, and
+ * NE_ERROR is returned.  */
 int ne_xml_dispatch_request(ne_request *req, ne_xml_parser *parser);
 
 END_NEON_DECLS
