@@ -81,6 +81,7 @@ static void set_cookie_hdl(void *userdata, const char *value)
     cook->value = ne_strdup(pairs[1]);
 
     for (n = 2; pairs[n] != NULL; n+=2) {
+        if (!pairs[n+1]) continue;
 	NE_DEBUG(NE_DBG_HTTP, "Cookie parm %s=%s\n", pairs[n], pairs[n+1]);
 	if (strcasecmp(pairs[n], "path") == 0) {
 	    cook->path = ne_strdup(pairs[n+1]);

@@ -72,13 +72,13 @@ void ne_session_destroy(ne_session *sess)
     destroy_hooks(sess->destroy_sess_hooks);
     destroy_hooks(sess->private);
 
-    NE_FREE(sess->server.hostname);
-    NE_FREE(sess->server.hostport);
+    ne_free(sess->scheme);
+    ne_free(sess->server.hostname);
+    ne_free(sess->server.hostport);
     if (sess->server.address) ne_addr_destroy(sess->server.address);
     if (sess->proxy.address) ne_addr_destroy(sess->proxy.address);
-    NE_FREE(sess->proxy.hostname);
-    NE_FREE(sess->scheme);
-    NE_FREE(sess->user_agent);
+    if (sess->proxy.hostname) ne_free(sess->proxy.hostname);
+    if (sess->user_agent) ne_free(sess->user_agent);
 
     if (sess->connected) {
 	ne_close_connection(sess);
@@ -118,8 +118,6 @@ static void set_hostport(struct host_info *host, unsigned int defaultport)
 static void
 set_hostinfo(struct host_info *info, const char *hostname, unsigned int port)
 {
-    NE_FREE(info->hostport);
-    NE_FREE(info->hostname);
     info->hostname = ne_strdup(hostname);
     info->port = port;
 }
@@ -158,6 +156,7 @@ void ne_session_proxy(ne_session *sess, const char *hostname,
 		      unsigned int port)
 {
     sess->use_proxy = 1;
+    if (sess->proxy.hostname) ne_free(sess->proxy.hostname);
     set_hostinfo(&sess->proxy, hostname, port);
 }
 
@@ -204,13 +203,19 @@ void ne_set_read_timeout(ne_session *sess, int timeout)
     sess->rdtimeout = timeout;
 }
 
-#define AGENT " neon/" NEON_VERSION
+#define UAHDR "User-Agent: "
+#define AGENT " neon/" NEON_VERSION "\r\n"
 
 void ne_set_useragent(ne_session *sess, const char *token)
 {
     if (sess->user_agent) ne_free(sess->user_agent);
-    sess->user_agent = ne_malloc(sizeof AGENT + strlen(token));
-    strcat(strcpy(sess->user_agent, token), AGENT);
+    sess->user_agent = ne_malloc(strlen(UAHDR) + strlen(AGENT) + 
+                                 strlen(token) + 1);
+#ifdef HAVE_STPCPY
+    strcpy(stpcpy(stpcpy(sess->user_agent, UAHDR), token), AGENT);
+#else
+    strcat(strcat(strcpy(sess->user_agent, UAHDR), token), AGENT);
+#endif
 }
 
 const char *ne_get_server_hostport(ne_session *sess)

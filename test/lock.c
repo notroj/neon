@@ -534,7 +534,7 @@ ne_test tests[] = {
     T(lock_timeout),
     T(lock_shared),
     T(discover),
-    T(fail_discover),
+    T_XLEAKY(fail_discover),
     T(NULL)
 };
 

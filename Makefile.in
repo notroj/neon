@@ -44,7 +44,7 @@ transform = @program_transform_name@
 
 LIBTOOL = @LIBTOOL@
 
-XMLTO = xmlto --skip-validation
+XMLTO = xmlto
 
 # The headers to distribute - making up the public interface of neon
 DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \

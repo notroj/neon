@@ -78,16 +78,16 @@ static const struct ne_xml_idmap map207[] = {
 
 /* Set the callbacks for the parser */
 void ne_207_set_response_handlers(ne_207_parser *p,
-				   ne_207_start_response start,
-				   ne_207_end_response end)
+                                  ne_207_start_response *start,
+                                  ne_207_end_response *end)
 {
     p->start_response = start;
     p->end_response = end;
 }
 
 void ne_207_set_propstat_handlers(ne_207_parser *p,
-				   ne_207_start_propstat start,
-				   ne_207_end_propstat end)
+				   ne_207_start_propstat *start,
+				   ne_207_end_propstat *end)
 {
     p->start_propstat = start;
     p->end_propstat = end;

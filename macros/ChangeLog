@@ -1,3 +1,11 @@
+Thu Sep  4 21:29:06 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.m4 (LIBNEON_SOURCE_CHECKS): Check for netinet/tcp.h.
+
+Wed Jul 23 21:17:40 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.m4 (NEON_GSSAPI): New macro.
+
 Mon Apr 21 18:24:12 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* neon-xml-parser.m4 (HAVE_EXPAT): Fail if --with-expat is given

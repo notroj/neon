@@ -135,41 +135,33 @@ int ne_parse_statusline(const char *status_line, ne_status *st)
     const char *part;
     int major, minor, status_code, klass;
 
-    /* Check they're speaking the right language */
-    status_line = strstr(status_line, "HTTP/");
-    if (status_line == NULL) {
-	return -1;
-    } 
+    /* skip leading garbage if any. */
+    part = strstr(status_line, "HTTP/");
+    if (part == NULL) return -1;
 
-    /* And find out which dialect of this peculiar language
-     * they can talk... */
-    major = 0;
-    minor = 0; 
-    /* Note, we're good children, and accept leading zero's on the
-     * version numbers */
-    for (part = status_line + 5; *part != '\0' && isdigit(*part); part++) {
+    minor = major = 0;
+
+    /* Parse version string, skipping leading zeroes. */
+    for (part += 5; *part != '\0' && isdigit(*part); part++)
 	major = major*10 + (*part-'0');
-    }
-    if (*part != '.') { 
-	return -1;
-    }
-    for (part++ ; *part != '\0' && isdigit(*part); part++) {
+
+    if (*part++ != '.') return -1;
+
+    for (;*part != '\0' && isdigit(*part); part++)
 	minor = minor*10 + (*part-'0');
-    }
-    if (*part != ' ') {
-	return -1;
-    }
+
+    if (*part != ' ') return -1;
+
     /* Skip any spaces */
-    for (; *part == ' ' ; part++) /* noop */;
-    /* Now for the Status-Code. part now points at the first Y in
-     * "HTTP/x.x YYY". We want value of YYY... could use atoi, but
-     * probably quicker this way. */
+    for (; *part == ' '; part++) /* noop */;
+
+    /* Parse the Status-Code; part now points at the first Y in
+     * "HTTP/x.x YYY". */
     if (!isdigit(part[0]) || !isdigit(part[1]) || !isdigit(part[2]) ||
-	(part[3] != '\0' && part[3] != ' ')) {
-	return -1;
-    }
+	(part[3] != '\0' && part[3] != ' ')) return -1;
     status_code = 100*(part[0]-'0') + 10*(part[1]-'0') + (part[2]-'0');
     klass = part[0]-'0';
+
     /* Skip whitespace between status-code and reason-phrase */
     for (part+=3; *part == ' ' || *part == '\t'; part++) /* noop */;
 

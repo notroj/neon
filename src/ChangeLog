@@ -1,3 +1,83 @@
+Thu Sep  4 21:41:38 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_socket.c (ne_sock_init): Succeed even if PRNG was not seeded.
+
+Thu Sep  4 21:33:34 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_session.c (ne_set_useragent): Build and store the entire
+	User-Agent header field in sess->user_agent.
+
+	* ne_request.c (add_fixed_headers): Adjust accordingly; avoid
+	unnecessary calls to ne_buffer_*.	
+
+Thu Sep  4 21:27:34 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_socket.c: Include netinet/tcp.h.
+	(ne_sock_connect): Disable the Nagle algorithm; thanks to Jim
+	Whitehead and Teng Xu for the analysis.
+
+Thu Sep  4 11:24:04 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_defs.h: Define ssize_t here for Win32.
+
+	* ne_socket.h: Don't define ssize_t here.
+
+Tue Sep  2 20:20:16 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (auth_challenge): Update to use ne_token not
+	split_string, patch by Tom Lee <i_am_gnomey@hotmail.com>.
+
+Wed Jul 30 21:54:38 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_cookies.c (set_cookie_hdl): Fix NULL pointer dereference;
+	thanks to Markus Mueller <markus-m.mueller@ubs.com>.
+
+Fri Jul 25 11:05:52 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_request.c (do_connect): On failure to connect, set error
+	string and call ne_sock_close directly rather than using
+	aborted(); fix leak of socket structure.
+
+Wed Jul 23 23:20:42 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	Fix SEGV if inflateInit2 fails with Z_MEM_ERROR etc.	
+	
+	* ne_compress.c (set_zlib_error): New function.
+	(do_inflate, gz_reader): Use it.
+
+Wed Jul 23 22:50:50 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	Add support for GSS-Negotiate; patch from Risko Gergely and Burjan
+	Gabor:
+
+	* ne_auth.c [HAVE_GSSAPI]: Include gssapi.h.
+	(auth_scheme): Add auth_scheme_gssapi.
+	(auth_session): Add gssapi_token.
+	(clean_session): Free gssapi_token.
+	(request_gssapi, get_gss_name, gssapi_challenge): New functions.
+	(tokenize): Handle challenge with single token.
+	(auth_challenge): Accept and process a GSS-Negotiate challenge.
+	(ah_pre_send): Send GSS-Negotiate handshake.
+
+Wed Jul 23 22:46:28 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_207.c (ne_207_set_response_handlers,
+	ne_207_set_propstat_handlers): Fix to match declarations (thanks
+	to Diego Tártara).
+
+Fri Jun 27 20:30:45 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_openssl.c [OPENSSL_VERSION_NUMBER < 0x0090700fL]:
+	Fix build against OpenSSL < 0.9.7.
+
+Sun Jun 22 23:07:45 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_session.c (ne_session_destroy): Replace unnecessary use of
+	NE_FREE with ne_free.
+	(set_hostinfo): Don't free hostport/hostinfo here.
+	(ne_session_proxy): Free existing proxy hostname here if
+	necessary.
+
 Sat Jun 21 12:58:25 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* ne_request.c (ne_begin_request): Set or clear is_http11 flag

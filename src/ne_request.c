@@ -431,23 +431,23 @@ static int send_request_body(ne_request *req)
 static void add_fixed_headers(ne_request *req) 
 {
     if (req->session->user_agent) {
-	ne_buffer_concat(req->headers, 
-			"User-Agent: ", req->session->user_agent, EOL, NULL);
+        ne_buffer_zappend(req->headers, req->session->user_agent);
     }
-    /* Send Connection: Keep-Alive for pre-1.1 origin servers, so we
-     * might get a persistent connection. 2068 sec 19.7.1 says we MUST
-     * NOT do this for proxies, though. So we don't.  Note that on the
-     * first request on any session, we don't know whether the server
-     * is 1.1 compliant, so we presume that it is not. */
+
+    /* Send Connection: Keep-Alive to pre-1.1 origin servers to try
+     * harder to get a persistent connection, except if using a proxy
+     * as per 2068 sec 19.7.1.  Always add TE: trailers since those
+     * are understood. */
     if (!req->session->is_http11 && !req->session->use_proxy) {
-	ne_buffer_zappend(req->headers, "Keep-Alive: " EOL);
-	ne_buffer_zappend(req->headers, "Connection: TE, Keep-Alive" EOL);
+	ne_buffer_zappend(req->headers, 
+                          "Keep-Alive: " EOL
+                          "Connection: TE, Keep-Alive" EOL
+                          "TE: trailers" EOL);
     } else {
-	ne_buffer_zappend(req->headers, "Connection: TE" EOL);
+	ne_buffer_zappend(req->headers, 
+                          "Connection: TE" EOL
+                          "TE: trailers" EOL);
     }
-    /* We send TE: trailers since we understand trailers in the chunked
-     * response. */
-    ne_buffer_zappend(req->headers, "TE: trailers" EOL);
 
 }
 
@@ -1338,7 +1338,8 @@ static int do_connect(ne_request *req, struct host_info *host, const char *err)
 	     (host->current = ne_addr_next(host->address)) != NULL);
 
     if (ret) {
-	aborted(req, err, ret);
+        ne_set_error(sess, "%s: %s", err, ne_sock_error(sess->socket));
+        ne_sock_close(sess->socket);
 	return NE_CONNECT;
     }
 

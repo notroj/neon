@@ -34,11 +34,38 @@
   <refsect2>
     <title>Thread-safeness and global initialization</title>
 
-    <para>&neon; itself is implemented to be thread-safe (avoiding
-    any use of global state), but in some configurations makes use of
-    other libraries which require global initialization.  The
-    <xref linkend="ne_sock_init"/> function should be called before
-    any other use of the &neon; library interface.</para>
+    <para>&neon; itself is implemented to be thread-safe (avoiding any
+    use of global state), but relies on the operating system providing
+    a thread-safe resolver interface.  Modern operating systems offer
+    the thread-safe <function>getaddrinfo</function> interface, which
+    &neon; supports; some others implement
+    <function>gethostbyname</function> using thread-local
+    storage.</para>
+
+    <para>To allow thread-safe use of the OpenSSL library, the
+    application must register some locking callbacks in accordance
+    with the <ulink
+    url="http://www.openssl.org/docs/crypto/threads.html">OpenSSL
+    documentation</ulink>.</para>
+
+    <para>Some platforms and libraries used by &neon; require global
+    initialization before use; notably:
+
+    <itemizedlist>
+      <listitem><simpara>OpenSSL requires global initialization to
+      load shared lookup tables.</simpara></listitem>
+
+      <listitem><simpara>The SOCKS library requires initialization
+      before use.</simpara></listitem>
+
+      <listitem><simpara>The Win32 socket library requires
+      initialization before use.</simpara></listitem>
+    </itemizedlist>
+
+    The <xref linkend="ne_sock_init"/> function should be called
+    before any other use of &neon; to perform any necessary
+    initialization needed for the particular platform.</para>
+
   </refsect2>
 
   <refsect2>
@@ -91,11 +118,12 @@
   <refsect2>
     <title>Argument validation</title>
   
-    <para>&neon; does not attempt to validate that arguments passed to
-    functions conform to the API (for instance, checking that pointer
-    arguments are not &null;).  Any use of the &neon; API which is not
-    documented to produce a certain behaviour results in
-    <emphasis>undefined behaviour</emphasis>, by definition.</para>
+    <para>&neon; does not attempt to validate that the parameters
+    passed to functions conform to the API (for instance, checking
+    that pointer arguments are not &null;).  Any use of the &neon; API
+    which is not documented to produce a certain behaviour results is
+    said to produce <emphasis>undefined behaviour</emphasis>; it is
+    likely that &neon; will segfault under these conditions.</para>
 
   </refsect2>
 
@@ -108,6 +136,15 @@
     names and values must be valid UTF-8 encoded Unicode
     strings.</para>
 
+  </refsect2>
+
+  <refsect2>
+    <title>User interaction</title>
+
+    <para>As a pure library interface, &neon; will never produce
+    output on <constant>stdout</constant> or
+    <constant>stderr</constant>; all user interaction is the
+    responsibilty of the application.</para>
   </refsect2>
 
   <refsect2>

@@ -146,7 +146,7 @@ ne_ssl_set_clicert(sess, ccert);
   <refsect1>
     <title>See also</title>
 
-    <para><xref linkend="ne_ssl_certificate"/></para>
+    <para><xref linkend="ne_ssl_cert_read"/></para>
   </refsect1>
 
 </refentry>

@@ -122,9 +122,12 @@ static int do_fetch(const char *realfn, const char *gzipfn,
     
     CALL(await_server());
 
-    ONN("inflated response compare", failed);
-    if (!expect_fail)
+    if (!expect_fail) {
+        ONN("inflated response compare", failed);
+        /* reader will have set body.len == 0 if the whole body
+         * has been compared. */
 	ONN("inflated response truncated", body.len != 0);
+    }
 
     return OK;
 }
@@ -198,6 +201,16 @@ static int fail_bad_csum(void)
     return do_fetch(newsfn, "badcsum.gz", 0, 1);
 }
 
+static int fail_corrupt1(void)
+{
+    return do_fetch(newsfn, "corrupt1.gz", 0, 1);
+}
+
+static int fail_corrupt2(void)
+{
+    return do_fetch(newsfn, "corrupt2.gz", 0, 1);
+}
+
 ne_test tests[] = {
     T_LEAKY(init),
     T(not_compressed),
@@ -206,6 +219,8 @@ ne_test tests[] = {
     T(fail_trailing),
     T(fail_bad_csum),
     T(fail_truncate),
+    T(fail_corrupt1),
+    T(fail_corrupt2),
     T(chunked_1b), 
     T(chunked_1b_wn),
     T(chunked_12b), 

@@ -122,7 +122,7 @@ AC_DEFUN([NEON_VERSIONS], [
 # Define the current versions.
 NEON_VERSION_MAJOR=0
 NEON_VERSION_MINOR=24
-NEON_VERSION_RELEASE=0
+NEON_VERSION_RELEASE=1
 NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
@@ -482,7 +482,7 @@ dnl Is strerror_r present; if so, which variant
 AC_REQUIRE([AC_FUNC_STRERROR_R])
 
 AC_CHECK_HEADERS([strings.h sys/time.h limits.h sys/select.h arpa/inet.h \
-	signal.h sys/socket.h netinet/in.h netdb.h])
+	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h])
 
 AC_REQUIRE([NE_SNPRINTF])
 
@@ -532,6 +532,7 @@ fi
 
 NEON_SSL()
 NEON_SOCKS()
+NEON_GSSAPI()
 
 AC_SUBST(NEON_CFLAGS)
 AC_SUBST(NEON_LIBS)
@@ -765,6 +766,30 @@ yes)
 esac
 AC_SUBST(NEON_SUPPORTS_SSL)
 ])
+
+dnl Check for Kerberos installation
+AC_DEFUN([NEON_GSSAPI], [
+AC_PATH_PROG([KRB5_CONFIG], krb5-config, none, $PATH:/usr/kerberos/bin)
+if test "x$KRB5_CONFIG" != "xnone"; then
+   NEON_LIBS="$NEON_LIBS `${KRB5_CONFIG} --libs gssapi`"
+   CPPFLAGS="$CPPFLAGS `${KRB5_CONFIG} --cflags gssapi`"
+   # MIT and Heimdal put gssapi.h in different places
+   AC_CHECK_HEADERS(gssapi/gssapi.h gssapi.h, [
+     NE_CHECK_FUNCS(gss_init_sec_context, [
+      AC_MSG_NOTICE([GSSAPI authentication support enabled])
+      AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
+      # MIT Kerberos lacks GSS_C_NT_HOSTBASED_SERVICE
+      AC_CHECK_DECL([GSS_C_NT_HOSTBASED_SERVICE],,
+        [AC_DEFINE([GSS_C_NT_HOSTBASED_SERVICE], gss_nt_service_name, 
+          [Define if GSS_C_NT_HOSTBASED_SERVICE is not defined otherwise])],
+        [#ifdef HAVE_GSSAPI_GSSAPI_H
+#include <gssapi/gssapi.h>
+#else
+#include <gssapi.h>
+#endif])])
+     break
+   ])
+fi])
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
 dnl compiler warnings

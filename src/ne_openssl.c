@@ -45,6 +45,14 @@
 #include "ne_private.h"
 #include "ne_privssl.h"
 
+/* OpenSSL 0.9.6 compatibility */
+#if OPENSSL_VERSION_NUMBER < 0x0090700fL
+#define PKCS12_unpack_authsafes M_PKCS12_unpack_authsafes
+#define PKCS12_unpack_p7data M_PKCS12_unpack_p7data
+/* cast away lack of const-ness */
+#define OBJ_cmp(a,b) OBJ_cmp((ASN1_OBJECT *)(a), (ASN1_OBJECT *)(b))
+#endif
+
 struct ne_ssl_dname_s {
     X509_NAME *dn;
 };

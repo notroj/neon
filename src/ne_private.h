@@ -86,7 +86,7 @@ struct ne_session_s {
     struct hook *create_req_hooks, *pre_send_hooks, *post_send_hooks;
     struct hook *destroy_req_hooks, *destroy_sess_hooks, *private;
 
-    char *user_agent; /* full User-Agent string */
+    char *user_agent; /* full User-Agent: header field */
 
 #ifdef NEON_SSL
     ne_ssl_client_cert *client_cert;

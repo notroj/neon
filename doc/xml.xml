@@ -10,8 +10,7 @@
   url="http://www.saxproject.org/">SAX</ulink> API used by XML
   parsers, with an additional abstraction, <firstterm>stacked SAX
   handlers</firstterm>, and also giving consistent <ulink
-  url="http://www.w3.org/TR/REC-xml-names">XML Namespace
-  support</ulink>.</para>
+  url="http://www.w3.org/TR/REC-xml-names">XML Namespace</ulink> support.</para>
 
 <sect2 id="xml-sax">
   <title>Introduction to SAX</title>

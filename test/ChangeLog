@@ -1,3 +1,16 @@
+Sat Aug 30 18:59:24 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in: Rewrite to use libtool to build object files and
+	libtest.
+
+	* run.sh: Don't set LD_LIBRARY_PATH.
+
+Wed Jul 23 23:25:39 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* compress.c (do_fetch): Check for response truncation
+	for success case.
+	(fail_corrupt1, fail_corrupt2): New tests.
+
 Sat Jun 21 12:59:49 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* request.c (versions): Fix and enable test.
