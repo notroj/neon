@@ -107,7 +107,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_auth.obj" \
 	"$(INTDIR)\ne_basic.obj" \
 	"$(INTDIR)\ne_compress.obj" \
-	"$(INTDIR)\ne_cookies.obj" \
 	"$(INTDIR)\ne_dates.obj" \
 	"$(INTDIR)\ne_i18n.obj" \
 	"$(INTDIR)\ne_md5.obj" \
@@ -159,7 +158,6 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_auth.obj"
 	-@erase "$(INTDIR)\ne_basic.obj"
 	-@erase "$(INTDIR)\ne_compress.obj"
-	-@erase "$(INTDIR)\ne_cookies.obj"
 	-@erase "$(INTDIR)\ne_dates.obj"
 	-@erase "$(INTDIR)\ne_i18n.obj"
 	-@erase "$(INTDIR)\ne_locks.obj"
@@ -206,7 +204,6 @@ CLEAN: $(ZLIB_CLEAN)
 "$(INTDIR)\ne_auth.obj":     .\src\ne_auth.c
 "$(INTDIR)\ne_basic.obj":    .\src\ne_basic.c
 "$(INTDIR)\ne_compress.obj": .\src\ne_compress.c
-"$(INTDIR)\ne_cookies.obj":  .\src\ne_cookies.c
 "$(INTDIR)\ne_dates.obj":    .\src\ne_dates.c
 "$(INTDIR)\ne_i18n.obj":     .\src\ne_i18n.c
 "$(INTDIR)\ne_locks.obj":    .\src\ne_locks.c
