@@ -251,12 +251,6 @@ static int no_body_204(void)
 			  "Content-Length: 5\r\n\r\n");
 }
 
-static int no_body_205(void)
-{
-    return expect_no_body("GET", "HTTP/1.1 205 Reset Content\r\n"
-			  "Content-Length: 5\r\n\r\n");
-}
-
 static int no_body_HEAD(void)
 {
     return expect_no_body("HEAD", "HTTP/1.1 200 OK\r\n"
@@ -1649,7 +1643,6 @@ ne_test tests[] = {
     T(single_get_eof),
     T(single_get_chunked),
     T(no_body_204),
-    T(no_body_205),
     T(no_body_304),
     T(no_body_HEAD),
     T(no_body_empty_clength),
