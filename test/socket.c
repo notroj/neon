@@ -822,7 +822,9 @@ static int ssl_closure(void)
     CALL(begin(&sock, serve_close, NULL));
     CALL(full_write(sock, "a", 1));
     CALL(await_server());
-    ret = ne_sock_fullwrite(sock, "a", 1);
+    do {
+        ret = ne_sock_fullwrite(sock, "a", 1);
+    } while (ret == 0);
     ONV(ret != NE_SOCK_RESET && ret != NE_SOCK_CLOSED, 
 	("write got %" NE_FMT_SSIZE_T " not reset or closure", ret));
     return good_close(sock);

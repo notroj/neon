@@ -754,12 +754,11 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 	     "Reading %" NE_FMT_SIZE_T " bytes of response body.\n", willread);
     readlen = ne_sock_read(sock, buffer, willread);
 
-    /* EOF is only valid when response body is delimited by it.  For
-     * interop with SSL servers which perform unclean shutdown, ignore
-     * a truncation if no response body has yet been read. */
+    /* EOF is only valid when response body is delimited by it.
+     * Strictly, an SSL truncation should not be treated as an EOF in
+     * any case, but SSL servers are just too buggy.  */
     if (resp->mode == R_TILLEOF && 
-	(readlen == NE_SOCK_CLOSED ||
-	 (readlen == NE_SOCK_TRUNC && resp->total == 0))) {
+	(readlen == NE_SOCK_CLOSED || readlen == NE_SOCK_TRUNC)) {
 	NE_DEBUG(NE_DBG_HTTP, "Got EOF.\n");
 	req->can_persist = 0;
 	readlen = 0;

@@ -14,15 +14,6 @@ Known problems/bugs in neon                                      -*- text -*-
  only cache on shutdown, since the SSL_SESSION may change during
  an ne_session.
 
-* test failures in `socket' on some non-Linux platforms:
-
-19. write_reset........... FAIL (write got 0 not reset)
-20. read_reset............ FAIL (read got -3 not reset)
-
-* server auth should not run on a CONNECT request; once a connection
-  has been CONNECT tunneled, subsequent requests through the tunnel
-  should not give proxy auth.
-
 * what is passed as 'path' to req create hook: auth needs Request-URI;
   how does that interact with proxies?  also they will be passed NULL
   for a CONNECT request, or "*" possibly as well.

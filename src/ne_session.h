@@ -182,10 +182,7 @@ void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
 /* Set the error string for the session; takes printf-like format
  * string. */
 void ne_set_error(ne_session *sess, const char *format, ...)
-#ifdef __GNUC__
-                __attribute__ ((format (printf, 2, 3)))
-#endif /* __GNUC__ */
-;
+    ne_attribute((format (printf, 2, 3)));
 
 /* Retrieve the error string for the session */
 const char *ne_get_error(ne_session *sess);

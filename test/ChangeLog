@@ -1,3 +1,16 @@
+Sat Oct 25 00:11:29 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c (fail_truncated_eof): Remove test.
+
+Tue Oct 21 20:29:46 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c (fail_tunnel, proxy_tunnel): Fix non-C89 code,
+	Radu Greab.
+
+Thu Oct  9 19:42:13 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* socket.c (ssl_closure): Fix occassional spurious errors.
+	
 Tue Oct  7 20:23:35 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* ssl.c (ssl_server): Handle several requests if required.
