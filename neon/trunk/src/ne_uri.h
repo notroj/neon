@@ -64,14 +64,14 @@ typedef struct {
 } ne_uri;
 
 /* Parse absoluteURI 'uri' and place parsed segments in *parsed.
- * Returns zero on success, non-zero on parse error. Fields of *parsed
- * are malloc'ed, structure should be free'd with uri_free on
- * successful return.  Any unspecified URI fields are set to NULL or 0
- * appropriately in *parsed. */
+ * Returns zero on success, non-zero on parse error.  On successful or
+ * error return, all the 'char *' fields of *parsed are either set to
+ * NULL, or point to malloc-allocated NUL-terminated strings.
+ * ne_uri_free can be used to free the structure after use.*/
 int ne_uri_parse(const char *uri, ne_uri *parsed);
 
 /* Turns a URI structure back into a string.  String is
- * malloc-allocated, and must be free'd by the caller. */
+ * malloc-allocated, and must be freed by the caller. */
 char *ne_uri_unparse(const ne_uri *uri);
 
 /* Compares URIs u1 and u2, returns non-zero if they are found to be
@@ -79,7 +79,8 @@ char *ne_uri_unparse(const ne_uri *uri);
  * 'u2', or >0 if 'u2' is greater than 'u1'. */
 int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2);
 
-/* Free URI object. */
+/* Frees any non-NULL fields of parsed URI structure *parsed.  All
+ * fields are then zero-initialized. */
 void ne_uri_free(ne_uri *parsed);
 
 END_NEON_DECLS
