@@ -1,7 +1,8 @@
 /* 
-   socket handling routines
+   Socket handling routines
    Copyright (C) 1998-2004, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
+   Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -64,7 +65,7 @@
 #include <stddef.h>
 #endif
 
-#if defined(NE_HAVE_SSL) && defined(HAVE_LIMITS_H)
+#if defined(HAVE_OPENSSL) && defined(HAVE_LIMITS_H)
 #include <limits.h> /* for INT_MAX */
 #endif
 #ifdef HAVE_STRING_H
@@ -91,14 +92,21 @@
 #endif
 
 #ifdef NE_HAVE_SSL
+#include "ne_privssl.h"
+
+#ifdef HAVE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/pkcs12.h> /* for PKCS12_PBE_add */
 #include <openssl/rand.h>
 #include <openssl/opensslv.h> /* for OPENSSL_VERSION_NUMBER */
-
-#include "ne_privssl.h"
 #endif
+
+#ifdef HAVE_GNUTLS
+#include <gnutls/gnutls.h>
+#endif
+
+#endif /* NE_HAVE_SSL */
 
 #include "ne_i18n.h"
 #include "ne_utils.h"
@@ -223,16 +231,21 @@ static void print_error(int errnum, char *buffer, size_t buflen)
 #define set_strerror(s, e) ne_strerror((e), (s)->error, sizeof (s)->error)
 #endif
 
-#ifdef NE_HAVE_SSL
-
-/* Initialize SSL library. */
+#if defined(HAVE_OPENSSL)
 static void init_ssl(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
     PKCS12_PBE_add();  /* ### not sure why this is needed. */
 }
+#elif defined(HAVE_GNUTLS)
+static void init_ssl(void)
+{
+    gnutls_global_init();
+}
+#endif /* HAVE_OPENSSL */
 
+#ifdef HAVE_OPENSSL
 /* Seed the SSL PRNG, if necessary; returns non-zero on failure. */
 static int seed_ssl_prng(void)
 {
@@ -240,7 +253,7 @@ static int seed_ssl_prng(void)
     if (RAND_status() == 1)
 	return 0;
 
-#ifdef EGD_PATH
+#if defined(EGD_PATH)
     NE_DEBUG(NE_DBG_SOCKET, "Seeding PRNG from " EGD_PATH "...\n");
     if (RAND_egd(EGD_PATH) != -1)
 	return 0;
@@ -260,7 +273,7 @@ static int seed_ssl_prng(void)
     NE_DEBUG(NE_DBG_SOCKET, "No entropy source found; could not seed PRNG.\n");
     return -1;
 }
-#endif /* NE_HAVE_SSL */
+#endif /* HAVE_OPENSSL */
 
 #ifdef USE_CHECK_IPV6
 static int ipv6_disabled = 0;
@@ -331,6 +344,9 @@ void ne_sock_exit(void)
 {
 #ifdef WIN32
     WSACleanup();
+#endif
+#ifdef HAVE_GNUTLS
+    gnutls_global_deinit();
 #endif
     init_result = 0;
 }
@@ -493,18 +509,12 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
 
 static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw };
 
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
 /* OpenSSL I/O function implementations. */
 static int readable_ossl(ne_socket *sock, int secs)
 {
-    /* If there is buffered SSL data, then don't block on the socket.
-     * FIXME: make sure that SSL_read *really* won't block if
-     * SSL_pending returns non-zero.  Possibly need to do
-     * SSL_read(ssl, buf, SSL_pending(ssl)) */
-
     if (SSL_pending(sock->ssl.ssl))
 	return 0;
-
     return readable_raw(sock, secs);
 }
 
@@ -577,13 +587,103 @@ static ssize_t write_ossl(ne_socket *sock, const char *data, size_t len)
     return 0;
 }
 
-static const struct iofns iofns_ossl = {
+static const struct iofns iofns_ssl = {
     read_ossl,
     write_ossl,
     readable_ossl
 };
 
-#endif /* NE_HAVE_SSL */
+#elif defined(HAVE_GNUTLS)
+
+/* Return zero if an alert value can be ignored. */
+static int check_alert(ne_socket *sock, ssize_t ret)
+{
+    const char *alert;
+
+    if (ret == GNUTLS_E_WARNING_ALERT_RECEIVED) {
+        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess));
+        NE_DEBUG(NE_DBG_SOCKET, "TLS warning alert: %s\n", alert);
+        return 0;
+    } else if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED) {
+        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess));
+        NE_DEBUG(NE_DBG_SOCKET, "TLS fatal alert: %s\n", alert);
+        return -1;
+    }
+    return ret;
+}
+
+static int readable_gnutls(ne_socket *sock, int secs)
+{
+    if (gnutls_record_check_pending(sock->ssl.sess))
+        return 0;
+
+    return readable_raw(sock, secs);
+}
+
+static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
+{
+    ssize_t ret;
+
+    switch (sret) {
+    case 0:
+	ret = NE_SOCK_CLOSED;
+	set_error(sock, _("Connection closed"));
+	break;
+    case GNUTLS_E_FATAL_ALERT_RECEIVED:
+	ret = NE_SOCK_RESET;
+        ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
+                    gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess)));
+        break;
+    default:
+        ret = NE_SOCK_ERROR;
+        ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
+                    gnutls_strerror(sret));
+    }
+    return ret;
+}
+
+#define RETRY_GNUTLS(sock, ret) ((ret < 0) \
+    && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN \
+        || check_alert(sock, ret) == 0))
+
+static ssize_t read_gnutls(ne_socket *sock, char *buffer, size_t len)
+{
+    ssize_t ret;
+
+    ret = readable_gnutls(sock, sock->rdtimeout);
+    if (ret) return ret;
+    
+    do {
+        ret = gnutls_record_recv(sock->ssl.sess, buffer, len);
+    } while (RETRY_GNUTLS(sock, ret));
+
+    if (ret < 0)
+	ret = error_gnutls(sock, ret);
+
+    return ret;
+}
+
+static ssize_t write_gnutls(ne_socket *sock, const char *data, size_t len)
+{
+    ssize_t ret;
+
+    do {
+        ret = gnutls_record_send(sock->ssl.sess, data, len);
+    } while (RETRY_GNUTLS(sock, ret));
+
+    if (ret < 0)
+	return error_gnutls(sock, ret);
+
+    return 0;
+}
+
+static const struct iofns iofns_ssl = {
+    read_gnutls,
+    write_gnutls,
+    readable_gnutls
+};
+
+#endif
 
 int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t len)
 {
@@ -995,14 +1095,20 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout)
 
 void ne_sock_switch_ssl(ne_socket *sock, void *ssl)
 {
+#if defined(HAVE_OPENSSL)
     sock->ssl.ssl = ssl;
-    sock->ops = &iofns_ossl;
+#elif defined(HAVE_GNUTLS)
+    sock->ssl.sess = ssl;
+#endif
+    sock->ops = &iofns_ssl;
 }
 
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
 {
-    SSL *ssl;
     int ret;
+
+#if defined(HAVE_OPENSSL)
+    SSL *ssl;
 
     if (seed_ssl_prng()) {
 	set_error(sock, _("SSL disabled due to lack of entropy"));
@@ -1025,7 +1131,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
     SSL_set_app_data(ssl, ctx);
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     SSL_set_fd(ssl, sock->fd);
-    sock->ops = &iofns_ossl;
+    sock->ops = &iofns_ssl;
     
     if (ctx->sess)
 	SSL_set_session(ssl, ctx->sess);
@@ -1037,7 +1143,24 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
 	sock->ssl.ssl = NULL;
 	return NE_SOCK_ERROR;
     }
+#elif defined(HAVE_GNUTLS)
+    /* DH and RSA params are set in ne_ssl_context_create */
+    gnutls_init(&ctx->sess, GNUTLS_CLIENT);
+    gnutls_set_default_priority(ctx->sess);
+    gnutls_credentials_set(ctx->sess, GNUTLS_CRD_CERTIFICATE, ctx->cred.cert);
 
+    /* Socket and context session are the same */
+    sock->ssl.sess = ctx->sess;
+
+    gnutls_transport_set_ptr(ctx->sess, (gnutls_transport_ptr) sock->fd);
+    sock->ops = &iofns_ssl;
+
+    ret = gnutls_handshake(ctx->sess);
+    if (ret < 0) {
+	error_gnutls(sock, ret);
+        return NE_SOCK_ERROR;
+    }
+#endif
     return 0;
 }
 
@@ -1057,12 +1180,21 @@ const char *ne_sock_error(const ne_socket *sock)
 int ne_sock_close(ne_socket *sock)
 {
     int ret;
-#ifdef NE_HAVE_SSL
+
+#if defined(HAVE_OPENSSL)
     if (sock->ssl.ssl) {
 	SSL_shutdown(sock->ssl.ssl);
 	SSL_free(sock->ssl.ssl);
     }
+#elif defined(HAVE_GNUTLS)
+    if (sock->ssl.sess) {
+        do {
+            ret = gnutls_bye(sock->ssl.sess, GNUTLS_SHUT_RDWR);
+        } while (ret < 0
+                 && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
+    }
 #endif
+
     if (sock->fd < 0)
         ret = 0;
     else
