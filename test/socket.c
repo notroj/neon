@@ -858,6 +858,10 @@ static int write_reset(void)
     CALL(full_write(sock, "a", 1));
     CALL(await_server());
     ret = ne_sock_fullwrite(sock, "a", 1);
+    if (ret == 0) {
+        ne_sock_close(sock);
+        return SKIP;
+    }
     ONV(ret != NE_SOCK_RESET, ("write got %d not reset", ret));
     return good_close(sock);
 }
@@ -870,6 +874,10 @@ static int read_reset(void)
     CALL(full_write(sock, "a", 1));
     CALL(await_server());
     ret = ne_sock_read(sock, buffer, 1);
+    if (ret == NE_SOCK_CLOSED) {
+        ne_sock_close(sock);
+        return SKIP;
+    }
     ONV(ret != NE_SOCK_RESET, ("read got %" NE_FMT_SSIZE_T " not reset", ret));
     return good_close(sock);
 }    

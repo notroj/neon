@@ -365,13 +365,19 @@ static int load_client_cert(void)
 
 /* Test that 'cert', which is signed by CA_CERT, is accepted
  * unconditionaly. */
-static int accept_signed_cert(char *cert)
+static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess = ne_session_create("https", hostname, 7777);
     /* no verify callback needed. */
     CALL(any_ssl_request(sess, serve_ssl, cert, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     return OK;
+}
+
+
+static int accept_signed_cert(char *cert)
+{
+    return accept_signed_cert_for_hostname(cert, "localhost");
 }
 
 static int simple(void)
@@ -506,7 +512,7 @@ static int caseless_match(void)
  * commonName attribute */
 static int subject_altname(void)
 {
-    return accept_signed_cert("altname.cert");
+    return accept_signed_cert("altname1.cert");
 }
 
 /* tests for multiple altNames. */
@@ -525,6 +531,11 @@ static int two_subject_altname2(void)
 static int notdns_altname(void)
 {
     return accept_signed_cert("altname4.cert");
+}
+
+static int ipaddr_altname(void)
+{
+    return accept_signed_cert_for_hostname("altname5.cert", "127.0.0.1");
 }
 
 /* test that the *most specific* commonName attribute is used. */
@@ -1121,7 +1132,7 @@ static int cert_identities(void)
         const char *fname, *identity;
     } certs[] = {
         { "twocn.cert", "localhost" },
-        { "altname.cert", "localhost" },
+        { "altname1.cert", "localhost" },
         { "altname2.cert", "nohost.example.com" },
         { "altname4.cert", "localhost" },
         { "ca4.pem", "fourth.example.com" },
@@ -1455,6 +1466,7 @@ ne_test tests[] = {
     T(two_subject_altname),
     T(two_subject_altname2),
     T(notdns_altname),
+    T(ipaddr_altname),
 
     T(multi_commonName),
     T(commonName_first),

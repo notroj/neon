@@ -63,12 +63,13 @@ NEON_VERSIONS
 # Pass the interface version on to libtool when linking libneon.la
 NEON_LINK_FLAGS="-version-info ${NEON_INTERFACE_VERSION}"
 
+# Checks to compile test suite
+NEON_TEST
+
 LIBNEON_SOURCE_CHECKS
 
 # Use the libtool-type build.
 NEON_LIBTOOL_BUILD
-# Checks to compile test suite
-NEON_TEST
 # Find an XML parser
 NEON_XML_PARSER
 # Extra checks for debugging, compiler warnings

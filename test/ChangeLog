@@ -1,3 +1,24 @@
+Sun Sep 14 12:27:22 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* socket.c (write_reset, read_reset): Skip if no RESET was
+	returned.
+
+Sun Sep 14 11:01:08 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in: Fix building the 'resolve' tool.
+
+Sat Sep  6 12:29:53 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* makekeys.sh, openssl.conf: Generate altname5.cert with an IPv4
+	address in the subjectAltName attribute.
+
+	* ssl.c (ipaddr_altname): Test for IPv4 address in subjectAltName.
+
+Sat Sep  6 12:28:55 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* Makefile.in: Clear the SUFFIXES list; use standard make syntax;
+	fix build of 'basic' on some platforms.
+
 Sat Aug 30 18:59:24 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* Makefile.in: Rewrite to use libtool to build object files and

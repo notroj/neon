@@ -1,3 +1,16 @@
+Sun Sep 14 10:50:01 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_socket.c (ne_addr_resolve): Use result of autoconf test for
+	working AI_ADDRCONFIG support.
+
+Sat Sep  6 12:05:00 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_openssl.c (check_identity): Take an optional server address
+	argument; check identity against IPaddress extension too if given.
+	(check_certificate): Optionally pass server address to
+	check_identity.
+	(populate_cert): Adjust accordingly.
+
 Thu Sep  4 21:41:38 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* ne_socket.c (ne_sock_init): Succeed even if PRNG was not seeded.
