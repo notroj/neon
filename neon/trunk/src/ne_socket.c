@@ -91,9 +91,6 @@
 #include <socks.h>
 #endif
 
-#ifdef NE_HAVE_SSL
-#include "ne_privssl.h"
-
 #ifdef HAVE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -106,12 +103,6 @@
 #include <gnutls/gnutls.h>
 #endif
 
-#endif /* NE_HAVE_SSL */
-
-#include "ne_i18n.h"
-#include "ne_utils.h"
-#include "ne_string.h"
-
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
@@ -120,18 +111,24 @@
  * structure, or losing type-safety by using void *. */
 #ifdef USE_GETADDRINFO
 typedef struct addrinfo ne_inet_addr;
-
-/* To avoid doing AAAA queries unless absolutely necessary, either use
- * AI_ADDRCONFIG where available, or a run-time check for working IPv6
- * support; the latter is only known to work on Linux. */
-#if !defined(USE_GAI_ADDRCONFIG) && defined(__linux__)
-#define USE_CHECK_IPV6
-#endif
-
 #else
 typedef struct in_addr ne_inet_addr;
 #endif
 
+#ifdef NE_HAVE_SSL
+#include "ne_privssl.h" /* MUST come after ne_inet_addr is defined */
+#endif
+
+/* To avoid doing AAAA queries unless absolutely necessary, either use
+ * AI_ADDRCONFIG where available, or a run-time check for working IPv6
+ * support; the latter is only known to work on Linux. */
+#if defined(USE_GETADDRINFO) && !defined(USE_GAI_ADDRCONFIG) && defined(__linux__)
+#define USE_CHECK_IPV6
+#endif
+
+#include "ne_i18n.h"
+#include "ne_utils.h"
+#include "ne_string.h"
 #include "ne_socket.h"
 #include "ne_alloc.h"
 
@@ -513,7 +510,7 @@ static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw };
 /* OpenSSL I/O function implementations. */
 static int readable_ossl(ne_socket *sock, int secs)
 {
-    if (SSL_pending(sock->ssl.ssl))
+    if (SSL_pending(sock->ssl))
 	return 0;
     return readable_raw(sock, secs);
 }
@@ -521,7 +518,7 @@ static int readable_ossl(ne_socket *sock, int secs)
 /* SSL error handling, according to SSL_get_error(3). */
 static int error_ossl(ne_socket *sock, int sret)
 {
-    int err = SSL_get_error(sock->ssl.ssl, sret), ret = NE_SOCK_ERROR;
+    int err = SSL_get_error(sock->ssl, sret), ret = NE_SOCK_ERROR;
     const char *str;
     
     switch (err) {
@@ -568,7 +565,7 @@ static ssize_t read_ossl(ne_socket *sock, char *buffer, size_t len)
     ret = readable_ossl(sock, sock->rdtimeout);
     if (ret) return ret;
     
-    ret = SSL_read(sock->ssl.ssl, buffer, CAST2INT(len));
+    ret = SSL_read(sock->ssl, buffer, CAST2INT(len));
     if (ret <= 0)
 	ret = error_ossl(sock, ret);
 
@@ -578,7 +575,7 @@ static ssize_t read_ossl(ne_socket *sock, char *buffer, size_t len)
 static ssize_t write_ossl(ne_socket *sock, const char *data, size_t len)
 {
     int ret, ilen = CAST2INT(len);
-    ret = SSL_write(sock->ssl.ssl, data, ilen);
+    ret = SSL_write(sock->ssl, data, ilen);
     /* ssl.h says SSL_MODE_ENABLE_PARTIAL_WRITE must be enabled to
      * have SSL_write return < length...  so, SSL_write should never
      * return < length. */
@@ -601,11 +598,11 @@ static int check_alert(ne_socket *sock, ssize_t ret)
     const char *alert;
 
     if (ret == GNUTLS_E_WARNING_ALERT_RECEIVED) {
-        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess));
+        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl));
         NE_DEBUG(NE_DBG_SOCKET, "TLS warning alert: %s\n", alert);
         return 0;
     } else if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED) {
-        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess));
+        alert = gnutls_alert_get_name(gnutls_alert_get(sock->ssl));
         NE_DEBUG(NE_DBG_SOCKET, "TLS fatal alert: %s\n", alert);
         return -1;
     }
@@ -614,9 +611,9 @@ static int check_alert(ne_socket *sock, ssize_t ret)
 
 static int readable_gnutls(ne_socket *sock, int secs)
 {
-    if (gnutls_record_check_pending(sock->ssl.sess))
+    if (gnutls_record_check_pending(sock->ssl)) {
         return 0;
-
+    }
     return readable_raw(sock, secs);
 }
 
@@ -632,7 +629,7 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
     case GNUTLS_E_FATAL_ALERT_RECEIVED:
 	ret = NE_SOCK_RESET;
         ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
-                    gnutls_alert_get_name(gnutls_alert_get(sock->ssl.sess)));
+                    gnutls_alert_get_name(gnutls_alert_get(sock->ssl)));
         break;
     default:
         ret = NE_SOCK_ERROR;
@@ -654,7 +651,7 @@ static ssize_t read_gnutls(ne_socket *sock, char *buffer, size_t len)
     if (ret) return ret;
     
     do {
-        ret = gnutls_record_recv(sock->ssl.sess, buffer, len);
+        ret = gnutls_record_recv(sock->ssl, buffer, len);
     } while (RETRY_GNUTLS(sock, ret));
 
     if (ret < 0)
@@ -668,7 +665,7 @@ static ssize_t write_gnutls(ne_socket *sock, const char *data, size_t len)
     ssize_t ret;
 
     do {
-        ret = gnutls_record_send(sock->ssl.sess, data, len);
+        ret = gnutls_record_send(sock->ssl, data, len);
     } while (RETRY_GNUTLS(sock, ret));
 
     if (ret < 0)
@@ -1093,14 +1090,35 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout)
 
 #ifdef NE_HAVE_SSL
 
-void ne_sock_switch_ssl(ne_socket *sock, void *ssl)
+int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
 {
+    int ret;
+    ne_ssl_socket ssl;
+
 #if defined(HAVE_OPENSSL)
-    sock->ssl.ssl = ssl;
+    ssl = SSL_new(ctx->ctx);
+    
+    SSL_set_fd(ssl, sock->fd);
+
+    sock->ssl = ssl;
+    ret = SSL_accept(ssl);
+    if (ret != 1) {
+        ret = error_ossl(sock, ret);
+    }
 #elif defined(HAVE_GNUTLS)
-    sock->ssl.sess = ssl;
+    gnutls_init(&ssl, GNUTLS_SERVER);
+    gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
+    gnutls_set_default_priority(ssl);
+
+    sock->ssl = ssl;
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
+    ret = gnutls_handshake(ssl);
+    if (ret < 0) {
+        ret = error_gnutls(sock, ret);
+    }
 #endif
     sock->ops = &iofns_ssl;
+    return ret;
 }
 
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
@@ -1122,7 +1140,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
         return NE_SOCK_ERROR;
     }
 
-    sock->ssl.ssl = ssl = SSL_new(ctx->ctx);
+    sock->ssl = ssl = SSL_new(ctx->ctx);
     if (!ssl) {
 	set_error(sock, _("Could not create SSL structure"));
 	return NE_SOCK_ERROR;
@@ -1140,22 +1158,19 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
     if (ret != 1) {
 	error_ossl(sock, ret);
 	SSL_free(ssl);
-	sock->ssl.ssl = NULL;
+	sock->ssl = NULL;
 	return NE_SOCK_ERROR;
     }
 #elif defined(HAVE_GNUTLS)
     /* DH and RSA params are set in ne_ssl_context_create */
-    gnutls_init(&ctx->sess, GNUTLS_CLIENT);
-    gnutls_set_default_priority(ctx->sess);
-    gnutls_credentials_set(ctx->sess, GNUTLS_CRD_CERTIFICATE, ctx->cred.cert);
+    gnutls_init(&sock->ssl, GNUTLS_CLIENT);
+    gnutls_set_default_priority(sock->ssl);
+    gnutls_credentials_set(sock->ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
-    /* Socket and context session are the same */
-    sock->ssl.sess = ctx->sess;
-
-    gnutls_transport_set_ptr(ctx->sess, (gnutls_transport_ptr) sock->fd);
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
     sock->ops = &iofns_ssl;
 
-    ret = gnutls_handshake(ctx->sess);
+    ret = gnutls_handshake(sock->ssl);
     if (ret < 0) {
 	error_gnutls(sock, ret);
         return NE_SOCK_ERROR;
@@ -1164,9 +1179,9 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx)
     return 0;
 }
 
-ne_ssl_socket *ne_sock_sslsock(ne_socket *sock)
+ne_ssl_socket ne__sock_sslsock(ne_socket *sock)
 {
-    return &sock->ssl;
+    return sock->ssl;
 }
 
 #endif
@@ -1182,14 +1197,14 @@ int ne_sock_close(ne_socket *sock)
     int ret;
 
 #if defined(HAVE_OPENSSL)
-    if (sock->ssl.ssl) {
-	SSL_shutdown(sock->ssl.ssl);
-	SSL_free(sock->ssl.ssl);
+    if (sock->ssl) {
+	SSL_shutdown(sock->ssl);
+	SSL_free(sock->ssl);
     }
 #elif defined(HAVE_GNUTLS)
-    if (sock->ssl.sess) {
+    if (sock->ssl) {
         do {
-            ret = gnutls_bye(sock->ssl.sess, GNUTLS_SHUT_RDWR);
+            ret = gnutls_bye(sock->ssl, GNUTLS_SHUT_RDWR);
         } while (ret < 0
                  && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
     }

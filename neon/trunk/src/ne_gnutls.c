@@ -31,6 +31,8 @@
 #endif
 
 #include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs12.h>
@@ -129,7 +131,7 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 #warning incomplete
 }
 
-ne_ssl_context *ne_ssl_context_create(void)
+ne_ssl_context *ne_ssl_context_create(int flags)
 {
     ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
 
@@ -139,23 +141,29 @@ ne_ssl_context *ne_ssl_context_create(void)
     gnutls_rsa_params_init(&ctx->rsa_params);
     gnutls_rsa_params_generate2(ctx->rsa_params, 1024);
 
-    gnutls_certificate_allocate_credentials(&ctx->cred.cert);
-    gnutls_certificate_set_dh_params(ctx->cred.cert, ctx->dh_params);
-    gnutls_certificate_set_rsa_params(ctx->cred.cert, ctx->rsa_params);
+    gnutls_certificate_allocate_credentials(&ctx->cred);
+    gnutls_certificate_set_dh_params(ctx->cred, ctx->dh_params);
+    gnutls_certificate_set_rsa_params(ctx->cred, ctx->rsa_params);
 
     return ctx;
 }
 
+int ne_ssl_context_keypair(ne_ssl_context *ctx, 
+                           const char *cert, const char *key)
+{
+    gnutls_certificate_set_x509_key_file(ctx->cred, cert, key,
+                                         GNUTLS_X509_FMT_PEM);
+    return 0;
+}
+
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
-    if (ctx->sess)
-        gnutls_deinit(ctx->sess);
     if (ctx->dh_params)
         gnutls_dh_params_deinit(ctx->dh_params);
     if (ctx->rsa_params)
         gnutls_rsa_params_deinit(ctx->rsa_params);
-    if (ctx->cred.cert)
-        gnutls_certificate_free_credentials(ctx->cred.cert);
+    if (ctx->cred)
+        gnutls_certificate_free_credentials(ctx->cred);
     ne_free(ctx);
 }
 
@@ -170,11 +178,6 @@ int ne__negotiate_ssl(ne_request *req)
     NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
 
     if (ne_sock_connect_ssl(sess->socket, ctx)) {
-	if (ctx->sess) {
-	    /* remove cached session. */
-	    gnutls_deinit(ctx->sess);
-	    ctx->sess = NULL;
-	}
 	ne_set_error(sess, _("SSL negotiation failed: %s"),
 		     ne_sock_error(sess->socket));
 	return NE_ERROR;
@@ -203,7 +206,7 @@ const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
     return cert->identity;
 }
 
-void ne_ssl_ctx_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
+void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
 {
 #warning incomplete
 }
