@@ -719,10 +719,13 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 }
 
 /* Parse line of comma-separated key-value pairs.  If 'ischall' == 1,
- * then also return a leading space-separated token, as *value == NULL.
- * Otherwise, if return value is 0, *key and *value will be non-NULL.
- * If return value is non-zero, parsing has ended. */
-static int tokenize(char **hdr, char **key, char **value, int ischall)
+ * then also return a leading space-separated token, as *value ==
+ * NULL.  Otherwise, if return value is 0, *key and *value will be
+ * non-NULL.  If return value is non-zero, parsing has ended.  If
+ * 'sep' is non-NULL and ischall is 1, the separator character is
+ * written to *sep when a challenge is passed*/
+static int tokenize(char **hdr, char **key, char **value, char *sep,
+                    int ischall)
 {
     char *pnt = *hdr;
     enum { BEFORE_EQ, AFTER_EQ, AFTER_EQ_QUOTED } state = BEFORE_EQ;
@@ -744,6 +747,7 @@ static int tokenize(char **hdr, char **key, char **value, int ischall)
 	    } else if ((*pnt == ' ' || *pnt == ',') 
                        && ischall && *key != NULL) {
 		*value = NULL;
+                if (sep) *sep = *pnt;
 		*pnt = '\0';
 		*hdr = pnt + 1;
 		return 0;
@@ -770,6 +774,7 @@ static int tokenize(char **hdr, char **key, char **value, int ischall)
     
     if (state == BEFORE_EQ && ischall && *key != NULL) {
 	*value = NULL;
+        if (sep) *sep = '\0';
     }
 
     *hdr = pnt;
@@ -812,7 +817,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     
     NE_DEBUG(NE_DBG_HTTPAUTH, "Auth-Info header: %s\n", value);
 
-    while (tokenize(&pnt, &key, &val, 0) == 0) {
+    while (tokenize(&pnt, &key, &val, NULL, 0) == 0) {
 	val = ne_shave(val, "\"");
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Pair: [%s] = [%s]\n", key, val);
 	if (strcasecmp(key, "qop") == 0) {
@@ -932,7 +937,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
  * challenge was found. */
 static int auth_challenge(auth_session *sess, const char *value) 
 {
-    char *pnt, *key, *val, *hdr;
+    char *pnt, *key, *val, *hdr, sep;
     struct auth_challenge *chall = NULL, *challenges = NULL;
     int success;
 
@@ -944,7 +949,7 @@ static int auth_challenge(auth_session *sess, const char *value)
      * split it down into attribute-value pairs, then search for
      * schemes in the pair keys. */
 
-    while (!tokenize(&pnt, &key, &val, 1)) {
+    while (!tokenize(&pnt, &key, &val, &sep, 1)) {
 
 	if (val == NULL) {
             auth_scheme scheme;
@@ -971,11 +976,13 @@ static int auth_challenge(auth_session *sess, const char *value)
             chall->next = challenges;
             challenges = chall;
 
-            if (scheme == auth_scheme_gssapi) {
+            if (scheme == auth_scheme_gssapi && sep == ' ') {
                 /* Cope with the fact that the unquoted base64
                  * paramater token doesn't match the 2617 auth-param
                  * grammar: */
                 chall->opaque = ne_shave(ne_token(&pnt, ','), " \t");
+                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Negotiate parameter '%s'\n",
+                         chall->opaque);
                 if (!pnt) break; /* stop parsing at end-of-string. */
             }
 	    continue;

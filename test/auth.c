@@ -131,6 +131,9 @@ static int basic(void)
         /* nego test. */
         "WWW-Authenticate: Negotiate fish, bar=boo, Basic realm=WallyWorld",
 
+        /* nego test. */
+        "WWW-Authenticate: Negotiate, Basic realm=WallyWorld",
+
         /* multi-header case 1 */
         "WWW-Authenticate: BarFooScheme\r\n"
         CHAL_WALLY,
