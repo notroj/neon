@@ -650,6 +650,24 @@ static void remove_response_header(ne_request *req, const char *name,
     }
 }
 
+/* Free all stored response headers. */
+static void free_response_headers(ne_request *req)
+{
+    int n;
+
+    for (n = 0; n < HH_HASHSIZE; n++) {
+        struct field **ptr = req->response_headers + n;
+
+        while (*ptr) {
+            struct field *const next = (*ptr)->next;
+            ne_free((*ptr)->name);
+            ne_free((*ptr)->value);
+            ne_free((*ptr));
+            *ptr = next;
+	}
+    }
+}
+
 void ne_add_response_body_reader(ne_request *req, ne_accept_response acpt,
 				 ne_block_reader rdr, void *userdata)
 {
@@ -665,8 +683,6 @@ void ne_request_destroy(ne_request *req)
 {
     struct body_reader *rdr, *next_rdr;
     struct hook *hk, *next_hk;
-    struct field *f, *f_next;
-    int n;
 
     ne_free(req->uri);
     ne_free(req->method);
@@ -676,14 +692,7 @@ void ne_request_destroy(ne_request *req)
 	ne_free(rdr);
     }
 
-    for (n = 0; n < HH_HASHSIZE; n++) {
-        for (f = req->response_headers[n]; f; f = f_next) {
-            f_next = f->next;
-            ne_free(f->name);
-            ne_free(f->value);
-            ne_free(f);
-	}
-    }
+    free_response_headers(req);
 
     ne_buffer_destroy(req->headers);
 
@@ -1210,6 +1219,10 @@ int ne_begin_request(ne_request *req)
     if (req->session->is_http11) req->can_persist = 1;
 
     ne_set_error(req->session, "%d %s", st->code, st->reason_phrase);
+    
+    /* Empty the response header hash, in case this request was
+     * retried: */
+    free_response_headers(req);
 
     /* Read the headers */
     HTTP_ERR(read_response_headers(req));
