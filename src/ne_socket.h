@@ -180,10 +180,12 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout);
  * none is known. */
 int ne_service_lookup(const char *name);
 
-/* Enable SSL with an already-negotiated SSL socket. */
+/* Negotiate an SSL connection on socket as an SSL server, using given
+ * SSL context. */
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 
-/* Perform an SSL negotiation on 'sock', using given context. */
+/* Negotiate an SSL connection on socket as an SSL client, using given
+ * SSL context. */
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx);
 
 END_NEON_DECLS
