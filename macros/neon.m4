@@ -906,7 +906,12 @@ fi])
 
 dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
-AC_PATH_PROG([KRB5_CONFIG], krb5-config, none, $PATH:/usr/kerberos/bin)
+AC_ARG_WITH(gssapi, AS_HELP_STRING(--without-gssapi, disable GSSAPI support))
+if test "$with_gssapi" != "no"; then
+  AC_PATH_PROG([KRB5_CONFIG], krb5-config, none, $PATH:/usr/kerberos/bin)
+else
+  KRB5_CONFIG=none
+fi
 if test "x$KRB5_CONFIG" != "xnone"; then
    ne_save_CPPFLAGS=$CPPFLAGS
    ne_save_LIBS=$NEON_LIBS
