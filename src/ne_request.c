@@ -659,11 +659,11 @@ static void free_response_headers(ne_request *req)
         struct field **ptr = req->response_headers + n;
 
         while (*ptr) {
-            struct field *const next = (*ptr)->next;
-            ne_free((*ptr)->name);
-            ne_free((*ptr)->value);
-            ne_free((*ptr));
-            *ptr = next;
+            struct field *const f = *ptr;
+            *ptr = f->next;
+            ne_free(f->name);
+            ne_free(f->value);
+            ne_free(f);
 	}
     }
 }
