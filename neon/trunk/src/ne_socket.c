@@ -63,6 +63,9 @@
 #ifdef WIN32
 #include <winsock2.h>
 #include <stddef.h>
+#ifdef USE_GETADDRINFO
+#include <ws2tcpip.h>
+#endif
 #endif
 
 #if defined(HAVE_OPENSSL) && defined(HAVE_LIMITS_H)
@@ -878,7 +881,7 @@ char *ne_addr_error(const ne_sock_addr *addr, char *buf, size_t bufsiz)
 
 char *ne_iaddr_print(const ne_inet_addr *ia, char *buf, size_t bufsiz)
 {
-#ifdef USE_GETADDRINFO /* implies inet_ntop */
+#if defined(USE_GETADDRINFO) && defined(HAVE_INET_NTOP)
     const char *ret;
 #ifdef AF_INET6
     if (ia->ai_family == AF_INET6) {
@@ -893,7 +896,12 @@ char *ne_iaddr_print(const ne_inet_addr *ia, char *buf, size_t bufsiz)
 	ret = NULL;
     if (ret == NULL)
 	ne_strnzcpy(buf, "[IP address]", bufsiz);
-#else
+#elif defined(USE_GETADDRINFO) && defined(NI_NUMERICHOST)
+    /* use getnameinfo instead for Win32, which lacks inet_ntop: */
+    if (getnameinfo(ia->ai_addr, ia->ai_addrlen, buf, bufsiz, NULL, 0,
+                    NI_NUMERICHOST))
+        ne_strnzcpy(buf, "[IP address]", bufsiz);
+#else /* USE_GETADDRINFO */
     ne_strnzcpy(buf, inet_ntoa(*ia), bufsiz);
 #endif
     return buf;
