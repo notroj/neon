@@ -1,6 +1,6 @@
 /*
    Access control
-   Copyright (C) 2001, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001, 2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -42,6 +42,8 @@
 #include "ne_acl.h"
 #include "ne_uri.h"
 #include "ne_xml.h" /* for NE_XML_MEDIA_TYPE */
+
+#define EOL "\r\n"
 
 static ne_buffer *acl_body(ne_acl_entry *right, int count)
 {
