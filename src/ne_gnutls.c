@@ -424,9 +424,6 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
     before = gnutls_x509_crt_get_activation_time(chain->subject);
     after = gnutls_x509_crt_get_expiration_time(chain->subject);
 
-    NE_DEBUG(NE_DBG_SSL, "before: %ld, now: %ld, after: %ld\n", 
-             before, now, after);
-
     if (now < before)
         failures |= NE_SSL_NOTYETVALID;
     else if (now > after)
@@ -467,9 +464,8 @@ int ne__negotiate_ssl(ne_request *req)
     ne_ssl_context *const ctx = sess->ssl_context;
     ne_ssl_certificate *chain;
     gnutls_session sock;
-    int ret;
 
-    NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
+    NE_DEBUG(NE_DBG_SSL, "Negotiating SSL connection.\n");
 
     if (ne_sock_connect_ssl(sess->socket, ctx)) {
 	ne_set_error(sess, _("SSL negotiation failed: %s"),
@@ -515,7 +511,7 @@ const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
 
 void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
 {
-    gnutls_x509_crt_t certs = cert->subject;
+    gnutls_x509_crt certs = cert->subject;
     gnutls_certificate_set_x509_trust(ctx->cred, &certs, 1);
 }
 
