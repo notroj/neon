@@ -1,6 +1,6 @@
 /* 
    Tests for high-level HTTP interface (ne_basic.h)
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -122,7 +122,7 @@ static int do_range(off_t start, off_t end, const char *fail,
 #if 0
 	t_warning("error was %s", ne_get_error(sess));
 #endif
-	ONN(fail, ret == NE_OK);
+	ONV(ret == NE_OK, ("%s", fail));
     } else {
 	ONREQ(ret);
     }

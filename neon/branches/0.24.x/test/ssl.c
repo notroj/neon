@@ -746,7 +746,7 @@ static int fail_ssl_request(char *cert, char *cacert,
 	("verification flags were %d not %d", gotf, failures));
 
     /* and check that the request was failed too. */
-    ONN(msg, ret == NE_OK);
+    ONV(ret == NE_OK, ("%s", msg));
 
     ne_session_destroy(sess);
 

@@ -1,3 +1,13 @@
+Tue May 18 21:00:07 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ssl.c (fail_ssl_request):
+	* basic.c (do_range): Fix false negatives from gcc
+	-Wformat-security.
+
+Sun May  2 21:16:45 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* util-tests.c (regress_dates): Add regression tests.
+
 Wed Apr 14 10:45:43 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* props.c (regress, patch_regress): Add regression tests for

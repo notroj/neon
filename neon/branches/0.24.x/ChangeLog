@@ -1,3 +1,12 @@
+Mon May 17 21:25:44 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.mak: Fix handling of paths with spaces, and simplify (Jon
+	Foster <jon@jon-foster.co.uk>).
+
+Thu May 13 11:42:07 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* configure.in: Don't rely on echo -n in ne_version.
+
 Fri Mar 26 12:07:04 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* Makefile.in (distclean): Clean more.

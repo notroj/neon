@@ -30,7 +30,7 @@ LDFLAGS = @LDFLAGS@
 NEON_LINK_FLAGS = @NEON_LINK_FLAGS@
 # Note: don't substitute @LIBS@ in here; during a bundled
 # build of this directory, @LIBS@ may include -lneon.
-LIBS = @NEON_LIBS@
+LIBS = @NEON_LIBS@ @NEON_LTLIBS@
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK = $(LIBTOOL) --quiet --mode=link $(CC) $(LDFLAGS)

@@ -1,6 +1,6 @@
 /* 
    utils tests
-   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -165,6 +165,7 @@ static const struct {
 } good_dates[] = {
     { "Fri, 08 Jun 2001 22:59:46 GMT", 992041186, d_rfc1123 },
     { "Friday, 08-Jun-01 22:59:46 GMT", 992041186, d_rfc1036 },
+    { "Wednesday, 06-Jun-01 22:59:46 GMT", 991868386, d_rfc1036 },
     /* some different types of ISO8601 dates. */
     { "2001-06-08T22:59:46Z", 992041186, d_iso8601 },
     { "2001-06-08T22:59:46.9Z", 992041186, d_iso8601 },
@@ -194,6 +195,23 @@ static int parse_dates(void)
 	ONV(res != good_dates[n].time, (
 	    "date %d incorrect (" FT " not " FT ")", n,
 	    res, good_dates[n].time));
+    }
+
+    return OK;
+}
+
+/* trigger segfaults in ne_rfc1036_parse() in <=0.24.5. */
+static int regress_dates(void)
+{
+    static const char *dates[] = {
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    };
+    size_t n;
+    
+    for (n = 0; n < sizeof(dates)/sizeof(dates[0]); n++) {
+        ne_rfc1036_parse(dates[n]);
+        ne_iso8601_parse(dates[n]);
+        ne_rfc1123_parse(dates[n]);
     }
 
     return OK;
@@ -249,6 +267,7 @@ ne_test tests[] = {
     T(md5),
     T(md5_alignment),
     T(parse_dates),
+    T(regress_dates),
     T(versioning),
     T(version_string),
     T(support),

@@ -1,3 +1,11 @@
+Fri Apr 16 11:43:10 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon-xml-parser.m4 (NEON_XML_PARSER): If built using libtool,
+	and --with-expat specifies a libexpat.la file, add the libexpat.la
+	to NEON_LTLIBS.
+
+	* neon.m4 (NEON_COMMON_CHECKS): Substitute NEON_LTLIBS.
+
 Tue Apr 13 20:51:59 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* neon.m4 (NEON_GSSAPI): Check for presence of
