@@ -1,6 +1,6 @@
 /* 
    tests for compressed response handling.
-   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,19 +27,15 @@
 #include <fcntl.h>
 
 #include "ne_compress.h"
+#include "ne_auth.h"
 
 #include "tests.h"
 #include "child.h"
 #include "utils.h"
 
-static int failed;
+static enum { f_partial = 0, f_mismatch, f_complete } failed;
 
 static char *newsfn = "../NEWS";
-
-struct body {
-    const char *str;
-    size_t len;
-};
 
 static int init(void)
 {
@@ -49,15 +45,41 @@ static int init(void)
     return lookup_localhost();
 }
 
+#define EXTRA_DEBUG 0 /* disabled by default */
+
 static void reader(void *ud, const char *block, size_t len)
 {
-    struct body *b = ud;
- 
-    if (failed || len > b->len || memcmp(b->str, block, len) != 0) {
-	failed = 1;
+    struct string *b = ud;
+
+#if EXTRA_DEBUG
+    NE_DEBUG(NE_DBG_HTTP, "reader: got (%d): [[[%.*s]]]\n", (int)len,
+             (int)len, block);
+#endif
+
+    if (failed == f_mismatch) return;
+
+    if (failed == f_partial && len == 0) {
+        if (b->len != 0) {
+            NE_DEBUG(NE_DBG_HTTP, "reader: got length %d at EOF\n",
+                     (int)b->len);
+            failed = f_mismatch;
+        } else {
+            failed = f_complete;
+        }
+        return;
+    }
+
+    if (len > b->len || memcmp(b->data, block, len) != 0) {
+        NE_DEBUG(NE_DBG_HTTP, "reader: failed, got [[%.*s]] not [[%.*s]]\n",
+                 (int)len, block, (int)b->len, b->data);
+	failed = f_mismatch;
     } else {
-	b->str += len;
+	b->data += len;
 	b->len -= len;
+#if EXTRA_DEBUG
+        NE_DEBUG(NE_DBG_HTTP, "reader: OK, %d bytes remaining\n", 
+                 (int)b->len);
+#endif
     }
 }
 
@@ -82,17 +104,17 @@ static int do_fetch(const char *realfn, const char *gzipfn,
     ne_buffer *buf = ne_buffer_create();
     struct serve_file_args sfargs;
     ne_decompress *dc;
-    struct body body;
+    struct string body;
     
     fd = open(realfn, O_RDONLY);
     ONN("failed to open file", fd < 0);
     file2buf(fd, buf);
     (void) close(fd);
 
-    body.str = buf->data;
+    body.data = buf->data;
     body.len = buf->used - 1;
     
-    failed = 0;
+    failed = f_partial;
 
     if (gzipfn) {
 	sfargs.fname = gzipfn;
@@ -123,10 +145,8 @@ static int do_fetch(const char *realfn, const char *gzipfn,
     CALL(await_server());
 
     if (!expect_fail) {
-        ONN("inflated response compare", failed);
-        /* reader will have set body.len == 0 if the whole body
-         * has been compared. */
-	ONN("inflated response truncated", body.len != 0);
+        ONN("inflated response truncated", failed == f_partial);
+        ONN("inflated response mismatch", failed == f_mismatch);
     }
 
     return OK;
@@ -211,6 +231,111 @@ static int fail_corrupt2(void)
     return do_fetch(newsfn, "corrupt2.gz", 0, 1);
 }
 
+static int auth_cb(void *userdata, const char *realm, int tries, 
+		   char *un, char *pw)
+{
+    strcpy(un, "foo");
+    strcpy(pw, "bar");
+    return tries;
+}
+
+static int retry_compress_helper(ne_accept_response acceptor,
+                                 struct string *resp, struct string *expect)
+{
+    ne_session *sess;
+    ne_request *req;
+    ne_decompress *dc;
+    
+    CALL(make_session(&sess, serve_sstring, resp));
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+
+    req = ne_request_create(sess, "GET", "/");
+    dc = ne_decompress_reader(req, acceptor, reader, expect);
+    failed = f_partial;
+
+    ONREQ(ne_request_dispatch(req));
+    
+    ONV(ne_decompress_destroy(dc),
+        ("decompress failed: %s", ne_get_error(sess)));
+
+    ONN("got bad response body", failed != f_complete);
+
+    CALL(await_server());
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
+static char retry_gz_resp[] = 
+"HTTP/1.1 401 Get Away\r\n"
+"Content-Encoding: gzip\r\n"
+"WWW-Authenticate: Basic realm=WallyWorld\r\n"
+"Content-Length: 5\r\n"
+"\r\n"
+"abcde"
+"HTTP/1.1 200 OK\r\n"
+"Server: foo\r\n"
+"Content-Length: 5\r\n"
+"Connection: close\r\n"
+"\r\n"
+"hello";
+
+/* Test where the response to the retried request does *not* have
+ * a content-encoding, whereas the original 401 response did. */
+static int retry_notcompress(void)
+{
+    struct string response = { retry_gz_resp, strlen(retry_gz_resp) };
+    struct string expect = { "hello", 5 };
+    return retry_compress_helper(ne_accept_2xx, &response, &expect);
+}
+
+static unsigned char retry_gz_resp2[] = 
+"HTTP/1.1 401 Get Away\r\n"
+"Content-Encoding: gzip\r\n"
+"WWW-Authenticate: Basic realm=WallyWorld\r\n"
+"Content-Length: 25\r\n"
+"\r\n"
+"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\xcb\x48\xcd\xc9\xc9\x07"
+"\x00\x86\xa6\x10\x36\x05\x00\x00\x00"
+"HTTP/1.1 200 OK\r\n"
+"Server: foo\r\n"
+"Content-Encoding: gzip\r\n"
+"Content-Length: 25\r\n"
+"Connection: close\r\n"
+"\r\n"
+"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x2b\xcf\x2f\xca\x49\x01"
+"\x00\x43\x11\x77\x3a\x05\x00\x00\x00";
+
+static int retry_accept(void *ud, ne_request *req, const ne_status *st)
+{
+    struct string *expect = ud;
+
+    NE_DEBUG(NE_DBG_HTTP, "retry_accept callback for %d response\n",
+             st->code);
+
+    if (expect->len == 4 && strcmp(expect->data, "fish") == 0) {
+        /* first time through */
+        expect->data = "hello";
+    } else {
+        expect->data = "world";
+    }
+
+    expect->len = 5;
+    return 1;
+}
+
+/* Test where the response to the retried request *does* have a
+ * content-encoding, as did the original 401 response. */
+static int retry_compress(void)
+{
+    struct string resp = { retry_gz_resp2, sizeof(retry_gz_resp2) - 1 };
+    struct string expect = { "fish", 4 };
+    return retry_compress_helper(retry_accept, &resp, &expect);
+}
+
 ne_test tests[] = {
     T_LEAKY(init),
     T(not_compressed),
@@ -227,5 +352,7 @@ ne_test tests[] = {
     T(chunked_20b),
     T(chunked_10b),
     T(chunked_10b_wn),
+    T(retry_notcompress),
+    T(retry_compress),
     T(NULL)
 };

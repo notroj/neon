@@ -1,3 +1,12 @@
+Changes in release 0.24.7:
+* Compression interface fixes:
+ - fix issues handling content decoding and request retries from
+ authentication challenges (Justin Erenkrantz)
+ - fix places where reader callback would receive spurious size=0 calls
+ - fix to pass user-supplied userdata to user-supplied acceptance callback
+* Fix for RFC2617-style digest authentication (Hideaki Takahashi).
+* Fix to pick up gethostbyname() on QNX 6.2.
+
 Changes in release 0.24.6:
 * SECURITY (CVE CAN-2004-0398): Fix sscanf overflow in ne_rfc1036_parse,
  thanks to Stefan Esser.

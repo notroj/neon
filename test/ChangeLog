@@ -1,3 +1,21 @@
+Mon Jul  5 10:59:17 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	Add regression tests for trio of ne_compress.c bugs:
+	
+	* compress.c (reader): Validate that a size=0 call comes only
+	after the expected response data, and use struct string.
+	(do_fetch): Pass a struct string to reader and adapt for failure
+	logic.
+	(auth_cb, retry_compress_helper, retry_compress,
+	retry_notcompress): New tests.
+
+Sun Jul  4 21:55:00 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* utils.c (serve_sstring_slowly, serve_sstring): Moved from
+	sockets.c, renamed from serve_string_slowly, serve_sstring.
+
+	* sockets.c: All callers updated.
+
 Tue May 18 21:00:07 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* ssl.c (fail_ssl_request):

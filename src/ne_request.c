@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -314,6 +314,25 @@ void ne_hook_destroy_session(ne_session *sess,
 			     ne_destroy_sess_fn fn, void *userdata)
 {
     ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
+}
+
+/* 0.24.x hack to fix ne_compress layer problems */
+void ne_kill_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata)
+{
+    struct hook **last, *hk;
+
+    last = &sess->pre_send_hooks;
+    hk = *last;
+
+    while (hk) {
+        if (hk->fn == (void_fn)fn && hk->userdata == userdata) {
+            *last = hk->next;
+            ne_free(hk);
+            return;
+        }
+        last = &hk->next;
+        hk = *last;
+    }
 }
 
 void ne_set_session_private(ne_session *sess, const char *id, void *userdata)

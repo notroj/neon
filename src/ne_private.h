@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -114,5 +114,8 @@ int ne_pull_request_body(ne_request *req, ne_push_fn fn, void *ud);
 
 /* Do the SSL negotiation. */
 int ne_negotiate_ssl(ne_request *req);
+
+/* 0.24.x hack to fix ne_compress layer problems */
+void ne_kill_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
 
 #endif /* HTTP_PRIVATE_H */

@@ -1,6 +1,6 @@
 /* 
    Handling of compressed HTTP responses
-   Copyright (C) 2001-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -33,6 +33,8 @@
 #include "ne_utils.h"
 #include "ne_i18n.h"
 
+#include "ne_private.h"
+
 #ifdef NEON_ZLIB
 
 #include <zlib.h>
@@ -53,6 +55,7 @@ struct ne_decompress_s {
 
     /* pass blocks back to this. */
     ne_block_reader reader;
+    ne_accept_response acceptor;
     void *userdata;
 
     /* buffer for gzip header bytes. */
@@ -159,6 +162,8 @@ static void process_footer(ne_decompress *ctx,
 	    uLong crc = BUF2UINT(ctx->footer) & 0xFFFFFFFF;
 	    if (crc == ctx->checksum) {
 		ctx->state = NE_Z_FINISHED;
+                /* reader requires a size=0 call at end-of-response */
+                ctx->reader(ctx->userdata, NULL, 0);
 		NE_DEBUG(NE_DBG_HTTP, "compress: Checksum match.\n");
 	    } else {
 		NE_DEBUG(NE_DBG_HTTP, "compress: Checksum mismatch: "
@@ -220,9 +225,10 @@ static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 	ctx->checksum = crc32(ctx->checksum, (unsigned char *)ctx->outbuf, 
 			      ctx->zstr.total_out);
 
-	/* pass on the inflated data */
-	ctx->reader(ctx->userdata, ctx->outbuf, ctx->zstr.total_out);
-	
+	/* pass on the inflated data, if any */
+        if (ctx->zstr.total_out > 0) {
+            ctx->reader(ctx->userdata, ctx->outbuf, ctx->zstr.total_out);
+        }	
     } while (ret == Z_OK && ctx->zstr.avail_in > 0);
     
     if (ret == Z_STREAM_END) {
@@ -389,6 +395,38 @@ int ne_decompress_destroy(ne_decompress *ctx)
     return ret;
 }
 
+/* Prepare for a compressed response */
+static void gz_pre_send(ne_request *r, void *ud, ne_buffer *req)
+{
+    ne_decompress *ctx = ud;
+
+    NE_DEBUG(NE_DBG_HTTP, "compress: Initialization.\n");
+
+    /* (Re-)Initialize the context */
+    ctx->state = NE_Z_BEFORE_DATA;
+    if (ctx->zstrinit) inflateEnd(&ctx->zstr);
+    ctx->zstrinit = 0;
+    ctx->incount = ctx->footcount = 0;
+    ctx->checksum = crc32(0L, Z_NULL, 0);
+    if (ctx->enchdr) {
+        ne_free(ctx->enchdr);
+        ctx->enchdr = NULL;
+    }
+}
+
+/* Kill the pre-send hook */
+static void gz_destroy(ne_request *req, void *userdata)
+{
+    ne_kill_pre_send(ne_get_session(req), gz_pre_send, userdata);
+}
+
+/* Wrapper for user-passed acceptor function. */
+static int gz_acceptor(void *userdata, ne_request *req, const ne_status *st)
+{
+    ne_decompress *ctx = userdata;
+    return ctx->acceptor(ctx->userdata, req, st);
+}
+
 ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 				    ne_block_reader rdr, void *userdata)
 {
@@ -399,14 +437,15 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
     ne_add_response_header_handler(req, "Content-Encoding", 
 				   ne_duplicate_header, &ctx->enchdr);
 
-    ne_add_response_body_reader(req, acpt, gz_reader, ctx);
+    ne_add_response_body_reader(req, gz_acceptor, gz_reader, ctx);
 
-    ctx->state = NE_Z_BEFORE_DATA;
     ctx->reader = rdr;
     ctx->userdata = userdata;
     ctx->session = ne_get_session(req);
-    /* initialize the checksum. */
-    ctx->checksum = crc32(0L, Z_NULL, 0);
+    ctx->acceptor = acpt;
+
+    ne_hook_pre_send(ctx->session, gz_pre_send, ctx);
+    ne_hook_destroy_request(ctx->session, gz_destroy, ctx);
 
     return ctx;    
 }

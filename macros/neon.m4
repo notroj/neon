@@ -122,7 +122,7 @@ AC_DEFUN([NEON_VERSIONS], [
 # Define the current versions.
 NEON_VERSION_MAJOR=0
 NEON_VERSION_MINOR=24
-NEON_VERSION_RELEASE=6
+NEON_VERSION_RELEASE=7
 NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
@@ -490,10 +490,20 @@ AC_REPLACE_FUNCS(strcasecmp)
 
 AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy)
 
+if test "$ac_cv_func_stpcpy" = "yes"; then
+  AC_CHECK_DECLS(stpcpy)
+fi
+
+# Modern AIXes with the "Linux-like" libc have an undeclared stpcpy
+AH_BOTTOM([#if defined(HAVE_STPCPY) && !HAVE_DECL_STPCPY && !defined(stpcpy)
+char *stpcpy(char *, const char *);
+#endif])
+
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
+# QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
 NE_SEARCH_LIBS(socket, socket inet)
-NE_SEARCH_LIBS(gethostbyname, nsl bind)
+NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
 
 # Enable getaddrinfo() support only if all the necessary functions
 # are found.
