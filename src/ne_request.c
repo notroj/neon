@@ -1198,7 +1198,7 @@ int ne_begin_request(ne_request *req)
 	ret = send_request(req, data);
     }
     ne_buffer_destroy(data);
-    if (ret != NE_OK) return ret;
+    if (ret != NE_OK) return ret == NE_RETRY ? NE_ERROR : ret;
 
     /* Determine whether server claims HTTP/1.1 compliance. */
     req->session->is_http11 = (st->major_version == 1 && 
