@@ -1659,7 +1659,9 @@ static int abort_reader(void)
 
     CALL(make_session(&sess, single_serve_string, 
                       RESP200 "Content-Length: 5\r\n\r\n"
-                      "abcde"));
+                      "abcde"
+                      "HTTP/1.1 200 OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
 
     req = ne_request_create(sess, "GET", "/foo");
     ne_add_response_body_reader(req, ne_accept_2xx, abortive_reader, sess);
@@ -1668,6 +1670,9 @@ static int abort_reader(void)
     ONV(strcmp(ne_get_error(sess), "Reader callback failed") != 0,
         ("unexpected session error string: %s", ne_get_error(sess)));
     ne_request_destroy(req);
+    /* test that the connection was closed. */
+    ONN("connection not closed after aborted response",
+        any_2xx_request(sess, "/failmeplease") == OK);
     ne_session_destroy(sess);
     CALL(await_server());
     return OK;
