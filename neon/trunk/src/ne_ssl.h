@@ -65,7 +65,7 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data);
 
 /* Returns the identity of the certificate, or NULL if none is given.
  * For a server certificate this will be the hostname of the server to
- * whom the cert was issued. */
+ * whom the cert was issued.  String returned is UTF-8-encoded. */
 const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert);
 
 /* Return the certificate of the entity which signed certificate
@@ -114,7 +114,7 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
 
 /* Returns the "friendly name" given for the client cert, or NULL if
  * none given.  This can be called before or after the client cert has
- * been decrypted.  Returns a NUL-terminated string. */
+ * been decrypted.  Returns a NUL-terminated, UTF-8-encoded string. */
 const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert);
 
 /* Returns non-zero if client cert is encrypted. */
