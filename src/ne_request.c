@@ -757,34 +757,33 @@ void ne_request_destroy(ne_request *req)
 }
 
 
-/* Reads a block of the response into buffer, which is of size buflen.
- * Returns number of bytes read, 0 on end-of-response, or NE_* on
- * error.  On error, the session error string is set and the
- * connection closed as necessary. */
+/* Reads a block of the response into BUFFER, which is of size
+ * *BUFLEN.  Returns zero on success or non-zero on error.  On
+ * success, *BUFLEN is updated to be the number of bytes read into
+ * BUFFER (which will be 0 to indicate the end of the repsonse).  On
+ * error, the connection is closed and the session error string is
+ * set.  */
 static int read_response_block(ne_request *req, struct ne_response *resp, 
 			       char *buffer, size_t *buflen) 
 {
+    ne_socket *const sock = req->session->socket;
     size_t willread;
     ssize_t readlen;
-    ne_socket *sock = req->session->socket;
+    
     switch (resp->mode) {
     case R_CHUNKED:
-	/* We are doing a chunked transfer-encoding.
-	 * It goes:  `SIZE CRLF CHUNK CRLF SIZE CRLF CHUNK CRLF ...'
-	 * ended by a `CHUNK CRLF 0 CRLF', a 0-sized chunk.
-	 * The slight complication is that we have to cope with
-	 * partial reads of chunks.
-	 * For this reason, resp.chunk.remain contains the number of
-	 * bytes left to read in the current chunk.
-	 */
+        /* Chunked transfer-encoding: chunk syntax is "SIZE CRLF CHUNK
+         * CRLF SIZE CRLF CHUNK CRLF ..." followed by zero-length
+         * chunk: "CHUNK CRLF 0 CRLF".  resp.chunk.remain contains the
+         * number of bytes left to read in the current chunk. */
 	if (resp->body.chunk.remain == 0) {
-	    unsigned long int chunk_len;
+	    unsigned long chunk_len;
 	    char *ptr;
-	    /* We are at the start of a new chunk. */
-	    NE_DEBUG(NE_DBG_HTTP, "New chunk.\n");
+
+            /* The start of a new chunk. */
 	    SOCK_ERR(req, ne_sock_readline(sock, buffer, *buflen),
 		     _("Could not read chunk size"));
-	    NE_DEBUG(NE_DBG_HTTP, "[Chunk Size] < %s", buffer);
+	    NE_DEBUG(NE_DBG_HTTP, "[chunk] < %s", buffer);
 	    chunk_len = strtoul(buffer, &ptr, 16);
 	    /* limit chunk size to <= UINT_MAX, so it will probably
 	     * fit in a size_t. */
@@ -793,18 +792,14 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 		return aborted(req, _("Could not parse chunk size"), 0);
 	    }
 	    NE_DEBUG(NE_DBG_HTTP, "Got chunk size: %lu\n", chunk_len);
-	    if (chunk_len == 0) {
-		/* Zero-size chunk == end of response. */
-		NE_DEBUG(NE_DBG_HTTP, "Zero-size chunk.\n");
-		*buflen = 0;
-		return NE_OK;
-	    }
 	    resp->body.chunk.remain = chunk_len;
 	}
-	willread = resp->body.chunk.remain > *buflen ? *buflen : resp->body.chunk.remain;
+	willread = resp->body.chunk.remain > *buflen
+            ? *buflen : resp->body.chunk.remain;
 	break;
     case R_CLENGTH:
-	willread = resp->body.clen.remain > (off_t)*buflen ? *buflen : (size_t)resp->body.clen.remain;
+	willread = resp->body.clen.remain > (off_t)*buflen 
+            ? *buflen : (size_t)resp->body.clen.remain;
 	break;
     case R_TILLEOF:
 	willread = *buflen;
