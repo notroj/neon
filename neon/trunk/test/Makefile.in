@@ -22,7 +22,8 @@ HELPERS = @HELPERS@
 BASIC_TESTS = uri-tests util-tests string-tests socket \
 	session request auth basic stubs redirect
 ZLIB_TESTS = compress
-ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz corrupt1.gz corrupt2.gz
+ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz \
+	corrupt1.gz corrupt2.gz empty.gz
 DAV_TESTS = xml acl props lock
 SSL_TESTS = socket-ssl ssl
 SSL_HELPERS = ca-stamp
@@ -89,6 +90,9 @@ corrupt1.gz: file1.gz
 
 corrupt2.gz: 
 	cat $(NEWS) > $@
+
+empty.gz:
+	touch $@
 
 # Dummy target to create the CA keys etc.  makekeys stderr is redirected
 # since it changes for every invocation; not helpful for regression
