@@ -156,17 +156,20 @@ static int endelm_abort(void *buf, int state,
         return 0;
 }
 
+/* Test mode for parse_match: */
 enum match_type {
-    match_valid = 0,
-    match_invalid,
-    match_nohands,
-    match_encoding
+    match_valid = 0, /* test that the parse succeeds */
+    match_invalid, /* test that the parse fails */
+    match_nohands, /* test with no handlers registered */
+    match_encoding, /* test whether the encoding is equal to the result string */.
+    match_chunked /* parse the document one byte at a time */
 };
 
 static int parse_match(const char *doc, const char *result, enum match_type t)
 {
     ne_xml_parser *p = ne_xml_create();
     ne_buffer *buf = ne_buffer_create();
+    int ret;
 
     if (t == match_invalid)
         ne_xml_push_handler(p, startelm_abort, chardata, endelm_abort, buf);
@@ -176,15 +179,26 @@ static int parse_match(const char *doc, const char *result, enum match_type t)
         ne_xml_push_handler(p, startelm_xform, chardata, endelm_xform, buf);
     }
 
-    ne_xml_parse(p, doc, strlen(doc));
-    ne_xml_parse(p, "", 0);
-    
+    if (t == match_chunked) {
+        do {
+            ret = ne_xml_parse(p, doc++, 1);
+        } while (ret == 0 && *doc);
+    } else {
+        ret = ne_xml_parse(p, doc, strlen(doc));
+    }
+
+    if (ret == 0) {
+        ne_xml_parse(p, "", 0);
+    }
+
+    ONV(ret != ne_xml_failed(p), 
+        ("ne_xml_failed gave %d not %d", ne_xml_failed(p), ret));
+
     if (t == match_invalid)
-        ONV(ne_xml_failed(p) != ABORT, 
-            ("parse got %d not abort failure: %s", 
-             ne_xml_failed(p), buf->data));
+        ONV(ret != ABORT, 
+            ("parse got %d not abort failure: %s", ret, buf->data));
     else
-        ONV(ne_xml_failed(p), ("parse failed: %s", ne_xml_get_error(p)));
+        ONV(ret, ("parse failed: %s", ne_xml_get_error(p)));
     
     if (t == match_encoding) {
         const char *enc = ne_xml_doc_encoding(p);
@@ -221,6 +235,8 @@ static int matches(void)
 
         /* UTF-8 XML Byte Order Mark */
         { "\xEF\xBB\xBF" PFX "<hello/>", "<{}hello></{}hello>" },
+        /* UTF-8 XML Byte Order Mark */
+        { "\xEF\xBB\xBF" PFX "<hello/>", "<{}hello></{}hello>", match_chunked },
 
 	/*** Tests for namespace handling. ***/
 #define NSA "xmlns:foo='bar'"
