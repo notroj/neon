@@ -1,9 +1,9 @@
 Changes in release 0.25.0:
 * New interfaces:
  - ne_get_response_header() replaces ne_add_response_header_handler
-   and ne_add_response_header_catcher.
+   and ne_add_response_header_catcher
  - ne_read_response_to_fd() and ne_discard_response() for use with
-   ne_begin_request/ne_end_request response handling.
+   ne_begin_request/ne_end_request response handling
  - ne_xmlreq.h: ne_xml_parse_response() and ne_xml_dispatch_request()
  - ne_has_feature() for feature detection, replaces ne_support_ssl()
  - ne_set_addrlist() can be used to bypass normal DNS hostname resolver
@@ -15,22 +15,23 @@ Changes in release 0.25.0:
  - ne_set_request_body_fd takes offset and length arguments and returns void
  - ne_set_request_body_provider takes length as off_t rather than size_t;
    provider callbacks now MUST set session error string if returning an error
+ - response body reader callback returns an integer and can abort the response
+ - ne_decompress_destroy() returns void; errors are caught earlier
  - ne_xml_failed() replaces ne_xml_valid(), with different return value logic
- - ne_get_content_type() replaces ne_content_type_handler().
+ - ne_get_content_type() replaces ne_content_type_handler()
  - ne_set_request_expect100() replaces ne_set_expect100() as a per-request flag
  - ne_path_escape() now escapes all but unreserved characters
- - ne_ssl_clicert_name() and ne_ssl_cert_identity() clarified to return UTF-8.
- - ne_uri_parse()/ne_uri_free() memory handling clarified.
-* Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
- - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
+ - ne_ssl_clicert_name() and ne_ssl_cert_identity() clarified to return UTF-8
+ - ne_uri_parse()/ne_uri_free() memory handling clarified
+ - removed the buffer length requirement for ne_read_response_block()
 * Bug fixes:
  - properly handle multiple Authentication challenges per request
- - fixes and improvements to the Negotiate auth implementation
+ - fixes and improvements to the Negotiate auth implementation (GSSAPI)
  - XML: handle the UTF-8 BOM even if the underlying parser does not
  - Win32: Fix timezone handling (Jiang Lei)
- - Win32: Add IPv6 support using ENABLE_IPV6 neon.mak flag (Kai Sommerfeld)
 * New features:
  - Win32: Negotiate/NTLM support using SSPI (Vladimir Berezniker)
+ - Win32: Add IPv6 support using ENABLE_IPV6 neon.mak flag (Kai Sommerfeld)
 * Removed features:
  - the cookies interface has been removed
  - ne_service_lookup() removed
