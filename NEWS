@@ -1,21 +1,28 @@
 Changes in release 0.25.0:
-* New feature detection interface, ne_has_feature():
- - replaces ne_supports_ssl(); NEON_SSL is no longer defined by neon-config.
-* ne_set_request_body_fd takes offset and length arguments and returns void.
-* ne_set_request_body_provider takes an off_t length argument.
+* New interfaces:
+ - ne_get_response_header() replaces ne_add_response_header_handler
+   and ne_add_response_header_catcher.
+ - ne_read_response_to_fd() and ne_discard_response() for use with
+   ne_begin_request/ne_end_request response handling.
+ - ne_xmlreq.h: ne_xml_parse_response() and ne_xml_dispatch_request()
+ - ne_set_request_body_fd64() call for using an fd opened using O_LARGEFILE
+ - ne_set_request_body_provider64(), takes an off64_t length argument
+ - ne_has_feature() for feature detection, replaces ne_support_ssl()
+ - ne_set_addrlist() can be used to bypass normal DNS hostname resolver
+ - ne_set_request_expect100() replaces ne_set_expect100() as a per-request flag
+* Interface changes:
+ - ne_set_request_body_fd takes offset and length arguments and returns void
+ - ne_set_request_body_provider takes length as off_t rather than size_t.
+ - ne_xml_failed() replaces ne_xml_valid(), with different return value logic
 * Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
  - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
-* ne_xml_failed() replaces ne_xml_valid(), with different return value logic.
-* Support for >2Gb request/response bodies on 32-bit Unixes with LFS support:
- - new ne_set_request_body_fd64() call for using an fd opened using O_LARGEFILE
- - new ne_set_request_body_provider64() which takes an off64_t length argument
-* ne_xml interface now rejects more invalid XML element names (e.g. "foo::bar").
-* Add ne_set_addrlist() interface to bypass normal DNS resolution.
-* Use a per-request flag to enable "Expect: 100-continue" support:
- - ne_set_request_expect100() replaces ne_set_expect100()
-* Fix handling of multiple Authentication challenges per request.
-* Win32: Fix timezone handling (Jiang Lei).
-* Win32: Add IPv6 support using ENABLE_IPV6 flag (Kai Sommerfeld).
+* Bug fixes:
+ - correct handling of multiple Authentication challenges per request
+ - XML: handle the UTF-8 BOM even if the underlying parser does not
+ - Win32: Fix timezone handling (Jiang Lei)
+ - Win32: Add IPv6 support using ENABLE_IPV6 neon.mak flag (Kai Sommerfeld)
+* Removed features:
+ - the cookies interface has been removed
 
 Changes in release 0.24.7:
 * Compression interface fixes:
