@@ -649,7 +649,7 @@ static ssize_t read_gnutls(ne_socket *sock, char *buffer, size_t len)
         ret = gnutls_record_recv(sock->ssl, buffer, len);
     } while (RETRY_GNUTLS(sock, ret));
 
-    if (ret < 0)
+    if (ret <= 0)
 	ret = error_gnutls(sock, ret);
 
     return ret;
