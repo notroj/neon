@@ -1,0 +1,171 @@
+# Makefile for neon test suite.
+
+SHELL = @SHELL@
+CPPFLAGS = @CPPFLAGS@ -I. -I$(top_srcdir)/src -I$(top_srcdir)/test/common
+CFLAGS = @CFLAGS@ @NEON_CFLAGS@
+LDFLAGS = -L. @LDFLAGS@ -L$(top_srcdir)/src -L../src/.libs
+DEFS = @DEFS@
+
+top_builddir = ..
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+AR = ar
+
+RANLIB = @RANLIB@
+LIBS = -ltest -lneon @NEON_LIBS@
+CC = @CC@
+OPENSSL = @OPENSSL@
+
+HELPERS = @HELPERS@
+BASIC_TESTS = uri-tests util-tests string-tests session socket \
+	request auth basic stubs redirect
+ZLIB_TESTS = compress
+ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz
+DAV_TESTS = xml acl props lock
+SSL_TESTS = socket-ssl ssl
+SSL_HELPERS = ca-stamp
+TESTS = @TESTS@
+HDRS = common/tests.h common/child.h utils.h $(top_builddir)/config.h
+VALGRIND = valgrind --gdb-attach=yes --leak-check=yes
+
+LIBTEST = libtest.a
+
+# By default, compile but don't run the tests.
+all: $(TESTS)
+
+clean:
+	rm -f $(TESTS) $(HELPERS) *.o common/*.o libtest.a *.log
+	rm -rf ca
+	rm -f ca-stamp client.key *.csr ssigned.pem wrongcn.pem \
+	   server.cert client.cert client.p12
+
+check: $(TESTS) $(HELPERS)
+	@SRCDIR=$(srcdir) $(SHELL) $(srcdir)/run.sh $(TESTS)
+
+grind: $(TESTS) $(HELPERS)
+	@SRCDIR=$(srcdir) HARNESS="$(VALGRIND)" $(SHELL) $(srcdir)/run.sh $(TESTS)
+
+file1.gz: ../NEWS
+	gzip -c --no-name $(top_srcdir)/NEWS > $@
+
+file2.gz: ../NEWS
+	gzip -c --name $(top_srcdir)/NEWS > $@
+
+# gzip file with trailing bytes.
+trailing.gz: ../NEWS
+	gzip -c --no-name $(top_srcdir)/NEWS > $@
+	echo "hello, world" >> $@
+
+truncated.gz: file1.gz
+	dd if=file1.gz of=$@ bs=2048 count=2
+
+badcsum.gz: file1.gz
+	dd of=$@ if=file1.gz bs=1 count=`perl -e 'printf "%d", (stat("file1.gz"))[7] - 8;'`
+	echo 'broken!' >> $@
+
+# Dummy target to create the CA keys etc.  makekeys stderr is redirected
+# since it changes for every invocation; not helpful for regression
+# testing.
+ca-stamp: $(srcdir)/makekeys.sh $(srcdir)/openssl.conf
+	rm -rf ca
+	OPENSSL=$(OPENSSL) \
+	 $(SHELL) $(srcdir)/makekeys.sh $(srcdir) 2>makekeys.out
+	@echo timestamp > ca-stamp
+
+Makefile: $(srcdir)/Makefile.in
+	cd .. && ./config.status test/Makefile
+
+LIBOBJS = common/tests.o common/child.o utils.o
+
+$(LIBTEST): $(LIBOBJS) $(HDRS) ../src/@NEON_TARGET@
+	$(AR) cru $@ $(LIBOBJS)
+	$(RANLIB) $@
+
+.c.o:
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+uri-tests: uri-tests.o $(LIBTEST)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ uri-tests.o $(LIBS)
+
+request: request.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ request.o $(LIBS)
+
+string-tests: string-tests.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ string-tests.o $(LIBS)
+
+socket: socket.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ socket.o $(LIBS)
+
+compress: compress.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ compress.o $(LIBS)
+
+acl: acl.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ acl.o $(LIBS)
+
+utils: utils.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ utils.o $(LIBS)
+
+util-tests: util-tests.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ util-tests.o $(LIBS)
+
+auth: auth.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ auth.o $(LIBS)
+
+lock: lock.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ lock.o $(LIBS)
+
+basic: basic.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ basic.o $(LIBS)
+
+# Recompile socket.c with SOCKET_SSL defined
+socket-ssl.o: $(srcdir)/socket.c $(HDRS)
+	$(CC) -DSOCKET_SSL $(CPPFLAGS) $(CFLAGS) -c $(srcdir)/socket.c -o $@
+
+socket-ssl: socket-ssl.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ socket-ssl.o $(LIBS)
+
+ssl: ssl.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ ssl.o $(LIBS)
+
+xml: xml.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ xml.o $(LIBS)
+
+stubs: stubs.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ stubs.o $(LIBS)
+
+redirect: redirect.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ redirect.o $(LIBS)
+
+session: session.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ session.o $(LIBS)
+
+cookies: cookies.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ cookies.o $(LIBS)
+
+props: props.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ props.o $(LIBS)
+
+resolve: resolve.o $(LIBTEST)
+	$(CC) $(LDFLAGS) -o $@ resolve.o $(LIBS)
+
+#FOO: FOO.o $(LIBTEST)
+#	$(CC) $(LDFLAGS) -o $@ FOO.o $(LIBS)
+
+auth.o: auth.c $(HDRS)
+uri-tests.o: uri-tests.c $(HDRS)
+util-tests.o: util-tests.c $(HDRS)
+string-tests.o: string-tests.c $(HDRS)
+socket.o: socket.c $(HDRS)
+server.o: server.c $(HDRS)
+request.o: request.c $(HDRS)
+regress.o: regress.c $(HDRS)
+compress.o: compress.c $(HDRS)
+acl.o: acl.c $(HDRS)
+utils.o: utils.c $(HDRS)
+stubs.o: stubs.c $(HDRS)
+props.o: props.c $(HDRS)
+session.o: session.c $(HDRS)
+redirect.o: redirect.c $(HDRS)
+basic.o: basic.c $(HDRS)
