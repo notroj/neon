@@ -74,7 +74,7 @@ libneon.a: $(OBJECTS)
 	$(RANLIB) $@
 
 clean:
-	rm -f $(NEON_TARGET) *.o *.lo
+	rm -f $(NEON_TARGET) *.o *.lo *.bbg *.bb *.gc*
 	rm -rf .libs
 
 c++.c:
