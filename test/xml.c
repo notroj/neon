@@ -161,7 +161,7 @@ enum match_type {
     match_valid = 0, /* test that the parse succeeds */
     match_invalid, /* test that the parse fails */
     match_nohands, /* test with no handlers registered */
-    match_encoding, /* test whether the encoding is equal to the result string */.
+    match_encoding, /* test whether the encoding is equal to the result string */
     match_chunked /* parse the document one byte at a time */
 };
 
