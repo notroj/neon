@@ -1,6 +1,6 @@
 /* 
    HTTP utility functions
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -108,9 +108,6 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #ifdef NE_HAVE_SOCKS
    ", SOCKSv5"
 #endif
-#ifdef NE_HAVE_IDNA
-   ", IDNA"
-#endif
 #ifdef HAVE_OPENSSL
 #ifdef OPENSSL_VERSION_TEXT
     ", " OPENSSL_VERSION_TEXT
@@ -138,7 +135,7 @@ int ne_has_support(int feature)
 {
     switch (feature) {
 #if defined(NE_HAVE_SSL) || defined(NE_HAVE_ZLIB) || defined(NE_HAVE_IPV6) \
-    || defined(NE_HAVE_IDNA) || defined(NE_HAVE_SOCKS) || defined(NE_HAVE_LFS)
+    || defined(NE_HAVE_SOCKS) || defined(NE_HAVE_LFS)
 #ifdef NE_HAVE_SSL
     case NE_FEATURE_SSL:
 #endif
@@ -147,9 +144,6 @@ int ne_has_support(int feature)
 #endif
 #ifdef NE_HAVE_IPV6
     case NE_FEATURE_IPV6:
-#endif
-#ifdef NE_HAVE_IDNA
-    case NE_FEATURE_IDNA:
 #endif
 #ifdef NE_HAVE_SOCKS
     case NE_FEATURE_SOCKS:

@@ -1704,60 +1704,6 @@ static int dup_method(void)
     return OK;
 }
 
-#ifdef NE_HAVE_IDNA
-
-/* "ħêłłø.com" in UTF-8 and ACE form. */
-#define HELLO_DOT_COM "\xc4\xa7" "\xc3\xaa" "\xc5\x82" "\xc5\x82" "\xc3\xb8" ".com"
-#define HELLO_IDNA_ACE "xn--bda2a5j8da.com"
-
-static char *host_hdr = NULL;
-
-static void dup_header(char *hdr)
-{
-    host_hdr = strdup(hdr);
-}
-
-static int serve_check_host(ne_socket *sock, void *userdata)
-{
-    const char *host = userdata;
-
-    want_header = "Host";
-    got_header = dup_header;
-    
-    CALL(discard_request(sock));
-
-    if (host_hdr == NULL) {
-        CALL(SEND_STRING(sock, "HTTP/1.0 500 No Host header!?\r\n\r\n"));
-    } else if (strcmp(host_hdr, host) != 0) {
-        CALL(SEND_STRING(sock, "HTTP/1.0 500 Bad Host Header\r\n\r\n"));
-    } else {
-        CALL(SEND_STRING(sock, "HTTP/1.0 200 Good Host Header\r\n\r\n"));
-    }
-
-    return OK;
-}        
-
-static int idna_hostname(void)
-{
-    ne_session *sess = ne_session_create("http", HELLO_DOT_COM, 80);
-
-    ne_session_proxy(sess, "localhost", 7777);
-
-    CALL(spawn_server(7777, serve_check_host, HELLO_IDNA_ACE));
-    CALL(any_2xx_request(sess, "/idnafoo"));
-    CALL(await_server());
-
-    ne_session_destroy(sess);
-    return OK;
-}
-#else
-static int idna_hostname(void)
-{
-    t_context("IDNA support not enabled");
-    return SKIP;
-}
-#endif
-
 static int abortive_reader(void *userdata, const char *buf, size_t len)
 {
     ne_session *sess = userdata;

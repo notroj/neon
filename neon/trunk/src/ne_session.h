@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -35,9 +35,7 @@ typedef struct ne_session_s ne_session;
 
 /* Create a session to the given server, using the given scheme.  If
  * "https" is passed as the scheme, SSL will be used to connect to the
- * server.  If neon is built with support for IDNA, 'hostname' can be
- * a UTF-8-encoded Unicode string; otherwise, it must be an ASCII
- * string. */
+ * server. */
 ne_session *ne_session_create(const char *scheme,
 			      const char *hostname, unsigned int port);
 
