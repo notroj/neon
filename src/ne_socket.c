@@ -516,40 +516,41 @@ static int readable_ossl(ne_socket *sock, int secs)
 /* SSL error handling, according to SSL_get_error(3). */
 static int error_ossl(ne_socket *sock, int sret)
 {
-    int err = SSL_get_error(sock->ssl, sret), ret = NE_SOCK_ERROR;
-    const char *str;
-    
-    switch (err) {
-    case SSL_ERROR_ZERO_RETURN:
-	ret = NE_SOCK_CLOSED;
+    int errnum = SSL_get_error(sock->ssl, sret);
+    unsigned long err;
+
+    if (errnum == SSL_ERROR_ZERO_RETURN) {
 	set_error(sock, _("Connection closed"));
-	break;
-    case SSL_ERROR_SYSCALL:
-	err = ERR_get_error();
-	if (err == 0) {
-	    if (sret == 0) {
-		/* EOF without close_notify, possible truncation */
-		set_error(sock, _("Secure connection truncated"));
-		ret = NE_SOCK_TRUNC;
-	    } else {
-		/* Other socket error. */
-		err = ne_errno;
-		set_strerror(sock, err);
-		ret = MAP_ERR(err);
-	    }
-	} else {
-            str = ERR_reason_error_string(err);
-	    ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"), 
-                        str ? str : _("unknown error code"));
-	}
-	break;
-    default:
-        str = ERR_reason_error_string(ERR_get_error());
-	ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"), 
-		    str ? str : _("unknown error code"));
-	break;
+        return NE_SOCK_CLOSED;
     }
-    return ret;
+    
+    /* for all other errors, look at the OpenSSL error stack */
+    err = ERR_get_error();
+    if (err == 0) {
+        /* Empty error stack, presume this is a system call error: */
+        if (sret == 0) {
+            /* EOF without close_notify, possible truncation */
+            set_error(sock, _("Secure connection truncated"));
+            return NE_SOCK_TRUNC;
+        } else {
+            /* Other socket error. */
+            errnum = ne_errno;
+            set_strerror(sock, errnum);
+            return MAP_ERR(errnum);
+        }
+    }
+
+    if (ERR_reason_error_string(err)) {
+        ne_snprintf(sock->error, sizeof sock->error, 
+                    _("SSL error: %s"), ERR_reason_error_string(err));
+    } else {
+	ne_snprintf(sock->error, sizeof sock->error, 
+                    _("SSL error code %d/%d/%lu"), sret, errnum, err);
+    }
+    
+    /* make sure the error stack is now empty. */
+    ERR_clear_error();
+    return NE_SOCK_ERROR;
 }
 
 /* Work around OpenSSL's use of 'int' rather than 'size_t', to prevent
