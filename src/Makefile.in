@@ -147,4 +147,6 @@ ne_compress.@NEON_OBJEXT@: ne_compress.c $(neonreq) ne_compress.h
 
 ne_acl.@NEON_OBJEXT@: ne_acl.c ne_acl.h $(neonreq)
 
+ne_xmlreq.@NEON_OBJEXT@: ne_xmlreq.c ne_xmlreq.h ne_xml.h $(neonreq)
+
 ne_stubssl.@NEON_OBJEXT@: ne_stubssl.c $(neonreq)
