@@ -216,7 +216,7 @@ static int match_hostname(char *cn, const char *hostname)
  * *identity.  If 'server' is non-NULL, it must be the network address
  * of the server in use, and identity must be NULL. */
 static int check_identity(const char *hostname, gnutls_x509_crt cert,
-                          char **identity, const ne_inet_addr *server)
+                          char **identity)
 {
     char name[255];
     unsigned int critical;
@@ -257,6 +257,8 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
                 if (identity) *identity = ne_strdup(name);
                 match = match_hostname(name, hostname);
             }
+        } else {
+            return -1;
         }
     }
 
@@ -275,7 +277,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
-    check_identity("", x5, &cert->identity, NULL);
+    check_identity("", x5, &cert->identity);
     return cert;
 }
 
@@ -380,14 +382,95 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     ne_free(ctx);
 }
 
-/* For internal use only. */
+/* Return the certificate chain sent by the peer, or NULL on error. */
+static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
+{
+    ne_ssl_certificate *current = NULL, *top = NULL;
+    const gnutls_datum *certs;
+    unsigned int n, count;
+
+    certs = gnutls_certificate_get_peers(sock, &count);
+    if (!certs) {
+        return NULL;
+    }
+    
+    for (n = 0; n < count; n++) {
+        ne_ssl_certificate *cert = ne_malloc(sizeof *cert);
+        gnutls_x509_crt x5;
+
+        if (gnutls_x509_crt_init(&x5) ||
+            gnutls_x509_crt_import(x5, &certs[n], GNUTLS_X509_FMT_DER)) {
+            /* leak! */
+            return NULL;
+        }
+
+        populate_cert(cert, x5);
+        
+        if (top == NULL) {
+            current = top = cert;
+        } else {
+            current->issuer = cert;
+            current = cert;
+        }
+    }
+    
+    return top;
+}
+
+/* Verifies an SSL server certificate. */
+static int check_certificate(ne_session *sess, gnutls_session sock,
+                             ne_ssl_certificate *chain)
+{
+    time_t before, after, now = time(NULL);
+    int ret, failures = 0;
+
+    before = gnutls_x509_crt_get_activation_time(chain->subject);
+    after = gnutls_x509_crt_get_expiration_time(chain->subject);
+
+    NE_DEBUG(NE_DBG_SSL, "before: %ld, now: %ld, after: %ld\n", 
+             before, now, after);
+
+    if (now < before)
+        failures |= NE_SSL_NOTYETVALID;
+    else if (now > after)
+        failures |= NE_SSL_EXPIRED;
+
+    ret = check_identity(sess->server.hostname, chain->subject, NULL);
+    if (ret < 0) {
+        ne_set_error(sess, _("Server certificate was missing commonName "
+                             "attribute in subject name"));
+        return NE_ERROR;
+    } else if (ret > 0) {
+        failures |= NE_SSL_IDMISMATCH;
+    }
+
+    if (gnutls_certificate_verify_peers(sock)) {
+        failures |= NE_SSL_UNTRUSTED;
+    }
+
+    NE_DEBUG(NE_DBG_SSL, "Failures = %d\n", failures);
+
+    if (failures == 0) {
+        ret = NE_OK;
+    } else {
+#warning TODO: set up error string
+        ret = NE_ERROR;
+        if (sess->ssl_verify_fn
+            && sess->ssl_verify_fn(sess->ssl_verify_ud, failures, chain) == 0)
+            ret = NE_OK;
+    }
+
+    return ret;
+}
+
+/* Negotiate an SSL connection. */
 int ne__negotiate_ssl(ne_request *req)
 {
     ne_session *const sess = ne_get_session(req);
     ne_ssl_context *const ctx = sess->ssl_context;
-    const gnutls_datum *chain;
-    unsigned int chain_size;
+    ne_ssl_certificate *chain;
     gnutls_session sock;
+    int ret;
 
     NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
 
@@ -397,14 +480,19 @@ int ne__negotiate_ssl(ne_request *req)
 	return NE_ERROR;
     }
 
+
     sock = ne__sock_sslsock(sess->socket);
-    
-#if 0
-    if (gnutls_certificate_verify_peers(sock)) {
-        ne_set_error(sess, _("Could not verify peer certificate"));
+
+    chain = make_peers_chain(sock);
+    if (chain == NULL) {
+        ne_set_error(sess, _("Server did not send certificate chain"));
         return NE_ERROR;
     }
-#endif
+
+    if (check_certificate(sess, sock, chain)) {
+        ne_ssl_cert_free(chain);
+        return NE_ERROR;
+    }
 
     return NE_OK;
 }
@@ -526,10 +614,7 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
                 if (ret < 0) continue;
 
                 break;
-            case GNUTLS_BAG_ENCRYPTED:
-            case GNUTLS_BAG_EMPTY:
-            case GNUTLS_BAG_UNKNOWN:
-            case GNUTLS_BAG_CRL:
+            default:
                 break;
             }
         }
