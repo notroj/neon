@@ -957,6 +957,7 @@ static int ccert_unencrypted(void)
     args.require_cc = 1;
 
     ccert = ne_ssl_clicert_read("unclient.p12");
+    ONN("could not load unclient.p12", ccert == NULL);
     ONN("unclient.p12 was encrypted", ne_ssl_clicert_encrypted(ccert));
 
     ne_ssl_set_clicert(sess, ccert);
