@@ -141,9 +141,14 @@ echo GB | ${REQ} -new -key ${srcdir}/server.key -out missingcn.csr
 REQDN=reqDN.justEmail
 echo blah@example.com | ${REQ} -new -key ${srcdir}/server.key -out justmail.csr
 
+# presume AVAs will come out in least->most specific order still...
+REQDN=reqDN.twoOU
+csr_fields "Second OU Dept
+First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
+
 ### don't put ${REQ} invocations after here
 
-for f in server client twocn caseless cnfirst missingcn justmail; do
+for f in server client twocn caseless cnfirst missingcn justmail twoou; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
