@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2004 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2005 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -25,7 +25,7 @@
 # Usage: 
 #  NEON_XML_PARSER()
 # or
-#  NEON_XML_PARSER(expat-dir)
+#  NEON_XML_PARSER([expat-srcdir], [expat-builddir])
 
 dnl Find expat: run $1 if found, else $2
 AC_DEFUN([NE_XML_EXPAT], [
@@ -71,10 +71,10 @@ fi
 CPPFLAGS="$CPPFLAGS -DXML_BYTE_ORDER=$ne_xml_border -DXML_DTD -I$1/xmlparse -I$1/xmltok"
 
 # Use the bundled expat sources
-AC_LIBOBJ($1/xmltok/xmltok)
-AC_LIBOBJ($1/xmltok/xmlrole)
-AC_LIBOBJ($1/xmlparse/xmlparse)
-AC_LIBOBJ($1/xmlparse/hashtable)
+AC_LIBOBJ($2/xmltok/xmltok)
+AC_LIBOBJ($2/xmltok/xmlrole)
+AC_LIBOBJ($2/xmlparse/xmlparse)
+AC_LIBOBJ($2/xmlparse/hashtable)
 
 AC_DEFINE(HAVE_EXPAT)
 
@@ -91,7 +91,7 @@ AC_ARG_WITH([expat],
 AS_HELP_STRING([--with-expat], [force use of expat]))
 
 dnl Flag to force choice of included expat, if available.
-ifelse($#, 1, [
+ifelse($#, 2, [
 AC_ARG_WITH([included-expat],
 AS_HELP_STRING([--with-included-expat], [use bundled expat sources]),,
 with_included_expat=no)],
@@ -138,7 +138,7 @@ if test "$NEON_NEED_XML_PARSER" = "yes"; then
     m4_if($1, [], 
        [AC_MSG_ERROR([no XML parser was found: expat or libxml 2.x required])],
        [# Configure the bundled copy of expat
-        NE_XML_BUNDLED_EXPAT($1)
+        NE_XML_BUNDLED_EXPAT($@)
 	neon_xml_parser_message="bundled expat in $1"])
   fi
 
