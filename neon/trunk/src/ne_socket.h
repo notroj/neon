@@ -156,8 +156,8 @@ int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t count);
  */
 ssize_t ne_sock_readline(ne_socket *sock, char *buffer, size_t len);
 
-/* Read exactly 'len' bytes into buffer; returns 0 on success, SOCK_*
- * on error. */
+/* Read exactly 'len' bytes into buffer; returns 0 on success,
+ * NE_SOCK_* on error. */
 ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t len);
 
 /* Accept a connection on listening socket 'fd'. */
