@@ -123,14 +123,14 @@ if test "$NEON_NEED_XML_PARSER" = "yes"; then
   esac
 
   # If expat wasn't specifically enabled and libxml was:
-  if test "${neon_xml_parser}-${with_libxml}-${with_included_expat}" = "none-yes-no"; then
+  if test "${neon_xml_parser}-${with_libxml2}-${with_included_expat}" = "none-yes-no"; then
      NE_XML_LIBXML2(
       [AC_MSG_ERROR([libxml2.x library not found, cannot proceed])])
   fi
 
-  # Otherwise, by default search for libxml2 then expat:
+  # Otherwise, by default search for expat then libxml2:
   if test "${neon_xml_parser}-${with_included_expat}" = "none-no"; then
-     NE_XML_LIBXML2([NE_XML_EXPAT([:])])
+     NE_XML_EXPAT([NE_XML_LIBXML2([:])])
   fi
 
   # If an XML parser still has not been found, fail or use the bundled expat
