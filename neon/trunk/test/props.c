@@ -547,12 +547,69 @@ static int pfind_simple(void)
     return OK;
 }
 
+struct infinite {
+    const char *header, *repeat;
+};
+
+static int serve_infinite(ne_socket *sock, void *ud)
+{
+    struct infinite *i = ud;
+
+    CALL(discard_request(sock));
+
+    SEND_STRING(sock, i->header);
+
+    while (server_send(sock, i->repeat, strlen(i->repeat)) == 0)
+        /* nullop */;
+    
+    return OK;
+}
+
+static int unbounded_response(const char *header, const char *repeats)
+{
+    ne_session *sess;
+    struct infinite i = { header, repeats};
+    int dbg;
+
+    CALL(make_session(&sess, serve_infinite, &i));
+
+    dbg = ne_debug_mask;
+
+    ONN("unbounded PROPFIND response did not fail",
+        ne_simple_propfind(sess, "/", 0, NULL, 
+                           dummy_results, NULL) != NE_ERROR);
+
+    CALL(reap_server());    
+    ne_session_destroy(sess);
+    return OK;
+}
+
+static int unbounded_propstats(void)
+{
+    return unbounded_response(
+	RESP207 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+	"<multistatus xmlns=\"DAV:\">"
+	"<response><href>/</href>",
+        "<propstat></propstat>");
+}
+
+static int unbounded_props(void)
+{
+    return unbounded_response(
+	RESP207 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+	"<multistatus xmlns=\"DAV:\">"
+	"<response><href>/</href><propstat>",
+        "<prop><jim>hello, world</jim></prop>");
+}
+
 ne_test tests[] = {
     T(two_oh_seven),
     T(patch_simple),
     T(pfind_simple),
     T(regress),
     T(patch_regress),
+    T(unbounded_props),
+    T(unbounded_propstats),
     T(NULL) 
 };
 

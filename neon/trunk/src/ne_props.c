@@ -33,6 +33,7 @@
 #include "ne_props.h"
 #include "ne_basic.h"
 #include "ne_locks.h"
+#include "ne_i18n.h"
 
 /* don't store flat props with a value > 10K */
 #define MAX_FLATPROP_LEN (102400)
@@ -83,11 +84,12 @@ struct propstat {
 /* Results set. */
 struct ne_prop_result_set_s {
     struct propstat *pstats;
-    int numpstats;
+    int numpstats, counter;
     void *private;
     char *href;
 };
 
+#define MAX_PROP_COUNTER (1024)
 
 static int 
 startelm(void *userdata, int state, const char *name, const char *nspace,
@@ -360,9 +362,15 @@ static void *start_response(void *userdata, const char *href)
 static void *start_propstat(void *userdata, void *response)
 {
     ne_prop_result_set *set = response;
-    int n;
+    ne_propfind_handler *hdl = userdata;
     struct propstat *pstat;
+    int n;
 
+    if (++hdl->current->counter == MAX_PROP_COUNTER) {
+        ne_xml_set_error(hdl->parser, _("Response exceeds maximum property count"));
+        return NULL;
+    }
+    
     n = set->numpstats;
     set->pstats = ne_realloc(set->pstats, sizeof(struct propstat) * (n+1));
     set->numpstats = n+1;
@@ -395,6 +403,13 @@ static int startelm(void *userdata, int parent,
             ne_buffer_concat(hdl->value, "<", name, ">", NULL);
         return ELM_flatprop;
     }        
+
+    /* Enforce maximum number of properties per resource to prevent a
+     * memory exhaustion attack by a hostile server. */
+    if (++hdl->current->counter == MAX_PROP_COUNTER) {
+        ne_xml_set_error(hdl->parser, _("Response exceeds maximum property count"));
+        return NE_XML_ABORT;
+    }
 
     /* Add a property to this propstat */
     n = pstat->numprops;
