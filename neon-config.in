@@ -70,12 +70,11 @@ while test $# -gt 0; do
        	;;
 
     --libs)
-	LIBS="-lneon @NEON_LIBS@"
+        LIBS="-lneon @NEON_LIBS@"
 	# Don't add standard library paths
-	case "${libdir}" in
-	/usr/lib|/lib) ;;
-	*) LIBS="-L${libdir} ${LIBS}" ;;
-	esac
+        if test "$prefix" != "/usr"; then
+           LIBS="-L${libdir} ${LIBS}" ;;
+        fi
 	echo @user_LDFLAGS@ ${LIBS}
 	;;
 
