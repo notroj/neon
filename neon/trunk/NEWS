@@ -15,6 +15,7 @@ Changes in release 0.25.0:
  - ne_set_request_body_fd takes offset and length arguments and returns void
  - ne_set_request_body_provider takes length as off_t rather than size_t.
  - ne_xml_failed() replaces ne_xml_valid(), with different return value logic
+ - ne_path_escape() now escapes all but unreserved characters
 * Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
  - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
 * Bug fixes:
