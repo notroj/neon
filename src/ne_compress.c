@@ -154,9 +154,9 @@ static int process_footer(ne_decompress *ctx,
 		ctx->state = NE_Z_FINISHED;
                 /* reader requires a size=0 call at end-of-response */
                 ctx->reader(ctx->userdata, NULL, 0);
-		NE_DEBUG(NE_DBG_HTTP, "compress: Checksum match.\n");
+		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum match.\n");
 	    } else {
-		NE_DEBUG(NE_DBG_HTTP, "compress: Checksum mismatch: "
+		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum mismatch: "
 			 "given %lu vs computed %lu\n", crc, ctx->checksum);
 		ne_set_error(ctx->session, 
 			     "Checksum invalid for compressed stream");
@@ -223,7 +223,7 @@ static int do_inflate(ne_decompress *ctx, const char *buf, size_t len)
     } while (ret == Z_OK && ctx->zstr.avail_in > 0);
     
     if (ret == Z_STREAM_END) {
-	NE_DEBUG(NE_DBG_HTTP, "compress: end of data stream, remaining %d.\n",
+	NE_DEBUG(NE_DBG_HTTP, "compress: end of data stream, %d bytes remain.\n",
 		 ctx->zstr.avail_in);
 	/* process the footer. */
 	ctx->state = NE_Z_AFTER_DATA;
