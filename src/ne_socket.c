@@ -237,7 +237,7 @@ static void init_ssl(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
-    PKCS12_PBE_add();  /* ### not sure why this is needed. */
+    OpenSSL_add_all_algorithms();
 }
 #elif defined(HAVE_GNUTLS)
 static void init_ssl(void)
