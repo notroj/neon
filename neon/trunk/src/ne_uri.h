@@ -27,9 +27,9 @@
 BEGIN_NEON_DECLS
 
 /* Return a copy of a path string with anything other than
- * "unreserved" and the forward-slash percent-encoded according to the
- * URI encoding rule. Returns a malloc-allocated string and never
- * NULL. */
+ * "unreserved" and the forward-slash character percent-encoded
+ * according to the URI encoding rules.  Returns a malloc-allocated
+ * string and never NULL. */
 char *ne_path_escape(const char *path);
 
 /* Return a decoded copy of a percent-encoded path string. Returns
