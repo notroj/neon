@@ -1,6 +1,6 @@
 /* 
    Stupidly simple test framework
-   Copyright (C) 2001-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -116,7 +116,7 @@ void t_warning(const char *str, ...)
 #define ONCMP(exp, act, ctx, name) do { \
 ONV(exp && !act, ("%s: " name " was NULL, expected non-NULL", ctx)); \
 ONV(!exp && act, ("%s: " name " was non-NULL, expected NULL", ctx)); \
-ONV(exp && strcmp(exp, act), ("%s: " name " was %s not %s", ctx, exp, act)); \
+ONV(exp && strcmp(exp, act), ("%s: " name " was '%s' not '%s'", ctx, act, exp)); \
 } while (0)
 
 /* return immediately with result of test 'x' if it fails. */
