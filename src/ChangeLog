@@ -1,3 +1,8 @@
+Wed Jul  7 16:07:44 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_request.c (do_connect): Fix ne_conn_connected status call
+	(Shameek Basu).
+
 Mon Jul  5 10:56:19 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* ne_compress.c (struct ne_decompress_s): Add acceptor field.

@@ -1363,7 +1363,7 @@ static int do_connect(ne_request *req, struct host_info *host, const char *err)
 	return NE_CONNECT;
     }
 
-    notify_status(sess, ne_conn_connected, sess->proxy.hostport);
+    notify_status(sess, ne_conn_connected, host->hostport);
     
     if (sess->rdtimeout)
 	ne_sock_read_timeout(sess->socket, sess->rdtimeout);
