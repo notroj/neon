@@ -1,3 +1,13 @@
+Sat Jul  3 11:39:01 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.m4 (LIBNEON_SOURCE_CHECKS): Pick up gethostbyname in
+	-lsocket for QNX.
+
+Wed May 19 08:36:44 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* neon.m4 (LIBNEON_SOURCE_CHECKS): Declare stpcpy on modern
+	"Linux-like" AIXes.
+
 Fri Apr 16 11:43:10 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	* neon-xml-parser.m4 (NEON_XML_PARSER): If built using libtool,

@@ -1,3 +1,31 @@
+Mon Jul  5 10:56:19 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_compress.c (struct ne_decompress_s): Add acceptor field.
+	(gz_acceptor): New function.
+	(ne_decompress_reader): Fix to pass the user-supplied userdata
+	pointer to the user-supplied acceptor callback, via gz_acceptor.
+
+Mon Jul  5 10:52:40 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_compress.c (do_inflate): Don't invoke the reader callback if
+	no bytes where produced by inflate().
+	(process_footer): Call the reader callback with size=0 to indicate
+	end-of-response for a good checksum match.
+
+Mon Jul  5 10:42:14 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_compress.c (gz_destroy, gz_pre_send): New functions.
+	(ne_decompress_reader): Register pre-send and destroy hooks,
+	to initialize the compression context before each request attempt.
+	(Justin Erenkrantz).
+
+	* ne_private.h, ne_request.c (ne_kill_pre_send): New function.
+
+Sat Jul  3 14:33:56 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (auth_challenge): Fix to set got_qop in challenge
+	correctly (Hideaki Takahashi).
+
 Sun May  2 21:14:14 2004  Joe Orton  <joe@manyfish.co.uk>
 
 	Fix buffer overflow in RFC1036 date parser, CVE CAN-2004-0389.

@@ -875,7 +875,7 @@ static int auth_challenge(auth_session *sess, const char *value)
 	    continue;
 	}
 
-	/* Strip quotes of value. */
+	/* Strip quotes off value. */
 	val = ne_shave(val, "\"'");
 
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got pair: [%s] = [%s]\n", key, val);
@@ -908,6 +908,8 @@ static int auth_challenge(auth_session *sess, const char *value)
                     chall->qop_auth_int = 1;
                 }
             } while (val);
+            
+            chall->got_qop = chall->qop_auth || chall->qop_auth_int;
 	}
     }
 
