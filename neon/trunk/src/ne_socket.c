@@ -1247,13 +1247,3 @@ int ne_sock_close(ne_socket *sock)
     ne_free(sock);
     return ret;
 }
-
-/* Returns HOST byte order port of given name */
-int ne_service_lookup(const char *name)
-{
-    struct servent *ent;
-    ent = getservbyname(name, "tcp");
-    if (ent)
-	return ntohs(ent->s_port);
-    return 0;
-}

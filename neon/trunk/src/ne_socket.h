@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -175,10 +175,6 @@ const char *ne_sock_error(const ne_socket *sock);
 
 /* Set read timeout for socket. */
 void ne_sock_read_timeout(ne_socket *sock, int timeout);
-
-/* Returns the standard TCP port for the given service, or zero if
- * none is known. */
-int ne_service_lookup(const char *name);
 
 /* Negotiate an SSL connection on socket as an SSL server, using given
  * SSL context. */
