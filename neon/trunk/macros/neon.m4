@@ -1,4 +1,5 @@
 # Copyright (C) 1998-2004 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -759,9 +760,9 @@ AC_CHECK_FUNCS(snprintf vsnprintf,,[
    break
 ])])
 
-dnl Usage: NE_CHECK_SSLVER(variable, version-string, version-hex)
+dnl Usage: NE_CHECK_OPENSSLVER(variable, version-string, version-hex)
 dnl Define 'variable' to 'yes' if OpenSSL version is >= version-hex
-AC_DEFUN([NE_CHECK_SSLVER], [
+AC_DEFUN([NE_CHECK_OPENSSLVER], [
 AC_CACHE_CHECK([OpenSSL version is >= $2], $1, [
 AC_EGREP_CPP(good, [#include <openssl/opensslv.h>
 #if OPENSSL_VERSION_NUMBER >= $3
@@ -794,17 +795,22 @@ else
    fi
 fi])
 
-dnl Check for OpenSSL
+dnl Check for an SSL library (GNU TLS or OpenSSL)
 AC_DEFUN([NEON_SSL], [
 
-AC_ARG_WITH(ssl, AS_HELP_STRING([--with-ssl], [enable OpenSSL support]))
+AC_ARG_WITH(ssl,
+            AS_HELP_STRING([--with-ssl=openssl|gnutls],
+                           [enable SSL support (default OpenSSL)]))
 
 AC_ARG_WITH(egd,
 [[  --with-egd[=PATH]       enable EGD support [using EGD socket at PATH]]])
 
 case $with_ssl in
-yes)
-
+/*)
+   AC_MSG_NOTICE([to use SSL libraries in non-standard locations, try --with-ssl --with-libs=$with_ssl])
+   AC_MSG_ERROR([--with-ssl does not take a path argument])
+   ;;
+yes|openssl)
    NE_PKG_CONFIG(NE_SSL, openssl,
     [AC_MSG_NOTICE(using SSL library configuration from pkg-config)
      CPPFLAGS="$CPPFLAGS ${NE_SSL_CFLAGS}"
@@ -817,13 +823,13 @@ yes)
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
 
    # Enable EGD support if using 0.9.7 or newer
-   NE_CHECK_SSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
+   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    if test "$ne_cv_lib_ssl097" = "yes"; then
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL (0.9.7 or later)])
    else
       # Fail if OpenSSL is older than 0.9.6
-      NE_CHECK_SSLVER(ne_cv_lib_ssl096, 0.9.6, 0x00906000L)
+      NE_CHECK_OPENSSLVER(ne_cv_lib_ssl096, 0.9.6, 0x00906000L)
       if test "$ne_cv_lib_ssl096" != "yes"; then
          AC_MSG_ERROR([OpenSSL 0.9.6 or later is required])
       fi
@@ -849,7 +855,31 @@ yes)
       fi
    fi
 
+   AC_DEFINE([HAVE_OPENSSL], 1, [Define if OpenSSL support is enabled])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
+   ;;
+gnutls)
+   AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
+
+   if test "$GNUTLS_CONFIG" = "no"; then
+     AC_MSG_ERROR([could not find libgnutls-config in \$PATH])
+   fi
+
+   ne_gnutls_ver=`$GNUTLS_CONFIG --version`
+   case $ne_gnutls_ver in
+   1.*) ;;
+   *) AC_MSG_ERROR([GNU TLS major version "$ne_gnutls_ver" not supported]) ;;
+   esac
+
+   CPPFLAGS="$CPPFLAGS `$GNUTLS_CONFIG --cflags`"
+
+   AC_CHECK_HEADER([gnutls/gnutls.h],,
+      [AC_MSG_ERROR([could not find gnutls/gnutls.h in include path])])
+
+   NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using GnuTLS $ne_gnutls_ver])
+   NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_gnutls"
+   NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
+   AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
    NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])

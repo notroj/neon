@@ -34,8 +34,12 @@
 #include <zlib.h>
 #endif
 
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
 #include <openssl/opensslv.h>
+#endif
+
+#ifdef HAVE_GNUTLS
+#include <gnutls/gnutls.h>
 #endif
 
 /* libxml2: pick up the version string. */
@@ -107,13 +111,16 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #ifdef NE_HAVE_IDNA
    ", IDNA"
 #endif
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
 #ifdef OPENSSL_VERSION_TEXT
     ", " OPENSSL_VERSION_TEXT
 #else
    "OpenSSL (unknown version)"
 #endif /* OPENSSL_VERSION_TEXT */
-#endif
+#endif /* HAVE_OPENSSL */
+#ifdef HAVE_GNUTLS
+    ", GNU TLS " LIBGNUTLS_VERSION
+#endif /* HAVE_GNUTLS */
    "."
 ;
 
