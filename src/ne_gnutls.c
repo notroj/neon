@@ -386,7 +386,10 @@ const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
 
 void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
 {
-#warning incomplete
+#warning waiting for patch in gnutls
+#if 0
+    gnutls_certificate_set_x509_trust(ctx->cred, &cert->subject, 1);
+#endif
 }
 
 void ne_ssl_trust_default_ca(ne_session *sess)
@@ -444,7 +447,7 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
         gnutls_pkcs12_bag_decrypt(bag, password == NULL ? "" : password);
 
         for (j = 0; ret == 0 && j < gnutls_pkcs12_bag_get_count(bag); ++j) {
-            gnutls_datum key_data;
+            gnutls_datum data;
 
             if (friendly_name && *friendly_name == NULL) {
                 char *name;
@@ -459,10 +462,10 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
             case GNUTLS_BAG_PKCS8_ENCRYPTED_KEY:
                 gnutls_x509_privkey_init(&pkey);
 
-                ret = gnutls_pkcs12_bag_get_data(bag, j, &key_data);
+                ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
                 if (ret < 0) continue;
 
-                ret = gnutls_x509_privkey_import_pkcs8(pkey, &key_data,
+                ret = gnutls_x509_privkey_import_pkcs8(pkey, &data,
                                                        GNUTLS_X509_FMT_DER,
                                                        password,
                                                        0);
@@ -473,6 +476,14 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
 
                 break;
             case GNUTLS_BAG_CERTIFICATE:
+                gnutls_x509_crt_init(&x5);
+
+                ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
+                if (ret < 0) continue;
+
+                ret = gnutls_x509_crt_import(x5, &data, GNUTLS_X509_FMT_DER);
+                if (ret < 0) continue;
+
                 break;
             case GNUTLS_BAG_ENCRYPTED:
                 decrypted = 0;
