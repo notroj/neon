@@ -325,7 +325,7 @@ static int retry_notcompress(void)
     return retry_compress_helper(ne_accept_2xx, &response, &expect);
 }
 
-static unsigned char retry_gz_resp2[] = 
+static char retry_gz_resp2[] = 
 "HTTP/1.1 401 Get Away\r\n"
 "Content-Encoding: gzip\r\n"
 "WWW-Authenticate: Basic realm=WallyWorld\r\n"
