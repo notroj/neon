@@ -30,6 +30,7 @@
  * ne_openssl. */
 
 #include "ne_ssl.h"
+#include "ne_socket.h"
 
 #ifdef HAVE_OPENSSL
 
@@ -40,9 +41,7 @@ struct ne_ssl_context_s {
     SSL_SESSION *sess;
 };
 
-struct ne_ssl_socket_s {
-    SSL *ssl;
-};
+typedef SSL *ne_ssl_socket;
 
 #endif /* HAVE_OPENSSL */
 
@@ -51,20 +50,15 @@ struct ne_ssl_socket_s {
 #include <gnutls/gnutls.h>
 
 struct ne_ssl_context_s {
-    gnutls_session sess;
     gnutls_dh_params dh_params;
     gnutls_rsa_params rsa_params;
-    /* Use union in case other credentials want to be added
-     * (anonymous, SRP) */
-    union {
-        gnutls_certificate_credentials cert;
-    } cred;
+    gnutls_certificate_credentials cred;
 };
 
-struct ne_ssl_socket_s {
-    gnutls_session sess;
-};
+typedef gnutls_session ne_ssl_socket;
 
 #endif /* HAVE_GNUTLS */
 
-#endif
+ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
+
+#endif /* NE_PRIVSSL_H */

@@ -137,10 +137,13 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *ccert);
 typedef struct ne_ssl_context_s ne_ssl_context;
 
 /* Create an SSL context. */
-ne_ssl_context *ne_ssl_context_create(void);
+ne_ssl_context *ne_ssl_context_create(int server);
 
 /* Trust the given certificate 'cert' in context 'ctx'. */
-void ne_ssl_ctx_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
+void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
+
+int ne_ssl_context_keypair(ne_ssl_context *ctx,
+                           const char *cert, const char *key);
 
 /* Destroy an SSL context. */
 void ne_ssl_context_destroy(ne_ssl_context *ctx);

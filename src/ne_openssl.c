@@ -481,16 +481,33 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
     sess->client_cert = dup_client_cert(cc);
 }
 
-ne_ssl_context *ne_ssl_context_create(void)
+ne_ssl_context *ne_ssl_context_create(int flags)
 {
     ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
-    ctx->ctx = SSL_CTX_new(SSLv23_client_method());
-    ctx->sess = NULL;
-    /* set client cert callback. */
-    SSL_CTX_set_client_cert_cb(ctx->ctx, provide_client_cert);
-    /* enable workarounds for buggy SSL server implementations */
-    SSL_CTX_set_options(ctx->ctx, SSL_OP_ALL);
+    if (flags == 0) {
+        ctx->ctx = SSL_CTX_new(SSLv23_client_method());
+        ctx->sess = NULL;
+        /* set client cert callback. */
+        SSL_CTX_set_client_cert_cb(ctx->ctx, provide_client_cert);
+        /* enable workarounds for buggy SSL server implementations */
+        SSL_CTX_set_options(ctx->ctx, SSL_OP_ALL);
+    } else {
+        ctx->ctx = SSL_CTX_new(SSLv23_server_method());
+    }
     return ctx;
+}
+
+int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
+                           const char *key)
+{
+    int ret;
+
+    ret = SSL_CTX_use_PrivateKey_file(ctx->ctx, key, SSL_FILETYPE_PEM);
+    if (ret == 1) {
+        ret = SSL_CTX_use_certificate_file(ctx->ctx, cert, SSL_FILETYPE_PEM);
+    }
+
+    return ret == 1 ? 0 : -1;
 }
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
@@ -506,7 +523,7 @@ int ne__negotiate_ssl(ne_request *req)
 {
     ne_session *sess = ne_get_session(req);
     ne_ssl_context *ctx = sess->ssl_context;
-    ne_ssl_socket *sock;
+    SSL *ssl;
     STACK_OF(X509) *chain;
     int freechain = 0; /* non-zero if chain should be free'd. */
 
@@ -527,12 +544,12 @@ int ne__negotiate_ssl(ne_request *req)
 	return NE_ERROR;
     }	
     
-    sock = ne_sock_sslsock(sess->socket);
+    ssl = ne__sock_sslsock(sess->socket);
 
-    chain = SSL_get_peer_cert_chain(sock->ssl);
+    chain = SSL_get_peer_cert_chain(ssl);
     /* For an SSLv2 connection, the cert chain will always be NULL. */
     if (chain == NULL) {
-        X509 *cert = SSL_get_peer_certificate(sock->ssl);
+        X509 *cert = SSL_get_peer_certificate(ssl);
         if (cert) {
             chain = sk_X509_new_null();
             sk_X509_push(chain, cert);
@@ -561,7 +578,7 @@ int ne__negotiate_ssl(ne_request *req)
 
         if (freechain) sk_X509_free(chain); /* no longer need the chain */
 
-	if (check_certificate(sess, sock->ssl, cert)) {
+	if (check_certificate(sess, ssl, cert)) {
 	    NE_DEBUG(NE_DBG_SSL, "SSL certificate checks failed: %s\n",
 		     sess->error);
 	    ne_ssl_cert_free(cert);
@@ -573,12 +590,12 @@ int ne__negotiate_ssl(ne_request *req)
     
     if (!ctx->sess) {
 	/* store the session. */
-	ctx->sess = SSL_get1_session(sock->ssl);
+	ctx->sess = SSL_get1_session(ssl);
     }
 
     if (sess->notify_cb) {
 	sess->notify_cb(sess->notify_ud, ne_conn_secure,
-                        SSL_get_version(sock->ssl));
+                        SSL_get_version(ssl));
     }
 
     return NE_OK;
@@ -604,7 +621,7 @@ const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
     return cert->identity;
 }
 
-void ne_ssl_ctx_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
+void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
 {
     X509_STORE *store = SSL_CTX_get_cert_store(ctx->ctx);
     

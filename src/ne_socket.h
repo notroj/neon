@@ -181,14 +181,10 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout);
 int ne_service_lookup(const char *name);
 
 /* Enable SSL with an already-negotiated SSL socket. */
-void ne_sock_switch_ssl(ne_socket *sock, void *ssl);
+int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 
 /* Perform an SSL negotiation on 'sock', using given context. */
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx);
-
-/* Return SSL socket object in use for 'sock'. */
-typedef struct ne_ssl_socket_s ne_ssl_socket;
-ne_ssl_socket *ne_sock_sslsock(ne_socket *sock);
 
 END_NEON_DECLS
 

@@ -153,7 +153,7 @@ ne_session *ne_session_create(const char *scheme,
 
 #ifdef NE_HAVE_SSL
     if (sess->use_ssl) {
-        sess->ssl_context = ne_ssl_context_create();
+        sess->ssl_context = ne_ssl_context_create(0);
     }
 #endif
 
@@ -276,9 +276,6 @@ void ne_ssl_provide_clicert(ne_session *sess,
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 {
 #ifdef NE_HAVE_SSL
-    ne_ssl_ctx_trustcert(sess->ssl_context, cert);
+    ne_ssl_context_trustcert(sess->ssl_context, cert);
 #endif
 }
-
-
-

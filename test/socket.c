@@ -48,9 +48,7 @@
 
 #include "ne_ssl.h"
 
-
-SSL_CTX *server_ctx;
-ne_ssl_context *client_ctx;
+ne_ssl_context *server_ctx, *client_ctx;
 #endif
 
 static ne_sock_addr *localhost;
@@ -102,7 +100,6 @@ static int do_connect(ne_socket **sock, ne_sock_addr *addr, unsigned int port)
 
 #ifdef SOCKET_SSL
 
-/* FIXME: largely cut'n'pasted from ssl.c. */
 static int init_ssl(void)
 {
     char *server_key;
@@ -112,26 +109,23 @@ static int init_ssl(void)
     if (test_argc > 1) {
 	server_key = ne_concat(test_argv[1], "/server.key", NULL);
     } else {
-	server_key = "server.key";
+	server_key = ne_strdup("server.key");
     }
 
-    ONN("sock_init failed.\n", ne_sock_init());
-    server_ctx = SSL_CTX_new(SSLv23_server_method());
+    ONN("sock_init failed", ne_sock_init());
+    server_ctx = ne_ssl_context_create(1);
     ONN("SSL_CTX_new failed", server_ctx == NULL);
-    ONN("failed to load private key",
-	!SSL_CTX_use_PrivateKey_file(server_ctx, server_key, 
-				     SSL_FILETYPE_PEM));
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(server_ctx, "server.cert", 
-				      SSL_FILETYPE_PEM));
 
-    client_ctx = ne_ssl_context_create();
+    ne_ssl_context_keypair(server_ctx, "server.cert", server_key);
+
+    client_ctx = ne_ssl_context_create(0);
     ONN("SSL_CTX_new failed for client", client_ctx == NULL);
     
     cert = ne_ssl_cert_read("ca/cert.pem");
     ONN("could not load ca/cert.pem", cert == NULL);
 
-    ne_ssl_ctx_trustcert(client_ctx, cert);
+    ne_ssl_context_trustcert(client_ctx, cert);
+    ne_free(server_key);
 
     return OK;
 }
@@ -162,24 +156,13 @@ struct serve_pair {
 static int wrap_serve(ne_socket *sock, void *ud)
 {
     struct serve_pair *pair = ud;
-    int fd = ne_sock_fd(sock), ret;
-    SSL *ssl = SSL_new(server_ctx);
-    BIO *bio = BIO_new_socket(fd, BIO_NOCLOSE);
-
-    ONN("SSL_new failed", ssl == NULL);
-    SSL_set_bio(ssl, bio, bio);
-
-#define ERROR_SSL_STRING (ERR_reason_error_string(ERR_get_error()))
-
-    NE_DEBUG(NE_DBG_SOCKET, "Doing SSL accept:\n");
-    ret = SSL_accept(ssl);
-    if (ret != 1) {
-	NE_DEBUG(NE_DBG_SOCKET, "SSL_accept failed: %s\n", ERROR_SSL_STRING);
+    
+    if (ne_sock_accept_ssl(sock, server_ctx)) {
+	NE_DEBUG(NE_DBG_SOCKET, "SSL_accept failed: %s\n", ne_sock_error(sock));
 	return 1;
     }
     
     NE_DEBUG(NE_DBG_SOCKET, "SSL accept okay.\n");
-    ne_sock_switch_ssl(sock, ssl);
     return pair->fn(sock, pair->userdata);
 }
 
