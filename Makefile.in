@@ -161,3 +161,6 @@ install-config: neon-config neon.pc
 	$(INSTALL) -d $(DESTDIR)$(pkgconfigdir)
 	$(INSTALL_DATA) neon.pc $(DESTDIR)$(pkgconfigdir)/neon.pc
 
+ChangeLog:
+	svn log > $@
+
