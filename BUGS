@@ -2,8 +2,6 @@
 Known problems/bugs in neon                                      -*- text -*-
 ---------------------------
 
-* look at escaping logic again w.r.t. ?, # characters?
-
 * 2818 requires that a on rejection of the SSL server cert, a "bad certificate"
  message should be sent - this is not being done currently (and can probably
  only be done with OpenSSL by actually doing cert verification in the verify
