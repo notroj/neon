@@ -192,8 +192,7 @@ void ne_request_destroy(ne_request *req);
 int ne_begin_request(ne_request *req);
 int ne_end_request(ne_request *req);
 
-/* Read a block of the response.  buffer must be at least 128 bytes.
- * 'buflen' must be length of buffer.
+/* Read a block of the response into the passed buffer of size 'buflen'.
  *
  * Returns:
  *  <0 - error, stop reading.
