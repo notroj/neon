@@ -102,6 +102,9 @@ ne_session.@NEON_OBJEXT@: ne_session.c ne_session.h ne_alloc.h \
 ne_openssl.@NEON_OBJEXT@: ne_openssl.c ne_session.h ne_ssl.h ne_privssl.h \
 	ne_private.h $(top_builddir)/config.h
 
+ne_gnutls.@NEON_OBJEXT@: ne_gnutls.c ne_session.h ne_ssl.h ne_privssl.h \
+	ne_private.h $(top_builddir)/config.h
+
 ne_socket.@NEON_OBJEXT@: ne_socket.c ne_socket.h $(top_builddir)/config.h \
 	ne_privssl.h ne_string.h
 
