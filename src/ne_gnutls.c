@@ -83,11 +83,11 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
 {
     if (from) {
         time_t t = gnutls_x509_crt_get_activation_time(cert->subject);
-        strftime(from, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y%Z", localtime(&t));
+        strftime(from, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
     }
     if (until) {
         time_t t = gnutls_x509_crt_get_expiration_time(cert->subject);
-        strftime(from, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y%Z", localtime(&t));
+        strftime(until, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
     }
 }
 
@@ -145,6 +145,18 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx,
                                          GNUTLS_X509_FMT_PEM);
     return 0;
 }
+
+int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
+                              const char *ca_names, const char *verify_cas)
+{
+    if (verify_cas) {
+        gnutls_certificate_set_x509_trust_file(ctx->cred, verify_cas,
+                                               GNUTLS_X509_FMT_PEM);
+    }
+#warning argh
+    return 0;
+}
+
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
