@@ -446,22 +446,24 @@ static void add_fixed_headers(ne_request *req)
         ne_buffer_zappend(req->headers, req->session->user_agent);
     }
 
-    /* Send Connection: Keep-Alive to pre-1.1 origin servers to try
-     * harder to get a persistent connection, except if using a proxy
-     * as per 2068 sec 19.7.1.  Always add TE: trailers since those
-     * are understood. */
-    if (!req->session->no_persist && !req->session->is_http11
-        && !req->session->use_proxy) {
-	ne_buffer_zappend(req->headers, 
+    /* If persistent connections are disabled, just send Connection:
+     * close; otherwise, send Connection: Keep-Alive to pre-1.1 origin
+     * servers to try harder to get a persistent connection, except if
+     * using a proxy as per 2068§19.7.1.  Always add TE: trailers. */
+    if (req->session->no_persist) {
+       ne_buffer_czappend(req->headers,
+                          "Connection: TE, close" EOL
+                          "TE: trailers" EOL);
+    } else if (!req->session->is_http11 && !req->session->use_proxy) {
+        ne_buffer_czappend(req->headers, 
                           "Keep-Alive: " EOL
                           "Connection: TE, Keep-Alive" EOL
                           "TE: trailers" EOL);
     } else {
-	ne_buffer_zappend(req->headers, 
-                          "Connection: TE" EOL
-                          "TE: trailers" EOL);
+        ne_buffer_czappend(req->headers, 
+                           "Connection: TE" EOL
+                           "TE: trailers" EOL);
     }
-
 }
 
 int ne_accept_always(void *userdata, ne_request *req, const ne_status *st)
