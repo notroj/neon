@@ -910,10 +910,10 @@ static ne_buffer *build_request(ne_request *req)
 
 static void dump_request(const char *request)
 { 
-    if ((NE_DBG_HTTPPLAIN&ne_debug_mask) == NE_DBG_HTTPPLAIN) { 
+    if (ne_debug_mask & (NE_DBG_HTTPPLAIN | NE_DBG_HTTP)) { 
 	/* Display everything mode */
 	NE_DEBUG(NE_DBG_HTTP, "Sending request headers:\n%s", request);
-    } else {
+    } else if (ne_debug_mask & NE_DBG_HTTP) {
 	/* Blank out the Authorization paramaters */
 	char *reqdebug = ne_strdup(request), *pnt = reqdebug;
 	while ((pnt = strstr(pnt, "Authorization: ")) != NULL) {
