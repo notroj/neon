@@ -156,7 +156,7 @@ const char *ne_get_response_header(ne_request *req, const char *name);
  * The order in which response headers is returned is undefined.  Both
  * the cursor and name/value pointers are valid only until the next
  * call to either ne_request_destroy or ne_begin_request for this
- * request.*/
+ * request. */
 void *ne_response_header_iterate(ne_request *req, void *cursor,
                                  const char **name, const char **value);
 
