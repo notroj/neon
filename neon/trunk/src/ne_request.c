@@ -758,9 +758,9 @@ void ne_request_destroy(ne_request *req)
 
 
 /* Reads a block of the response into buffer, which is of size buflen.
- * Returns number of bytes read, 0 on end-of-response, or NE_* on error.
- * TODO?: only make one actual read() call in here... 
- */
+ * Returns number of bytes read, 0 on end-of-response, or NE_* on
+ * error.  On error, the session error string is set and the
+ * connection closed as necessary. */
 static int read_response_block(ne_request *req, struct ne_response *resp, 
 			       char *buffer, size_t *buflen) 
 {
@@ -875,6 +875,7 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
 
     for (rdr = req->body_readers; rdr!=NULL; rdr=rdr->next) {
 	if (rdr->use && rdr->handler(rdr->userdata, buffer, readlen) != 0) {
+            ne_close_connection(req->session);
             return -1;
         }
     }
