@@ -550,7 +550,8 @@ static int line_closure(void)
     
     ret = ne_sock_readline(sock, buffer, BUFSIZ);
     ONV(ret != NE_SOCK_CLOSED, 
-	("readline got %" NE_FMT_SSIZE_T " not EOF", ret));
+	("readline got %" NE_FMT_SSIZE_T " not EOF: %s", ret,
+         ne_sock_error(sock)));
     
     return finish(sock, 0);
 }   
@@ -774,7 +775,8 @@ static int ssl_closure(void)
         ret = ne_sock_fullwrite(sock, "a", 1);
     } while (ret == 0);
     ONV(ret != NE_SOCK_RESET && ret != NE_SOCK_CLOSED, 
-	("write got %" NE_FMT_SSIZE_T " not reset or closure", ret));
+	("write got %" NE_FMT_SSIZE_T " not reset or closure: %s", ret,
+         ne_sock_error(sock)));
     return good_close(sock);
 }
 
@@ -819,7 +821,8 @@ static int write_reset(void)
         ne_sock_close(sock);
         return SKIP;
     }
-    ONV(ret != NE_SOCK_RESET, ("write got %d not reset", ret));
+    ONV(ret != NE_SOCK_RESET, 
+        ("write got %d not reset: %s", ret, ne_sock_error(sock)));
     return good_close(sock);
 }
 
@@ -835,7 +838,9 @@ static int read_reset(void)
         ne_sock_close(sock);
         return SKIP;
     }
-    ONV(ret != NE_SOCK_RESET, ("read got %" NE_FMT_SSIZE_T " not reset", ret));
+    ONV(ret != NE_SOCK_RESET, 
+        ("read got %" NE_FMT_SSIZE_T " not reset: %s", ret,
+         ne_sock_error(sock)));
     return good_close(sock);
 }    
 #endif
