@@ -1513,13 +1513,11 @@ static int open_connection(ne_request *req)
         if (req->session->use_proxy)
             ret = proxy_tunnel(sess);
         
-        if (ret == NE_OK)
+        if (ret == NE_OK) {
             ret = ne__negotiate_ssl(req);
-
-        /* This is probably only really needed for ne_negotiate_ssl
-         * failures as proxy_tunnel will fail via aborted(). */
-        if (ret != NE_OK)
-            ne_close_connection(sess);
+            if (ret != NE_OK)
+                ne_close_connection(sess);
+        }
     }
 #endif
     
