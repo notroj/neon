@@ -170,7 +170,7 @@ static int server_child(int readyfd, struct in_addr addr, int port,
 
 #ifdef USE_PIPE
     /* Tell the parent we're ready for the request. */
-    write(readyfd, "a", 1);
+    if (write(readyfd, "a", 1) != 1) abort();
 #endif
 
     ONN("accept failed", ne_sock_accept(s, listener));
@@ -268,7 +268,7 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	listener = do_listen(lh_addr, port);
 
 #ifdef USE_PIPE
-	write(fds[1], "Z", 1);
+	if (write(fds[1], "Z", 1) != 1) abort();
 #endif
 
 	close(fds[1]);

@@ -100,29 +100,34 @@ void t_warning(const char *str, ...)
 (NE_DBG_HTTP | NE_DBG_SOCKET | NE_DBG_HTTPBODY | NE_DBG_HTTPAUTH | \
  NE_DBG_LOCKS | NE_DBG_XMLPARSE | NE_DBG_XML | NE_DBG_SSL)
 
-#define W(m) write(0, m, strlen(m))
+#define W(m) do { if (write(0, m, strlen(m)) < 0) exit(99); } while(0)
 
+#define W_RED(m) do { if (use_colour) W("\033[41;37;01m"); \
+W(m); if (use_colour) W("\033[00m\n"); } while (0);
+
+/* Signal handler for child processes. */
 static void child_segv(int signo)
 {
-    signal(SIGSEGV, SIG_DFL);
-    W("(possible segfault in child, not dumping core)\n");
-    exit(-1);
+    signal(SIGSEGV, SIG_DFL); 
+    signal(SIGABRT, SIG_DFL);
+    W_RED("Fatal signal in child!");
+    kill(getpid(), SIGSEGV);
+    minisleep();
 }
 
-static void segv(int signo)
+/* Signal handler for parent process. */
+static void parent_segv(int signo)
 {
     signal(SIGSEGV, SIG_DFL);
-    if (use_colour) {
-	W("\033[41;37;01m");
+    signal(SIGABRT, SIG_DFL);
+    if (signo == SIGSEGV) {
+        W_RED("FAILED - segmentation fault");
+    } else if (signo == SIGABRT) {
+        W_RED("ABORTED");
     }
-    W("FAILED - segmentation fault.");
-    if (use_colour) {
-	W("\033[00m");
-    }
-    W("\n");
-    fflush(debug);
     reap_server();
     kill(getpid(), SIGSEGV);
+    minisleep();
 }
 
 void in_child(void)
@@ -130,6 +135,7 @@ void in_child(void)
     ne_debug_init(child_debug, TEST_DEBUG);    
     NE_DEBUG(TEST_DEBUG, "**** Child forked for test %s ****\n", test_name);
     signal(SIGSEGV, child_segv);
+    signal(SIGABRT, child_segv);
 }
 
 int main(int argc, char *argv[])
@@ -174,7 +180,8 @@ int main(int argc, char *argv[])
     }
 
     /* install special SEGV handler. */
-    signal(SIGSEGV, segv);
+    signal(SIGSEGV, parent_segv);
+    signal(SIGABRT, parent_segv);
 
     /* test the "no-debugging" mode of ne_debug. */
     ne_debug_init(NULL, 0);
