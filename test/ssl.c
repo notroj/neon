@@ -1188,6 +1188,7 @@ static int cert_identities(void)
     static const struct {
         const char *fname, *identity;
     } certs[] = {
+        { "ssigned.pem", "localhost" },
         { "twocn.cert", "localhost" },
         { "altname1.cert", "localhost" },
         { "altname2.cert", "nohost.example.com" },
