@@ -879,7 +879,7 @@ int ne_sock_connect(ne_socket *sock,
     }
 #endif
 
-    if (raw_connect(fd, addr, ntohs(port))) {
+    if (raw_connect(fd, addr, htons(port))) {
         set_strerror(sock, ne_errno);
 	ne_close(fd);
 	return -1;
