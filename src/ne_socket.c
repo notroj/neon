@@ -170,8 +170,8 @@ struct iofns {
     /* Read up to 'len' bytes into 'buf' from socket.  Return <0 on
      * error or EOF, or >0; number of bytes read. */
     ssize_t (*read)(ne_socket *s, char *buf, size_t len);
-    /* Write exactly 'len' bytes from 'buf' to socket.  Return zero on
-     * success, <0 on error. */
+    /* Write up to 'len' bytes from 'buf' to socket.  Return number of
+     * bytes written on success, or <0 on error. */
     ssize_t (*write)(ne_socket *s, const char *buf, size_t len);
     /* Wait up to 'n' seconds for socket to become readable.  Returns
      * 0 when readable, otherwise NE_SOCK_TIMEOUT or NE_SOCK_ERROR. */
@@ -485,23 +485,18 @@ static ssize_t read_raw(ne_socket *sock, char *buffer, size_t len)
 
 static ssize_t write_raw(ne_socket *sock, const char *data, size_t length) 
 {
-    ssize_t wrote;
+    ssize_t ret;
     
     do {
-	wrote = send(sock->fd, data, length, 0);
-        if (wrote > 0) {
-            data += wrote;
-            length -= wrote;
-        }
-    } while ((wrote > 0 || NE_ISINTR(ne_errno)) && length > 0);
+	ret = send(sock->fd, data, length, 0);
+    } while (ret == -1 && NE_ISINTR(ne_errno));
 
-    if (wrote < 0) {
+    if (ret < 0) {
 	int errnum = ne_errno;
 	set_strerror(sock, errnum);
 	return MAP_ERR(errnum);
     }
-
-    return 0;
+    return ret;
 }
 
 static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw };
@@ -581,7 +576,7 @@ static ssize_t write_ossl(ne_socket *sock, const char *data, size_t len)
      * return < length. */
     if (ret != ilen)
 	return error_ossl(sock, ret);
-    return 0;
+    return ret;
 }
 
 static const struct iofns iofns_ssl = {
@@ -671,7 +666,7 @@ static ssize_t write_gnutls(ne_socket *sock, const char *data, size_t len)
     if (ret < 0)
 	return error_gnutls(sock, ret);
 
-    return 0;
+    return ret;
 }
 
 static const struct iofns iofns_ssl = {
@@ -684,7 +679,17 @@ static const struct iofns iofns_ssl = {
 
 int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t len)
 {
-    return sock->ops->write(sock, data, len);
+    ssize_t ret;
+
+    do {
+        ret = sock->ops->write(sock, data, len);
+        if (ret > 0) {
+            data += ret;
+            len -= ret;
+        }
+    } while (ret > 0 && len > 0);
+
+    return ret < 0 ? ret : 0;
 }
 
 ssize_t ne_sock_readline(ne_socket *sock, char *buf, size_t buflen)
