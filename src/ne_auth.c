@@ -74,9 +74,9 @@
 #include "ne_sspi.h"
 #endif
 
-/* TODO: should remove this eventually. Need it for
- * ne_pull_request_body. */
-#include "ne_private.h"
+#ifdef HAVE_GSSAPI
+#include "ne_private.h" /* only need to extract proxy hostname */
+#endif
 
 #define HOOK_SERVER_ID "http://webdav.org/neon/hooks/server-auth"
 #define HOOK_PROXY_ID "http://webdav.org/neon/hooks/proxy-auth"
@@ -636,14 +636,6 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
     
     NE_DEBUG(NE_DBG_HTTPAUTH, "I like this Digest challenge.\n");
 
-    return 0;
-}
-
-/* callback for ne_pull_request_body. */
-static int digest_body(void *userdata, const char *buf, size_t count)
-{
-    struct ne_md5_ctx *ctx = userdata;
-    ne_md5_process_bytes(buf, count, ctx);
     return 0;
 }
 
