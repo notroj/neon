@@ -44,7 +44,8 @@ NEON_BASEOBJS = ne_request.@NEON_OBJEXT@ ne_session.@NEON_OBJEXT@ 	    \
 
 NEON_DAVOBJS = $(NEON_BASEOBJS) \
 	ne_207.@NEON_OBJEXT@ ne_xml.@NEON_OBJEXT@ \
-	ne_props.@NEON_OBJEXT@ ne_locks.@NEON_OBJEXT@
+	ne_props.@NEON_OBJEXT@ ne_locks.@NEON_OBJEXT@ \
+	ne_xmlreq.@NEON_OBJEXT@
 
 OBJECTS = @NEONOBJS@ @NEON_EXTRAOBJS@
 
