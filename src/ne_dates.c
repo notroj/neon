@@ -34,6 +34,10 @@
 #include <string.h>
 #endif
 
+#ifdef WIN32
+#include <windows.h> /* for TIME_ZONE_INFORMATION */
+#endif
+
 #include "ne_alloc.h"
 #include "ne_dates.h"
 #include "ne_string.h"
