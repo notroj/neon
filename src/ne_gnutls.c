@@ -317,39 +317,6 @@ void ne_ssl_trust_default_ca(ne_session *sess)
 #warning incomplete
 }
 
-/* Functions from GNU TLS manual examples.
- *
- * Helper functions to load a certificate and key
- * files into memory. They use mmap for simplicity.
- */
-static gnutls_datum mmap_file(const char* filename)
-{
-    int fd;
-    gnutls_datum mmaped_file = { NULL, 0 };
-    struct stat stat_st;
-    void* ptr;
-
-    fd = open(filename, 0);
-    if (fd == -1)
-        return mmaped_file;
-
-    fstat(fd, &stat_st);
-
-    if ((ptr = mmap(NULL, stat_st.st_size,
-                    PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
-        return mmaped_file;
-
-    mmaped_file.data = ptr;
-    mmaped_file.size = stat_st.st_size;
-
-    return mmaped_file;
-}
-
-static void munmap_file( gnutls_datum data)
-{
-    munmap(data.data, data.size);
-}
-
 ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
 {
     return NULL;
@@ -375,25 +342,51 @@ const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert)
     return ccert->friendly_name;
 }
 
+/* Read the contents of file FILENAME into *DATUM. */
+static int read_to_datum(const char *filename, gnutls_datum *datum)
+{
+    FILE *f = fopen(filename, "r");
+    ne_buffer *buf;
+    char tmp[4192];
+    size_t len;
+
+    if (!f) {
+        return -1;
+    }
+
+    buf = ne_buffer_ncreate(8192);
+    while ((len = fread(tmp, 1, sizeof tmp, f)) > 0) {
+        ne_buffer_append(buf, tmp, len);
+    }
+
+    if (!feof(f)) {
+        ne_buffer_destroy(buf);
+        return -1;
+    }
+    
+    datum->size = ne_buffer_size(buf);
+    datum->data = ne_buffer_finish(buf);
+    return 0;
+}
+
 ne_ssl_certificate *ne_ssl_cert_read(const char *filename)
 {
     int ret;
     gnutls_datum data;
     gnutls_x509_crt x5;
 
-    data = mmap_file(filename);
-    if (data.data == NULL)
+    if (read_to_datum(filename, &data))
         return NULL;
 
     if (gnutls_x509_crt_init(&x5) != 0)
         return NULL;
 
     ret = gnutls_x509_crt_import(x5, &data, GNUTLS_X509_FMT_PEM);
+    ne_free(data.data);
     if (ret < 0) {
         gnutls_x509_crt_deinit(x5);
         return NULL;
     }
-    munmap_file(data);
     
     return populate_cert(ne_calloc(sizeof(struct ne_ssl_certificate_s)), x5);
 }
