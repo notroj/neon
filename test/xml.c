@@ -237,6 +237,8 @@ static int matches(void)
         { "\xEF\xBB\xBF" PFX "<hello/>", "<{}hello></{}hello>" },
         /* UTF-8 XML Byte Order Mark */
         { "\xEF\xBB\xBF" PFX "<hello/>", "<{}hello></{}hello>", match_chunked },
+        /* UTF-8 XML Byte Order Mark sans prolog */
+        { "\xEF\xBB\xBF" "<hello/>", "<{}hello></{}hello>" },
 
 	/*** Tests for namespace handling. ***/
 #define NSA "xmlns:foo='bar'"
