@@ -5,11 +5,12 @@ Changes in release 0.25.0:
  - ne_read_response_to_fd() and ne_discard_response() for use with
    ne_begin_request/ne_end_request response handling.
  - ne_xmlreq.h: ne_xml_parse_response() and ne_xml_dispatch_request()
- - ne_set_request_body_fd64() call for using an fd opened using O_LARGEFILE
- - ne_set_request_body_provider64(), takes an off64_t length argument
  - ne_has_feature() for feature detection, replaces ne_support_ssl()
  - ne_set_addrlist() can be used to bypass normal DNS hostname resolver
  - ne_buffer_czappend(), convenience wrapper for ne_buffer_append.
+* New interfaces on LFS systems for large file support:
+ - ne_set_request_body_fd64() call for using an fd opened using O_LARGEFILE
+ - ne_set_request_body_provider64(), takes an off64_t length argument
 * Interface changes:
  - ne_set_request_body_fd takes offset and length arguments and returns void
  - ne_set_request_body_provider takes length as off_t rather than size_t;
@@ -19,6 +20,7 @@ Changes in release 0.25.0:
  - ne_set_request_expect100() replaces ne_set_expect100() as a per-request flag
  - ne_path_escape() now escapes all but unreserved characters
  - ne_ssl_clicert_name() and ne_ssl_cert_identity() clarified to return UTF-8.
+ - ne_uri_parse()/ne_uri_free() memory handling clarified.
 * Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
  - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
 * Bug fixes:
@@ -31,6 +33,7 @@ Changes in release 0.25.0:
  - Win32: Negotiate/NTLM support using SSPI (Vladimir Berezniker)
 * Removed features:
  - the cookies interface has been removed
+ - ne_service_lookup() removed
 
 Changes in release 0.24.7:
 * Compression interface fixes:
