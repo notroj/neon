@@ -74,7 +74,7 @@ void ne_set_request_body_fd64(ne_request *req, int fd,
  * per request (for authentication retries etc.).
  *
  * For a call with buflen == 0, the callback must return zero on success
- * on non-zero on error; the session error string must be set on error.
+ * or non-zero on error; the session error string must be set on error.
  * For a call with buflen > 0, the callback must return:
  *        <0           : error, abort request; session error string must be set.
  *         0           : ignore 'buffer' contents, end of body.
