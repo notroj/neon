@@ -489,8 +489,11 @@ dnl Work out which specifier character to use
 m4_ifdef([ne_spec], [m4_undefine([ne_spec])])
 m4_if($#, 3, [m4_define(ne_spec,$3)], [m4_define(ne_spec,d)])
 
-AC_CACHE_CHECK([how to print $1], [ne_cv_fmt_$1], [
-ne_cv_fmt_$1=none
+m4_ifdef([ne_cvar], [m4_undefine([ne_cvar])])dnl
+m4_define([ne_cvar], m4_translit(ne_cv_fmt_[$1], [ ], [_]))dnl
+
+AC_CACHE_CHECK([how to print $1], [ne_cvar], [
+ne_cvar=none
 if test $ne_fmt_trycompile = yes; then
   oflags="$CPPFLAGS"
   # Consider format string mismatches as errors
@@ -500,25 +503,25 @@ if test $ne_fmt_trycompile = yes; then
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 $2
 #include <stdio.h>]], [[$1 i = 1; printf("%$str", i);]])],
-	[ne_cv_fmt_$1=$str; break])
+	[ne_cvar=$str; break])
   done
   CPPFLAGS=$oflags
 else
   # Best guess. Don't have to be too precise since we probably won't
   # get a warning message anyway.
-  case $ac_cv_sizeof_$1 in
-  $ac_cv_sizeof_int) ne_cv_fmt_$1="ne_spec" ;;
-  $ac_cv_sizeof_long) ne_cv_fmt_$1="l]ne_spec[" ;;
-  $ac_cv_sizeof_long_long) ne_cv_fmt_$1="ll]ne_spec[" ;;
+  case $ac_cv_sizeof_]m4_translit($1, [ ], [_])[ in
+  $ac_cv_sizeof_int) ne_cvar="ne_spec" ;;
+  $ac_cv_sizeof_long) ne_cvar="l]ne_spec[" ;;
+  $ac_cv_sizeof_long_long) ne_cvar="ll]ne_spec[" ;;
   esac
 fi
 ])
 
-if test "x$ne_cv_fmt_$1" = "xnone"; then
+if test "x$ne_cvar" = "xnone"; then
   AC_MSG_ERROR([format string for $1 not found])
 fi
 
-AC_DEFINE_UNQUOTED([NE_FMT_]translit($1, a-z, A-Z), "$ne_cv_fmt_$1", 
+AC_DEFINE_UNQUOTED([NE_FMT_]m4_translit($1, [a-z ], [A-Z_]), "$ne_cvar", 
 	[Define to be printf format string for $1])
 ])
 
