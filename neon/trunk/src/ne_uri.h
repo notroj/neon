@@ -1,6 +1,6 @@
 /* 
-   HTTP URI handling
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   URI manipulation routines.
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -26,13 +26,16 @@
 
 BEGIN_NEON_DECLS
 
-/* Un-escapes a path. Returns malloc-allocated path on success, or
- * NULL on an invalid %<HEX><HEX> sequence. */
-char *ne_path_unescape(const char *uri);
+/* Return a copy of a path string with anything other than
+ * "unreserved" and the forward-slash percent-encoded according to the
+ * URI encoding rule. Returns a malloc-allocated string and never
+ * NULL. */
+char *ne_path_escape(const char *path);
 
-/* Escapes the a path segment: returns malloc-allocated string on
- * success, or NULL on malloc failure.  */
-char *ne_path_escape(const char *abs_path);
+/* Return a decoded copy of a percent-encoded path string. Returns
+ * malloc-allocated path on success, or NULL if the string contained
+ * any syntactically invalid percent-encoding sequences. */
+char *ne_path_unescape(const char *epath);
 
 /* Returns malloc-allocated parent of path, or NULL if path has no
  * parent (such as "/"). */
