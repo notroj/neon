@@ -1,6 +1,6 @@
 /* 
    WebDAV property manipulation
-   Copyright (C) 2000-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2000-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -142,7 +142,7 @@ static int propfind(ne_propfind_handler *handler,
     if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;
     } else if (!ne_xml_valid(handler->parser)) {
-	ne_set_error(handler->sess, ne_xml_get_error(handler->parser));
+	ne_set_error(handler->sess, "%s", ne_xml_get_error(handler->parser));
 	ret = NE_ERROR;
     }
 

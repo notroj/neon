@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -320,12 +320,12 @@ int ne_simple_request(ne_session *sess, ne_request *req)
 	if (ne_get_status(req)->code == 207) {
 	    if (!ne_xml_valid(p)) { 
 		/* The parse was invalid */
-		ne_set_error(sess, ne_xml_get_error(p));
+		ne_set_error(sess, "%s", ne_xml_get_error(p));
 		ret = NE_ERROR;
 	    } else if (ctx.is_error) {
 		/* If we've actually got any error information
 		 * from the 207, then set that as the error */
-		ne_set_error(sess, ctx.buf->data);
+		ne_set_error(sess, "%s", ctx.buf->data);
 		ret = NE_ERROR;
 	    }
 	} else if (ne_get_status(req)->klass != 2) {

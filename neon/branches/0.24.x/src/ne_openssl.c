@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -86,10 +86,36 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
          * attribute in dname. */
 	if ((OBJ_cmp(ent->object, cname) && OBJ_cmp(ent->object, email)) ||
             (!flag && n == 1)) {
-	    if (flag)
+ 	    if (flag++)
 		ne_buffer_append(dump, ", ", 2);
-	    ne_buffer_append(dump, ent->value->data, ent->value->length);
-	    flag = 1;
+
+            switch (ent->value->type) {
+            case V_ASN1_UTF8STRING:
+            case V_ASN1_IA5STRING: /* definitely ASCII */
+            case V_ASN1_VISIBLESTRING: /* probably ASCII */
+            case V_ASN1_PRINTABLESTRING: /* subset of ASCII */
+                ne_buffer_append(dump, ent->value->data, ent->value->length);
+                break;
+            case V_ASN1_UNIVERSALSTRING:
+            case V_ASN1_T61STRING: /* let OpenSSL convert it as ISO-8859-1 */
+            case V_ASN1_BMPSTRING: {
+                unsigned char *tmp = ""; /* initialize to workaround 0.9.6 bug */
+                int len;
+
+                len = ASN1_STRING_to_UTF8(&tmp, ent->value);
+                if (len > 0) {
+                    ne_buffer_append(dump, tmp, len);
+                    OPENSSL_free(tmp);
+                    break;
+                } else {
+                    ERR_clear_error();
+                    /* and fall through */
+                }
+            }
+            default:
+                ne_buffer_zappend(dump, "???");
+                break;
+            }                
 	}
     }
 

@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -734,7 +734,7 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
 	}
 	else if (parse_failed) {
 	    ret = NE_ERROR;
-	    ne_set_error(sess, ne_xml_get_error(parser));
+	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	}
 	else if (ne_get_status(req)->code == 207) {
 	    ret = NE_ERROR;
@@ -802,7 +802,7 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
     if (ret == NE_OK && ne_get_status(req)->klass == 2) {
 	if (parse_failed) {
 	    ret = NE_ERROR;
-	    ne_set_error(sess, ne_xml_get_error(parser));
+	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	}
 	else if (ne_get_status(req)->code == 207) {
 	    ret = NE_ERROR;

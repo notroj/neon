@@ -1,3 +1,14 @@
+Changes in release 0.24.5:
+* SECURITY (CVE CAN-2004-0179): Fix format string vulnerabilities in
+ XML/207 response handling, reported by greuff@void.at.
+* Performance fix: avoid seeding the SSL PRNG if not creating an SSL socket.
+* ne_ssl_readable_dname() is now defined to return UTF-8 strings.
+* Fix case where gssapi/gssapi_generic.h was included but not present.
+* Fix ne_utils.c build on platforms where zlib does "#define const".
+* Fix use of ne_proppatch_operation with some C++ compilers.
+* Update libtool for fix to --enable-shared on Darwin.
+* BeOS: check for gethostbyname in -lbind (David Reid).
+
 Changes in release 0.24.4:
 * Ignore unclean SSL closure when response body is delimited by EOF
  ("Could not read response body: Secure connection truncated" errors

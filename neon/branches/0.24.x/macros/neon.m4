@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2003 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2004 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -122,7 +122,7 @@ AC_DEFUN([NEON_VERSIONS], [
 # Define the current versions.
 NEON_VERSION_MAJOR=0
 NEON_VERSION_MINOR=24
-NEON_VERSION_RELEASE=4
+NEON_VERSION_RELEASE=5
 NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
@@ -493,7 +493,7 @@ AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy)
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
 NE_SEARCH_LIBS(socket, socket inet)
-NE_SEARCH_LIBS(gethostbyname, nsl)
+NE_SEARCH_LIBS(gethostbyname, nsl bind)
 
 # Enable getaddrinfo() support only if all the necessary functions
 # are found.
@@ -791,6 +791,7 @@ if test "x$KRB5_CONFIG" != "xnone"; then
       ne_save_LIBS=$NEON_LIBS
       AC_MSG_NOTICE([GSSAPI authentication support enabled])
       AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
+      AC_CHECK_HEADERS(gssapi/gssapi_generic.h)
       # MIT Kerberos lacks GSS_C_NT_HOSTBASED_SERVICE
       AC_CHECK_DECL([GSS_C_NT_HOSTBASED_SERVICE],,
         [AC_DEFINE([GSS_C_NT_HOSTBASED_SERVICE], gss_nt_service_name, 

@@ -1,3 +1,79 @@
+Wed Apr 14 10:39:53 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	Fix format string vulnerabilities, CVE CAN-2004-0179:
+	
+	* ne_207.c (ne_simple_request): Avoid format string
+	vulnerabilities.
+
+	* ne_xml.c (ne_xml_set_error): Likewise.
+
+	* ne_props.c (propfind): Likewise.
+
+	* ne_locks.c (ne_lock, ne_lock_refresh): Likewise.
+
+Wed Apr 14 10:33:46 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (ah_post_send): Avoid false positives from gcc
+	-Wformat-security.
+
+Tue Apr 13 20:51:41 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c: Conditionally include gssapi_generic.h.
+
+Thu Apr  8 13:40:03 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_props.h: Don't use an anonymous enum for the proppatch
+	operation type, as some C++ compilers don't like it.
+
+Sun Mar 28 02:59:58 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (get_cnonce): Only use RAND_pseudo_bytes() if the PRNG
+	is seeded.
+
+Fri Mar 26 12:16:15 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_socket.c (init_ssl): Just initialize the SSL library; delay
+	seeding PRNG until really necessary (performance fix).
+	(seed_ssl_prng): Split from init_ssl.
+	(ne_sock_connect_ssl): Call seed_ssl_prng().
+	(ne_sock_init): Adjust since init_ssl() can't fail.
+
+Fri Mar 26 12:01:38 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_utils.c: Include zlib.h before ne_*.h to fix issues
+	on platforms where zconf.h does "#define const".
+
+Fri Mar 26 11:55:06 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (get_gss_name, request_gssapi, gssapi_challenge,
+	auth_challenge): Implement the Negotiate auth scheme rather than
+	the obsolete GSS-Negotiate, and fix memory leaks.  Only accept
+	Negotiate challenges over SSL.
+
+Sun Feb 15 13:37:03 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_ssl.h: Define that ne_ssl_readable_dname returns UTF-8
+	encoded strings.
+
+	* ne_openssl.c (ne_ssl_readable_dname): Convert dname strings to
+	UTF-8, or use "???".
+
+Sat Jan 24 16:49:30 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (basic_challenge): Cast first parameter to ne_base64
+	to unsigned char * to fix warnings with some compilers.
+
+Thu Nov 13 20:38:28 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_request.c (ne_begin_request): Presume a 205 response has no
+	message-body too; RFC2616 compliance fix.
+
+Thu Nov 13 20:31:07 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* ne_auth.c (ah_post_send): Treat a 401 response to a CONNECT
+	request as a valid proxy auth challenge, to work around buggy
+	proxies.
+
 Wed Oct 22 22:19:19 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* ne_request.c (read_response_block): Treat an EOF without clean

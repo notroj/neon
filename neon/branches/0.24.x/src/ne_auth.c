@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -67,10 +67,12 @@
 #include "ne_i18n.h"
 
 #ifdef HAVE_GSSAPI
-#ifdef HAVE_GSSAPI_GSSAPI_H /* MIT */
+#ifdef HAVE_GSSAPI_GSSAPI_H
 #include <gssapi/gssapi.h>
+#ifdef HAVE_GSSAPI_GSSAPI_GENERIC_H
 #include <gssapi/gssapi_generic.h>
-#else /* Heimdal. */
+#endif
+#else
 #include <gssapi.h>
 #endif
 #endif
@@ -226,7 +228,7 @@ static char *get_cnonce(void)
     ne_md5_init_ctx(&hash);
 
 #ifdef NEON_SSL
-    if (RAND_pseudo_bytes(data, sizeof data) >= 0)
+    if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
 	ne_md5_process_bytes(data, sizeof data, &hash);
     else {
 #endif
@@ -300,7 +302,7 @@ static int basic_challenge(auth_session *sess, struct auth_challenge *parms)
     sess->scheme = auth_scheme_basic;
 
     tmp = ne_concat(sess->username, ":", password, NULL);
-    sess->basic = ne_base64(tmp, strlen(tmp));
+    sess->basic = ne_base64((unsigned char *)tmp, strlen(tmp));
     ne_free(tmp);
 
     /* Paranoia. */
@@ -319,7 +321,7 @@ static char *request_basic(auth_session *sess)
 /* Add GSSAPI authentication credentials to a request */
 static char *request_gssapi(auth_session *sess) 
 {
-    return ne_concat("GSS-Negotiate ", sess->gssapi_token, "\r\n", NULL);
+    return ne_concat("Negotiate ", sess->gssapi_token, "\r\n", NULL);
 }
 
 static int get_gss_name(gss_name_t *server, auth_session *sess)
@@ -327,7 +329,7 @@ static int get_gss_name(gss_name_t *server, auth_session *sess)
     unsigned int major_status, minor_status;
     gss_buffer_desc token = GSS_C_EMPTY_BUFFER;
 
-    token.value = ne_concat("khttp@", sess->sess->server.hostname, NULL);
+    token.value = ne_concat("HTTP@", sess->sess->server.hostname, NULL);
     token.length = strlen(token.value);
 
     major_status = gss_import_name(&minor_status, &token,
@@ -357,14 +359,16 @@ gssapi_challenge(auth_session *sess, struct auth_challenge *parms)
                                         &context,
                                         server_name,
                                         GSS_C_NO_OID,
-                                        GSS_C_DELEG_FLAG,
                                         0,
+                                        GSS_C_INDEFINITE,
                                         GSS_C_NO_CHANNEL_BINDINGS,
                                         &input_token,
                                         NULL,
                                         &output_token,
                                         NULL,
                                         NULL);
+    gss_release_name(&minor_status, &server_name);
+
     if (GSS_ERROR(major_status)) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "gss_init_sec_context failed.\n");
         return -1;
@@ -374,6 +378,7 @@ gssapi_challenge(auth_session *sess, struct auth_challenge *parms)
         return -1;
 
     sess->gssapi_token = ne_base64(output_token.value, output_token.length);
+    gss_release_buffer(&major_status, &output_token);
 
     NE_DEBUG(NE_DBG_HTTPAUTH, 
              "Base64 encoded GSSAPI challenge: %s.\n", sess->gssapi_token);
@@ -852,7 +857,7 @@ static int auth_challenge(auth_session *sess, const char *value)
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Digest scheme.\n");
 		chall->scheme = auth_scheme_digest;
 #ifdef HAVE_GSSAPI		
-	    } else if (strcasecmp(key, "gss-negotiate") == 0) {
+	    } else if (strcasecmp(key, "negotiate") == 0) {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "GSSAPI scheme.\n");
 		chall->scheme = auth_scheme_gssapi;
 #endif
@@ -917,15 +922,17 @@ static int auth_challenge(auth_session *sess, const char *value)
     success = 0;
 
 #ifdef HAVE_GSSAPI
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for GSSAPI.\n");
-    /* Try a GSSAPI challenge */
-    for (chall = challenges; chall != NULL; chall = chall->next) {
-	if (chall->scheme == auth_scheme_gssapi) {
+    if (strcmp(ne_get_scheme(sess->sess), "https") == 0) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for GSSAPI.\n");
+        /* Try a GSSAPI challenge */
+        for (chall = challenges; chall != NULL; chall = chall->next) {
+            if (chall->scheme == auth_scheme_gssapi) {
 	    if (!gssapi_challenge(sess, chall)) {
 		success = 1;
 		break;
 	    }
-	}
+            }
+        }
     }
 #endif
 
@@ -1080,10 +1087,13 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     if (areq->auth_info_hdr != NULL && 
 	verify_response(areq, sess, areq->auth_info_hdr)) {
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Response authentication invalid.\n");
-	ne_set_error(sess->sess, _(sess->spec->fail_msg));
+	ne_set_error(sess->sess, "%s", _(sess->spec->fail_msg));
 	ret = NE_ERROR;
-    } else if (status->code == sess->spec->status_code && 
+    } else if ((status->code == sess->spec->status_code ||
+                (status->code == 401 && sess->context == AUTH_CONNECT)) &&
 	       areq->auth_hdr != NULL) {
+        /* note above: allow a 401 in response to a CONNECT request
+         * from a proxy since some buggy proxies send that. */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got challenge with code %d.\n", status->code);
 	if (!auth_challenge(sess, areq->auth_hdr)) {
 	    ret = NE_RETRY;

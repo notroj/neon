@@ -1,3 +1,20 @@
+Wed Apr 14 10:45:43 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* props.c (regress, patch_regress): Add regression tests for
+	CAN-2004-0179 issues.
+
+Sun Feb 15 12:34:13 2004  Joe Orton  <joe@manyfish.co.uk>
+
+	* makekeys.sh, openssl.conf: Create new utf8subj.cert,
+	bmpsubj.cert, t61subj.cert certificates.
+
+	* ssl.c (dname_readable): Test that ne_ssl_readable_dname always
+	gives back UTF-8.
+
+Thu Nov 13 20:33:44 2003  Joe Orton  <joe@manyfish.co.uk>
+
+	* request.c (no_body_205): New test.
+
 Sat Oct 25 00:11:29 2003  Joe Orton  <joe@manyfish.co.uk>
 
 	* ssl.c (fail_truncated_eof): Remove test.
