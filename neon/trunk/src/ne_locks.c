@@ -719,8 +719,6 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
     ne_buffer_zappend(body, "</lockinfo>" EOL);
 
     ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
-    ne_add_response_body_reader(req, ne_accept_2xx, 
-				ne_xml_parse_v, parser);
     ne_add_request_header(req, "Content-Type", NE_XML_MEDIA_TYPE);
     ne_add_depth_header(req, lock->depth);
     add_timeout_header(req, lock->timeout);
@@ -734,7 +732,7 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
     /* This one is clearer from 2518 sec 8.10.4. */
     ne_lock_using_resource(req, lock->uri.path, lock->depth);
 
-    ret = ne_request_dispatch(req);
+    ret = ne_xml_dispatch_request(req, parser);
 
     ne_buffer_destroy(body);
     ne_buffer_destroy(ctx.cdata);
