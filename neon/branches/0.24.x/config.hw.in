@@ -1,7 +1,7 @@
 /* 
    Win32 config.h
    Copyright (C) 1999-2000, Peter Boos <pedib@colorfullife.com>
-   Copyright (C) 2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002, 2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -35,6 +35,7 @@
 #define HAVE_STRING_H
 
 #define HAVE_MEMCPY
+#define HAVE_SETSOCKOPT
 
 #ifndef NEON_NODAV
 #define USE_DAV_LOCKS
