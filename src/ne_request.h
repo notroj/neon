@@ -228,6 +228,15 @@ int ne_end_request(ne_request *req);
  */
 ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen);
 
+/* Read response blocks until end of response; exactly equivalent to
+ * calling ne_read_response_block() until it returns 0.  Returns
+ * non-zero on error. */
+int ne_discard_response(ne_request *req);
+
+/* Read response blocks until end of response, writing content to the
+ * given file descriptor.  Returns NE_ERROR on error. */
+int ne_read_response_to_fd(ne_request *req, int fd);
+
 /* Include the HTTP/1.1 header "Expect: 100-continue" in request 'req'
  * if 'flag' is non-zero.  Warning: 100-continue support is not
  * implemented correctly in some HTTP/1.1 servers, enabling this

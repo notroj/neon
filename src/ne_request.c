@@ -1294,6 +1294,45 @@ int ne_end_request(ne_request *req)
     return ret;
 }
 
+int ne_read_response_to_fd(ne_request *req, int fd)
+{
+    ssize_t len;
+
+    while ((len = ne_read_response_block(req, req->respbuf, 
+                                         sizeof req->respbuf)) > 0) {
+        const char *block = req->respbuf;
+
+        do {
+            ssize_t ret = write(fd, block, len);
+            if (ret == -1 && errno == EINTR) {
+                continue;
+            } else if (ret < 0) {
+                char err[200];
+                ne_strerror(errno, err, sizeof err);
+                ne_set_error(ne_get_session(req), 
+                             _("Could not write to file: %s"), err);
+                return NE_ERROR;
+            } else {
+                len -= ret;
+                block += ret;
+            }
+        } while (len > 0);
+    }
+    
+    return len == 0 ? NE_OK : NE_ERROR;
+}
+
+int ne_discard_response(ne_request *req)
+{
+    ssize_t len;
+
+    do {
+        len = ne_read_response_block(req, req->respbuf, sizeof req->respbuf);
+    } while (len > 0);
+    
+    return len == 0 ? NE_OK : NE_ERROR;
+}
+
 int ne_request_dispatch(ne_request *req) 
 {
     int ret;
