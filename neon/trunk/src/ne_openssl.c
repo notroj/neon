@@ -481,18 +481,20 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
     sess->client_cert = dup_client_cert(cc);
 }
 
-ne_ssl_context *ne_ssl_context_create(int flags)
+ne_ssl_context *ne_ssl_context_create(int mode)
 {
-    ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
-    if (flags == 0) {
+    ne_ssl_context *ctx = ne_calloc(sizeof *ctx);
+    if (mode == NE_SSL_CTX_CLIENT) {
         ctx->ctx = SSL_CTX_new(SSLv23_client_method());
         ctx->sess = NULL;
         /* set client cert callback. */
         SSL_CTX_set_client_cert_cb(ctx->ctx, provide_client_cert);
         /* enable workarounds for buggy SSL server implementations */
         SSL_CTX_set_options(ctx->ctx, SSL_OP_ALL);
-    } else {
+    } else if (mode == NE_SSL_CTX_SERVER) {
         ctx->ctx = SSL_CTX_new(SSLv23_server_method());
+    } else {
+        ctx->ctx = SSL_CTX_new(SSLv2_server_method());
     }
     return ctx;
 }
@@ -508,6 +510,25 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
     }
 
     return ret == 1 ? 0 : -1;
+}
+
+int ne_ssl_context_set_verify(ne_ssl_context *ctx, 
+                              int required,
+                              const char *ca_names,
+                              const char *verify_cas)
+{
+    if (required) {
+        SSL_CTX_set_verify(ctx->ctx, SSL_VERIFY_PEER | 
+                           SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+    }
+    if (ca_names) {
+        SSL_CTX_set_client_CA_list(ctx->ctx, 
+                                   SSL_load_client_CA_file(ca_names));
+    }
+    if (verify_cas) {
+        SSL_CTX_load_verify_locations(ctx->ctx, verify_cas, NULL);
+    }
+    return 0;
 }
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
