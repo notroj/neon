@@ -272,6 +272,8 @@ static int addr_make_v6(void)
     return OK;
 }
 
+static const unsigned char raw_1234[] = "\x01\x02\x03\x04";
+
 static int addr_compare(void)
 {
     ne_inet_addr *ia1, *ia2;
@@ -285,21 +287,25 @@ static int addr_compare(void)
     ONV(ret != 0, ("comparison of equal IPv4 addresses was %d", ret));
     ne_iaddr_free(ia2);
 
-    ia2 = ne_iaddr_make(ne_iaddr_ipv4, "abcd");
+    ia2 = ne_iaddr_make(ne_iaddr_ipv4, raw_1234);
     ret = ne_iaddr_cmp(ia1, ia2);
     ONN("comparison of unequal IPv4 addresses was zero", ret == 0);
     
 #ifdef TEST_IPV6
     ne_iaddr_free(ia2);
-    ia2 = ne_iaddr_make(ne_iaddr_ipv6, "feed::1");
+    ia2 = ne_iaddr_make(ne_iaddr_ipv6, raw6_cafe);
     ret = ne_iaddr_cmp(ia1, ia2);
     ONN("comparison of IPv4 and IPv6 addresses was zero", ret == 0);
 
     ne_iaddr_free(ia1);
-    ia1 = ne_iaddr_make(ne_iaddr_ipv6, "feed::1");
+    ia1 = ne_iaddr_make(ne_iaddr_ipv6, raw6_cafe);
     ret = ne_iaddr_cmp(ia1, ia2);
-    ONN("comparison of equal IPv6 addresses was zero", ret != 0);
+    ONN("comparison of equal IPv6 addresses was not zero", ret != 0);
 
+    ne_iaddr_free(ia1);
+    ia1 = ne_iaddr_make(ne_iaddr_ipv6, raw6_babe);
+    ret = ne_iaddr_cmp(ia1, ia2);
+    ONN("comparison of unequal IPv6 address was zero", ret == 0);
 #endif    
 
     ne_iaddr_free(ia1);
