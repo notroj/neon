@@ -399,12 +399,17 @@ static int peek_close(void)
 /* do a sock_peek() on sock for 'len' bytes, and expect 'str'. */
 static int peek_expect(ne_socket *sock, const char *str, size_t len)
 {
-    ssize_t ret = ne_sock_peek(sock, buffer, len);
+    ssize_t ret;
+    memset(buffer, '@', sizeof buffer);
+    ret = ne_sock_peek(sock, buffer, len);
     ONV((ssize_t)len != ret, 
 	("peek got %" NE_FMT_SSIZE_T " bytes not %" NE_FMT_SIZE_T, ret, len));
     ONV(memcmp(str, buffer, len),
 	("peek mismatch: `%.*s' not `%.*s'", 
-	 (int)len, buffer, (int)len, str));    
+	 (int)len, buffer, (int)len, str));
+    ONV(buffer[len] != '@',
+        ("buffer overrun: %" NE_FMT_SSIZE_T "nth byte was '%c' not '@'", 
+         len, buffer[len]));
     return OK;
 }
 
