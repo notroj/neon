@@ -19,13 +19,6 @@
 
 */
 
-
-/* HTTP Authentication, as per RFC2617.
- * 
- * TODO:
- *  - Test auth-int support
- */
-
 #include "config.h"
 
 #include <sys/types.h>
@@ -106,8 +99,7 @@ typedef enum {
 /* Selected method of qop which the client is using */
 typedef enum {
     auth_qop_none,
-    auth_qop_auth,
-    auth_qop_auth_int
+    auth_qop_auth
 } auth_qop;
 
 /* A challenge */
@@ -119,7 +111,6 @@ struct auth_challenge {
     unsigned int stale:1; /* if stale=true */
     unsigned int got_qop:1; /* we were given a qop directive */
     unsigned int qop_auth:1; /* "auth" token in qop attrib */
-    unsigned int qop_auth_int:1; /* "auth-int" token in qop attrib */
     auth_algorithm alg;
     struct auth_challenge *next;
 };
@@ -563,10 +554,9 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
     char password[NE_ABUFSIZ];
 
     /* Verify they've given us the right bits. */
-    if (parms->alg == auth_alg_unknown ||
-	((parms->alg == auth_alg_md5_sess) &&
-	 !(parms->qop_auth || parms->qop_auth_int)) ||
-	parms->realm==NULL || parms->nonce==NULL) {
+    if (parms->alg == auth_alg_unknown 
+        || (parms->alg == auth_alg_md5_sess && !parms->qop_auth)
+        || parms->realm == NULL || parms->nonce == NULL) {
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Invalid challenge.");
 	return -1;
     }
@@ -601,11 +591,7 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
 	/* What type of qop are we to apply to the message? */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got qop directive.\n");
 	sess->nonce_count = 0;
-	if (parms->qop_auth_int) {
-	    sess->qop = auth_qop_auth_int;
-	} else {
-	    sess->qop = auth_qop_auth;
-	}
+        sess->qop = auth_qop_auth;
     } else {
 	/* No qop at all/ */
 	sess->qop = auth_qop_none;
@@ -669,7 +655,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     unsigned char a2_md5[16], rdig_md5[16];
     char a2_md5_ascii[33], rdig_md5_ascii[33];
     char nc_value[9] = {0};
-    const char *qop_value; /* qop-value */
+    const char *qop_value = "auth"; /* qop-value */
     ne_buffer *ret;
 
     /* Increase the nonce-count */
@@ -680,37 +666,11 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 		 sess->nonce_count, nc_value);
     }
 
-    qop_value = sess->qop == auth_qop_auth_int ? "auth-int" : "auth";
-
     /* Calculate H(A2). */
     ne_md5_init_ctx(&a2);
     ne_md5_process_bytes(req->method, strlen(req->method), &a2);
     ne_md5_process_bytes(":", 1, &a2);
     ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-    
-    if (sess->qop == auth_qop_auth_int) {
-	struct ne_md5_ctx body;
-	char tmp_md5_ascii[33];
-	unsigned char tmp_md5[16];
-	
-	ne_md5_init_ctx(&body);
-
-	/* Calculate H(entity-body): pull in the request body from
-	 * where-ever it is coming from, and calculate the digest. */
-	
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Digesting request body...\n");
-	ne__pull_request_body(req->request, digest_body, &body);
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Digesting request body done.\n");
-		
-	ne_md5_finish_ctx(&body, tmp_md5);
-	ne_md5_to_ascii(tmp_md5, tmp_md5_ascii);
-
-	NE_DEBUG(NE_DBG_HTTPAUTH, "H(entity-body) is [%s]\n", tmp_md5_ascii);
-	
-	/* Append to A2 */
-	ne_md5_process_bytes(":", 1, &a2);
-	ne_md5_process_bytes(tmp_md5_ascii, 32, &a2);
-    }
     ne_md5_finish_ctx(&a2, a2_md5);
     ne_md5_to_ascii(a2_md5, a2_md5_ascii);
     NE_DEBUG(NE_DBG_HTTPAUTH, "H(A2): %s\n", a2_md5_ascii);
@@ -884,10 +844,8 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 	val = ne_shave(val, "\"");
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Pair: [%s] = [%s]\n", key, val);
 	if (strcasecmp(key, "qop") == 0) {
-	    qop_value = val;
-	    if (strcasecmp(val, "auth-int") == 0) {
-		qop = auth_qop_auth_int;
-	    } else if (strcasecmp(val, "auth") == 0) {
+            qop_value = val;
+            if (strcasecmp(val, "auth") == 0) {
 		qop = auth_qop_auth;
 	    } else {
 		qop = auth_qop_none;
@@ -934,16 +892,6 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 		ne_md5_init_ctx(&a2);
 		ne_md5_process_bytes(":", 1, &a2);
 		ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-		if (qop == auth_qop_auth_int) {
-		    unsigned char heb_md5[16];
-		    char heb_md5_ascii[33];
-		    /* Add on ":" H(entity-body) */
-		    ne_md5_finish_ctx(&req->response_body, heb_md5);
-		    ne_md5_to_ascii(heb_md5, heb_md5_ascii);
-		    ne_md5_process_bytes(":", 1, &a2);
-		    ne_md5_process_bytes(heb_md5_ascii, 32, &a2);
-		    NE_DEBUG(NE_DBG_HTTPAUTH, "Digested [:%s]\n", heb_md5_ascii);
-		}
 		ne_md5_finish_ctx(&a2, a2_md5);
 		ne_md5_to_ascii(a2_md5, a2_md5_ascii);
 		
@@ -1095,12 +1043,10 @@ static int auth_challenge(auth_session *sess, const char *value)
                 
                 if (strcasecmp(tok, "auth") == 0) {
                     chall->qop_auth = 1;
-                } else if (strcasecmp(tok, "auth-int") == 0 ) {
-                    chall->qop_auth_int = 1;
                 }
             } while (val);
             
-            chall->got_qop = chall->qop_auth || chall->qop_auth_int;
+            chall->got_qop = chall->qop_auth;
 	}
     }
 
@@ -1203,16 +1149,6 @@ static int auth_challenge(auth_session *sess, const char *value)
     return !success;
 }
 
-/* The body reader callback. */
-static int auth_body_reader(void *cookie, const char *block, size_t length)
-{
-    struct ne_md5_ctx *ctx = cookie;
-    NE_DEBUG(NE_DBG_HTTPAUTH, 
-	     "Digesting %" NE_FMT_SIZE_T " bytes of response body.\n", length);
-    ne_md5_process_bytes(block, length, ctx);
-    return 0;
-}
-
 static void ah_create(ne_request *req, void *session, const char *method,
 		      const char *uri)
 {
@@ -1250,14 +1186,6 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Handling auth session.\n");
 	req->will_handle = 1;
 
-	if (sess->qop == auth_qop_auth_int) {
-	    /* Digest mode / qop=auth-int: take an MD5 digest of the
-	     * response body. */
-	    ne_md5_init_ctx(&req->response_body);
-	    ne_add_response_body_reader(req->request, ne_accept_always, 
-					auth_body_reader, &req->response_body);
-	}
-	
 	switch(sess->scheme) {
 	case auth_scheme_basic:
 	    value = request_basic(sess);
