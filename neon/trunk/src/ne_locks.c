@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -575,12 +575,15 @@ static int lk_startelm(void *userdata, int parent,
     if (id == 0)
         return NE_XML_DECLINE;    
 
-    if (parent == 0) {
+    if (parent == 0 && ctx->token == NULL) {
         const char *token = ne_get_response_header(ctx->req, "Lock-Token");
         /* at the root element; retrieve the Lock-Token header,
          * and bail if it wasn't given. */
-        if (token == NULL)
+        if (token == NULL) {
+            ne_set_error(ne_get_session(ctx->req), "%s",
+                         _("LOCK response missing Lock-Token header"));
             return NE_XML_ABORT;
+        }
 
         if (token[0] == '<') token++;
         ctx->token = ne_strdup(token);
@@ -779,12 +782,13 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
 {
     ne_request *req = ne_request_create(sess, "LOCK", lock->uri.path);
     ne_xml_parser *parser = ne_xml_create();
-    int ret, parse_failed;
+    int ret;
     struct lock_ctx ctx;
 
     memset(&ctx, 0, sizeof ctx);
     ctx.cdata = ne_buffer_create();
     ctx.req = req;
+    ctx.token = lock->token;
 
     /* Handle the response and update *lock appropriately. */
     ne_xml_push_handler(parser, lk_startelm, lk_cdata, lk_endelm, &ctx);
@@ -802,22 +806,21 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
 
     ret = ne_request_dispatch(req);
 
-    parse_failed = ne_xml_failed(parser);
-    
     if (ret == NE_OK && ne_get_status(req)->klass == 2) {
-	if (parse_failed) {
+        if (ne_xml_failed(parser)) {
 	    ret = NE_ERROR;
 	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	}
 	else if (ne_get_status(req)->code == 207) {
 	    ret = NE_ERROR;
 	    /* TODO: set the error string appropriately */
-	}
+	} else {
+            ret = NE_OK;
+        }
     } else {
 	ret = NE_ERROR;
     }
 
-    if (ctx.token) ne_free(ctx.token);
     ne_buffer_destroy(ctx.cdata);
     ne_request_destroy(req);
     ne_xml_destroy(parser);
