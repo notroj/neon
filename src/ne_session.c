@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -31,10 +31,6 @@
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
-#endif
-
-#ifdef NE_HAVE_IDNA
-#include <idna.h>
 #endif
 
 #include "ne_session.h"
@@ -122,14 +118,6 @@ static void set_hostport(struct host_info *host, unsigned int defaultport)
 static void
 set_hostinfo(struct host_info *info, const char *hostname, unsigned int port)
 {
-#ifdef NE_HAVE_IDNA
-    char *ihost;
-        
-#define FLAGS IDNA_USE_STD3_ASCII_RULES
-    if (idna_to_ascii_8z(hostname, &ihost, FLAGS) == IDNA_SUCCESS)
-        info->hostname = ihost;
-    else /* fall back to use provided hostname string */
-#endif
     info->hostname = ne_strdup(hostname);
     info->port = port;
 }

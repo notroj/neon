@@ -1,6 +1,6 @@
 /* 
    utils tests
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -268,11 +268,6 @@ static int support(void)
     ONN("IPv6 support not advertised", !ne_has_support(NE_FEATURE_IPV6));
 #else
     ONN("IPv6 support advertised", ne_has_support(NE_FEATURE_IPV6));
-#endif
-#ifdef NE_HAVE_IDNA
-    ONN("IDNA support not advertised", !ne_has_support(NE_FEATURE_IDNA));
-#else
-    ONN("IDNA support advertised", ne_has_support(NE_FEATURE_IDNA));
 #endif
 #ifdef NE_HAVE_LFS
     ONN("LFS support not advertised", !ne_has_support(NE_FEATURE_LFS));

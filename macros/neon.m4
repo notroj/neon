@@ -240,7 +240,6 @@ NEON_CHECK_VERSION([
     neon_xml_parser_message="using whatever neon uses"
     NEON_CHECK_SUPPORT([ssl], [SSL], [SSL])
     NEON_CHECK_SUPPORT([zlib], [ZLIB], [zlib])
-    NEON_CHECK_SUPPORT([idna], [IDNA], [IDNA])
     NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
     NEON_CHECK_SUPPORT([lfs], [LFS], [LFS])
     NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
@@ -638,7 +637,6 @@ fi
 
 NEON_SSL()
 NEON_SOCKS()
-NEON_LIBIDN()
 NEON_GSSAPI()
 
 AC_SUBST(NEON_CFLAGS)
@@ -893,21 +891,6 @@ gnutls)
 esac
 AC_SUBST(NEON_SUPPORTS_SSL)
 ])
-
-dnl Check for GNU libidn
-AC_DEFUN([NEON_LIBIDN], [
-AC_ARG_WITH(libidn, AS_HELP_STRING(--without-libidn, disable IDNA support))
-if test "$with_libidn" != "no"; then
-  ne_use_idna=no
-  AC_CHECK_HEADER(idna.h,
-    [NE_SEARCH_LIBS(idna_to_ascii_8z,idn,,,[ne_use_idna=yes])])
-  if test $ne_use_idna = yes; then
-    NE_ENABLE_SUPPORT(IDNA, [IDNA support enabled using GNU libidn])
-  else
-    NE_DISABLE_SUPPORT(IDNA, 
-      [IDNA support not enabled; GNU libidn >=0.2.0 required])
-  fi
-fi])
 
 dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
