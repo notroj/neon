@@ -56,7 +56,7 @@ DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \
 all: subdirs
 
 check: subdirs
-	cd test && $(MAKE) check
+	@cd test && $(MAKE) check
 
 # Useful for doing coverage analysis; use e.g.:
 #   make TESTS=string-tests MODULE=ne_string.c cover
@@ -73,10 +73,7 @@ uncover: subdirs
 	@grep ^function src/$(MODULE).gcov | grep -v 'executed 100' | sort -nr -k 9,9
 
 subdirs:
-	cd src && $(MAKE)
-	@echo
-	@echo "  Compilation complete. Run '$(MAKE) install' (as root?) to install neon."
-	@echo
+	@cd src && $(MAKE)
 
 # Uses Tim Waugh's excellent "xmlto" utility, see
 # http://cyberelk.net/tim/xmlto/.  (The docs target is executed at release
@@ -103,8 +100,8 @@ docs-valid:
 	xmllint --noout --valid doc/manual.xml
 
 clean:
-	cd src && $(MAKE) clean
-	cd test && $(MAKE) clean
+	@cd src && $(MAKE) clean
+	@cd test && $(MAKE) clean
 
 distclean: clean
 	rm -rf Makefile config.h neon.pc config.status src/Makefile libtool config.log config.cache neon-config autom4te*.cache test/Makefile
