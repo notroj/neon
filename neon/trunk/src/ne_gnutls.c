@@ -64,33 +64,78 @@ struct ne_ssl_client_cert_s {
     char *friendly_name;
 };
 
+/* Returns the highest used index in subject (or issuer) DN of
+ * certificate CERT for OID, or -1 if no RDNs are present in the DN
+ * using that OID. */
+static int oid_find_highest_index(gnutls_x509_crt cert, int subject, const char *oid)
+{
+    int ret, idx = -1;
+
+    do {
+        size_t len = 0;
+
+        if (subject)
+            ret = gnutls_x509_crt_get_dn_by_oid(cert, oid, ++idx, 0, 
+                                                NULL, &len);
+        else
+            ret = gnutls_x509_crt_get_issuer_dn_by_oid(cert, oid, ++idx, 0, 
+                                                       NULL, &len);
+    } while (ret == GNUTLS_E_SHORT_MEMORY_BUFFER);
+    
+    return idx - 1;
+}
+
 /* Appends the value of RDN with given oid from certitifcate x5
  * subject (if subject is non-zero), or issuer DN to buffer 'buf': */
 static void append_rdn(ne_buffer *buf, gnutls_x509_crt x5, int subject, const char *oid)
 {
+    int idx, top, ret;
     char rdn[50];
-    size_t rdnlen = sizeof rdn;
-    int ret;
 
-    if (subject)
-        ret = gnutls_x509_crt_get_dn_by_oid(x5, oid, 0, 0, rdn, &rdnlen);
-    else
-        ret = gnutls_x509_crt_get_issuer_dn_by_oid(x5, oid, 0, 0, rdn, &rdnlen);
+    top = oid_find_highest_index(x5, subject, oid);
+    
+    for (idx = top; idx >= 0; idx--) {
+        size_t rdnlen = sizeof rdn;
 
-    if (ret < 0)
-        return;
+        if (subject)
+            ret = gnutls_x509_crt_get_dn_by_oid(x5, oid, idx, 0, rdn, &rdnlen);
+        else
+            ret = gnutls_x509_crt_get_issuer_dn_by_oid(x5, oid, idx, 0, rdn, &rdnlen);
+        
+        if (ret < 0)
+            return;
 
-    if (buf->used > 1) {
-        ne_buffer_append(buf, ", ", 2);
+        if (buf->used > 1) {
+            ne_buffer_append(buf, ", ", 2);
+        }
+        
+        ne_buffer_append(buf, rdn, rdnlen);
     }
-
-    ne_buffer_append(buf, rdn, rdnlen);
 }
 
 
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 {
     ne_buffer *buf = ne_buffer_create();
+#if 0
+    /* this code can be used once there is a released version of GnuTLS
+     * with fixed _get_dn_oid functions */
+    int ret, idx = 0;
+
+    do {
+        char oid[32] = {0};
+        size_t oidlen = sizeof oid;
+        
+        ret = name->subject 
+            ? gnutls_x509_crt_get_dn_oid(name->cert, idx, oid, &oidlen)
+            : gnutls_x509_crt_get_issuer_dn_oid(name->cert, idx, oid, &oidlen);
+        
+        if (ret == 0) {
+            append_rdn(buf, name->cert, name->subject, oid);
+            idx++;
+        }
+    } while (ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE);
+#else
 
 #define APPEND_RDN(x) append_rdn(buf, name->cert, name->subject, GNUTLS_OID_##x)
 
@@ -104,6 +149,7 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
     if (buf->used == 1) APPEND_RDN(PKCS9_EMAIL);
 
 #undef APPEND_RDN
+#endif
 
     return ne_buffer_finish(buf);
 }
@@ -191,19 +237,13 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
     /* Check against the commonName if no DNS alt. names were found,
      * as per RFC3280. */
     if (!found) {
-        seq = -1;
-        
-        do {
-            len = 0;
-            ret = gnutls_x509_crt_get_dn_by_oid(cert, GNUTLS_OID_X520_COMMON_NAME,
-                                                ++seq, 0, NULL, &len);
-        } while (ret == GNUTLS_E_SHORT_MEMORY_BUFFER);
+        seq = oid_find_highest_index(cert, 1, GNUTLS_OID_X520_COMMON_NAME);
 
-        if (seq > 0) {
+        if (seq >= 0) {
             len = sizeof name;
             name[0] = '\0';
             ret = gnutls_x509_crt_get_dn_by_oid(cert, GNUTLS_OID_X520_COMMON_NAME,
-                                                seq - 1, 0, name, &len);
+                                                seq, 0, name, &len);
             if (ret == 0) {
                 if (identity) *identity = ne_strdup(name);
                 match = match_hostname(name, hostname);
