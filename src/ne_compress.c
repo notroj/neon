@@ -44,12 +44,12 @@
  * be inflated. */
 
 struct ne_decompress_s {
+    ne_request *request; /* associated request. */
     ne_session *session; /* associated session. */
     /* temporary buffer for holding inflated data. */
     char outbuf[BUFSIZ];
     z_stream zstr;
     int zstrinit; /* non-zero if zstr has been initialized */
-    char *enchdr; /* value of Content-Enconding response header. */
 
     /* pass blocks back to this. */
     ne_block_reader reader;
@@ -241,13 +241,15 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     ne_decompress *ctx = ud;
     const char *zbuf;
     size_t count;
+    const char *hdr;
 
     if (len == 0) {
         /* End of response: */
         switch (ctx->state) {
-        case NE_Z_BEFORE_DATA: 
-            if (ctx->enchdr && strcasecmp(ctx->enchdr, "gzip") == 0) {
-                /* response was truncated: break out. */
+        case NE_Z_BEFORE_DATA:
+            hdr = ne_get_response_header(ctx->request, "Content-Encoding");
+            if (hdr && strcasecmp(hdr, "gzip") == 0) {
+                /* response was truncated: return error. */
                 break;
             }
             /* else, fall through */
@@ -280,7 +282,8 @@ static int gz_reader(void *ud, const char *buf, size_t len)
 
     case NE_Z_BEFORE_DATA:
 	/* work out whether this is a compressed response or not. */
-	if (ctx->enchdr && strcasecmp(ctx->enchdr, "gzip") == 0) {
+        hdr = ne_get_response_header(ctx->request, "Content-Encoding");
+        if (hdr && strcasecmp(hdr, "gzip") == 0) {
             int ret;
 	    NE_DEBUG(NE_DBG_HTTP, "compress: got gzipped stream.\n");
 
@@ -376,9 +379,6 @@ void ne_decompress_destroy(ne_decompress *ctx)
 	 * return value. */
 	inflateEnd(&ctx->zstr);
 
-    if (ctx->enchdr)
-	ne_free(ctx->enchdr);
-
     ne_free(ctx);
 }
 
@@ -396,15 +396,13 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 
     ne_add_request_header(req, "Accept-Encoding", "gzip");
 
-    ne_add_response_header_handler(req, "Content-Encoding", 
-				   ne_duplicate_header, &ctx->enchdr);
-
     ne_add_response_body_reader(req, gz_acceptor, gz_reader, ctx);
 
     ctx->state = NE_Z_BEFORE_DATA;
     ctx->reader = rdr;
     ctx->userdata = userdata;
     ctx->session = ne_get_session(req);
+    ctx->request = req;
     /* initialize the checksum. */
     ctx->checksum = crc32(0L, Z_NULL, 0);
     ctx->acceptor = acpt;

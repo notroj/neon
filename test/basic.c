@@ -72,9 +72,33 @@ static int content_type(void)
 
     for (n = 0; ctypes[n].value != NULL; n++) {
 	ne_content_type ct = {0};
+        ne_session *sess;
+        ne_request *req;
+        char resp[200];
+        int rv;
 
-	ne_content_type_handler(&ct, ctypes[n].value);
-	
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.0 200 OK\r\n" "Content-Length: 0\r\n"
+                    "Content-Type: %s\r\n" "\r\n", ctypes[n].value);
+        
+        CALL(make_session(&sess, single_serve_string, resp));
+
+        req = ne_request_create(sess, "GET", "/anyfoo");
+        ONREQ(ne_request_dispatch(req));
+        rv = ne_get_content_type(req, &ct);
+        
+        ONV(rv == 0 && !ctypes[n].type,
+            ("expected c-t parse failure for %s", ctypes[n].value));
+
+        ONV(rv != 0 && ctypes[n].type,
+            ("c-t parse failure %d for %s", rv, ctypes[n].value));
+
+        ne_request_destroy(req);
+        ne_session_destroy(sess);
+        CALL(await_server());
+
+        if (rv) continue;	
+
 	ONV(strcmp(ct.type, ctypes[n].type),
 	    ("for `%s': type was `%s'", ctypes[n].value, ct.type));
 
@@ -92,7 +116,7 @@ static int content_type(void)
 	    strcmp(ctypes[n].charset, ct.charset),
 	    ("for `%s': charset was `%s'", ctypes[n].value, ct.charset));
 
-	NE_FREE(ct.value);
+	ne_free(ct.value);
     }
 
     return OK;

@@ -140,35 +140,9 @@ typedef int (*ne_block_reader)(void *userdata, const char *buf, size_t len);
 void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
 				 ne_block_reader reader, void *userdata);
 
-/* Handle response headers. Each handler is associated with a specific
- * header field (indicated by name). The handler is then passed the
- * value of this header field. */
-
-/* The header handler callback type */
-typedef void (*ne_header_handler)(void *userdata, const char *value);
-
-/* Adds a response header handler for the given request. userdata is passed
- * as the first argument to the header handler, and the 'value' is the
- * header field value (i.e. doesn't include the "Header-Name: " part").
- */
-void ne_add_response_header_handler(ne_request *req, const char *name, 
-				    ne_header_handler hdl, void *userdata);
-
-/* Add handler which is passed ALL header values regardless of name */
-void ne_add_response_header_catcher(ne_request *req, 
-				    ne_header_handler hdl, void *userdata);
-
-/* Stock header handlers:
- *  'duplicate': *(char **)userdata = strdup(value)
- *  'numeric':   *(int *)userdata = atoi(value)
- * e.g.
- *   int mynum;
- *   ne_add_response_header_handler(myreq, "Content-Length",
- *                                    ne_handle_numeric_handler, &mynum);
- * ... arranges mynum to be set to the value of the Content-Length header.
- */
-void ne_duplicate_header(void *userdata, const char *value);
-void ne_handle_numeric_header(void *userdata, const char *value);
+/* Retrieve a response header of given name; returns NULL if response
+ * header with given name was not found. */
+const char *ne_get_response_header(ne_request *req, const char *name);
 
 /* Adds a header to the request with given name and value. */
 void ne_add_request_header(ne_request *req, const char *name, 

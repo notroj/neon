@@ -39,7 +39,6 @@
 #define REDIRECT_ID "http://www.webdav.org/neon/hooks/http-redirect"
 
 struct redirect {
-    char *location;
     char *requri;
     int valid; /* non-zero if .uri contains a redirect */
     ne_uri uri;
@@ -50,11 +49,8 @@ static void
 create(ne_request *req, void *session, const char *method, const char *uri)
 {
     struct redirect *red = session;
-    NE_FREE(red->location);
     NE_FREE(red->requri);
     red->requri = ne_strdup(uri);
-    ne_add_response_header_handler(req, "Location", ne_duplicate_header,
-				   &red->location);
 }
 
 #define REDIR(n) ((n) == 301 || (n) == 302 || (n) == 303 || \
@@ -63,14 +59,17 @@ create(ne_request *req, void *session, const char *method, const char *uri)
 static int post_send(ne_request *req, void *private, const ne_status *status)
 {
     struct redirect *red = private;
+    const char *location = ne_get_response_header(req, "Location");
+    ne_buffer *path = NULL;
+    int ret;
 
     /* Don't do anything for non-redirect status or no Location header. */
-    if (!REDIR(status->code) || red->location == NULL)
+    if (!REDIR(status->code) || location == NULL)
 	return NE_OK;
 
-    if (strstr(red->location, "://") == NULL && red->location[0] != '/') {
+    if (strstr(location, "://") == NULL && location[0] != '/') {
 	/* FIXME: remove this relative URI resolution hack. */
-	ne_buffer *path = ne_buffer_create();
+	path = ne_buffer_create();
 	char *pnt;
 	
 	ne_buffer_zappend(path, red->requri);
@@ -81,36 +80,37 @@ static int post_send(ne_request *req, void *private, const ne_status *status)
 	    *(pnt+1) = '\0';
 	    ne_buffer_altered(path);
 	}
-	ne_buffer_zappend(path, red->location);
-	ne_free(red->location);
-	red->location = ne_buffer_finish(path);
+	ne_buffer_zappend(path, location);
+	location = path->data;
     }
 
     /* free last uri. */
     ne_uri_free(&red->uri);
     
     /* Parse the Location header */
-    if (ne_uri_parse(red->location, &red->uri) || red->uri.path == NULL) {
+    if (ne_uri_parse(location, &red->uri) || red->uri.path == NULL) {
         red->valid = 0;
 	ne_set_error(red->sess, _("Could not parse redirect location."));
-	return NE_ERROR;
+        ret = NE_ERROR;
+    } else {
+        /* got a valid redirect. */
+        red->valid = 1;
+        ret = NE_REDIRECT;
+
+        if (!red->uri.host) {
+            /* Not an absoluteURI: breaks 2616 but everybody does it. */
+            ne_fill_server_uri(red->sess, &red->uri);
+        }
     }
 
-    /* got a valid redirect. */
-    red->valid = 1;
-    
-    if (!red->uri.host) {
-	/* Not an absoluteURI: breaks 2616 but everybody does it. */
-	ne_fill_server_uri(red->sess, &red->uri);
-    }
+    if (path) ne_buffer_destroy(path);
 
-    return NE_REDIRECT;
+    return ret;
 }
 
 static void free_redirect(void *cookie)
 {
     struct redirect *red = cookie;
-    NE_FREE(red->location);
     ne_uri_free(&red->uri);
     if (red->requri)
         ne_free(red->requri);

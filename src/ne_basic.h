@@ -1,6 +1,6 @@
 /* 
    HTTP/1.1 methods
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -77,9 +77,11 @@ typedef struct {
     char *value;
 } ne_content_type;
 
-/* Sets (*ne_content_type)userdata appropriately. 
- * Caller must free ->value after use */
-void ne_content_type_handler(void *userdata, const char *value);
+/* Retrieve the content-type of the response; returns zero if response
+ * had valid content-type, in which case *ctype is filled in and the
+ * caller must free 'value' after use.  Returns non-zero on error, in
+ * which case *ctype is not altered. */
+int ne_get_content_type(ne_request *req, ne_content_type *ctype);
 
 /* Server capabilities: */
 typedef struct {
