@@ -429,9 +429,8 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
     return (ne_decompress *)req;
 }
 
-int ne_decompress_destroy(ne_decompress *dc)
+void ne_decompress_destroy(ne_decompress *dc)
 {
-    return 0;
 }
 
 #endif /* NE_HAVE_ZLIB */
