@@ -50,7 +50,7 @@
 #include <windows.h> /* for GetCurrentThreadId() etc */
 #endif
 
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
 #endif
 
@@ -241,7 +241,7 @@ static char *get_cnonce(void)
 
     ne_md5_init_ctx(&hash);
 
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
     if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
 	ne_md5_process_bytes(data, sizeof data, &hash);
     else {
@@ -274,7 +274,7 @@ static char *get_cnonce(void)
 	ne_md5_process_bytes(&pid, sizeof pid, &hash);
     }
 
-#ifdef NE_HAVE_SSL
+#ifdef HAVE_OPENSSL
     }
 #endif
     
