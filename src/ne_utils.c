@@ -128,7 +128,8 @@ const char *ne_version_string(void)
 
 int ne_version_match(int major, int minor)
 {
-    return (NEON_VERSION_MAJOR != major) || (NEON_VERSION_MINOR < minor);
+    return NE_VERSION_MAJOR != major || NE_VERSION_MINOR < minor
+        || (NE_VERSION_MAJOR == 0 && NE_VERSION_MINOR != minor);
 }
 
 int ne_has_support(int feature)
