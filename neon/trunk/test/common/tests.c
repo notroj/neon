@@ -262,10 +262,12 @@ int main(int argc, char *argv[])
 	    if (warned) {
 		printf(" (with %d warning%s)", warned, (warned > 1)?"s":"");
 	    }
+#ifdef NEON_MEMLEAK
             if (is_xleaky) {
                 printf(" (with expected leak, %" NE_FMT_SIZE_T " bytes)",
                        ne_alloc_used - allocated);
             }
+#endif
 	    putchar('\n');
 	    passes++;
 	    break;
