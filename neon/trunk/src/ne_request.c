@@ -98,7 +98,7 @@ typedef off_t ne_off_t;
 
 struct field {
     char *name, *value;
-    size_t vlen, valloc;
+    size_t vlen;
     struct field *next;
 };
 
