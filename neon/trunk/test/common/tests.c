@@ -247,11 +247,13 @@ int main(int argc, char *argv[])
 
 	switch (result) {
 	case OK:
-	    COL("32"); 
-            if (is_xfail) 
+            if (is_xfail) {
+                COL("32;07"); 
                 printf("xfail");
-            else 
+            } else {
+                COL("32"); 
                 printf("pass"); 
+            }
             NOCOL;
 	    if (warned) {
 		printf(" (with %d warning%s)", warned, (warned > 1)?"s":"");
@@ -274,7 +276,7 @@ int main(int argc, char *argv[])
 	    aborted = 1;
 	    /* fall-through */
 	case SKIP:
-	    COL("44"); printf("SKIPPED"); NOCOL;
+	    COL("44;37;01"); printf("SKIPPED"); NOCOL;
 	    if (have_context) {
 		printf(" (%s)", test_context);
 	    }
