@@ -10,6 +10,7 @@ Changes in release 0.25.0:
  - ne_has_feature() for feature detection, replaces ne_support_ssl()
  - ne_set_addrlist() can be used to bypass normal DNS hostname resolver
  - ne_set_request_expect100() replaces ne_set_expect100() as a per-request flag
+ - ne_buffer_czappend(), convenience wrapper for ne_buffer_append.
 * Interface changes:
  - ne_set_request_body_fd takes offset and length arguments and returns void
  - ne_set_request_body_provider takes length as off_t rather than size_t.
@@ -17,10 +18,13 @@ Changes in release 0.25.0:
 * Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
  - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
 * Bug fixes:
- - correct handling of multiple Authentication challenges per request
+ - properly handle multiple Authentication challenges per request
+ - fixes and improvements to the Negotiate implementation
  - XML: handle the UTF-8 BOM even if the underlying parser does not
  - Win32: Fix timezone handling (Jiang Lei)
  - Win32: Add IPv6 support using ENABLE_IPV6 neon.mak flag (Kai Sommerfeld)
+* New features:
+ - Win32: Negotiate/NTLM support using SSPI (Vladimir Berezniker)
 * Removed features:
  - the cookies interface has been removed
 
