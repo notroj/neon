@@ -25,7 +25,3 @@ returning -1 from the provide_client_cert function would allow that
 opportunistic use of client certificates, of the "SSLVerifyClient
 optional" variety.
 
-* Check whether the following always return UTF-8-encoded strings:
-  - ne_ssl_clicert_name
-  - ne_ssl_cert_identity
-
