@@ -58,13 +58,6 @@
 
 #include "ne_private.h"
 
-#define HTTP_EXPECT_TIMEOUT 15
-/* 100-continue only used if size > HTTP_EXPECT_MINSIZ */
-#define HTTP_EXPECT_MINSIZE 1024
-
-/* with thanks to Jim Blandy; this macro simplified loads of code. */
-#define HTTP_ERR(x) do { int _ret = (x); if (_ret != NE_OK) return _ret; } while (0)
-
 #define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
 if (sret < 0) return aborted(req, msg, sret); } while (0)
 
@@ -1188,8 +1181,10 @@ int ne_begin_request(ne_request *req)
 
     /* Resolve hostname if necessary. */
     host = req->session->use_proxy?&req->session->proxy:&req->session->server;
-    if (host->address == NULL)
-	HTTP_ERR(lookup_host(req->session, host));
+    if (host->address == NULL) {
+        ret = lookup_host(req->session, host);
+        if (ret) return ret;
+    }    
 
     req->resp.mode = R_TILLEOF;
     
@@ -1219,7 +1214,8 @@ int ne_begin_request(ne_request *req)
     free_response_headers(req);
 
     /* Read the headers */
-    HTTP_ERR(read_response_headers(req));
+    ret = read_response_headers(req);
+    if (ret) return ret;
 
     /* check the Connection header */
     value = get_response_header_hv(req, HH_HV_CONNECTION, "connection");
@@ -1289,11 +1285,15 @@ int ne_begin_request(ne_request *req)
 int ne_end_request(ne_request *req)
 {
     struct hook *hk;
-    int ret = NE_OK;
+    int ret;
 
     /* Read headers in chunked trailers */
-    if (req->resp.mode == R_CHUNKED)
-	HTTP_ERR(read_response_headers(req));
+    if (req->resp.mode == R_CHUNKED) {
+	ret = read_response_headers(req);
+        if (ret) return ret;
+    } else {
+        ret = NE_OK;
+    }
     
     NE_DEBUG(NE_DBG_HTTP, "Running post_send hooks\n");
     for (hk = req->session->post_send_hooks; 
@@ -1356,14 +1356,14 @@ int ne_request_dispatch(ne_request *req)
     int ret;
     
     do {
-	HTTP_ERR(ne_begin_request(req));
-        HTTP_ERR(ne_discard_response(req));
-	ret = ne_end_request(req);
+	ret = ne_begin_request(req);
+        if (ret == NE_OK) ret = ne_discard_response(req);
+        if (ret == NE_OK) ret = ne_end_request(req);
     } while (ret == NE_RETRY);
 
     NE_DEBUG(NE_DBG_HTTP | NE_DBG_FLUSH, 
-	   "Request ends, status %d class %dxx, error line:\n%s\n", 
-	   req->status.code, req->status.klass, req->session->error);
+             "Request ends, status %d class %dxx, error line:\n%s\n", 
+             req->status.code, req->status.klass, req->session->error);
 
     return ret;
 }
