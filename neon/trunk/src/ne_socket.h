@@ -185,8 +185,9 @@ int ne_service_lookup(const char *name);
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 
 /* Negotiate an SSL connection on socket as an SSL client, using given
- * SSL context. */
-int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx);
+ * SSL context; userdata is made available for callbacks. */
+int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
+                        void *userdata);
 
 END_NEON_DECLS
 
