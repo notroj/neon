@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -770,7 +770,7 @@ static int strip_http10_connhdr2(void)
     return expect_header_value("X-Widget", NULL,
                                single_serve_string,
                                "HTTP/1.0 200 OK\r\n"
-                               "Connection: connection, x-widget\r\n"
+                               "Connection: connection, x-fish, x-widget\r\n"
                                "x-widget: blah\r\n"
                                "Content-Length: 0\r\n"
                                "\r\n");
@@ -1549,20 +1549,29 @@ static int fail_long_header(void)
     return invalid_response_gives_error(resp, "Line too long");
 }
 
-static int fail_corrupt_chunks(void)
+static int fail_on_invalid(void)
 {
     static const struct {
         const char *resp, *error;
     } ts[] = {
-        /* not CRLF */
+        /* chunk without trailing CRLF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcdeFISH", 
           "delimiter was invalid" },
-        /* short CRLF */
+        /* chunk with CR then EOF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcde\n",
           "not read chunk delimiter" },
-        /* CR-notLF */
+        /* chunk with CR then notLF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcde\rZZZ",
           "delimiter was invalid" },
+
+        /* negative C-L */
+        { RESP200 "Content-Length: -1\r\n" "\r\n" "abcde",
+          "Invalid Content-Length" },
+        /* stupidly-large C-L */
+        { RESP200 "Content-Length: 99999999999999999999999999\r\n" 
+          "\r\n" "abcde",
+          "Invalid Content-Length" },
+        
         { NULL, NULL }
     };
     int n;
@@ -1848,7 +1857,7 @@ ne_test tests[] = {
     T(fail_eof_chunk),
     T(fail_eof_badclen),
     T(fail_long_header),
-    T(fail_corrupt_chunks),
+    T(fail_on_invalid),
     T(read_timeout),
     T(fail_lookup),
     T(fail_double_lookup),
