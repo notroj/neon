@@ -575,7 +575,8 @@ char *stpcpy(char *, const char *);
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
 # QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
-NE_SEARCH_LIBS(socket, socket inet)
+# CygWin/Winsock2 has it in -lws2_32, allegedly.
+NE_SEARCH_LIBS(socket, socket inet ws2_32)
 NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
 
 NE_SEARCH_LIBS(getaddrinfo, nsl,,
