@@ -1,6 +1,6 @@
 /* 
-   URI tests
-   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
+   URI handling tests
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -357,6 +357,13 @@ static int unparse(void)
     return OK;    
 }
 
+static int leak_authinfo(void)
+{
+    ne_uri uri;
+    ne_uri_parse("http://fish@[ackack", &uri);
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(simple_ssl),
@@ -373,5 +380,6 @@ ne_test tests[] = {
     T(parse),
     T(failparse),
     T(unparse),
+    T_XLEAKY(leak_authinfo),
     T(NULL)
 };
