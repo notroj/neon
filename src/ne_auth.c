@@ -359,7 +359,7 @@ static char *request_gssapi(auth_session *sess)
 static void get_gss_name(gss_name_t *server, const char *hostname)
 {
     unsigned int major, minor;
-    gss_buffer_desc token = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc token;
 
     token.value = ne_concat("HTTP@", hostname, NULL);
     token.length = strlen(token.value);
