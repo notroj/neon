@@ -547,24 +547,6 @@ static int pfind_simple(void)
     return OK;
 }
 
-struct infinite {
-    const char *header, *repeat;
-};
-
-static int serve_infinite(ne_socket *sock, void *ud)
-{
-    struct infinite *i = ud;
-
-    CALL(discard_request(sock));
-
-    SEND_STRING(sock, i->header);
-
-    while (server_send(sock, i->repeat, strlen(i->repeat)) == 0)
-        /* nullop */;
-    
-    return OK;
-}
-
 static int unbounded_response(const char *header, const char *repeats)
 {
     ne_session *sess;

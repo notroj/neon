@@ -132,3 +132,17 @@ int serve_sstring_slowly(ne_socket *sock, void *ud)
     
     return 0;
 }
+
+int serve_infinite(ne_socket *sock, void *ud)
+{
+    struct infinite *i = ud;
+
+    CALL(discard_request(sock));
+
+    SEND_STRING(sock, i->header);
+
+    while (server_send(sock, i->repeat, strlen(i->repeat)) == 0)
+        /* nullop */;
+    
+    return OK;
+}
