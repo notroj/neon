@@ -167,8 +167,8 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
         gnutls_pkcs12_deinit(cc->p12);
     if (cc->decrypted) {
         if (cc->cert.identity) ne_free(cc->cert.identity);
-        gnutls_x509_privkey_deinit(cc->pkey);
-        gnutls_x509_crt_deinit(cc->cert.subject);
+        if (cc->pkey) gnutls_x509_privkey_deinit(cc->pkey);
+        if (cc->cert.subject) gnutls_x509_crt_deinit(cc->cert.subject);
     }
     if (cc->friendly_name) ne_free(cc->friendly_name);
     ne_free(cc);
@@ -279,6 +279,40 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     return cert;
 }
 
+/* Returns a copy certificate of certificate SRC. */
+static gnutls_x509_crt x509_crt_copy(gnutls_x509_crt src)
+{
+    int ret;
+    size_t size;
+    gnutls_datum tmp;
+    gnutls_x509_crt dest;
+    
+    if (gnutls_x509_crt_init(&dest) == 0) {
+        return NULL;
+    }
+
+    if (gnutls_x509_crt_export(src, GNUTLS_X509_FMT_DER, NULL, &size) 
+        != GNUTLS_E_SHORT_MEMORY_BUFFER) {
+        gnutls_x509_crt_deinit(dest);
+        return NULL;
+    }
+
+    tmp.data = ne_malloc(size);
+    ret = gnutls_x509_crt_export(src, GNUTLS_X509_FMT_DER, tmp.data, &size);
+    if (ret == 0) {
+        tmp.size = size;
+        ret = gnutls_x509_crt_import(dest, &tmp, GNUTLS_X509_FMT_DER);
+    }
+
+    if (ret) {
+        gnutls_x509_crt_deinit(dest);
+        dest = NULL;
+    }
+
+    ne_free(tmp.data);
+    return dest;
+}
+
 /* Duplicate a client certificate, which must be in the decrypted state. */
 static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
 {
@@ -288,24 +322,25 @@ static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
     newcc->decrypted = 1;
 
     ret = gnutls_x509_privkey_init(&newcc->pkey);
-    if (ret < 0) {
-        ne_free(newcc);
-        return NULL;
-    }
-    gnutls_x509_privkey_cpy(newcc->pkey, cc->pkey);
+    if (ret != 0) goto dup_error;
 
-    if (cc->friendly_name)
-        newcc->friendly_name = ne_strdup(cc->friendly_name);
+    ret = gnutls_x509_privkey_cpy(newcc->pkey, cc->pkey);
+    if (ret != 0) goto dup_error;
+    
+    newcc->cert.subject = x509_crt_copy(cc->cert.subject);
+    if (!newcc->cert.subject) goto dup_error;
 
-    ret = gnutls_x509_crt_init(&newcc->cert.subject);
-    if (ret < 0) {
-        ne_free(newcc);
-        return NULL;
-    }
-    populate_cert(&newcc->cert, cc->cert.subject);
+    if (cc->friendly_name) newcc->friendly_name = ne_strdup(cc->friendly_name);
 
+    populate_cert(&newcc->cert, newcc->cert.subject);
     return newcc;
-}
+
+dup_error:
+    if (newcc->pkey) gnutls_x509_privkey_deinit(newcc->pkey);
+    if (newcc->cert.subject) gnutls_x509_crt_deinit(newcc->cert.subject);
+    ne_free(newcc);
+    return NULL;
+}    
 
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 {
@@ -427,16 +462,15 @@ static int read_to_datum(const char *filename, gnutls_datum *datum)
 /* Parses a PKCS#12 structure and loads the certificate, private key
  * and friendly name if possible. Return 1 if PKCS#12 was not
  * encrypted, 0 if encrypted and a negative number if error. */
-static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
-                        gnutls_x509_crt x5, char **friendly_name,
+static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
+                        gnutls_x509_crt *x5, char **friendly_name,
                         const char *password)
 {
     gnutls_pkcs12_bag bag = NULL;
     int i, j, ret = 0, decrypted = 1;
 
     for (i = 0; ret == 0; ++i) {
-        if (bag)
-            gnutls_pkcs12_bag_deinit(bag);
+        if (bag) gnutls_pkcs12_bag_deinit(bag);
 
         ret = gnutls_pkcs12_bag_init(&bag);
         if (ret < 0) continue;
@@ -452,7 +486,10 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
             if (friendly_name && *friendly_name == NULL) {
                 char *name;
                 gnutls_pkcs12_bag_get_friendly_name(bag, j, &name);
-                if (name) *friendly_name = ne_strdup(name);
+                if (name) {
+                    if (name[0] == '.') name++; /* weird GnuTLS bug? */
+                    *friendly_name = ne_strdup(name);
+                }
             }
 
             gnutls_pkcs12_bag_type type = gnutls_pkcs12_bag_get_type(bag, j);
@@ -460,12 +497,12 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
             {
             case GNUTLS_BAG_PKCS8_KEY:
             case GNUTLS_BAG_PKCS8_ENCRYPTED_KEY:
-                gnutls_x509_privkey_init(&pkey);
+                gnutls_x509_privkey_init(pkey);
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
                 if (ret < 0) continue;
 
-                ret = gnutls_x509_privkey_import_pkcs8(pkey, &data,
+                ret = gnutls_x509_privkey_import_pkcs8(*pkey, &data,
                                                        GNUTLS_X509_FMT_DER,
                                                        password,
                                                        0);
@@ -476,12 +513,12 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
 
                 break;
             case GNUTLS_BAG_CERTIFICATE:
-                gnutls_x509_crt_init(&x5);
+                gnutls_x509_crt_init(x5);
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
                 if (ret < 0) continue;
 
-                ret = gnutls_x509_crt_import(x5, &data, GNUTLS_X509_FMT_DER);
+                ret = gnutls_x509_crt_import(*x5, &data, GNUTLS_X509_FMT_DER);
                 if (ret < 0) continue;
 
                 break;
@@ -493,8 +530,14 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey pkey,
     }
 
     /* Make sure last bag is freed */
-    if (bag)
-        gnutls_pkcs12_bag_deinit(bag);
+    if (bag) gnutls_pkcs12_bag_deinit(bag);
+
+    /* Free in case of error */
+    if (ret < 0 && ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+        if (*x5) gnutls_x509_crt_deinit(*x5);
+        if (*pkey) gnutls_x509_privkey_deinit(*pkey);
+        if (friendly_name && *friendly_name) ne_free(*friendly_name);
+    }
 
     return ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE ? decrypted : ret;
 }
@@ -523,7 +566,7 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
         return NULL;
     }
 
-    ret = pkcs12_parse(p12, pkey, cert, &friendly_name, NULL);
+    ret = pkcs12_parse(p12, &pkey, &cert, &friendly_name, NULL);
 
     if (ret == 1) {
         cc = ne_calloc(sizeof *cc);
@@ -558,7 +601,7 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *cc, const char *password)
     gnutls_x509_crt cert = NULL;
     gnutls_x509_privkey pkey = NULL;
 
-    ret = pkcs12_parse(cc->p12, pkey, cert, NULL, password);
+    ret = pkcs12_parse(cc->p12, &pkey, &cert, NULL, password);
     if (ret < 0)
         return ret;
 
