@@ -1,6 +1,6 @@
 /* 
    HTTP-redirect support
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -68,10 +68,9 @@ static int post_send(ne_request *req, void *private, const ne_status *status)
 	return NE_OK;
 
     if (strstr(location, "://") == NULL && location[0] != '/') {
-	/* FIXME: remove this relative URI resolution hack. */
-	path = ne_buffer_create();
 	char *pnt;
-	
+
+	path = ne_buffer_create();
 	ne_buffer_zappend(path, red->requri);
 	pnt = strrchr(path->data, '/');
 
