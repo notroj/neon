@@ -44,5 +44,3 @@ client.*
 output.pem
 libtest.*
 clog
-largefile
-sparse.bin

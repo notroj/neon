@@ -158,7 +158,7 @@ static int
 end_element(void *userdata, int state, const char *nspace, const char *name)
 {
     ne_207_parser *p = userdata;
-    const char *cdata = ne_shave(p->cdata->data, "\r\n\t ");
+    const char *cdata = p->cdata->data;
 
     switch (state) {
     case ELM_responsedescription:
@@ -318,7 +318,7 @@ int ne_simple_request(ne_session *sess, ne_request *req)
 
     if (ret == NE_OK) {
 	if (ne_get_status(req)->code == 207) {
-	    if (ne_xml_failed(p)) { 
+	    if (!ne_xml_valid(p)) { 
 		/* The parse was invalid */
 		ne_set_error(sess, "%s", ne_xml_get_error(p));
 		ret = NE_ERROR;

@@ -27,7 +27,7 @@
 
 /* This is the private interface between ne_socket and ne_openssl. */
 
-#ifdef NE_HAVE_SSL
+#ifdef NEON_SSL
 
 #include <openssl/ssl.h>
 
@@ -43,6 +43,6 @@ struct ne_ssl_socket_s {
     SSL *ssl;
 };
 
-#endif /* NE_HAVE_SSL */
+#endif /* NEON_SSL */
 
 #endif

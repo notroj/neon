@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -82,22 +82,20 @@ static int multi_init(void)
     return OK;
 }
 
-/* Create and connect *sock to address addr on given port. */
-static int do_connect(ne_socket **sock, ne_sock_addr *addr, unsigned int port)
+static ne_socket *do_connect(ne_sock_addr *addr, unsigned int port)
 {
+    ne_socket *sock = ne_sock_create();
     const ne_inet_addr *ia;
 
-    *sock = ne_sock_create();
-    ONN("could not create socket", *sock == NULL);
+    if (!sock) return NULL;
 
     for (ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr)) {
-	if (ne_sock_connect(*sock, ia, port) == 0)
-            return OK;
+	if (ne_sock_connect(sock, ia, port) == 0)
+            return sock;
     }
     
-    t_context("could not connect to server: %s", ne_sock_error(*sock));
-    ne_sock_close(*sock);
-    return FAIL;
+    ne_sock_close(sock);
+    return NULL;
 }
 
 #ifdef SOCKET_SSL
@@ -189,7 +187,8 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
     pair.fn = fn;
     pair.userdata = ud;
     CALL(spawn_server(7777, wrap_serve, &pair));
-    CALL(do_connect(sock, localhost, 7777));
+    *sock = do_connect(localhost, 7777);
+    ONN("could not connect to localhost:7777", *sock == NULL);
     ONV(ne_sock_connect_ssl(*sock, client_ctx),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
     return OK;
@@ -200,7 +199,9 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
     CALL(spawn_server(7777, fn, ud));
-    return do_connect(sock, localhost, 7777);
+    *sock = do_connect(localhost, 7777);
+    ONN("could not connect to localhost:7777", *sock == NULL);
+    return OK;
 }
 #endif
 
@@ -410,6 +411,40 @@ static int peek_close(void)
     return await_server();
 }
 
+
+struct string {
+    char *data;
+    size_t len;
+};
+
+static int serve_string(ne_socket *sock, void *ud)
+{
+    struct string *str = ud;
+
+    NE_DEBUG(NE_DBG_SOCKET, "Serving string: [[[%.*s]]]\n",
+	     (int)str->len, str->data);
+
+    ONN("write failed", ne_sock_fullwrite(sock, str->data, str->len));
+    
+    return 0;
+}
+
+static int serve_string_slowly(ne_socket *sock, void *ud)
+{
+    struct string *str = ud;
+    size_t n;
+
+    NE_DEBUG(NE_DBG_SOCKET, "Slowly serving string: [[[%.*s]]]\n",
+	     (int)str->len, str->data);
+    
+    for (n = 0; n < str->len; n++) {
+	ONN("write failed", ne_sock_fullwrite(sock, &str->data[n], 1));
+	minisleep();
+    }
+    
+    return 0;
+}
+
 /* Don't change this string. */
 #define STR "Hello, World."
 
@@ -446,7 +481,7 @@ static int single_read(void)
     ne_socket *sock;
     DECL(hello, STR);
 
-    CALL(begin(&sock, serve_sstring, &hello));
+    CALL(begin(&sock, serve_string, &hello));
     CALL(read_expect(sock, STR, strlen(STR)));
     CALL(expect_close(sock));
     CALL(good_close(sock));
@@ -460,7 +495,7 @@ static int single_peek(void)
     ne_socket *sock;
     DECL(hello, STR);
 
-    CALL(begin(&sock, serve_sstring, &hello));
+    CALL(begin(&sock, serve_string, &hello));
     CALL(peek_expect(sock, STR, strlen(STR)));
  
     return finish(sock, 0);
@@ -473,7 +508,7 @@ static int small_reads(void)
     char *pnt;
     DECL(hello, STR);
 
-    CALL(begin(&sock, serve_sstring, &hello));
+    CALL(begin(&sock, serve_string, &hello));
 
     /* read the string byte-by-byte. */
     for (pnt = hello.data; *pnt; pnt++) {
@@ -493,7 +528,7 @@ static int read_and_peek(void)
     ne_socket *sock;
     DECL(hello, STR);
 
-    CALL(begin(&sock, serve_sstring, &hello));
+    CALL(begin(&sock, serve_string, &hello));
 
     PEEK("Hello");
     PEEK("Hell");
@@ -516,7 +551,7 @@ static int larger_read(void)
     ssize_t nb;
     DECL(hello, STR);
 
-    CALL(begin(&sock, serve_sstring, &hello));
+    CALL(begin(&sock, serve_string, &hello));
     
     nb = ne_sock_read(sock, buffer, hello.len + 10);
     ONV(nb != (ssize_t)hello.len, 
@@ -549,7 +584,7 @@ static int line_simple(void)
     ne_socket *sock;
     DECL(oneline, STR "\n" STR2 "\n");
 
-    CALL(begin(&sock, serve_sstring, &oneline));
+    CALL(begin(&sock, serve_string, &oneline));
     LINE(STR "\n");
     LINE(STR2 "\n");
     
@@ -562,7 +597,7 @@ static int line_closure(void)
     ssize_t ret;
     DECL(oneline, STR "\n" "foobar");
     
-    CALL(begin(&sock, serve_sstring, &oneline));
+    CALL(begin(&sock, serve_string, &oneline));
     LINE(STR "\n");
     
     ret = ne_sock_readline(sock, buffer, BUFSIZ);
@@ -578,7 +613,7 @@ static int line_empty(void)
     ne_socket *sock;
     DECL(oneline, "\n\na\n\n");
 
-    CALL(begin(&sock, serve_sstring, &oneline));
+    CALL(begin(&sock, serve_string, &oneline));
     LINE("\n"); LINE("\n");
     LINE("a\n"); LINE("\n");
     
@@ -591,7 +626,7 @@ static int line_toolong(void)
     ssize_t ret;
     DECL(oneline, "AAAAAA\n");
 
-    CALL(begin(&sock, serve_sstring, &oneline));
+    CALL(begin(&sock, serve_string, &oneline));
     ret = ne_sock_readline(sock, buffer, 5);
     ONV(ret != NE_SOCK_ERROR, 
 	("readline should fail on long line: %" NE_FMT_SSIZE_T, ret));
@@ -605,7 +640,7 @@ static int line_mingle(void)
     ne_socket *sock;
     DECL(oneline, "alpha\nbeta\ndelta\ngamma\n");
 
-    CALL(begin(&sock, serve_sstring, &oneline));
+    CALL(begin(&sock, serve_string, &oneline));
     
     READ("a"); LINE("lpha\n");
     READ("beta"); LINE("\n");
@@ -622,7 +657,7 @@ static int line_chunked(void)
     ne_socket *sock;
     DECL(oneline, "this is a line\n");
 
-    CALL(begin(&sock, serve_sstring_slowly, &oneline));
+    CALL(begin(&sock, serve_string_slowly, &oneline));
     
     LINE("this is a line\n");
     

@@ -1,6 +1,6 @@
 /* 
    Stupidly simple test framework
-   Copyright (C) 2001-2002, 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2002, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@
 #include <errno.h>
 #endif
 
-#include "ne_string.h"
 #include "ne_utils.h"
 #include "ne_socket.h"
 
@@ -196,7 +195,7 @@ int main(int argc, char *argv[])
     printf("-> running `%s':\n", test_suite);
     
     for (n = 0; !aborted && tests[n].fn != NULL; n++) {
-	int result, is_xfail = 0;
+	int result;
 #ifdef NEON_MEMLEAK
         size_t allocated = ne_alloc_used;
 #endif
@@ -234,10 +233,8 @@ int main(int argc, char *argv[])
             if (result == OK) {
                 t_context("test passed but expected failure");
                 result = FAIL;
-            } else if (result == FAIL) {
+            } else if (result == FAIL)
                 result = OK;
-                is_xfail = 1;
-            }
         }
 
 	/* align the result column if we've had warnings. */
@@ -247,12 +244,7 @@ int main(int argc, char *argv[])
 
 	switch (result) {
 	case OK:
-	    COL("32"); 
-            if (is_xfail) 
-                printf("xfail");
-            else 
-                printf("pass"); 
-            NOCOL;
+	    COL("32"); printf("pass"); NOCOL;
 	    if (warned) {
 		printf(" (with %d warning%s)", warned, (warned > 1)?"s":"");
 	    }

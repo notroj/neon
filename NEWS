@@ -1,30 +1,3 @@
-Changes in release 0.25.0:
-* New feature detection interface, ne_has_feature():
- - replaces ne_supports_ssl(); NEON_SSL is no longer defined by neon-config.
-* ne_set_request_body_fd takes offset and length arguments and returns void.
-* ne_set_request_body_provider takes an off_t length argument.
-* Support for non-ASCII hostnames following the IDNA spec, using GNU libidn:
- - if enabled, ne_session_create can be passed a UTF-8 encoded hostname.
-* ne_xml_failed() replaces ne_xml_valid(), with different return value logic.
-* Support for >2Gb request/response bodies on 32-bit Unixes with LFS support:
- - new ne_set_request_body_fd64() call for using an fd opened using O_LARGEFILE
- - new ne_set_request_body_provider64() which takes an off64_t length argument
-* ne_xml interface now rejects more invalid XML element names (e.g. "foo::bar").
-* Add ne_set_addrlist() interface to bypass normal DNS resolution.
-* Use a per-request flag to enable "Expect: 100-continue" support:
- - ne_set_request_expect100() replaces ne_set_expect100()
-* Fix handling of multiple Authentication challenges per request.
-* Fix timezone handling on Win32 (Jiang Lei).
-
-Changes in release 0.24.7:
-* Compression interface fixes:
- - fix issues handling content decoding and request retries from
- authentication challenges (Justin Erenkrantz)
- - fix places where reader callback would receive spurious size=0 calls
- - fix to pass user-supplied userdata to user-supplied acceptance callback
-* Fix for RFC2617-style digest authentication (Hideaki Takahashi).
-* Fix to pick up gethostbyname() on QNX 6.2.
-
 Changes in release 0.24.6:
 * SECURITY (CVE CAN-2004-0398): Fix sscanf overflow in ne_rfc1036_parse,
  thanks to Stefan Esser.

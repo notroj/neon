@@ -88,7 +88,7 @@ AC_DEFUN([NEON_COMMON_BUNDLED],[
 AC_PREREQ(2.50)
 
 AC_ARG_WITH(included-neon,
-AS_HELP_STRING([--with-included-neon], [force use of included neon library]),
+AC_HELP_STRING([--with-included-neon], [force use of included neon library]),
 [neon_force_included="$withval"], [neon_force_included="no"])
 
 NEON_COMMON
@@ -121,9 +121,9 @@ AC_DEFUN([NEON_VERSIONS], [
 
 # Define the current versions.
 NEON_VERSION_MAJOR=0
-NEON_VERSION_MINOR=25
-NEON_VERSION_RELEASE=0
-NEON_VERSION_TAG=-dev
+NEON_VERSION_MINOR=24
+NEON_VERSION_RELEASE=6
+NEON_VERSION_TAG=
 
 NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
 
@@ -173,16 +173,15 @@ else
     ne_libver=`$NEON_CONFIG --version | sed -e "s/neon //g"`
     # Check whether it's possible to link against neon
     AC_CACHE_CHECK([linking against neon], [ne_cv_lib_neon],
-    [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([[#include <ne_utils.h>]], [[ne_version_match(0, 0);]])],
-	[ne_cv_lib_neon=yes], [ne_cv_lib_neon=no])])
+    AC_TRY_LINK_FUNC([ne_version_match],
+	[ne_cv_lib_neon=yes], [ne_cv_lib_neon=no]))
     if test "$ne_cv_lib_neon" = "yes"; then
        # Now check whether the neon library version is satisfactory
        AC_CACHE_CHECK([neon library version], [ne_cv_lib_neonver],
-       [AC_RUN_IFELSE(
-         [AC_LANG_PROGRAM([[#include <ne_utils.h>]],
-                          [[return ne_version_match($neon_require_major, $neon_require_minor);]])],
-         [ne_cv_lib_neonver=yes], [ne_cv_lib_neonver=no], [ne_cv_lib_neonver=no])])
+       AC_TRY_RUN([#include <ne_utils.h>
+int main(int argc, char **argv) {
+return ne_version_match($neon_require_major, $neon_require_minor);
+}], ne_cv_lib_neonver=yes, ne_cv_lib_neonver=no))
     fi
     ne_goodver=$ne_cv_lib_neonver
     LIBS=$ne_save_LIBS
@@ -196,36 +195,15 @@ else
     $2
 fi])
 
-dnl NEON_CHECK_SUPPORT(feature, var, name)
+dnl NEON_CHECK_SUPPORT(feature, var)
 AC_DEFUN([NEON_CHECK_SUPPORT], [
 if $NEON_CONFIG --support $1 >/dev/null; then
-   NE_ENABLE_SUPPORT($2, [$3 is supported by neon])
+   neon_$1_message="supported by neon"
+   $2=yes
 else
-   NE_DISABLE_SUPPORT($2, [$3 is not supported by neon])
+   neon_$1_message="not supported by neon"
+   $2=no
 fi
-])
-
-dnl enable support for feature $1 with define $2, message $2
-AC_DEFUN([NE_ENABLE_SUPPORT], [
-NE_FLAG_$1=yes
-AC_SUBST(NE_FLAG_$1)
-AC_DEFINE([NE_HAVE_]$1, 1, [Defined if $1 is supported])
-m4_if([$2], [], 
- [ne_$1_message="support enabled"
-  AC_MSG_NOTICE([$1 support is enabled])],
- [ne_$1_message="$2"
-  AC_MSG_NOTICE([$2])])
-])
-
-dnl Disable support for feature $1 with define $1, message $3
-AC_DEFUN([NE_DISABLE_SUPPORT], [
-NE_FLAG_$1=no
-AC_SUBST(NE_FLAG_$1)
-m4_if([$2], [],
- [ne_$1_message="not supported"
-  AC_MSG_NOTICE([$1 support is not enabled])],
- [ne_$1_message="$2"
-  AC_MSG_NOTICE([$2])])
 ])
 
 AC_DEFUN([NEON_USE_EXTERNAL], [
@@ -237,12 +215,8 @@ NEON_CHECK_VERSION([
     NEON_LIBS="$NEON_LIBS `$NEON_CONFIG --libs`"
     neon_library_message="library in ${neon_prefix} (`$NEON_CONFIG --version`)"
     neon_xml_parser_message="using whatever neon uses"
-    NEON_CHECK_SUPPORT([ssl], [SSL], [SSL])
-    NEON_CHECK_SUPPORT([zlib], [ZLIB], [zlib])
-    NEON_CHECK_SUPPORT([idna], [IDNA], [IDNA])
-    NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
-    NEON_CHECK_SUPPORT([lfs], [LFS], [LFS])
-    NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
+    NEON_CHECK_SUPPORT([ssl], [NEON_SUPPORTS_SSL])
+    NEON_CHECK_SUPPORT([zlib], [NEON_SUPPORTS_ZLIB])
     neon_got_library=yes
 ], [neon_got_library=no])
 ])
@@ -337,27 +311,21 @@ dnl give an error and fail configure.
 AC_DEFUN([NE_SEARCH_LIBS], [
 
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
-AC_LINK_IFELSE(
-  [AC_LANG_PROGRAM([], [[$1();]])], 
-  [ne_cv_libsfor_$1="none needed"], [
+AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="none needed"], [
 ne_sl_save_LIBS=$LIBS
 ne_cv_libsfor_$1="not found"
 for lib in $2; do
     LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[$1();]])],
-                   [ne_cv_libsfor_$1="-l$lib"; break])
+    AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="-l$lib"; break])
     m4_if($3, [], [], dnl If $3 is specified, then...
               [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
-               AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[$1();]])], 
-                              [ne_cv_libsfor_$1="-l$lib $3"; break])])
+               AC_TRY_LINK_FUNC($1, [ne_cv_libsfor_$1="-l$lib $3"; break])])
 done
 LIBS=$ne_sl_save_LIBS])])
 
 if test "$ne_cv_libsfor_$1" = "not found"; then
-   m4_if([$4], [], [AC_MSG_ERROR([could not find library containing $1])], [$4])
-elif test "$ne_cv_libsfor_$1" = "none needed"; then
-   m4_if([$5], [], [:], [$5])
-else
+   m4_if($4, [], [AC_MSG_ERROR([could not find library containing $1])], [$4])
+elif test "$ne_cv_libsfor_$1" != "none needed"; then 
    NEON_LIBS="$ne_cv_libsfor_$1 $NEON_LIBS"
    $5
 fi])
@@ -365,18 +333,23 @@ fi])
 dnl Check for presence and suitability of zlib library
 AC_DEFUN([NEON_ZLIB], [
 
-AC_ARG_WITH(zlib, AS_HELP_STRING([--without-zlib], [disable zlib support]),
+AC_ARG_WITH(zlib, AC_HELP_STRING([--without-zlib], [disable zlib support]),
 ne_use_zlib=$withval, ne_use_zlib=yes)
+
+NEON_SUPPORTS_ZLIB=no
+AC_SUBST(NEON_SUPPORTS_ZLIB)
 
 if test "$ne_use_zlib" = "yes"; then
     AC_CHECK_HEADER(zlib.h, [
   	AC_CHECK_LIB(z, inflate, [ 
 	    NEON_LIBS="$NEON_LIBS -lz"
-            NE_ENABLE_SUPPORT(ZLIB, [zlib support enabled, using -lz])
-	], [NE_DISABLE_SUPPORT(ZLIB, [zlib library not found])])
-    ], [NE_DISABLE_SUPPORT(ZLIB, [zlib header not found])])
+	    NEON_CFLAGS="$NEON_CFLAGS -DNEON_ZLIB"
+	    NEON_SUPPORTS_ZLIB=yes
+	    neon_zlib_message="found in -lz"
+	], [neon_zlib_message="zlib not found"])
+    ], [neon_zlib_message="zlib not found"])
 else
-    NE_DISABLE_SUPPORT(ZLIB, [zlib not enabled])
+    neon_zlib_message="zlib disabled"
 fi
 ])
 
@@ -399,6 +372,8 @@ AC_DEFUN([NEON_COMMON_CHECKS], [
 # is used.
 
 AC_REQUIRE([AC_PROG_CC])
+AC_REQUIRE([AC_PROG_CC_STDC])
+AC_REQUIRE([AC_LANG_C])
 AC_REQUIRE([AC_ISC_POSIX])
 AC_REQUIRE([AC_C_INLINE])
 AC_REQUIRE([AC_C_CONST])
@@ -428,8 +403,8 @@ if test "$GCC" = "yes"; then
   # See whether a simple test program will compile without errors.
   ne_save_CPPFLAGS=$CPPFLAGS
   CPPFLAGS="$CPPFLAGS -Wformat -Werror"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-#include <stdio.h>]], [[int i = 42; printf("%d", i);]])],
+  AC_TRY_COMPILE([#include <sys/types.h>
+  #include <stdio.h>], [int i = 42; printf("%d", i);], 
   [ne_cv_cc_werror=yes], [ne_cv_cc_werror=no])
   CPPFLAGS=$ne_save_CPPFLAGS])
   ne_fmt_trycompile=$ne_cv_cc_werror
@@ -437,39 +412,6 @@ else
   ne_fmt_trycompile=no
 fi
 ])
-
-dnl Check for LFS support
-AC_DEFUN([NE_LARGEFILE], [
-dnl Need the size of off_t
-AC_REQUIRE([NEON_COMMON_CHECKS])
-
-if test -z "$ac_cv_sizeof_off_t"; then
-   NE_DISABLE_SUPPORT(LFS, [LFS support omitted: off_t size unknown!])
-elif test $ac_cv_sizeof_off_t != 4; then
-   NE_DISABLE_SUPPORT(LFS, [LFS support unnecessary, off_t is not 32-bit])
-   AC_CHECK_FUNCS([strtoll strtoq], [break])
-elif test -z "$ac_cv_sizeof_long_long"; then
-   NE_DISABLE_SUPPORT(LFS, [LFS support omitted: long long size unknown])
-elif test $ac_cv_sizeof_long_long != 8; then
-   NE_DISABLE_SUPPORT(LFS, [LFS support omitted: long long not 64-bit])
-else
-   ne_save_CPPFLAGS=$CPPFLAGS
-   CPPFLAGS="$CPPFLAGS -D_LARGEFILE64_SOURCE"
-   AC_CHECK_TYPE(off64_t, [
-     NEON_FORMAT(off64_t)
-     ne_lfsok=no
-     AC_CHECK_FUNCS([strtoll strtoq], [ne_lfsok=yes; break])
-     AC_CHECK_FUNCS([lseek64 fstat64], [], [ne_lfsok=no; break])
-     if test x$ne_lfsok = xyes; then
-       NE_ENABLE_SUPPORT(LFS, [LFS (large file) support enabled])
-       NEON_CFLAGS="$NEON_CFLAGS -D_LARGEFILE64_SOURCE -DNE_LFS"
-       ne_save_CPPFLAGS="$CPPFLAGS -DNE_LFS"
-     else
-       NE_DISABLE_SUPPORT(LFS, 
-         [LFS support omitted: 64-bit support functions not found])
-     fi], [NE_DISABLE_SUPPORT(LFS, [LFS support omitted: off64_t type not found])])
-   CPPFLAGS=$ne_save_CPPFLAGS
-fi])
 
 dnl NEON_FORMAT(TYPE[, HEADERS[, [SPECIFIER]])
 dnl
@@ -494,11 +436,11 @@ if test $ne_fmt_trycompile = yes; then
   oflags="$CPPFLAGS"
   # Consider format string mismatches as errors
   CPPFLAGS="$CPPFLAGS -Wformat -Werror"
-  dnl obscured for m4 quoting: "for str in d ld lld; do"
-  for str in ne_spec l]ne_spec[ ll]ne_spec[; do
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+  dnl obscured for m4 quoting: "for str in d ld qd; do"
+  for str in ne_spec l]ne_spec[ q]ne_spec[; do
+    AC_TRY_COMPILE([#include <sys/types.h>
 $2
-#include <stdio.h>]], [[$1 i = 1; printf("%$str", i);]])],
+#include <stdio.h>], [$1 i = 1; printf("%$str", i);], 
 	[ne_cv_fmt_$1=$str; break])
   done
   CPPFLAGS=$oflags
@@ -539,73 +481,37 @@ AC_REQUIRE([AC_C_BIGENDIAN])
 dnl Is strerror_r present; if so, which variant
 AC_REQUIRE([AC_FUNC_STRERROR_R])
 
-AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h \
-	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h],,,
-[AC_INCLUDES_DEFAULT
-/* netinet/tcp.h requires netinet/in.h on some platforms. */
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif])
+AC_CHECK_HEADERS([strings.h sys/time.h limits.h sys/select.h arpa/inet.h \
+	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h])
 
 AC_REQUIRE([NE_SNPRINTF])
 
-dnl Check for large file support
-NE_LARGEFILE
-
 AC_REPLACE_FUNCS(strcasecmp)
 
-AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy poll)
-
-if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
-  AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
-fi
-
-if test "$ac_cv_func_stpcpy" = "yes"; then
-  AC_CHECK_DECLS(stpcpy)
-fi
-
-# Modern AIXes with the "Linux-like" libc have an undeclared stpcpy
-AH_BOTTOM([#if defined(HAVE_STPCPY) && defined(HAVE_DECL_STPCPY) && !HAVE_DECL_STPCPY && !defined(stpcpy)
-char *stpcpy(char *, const char *);
-#endif])
-
-# Enable getaddrinfo support if it, gai_strerror and inet_ntop are
-# all available.  Solaris etc hide things in -lsocket, use that too.
+AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy)
 
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
-# QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
 NE_SEARCH_LIBS(socket, socket inet)
-NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
+NE_SEARCH_LIBS(gethostbyname, nsl bind)
 
-NE_SEARCH_LIBS(getaddrinfo, nsl,,
-  [ne_enable_gai=no],
-  [# HP-UX boxes commonly get into a state where getaddrinfo is present
-   # but borked: http://marc.theaimsgroup.com/?l=apr-dev&m=107730955207120&w=2
-   case x`uname -sr 2>/dev/null`y in
-   xHP-UX*11.[[01]]*y)
-      AC_MSG_NOTICE([getaddrinfo support disabled on HP-UX 11.0x/11.1x]) ;;
-   *)
-     ne_enable_gai=yes
-     NE_CHECK_FUNCS(gai_strerror inet_ntop,,[ne_enable_gai=no; break]) ;;
-   esac
-])
-
+# Enable getaddrinfo() support only if all the necessary functions
+# are found.
+ne_enable_gai=yes
+NE_CHECK_FUNCS(getaddrinfo gai_strerror inet_ntop,,[ne_enable_gai=no; break])
 if test $ne_enable_gai = yes; then
-   NE_ENABLE_SUPPORT(IPV6, [IPv6 support is enabled])
    AC_DEFINE(USE_GETADDRINFO, 1, [Define if getaddrinfo() should be used])
    AC_CACHE_CHECK([for working AI_ADDRCONFIG], [ne_cv_gai_addrconfig], [
    AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <netdb.h>],
 [struct addrinfo hints = {0}, *result;
 hints.ai_flags = AI_ADDRCONFIG;
 if (getaddrinfo("localhost", NULL, &hints, &result) != 0) return 1;])],
-   ne_cv_gai_addrconfig=yes, ne_cv_gai_addrconfig=no, ne_cv_gai_addrconfig=no)])
+   ne_cv_gai_addrconfig=yes, ne_cv_gai_addrconfig=no)])
    if test $ne_cv_gai_addrconfig = yes; then
       AC_DEFINE(USE_GAI_ADDRCONFIG, 1, [Define if getaddrinfo supports AI_ADDRCONFIG])
    fi
 else
    # Checks for non-getaddrinfo() based resolver interfaces.
-   NE_SEARCH_LIBS(gethostbyname, nsl bind)
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
@@ -613,16 +519,16 @@ else
 #include <netdb.h>])
 fi
 
-AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
-  [#include <time.h>])
+AC_CHECK_MEMBERS(struct tm.tm_gmtoff,,
+AC_MSG_WARN([no timezone handling in date parsing on this platform]),
+[#include <time.h>])
 
-if test $ac_cv_member_struct_tm_tm_gmtoff$ac_cv_member_struct_tm___tm_gmtoff = nono; then
-  AC_MSG_WARN([no timezone handling in date parsing on this platform])
-fi
-
-ifdef([neon_no_zlib], 
-  [NE_DISABLE_SUPPORT(ZLIB, [zlib not supported])],
-  [NEON_ZLIB()])
+ifdef([neon_no_zlib], [
+    neon_zlib_message="zlib disabled"
+    NEON_SUPPORTS_ZLIB=no
+], [
+    NEON_ZLIB()
+])
 
 # Conditionally enable ACL support
 AC_MSG_CHECKING([whether to enable ACL support in neon])
@@ -635,7 +541,6 @@ fi
 
 NEON_SSL()
 NEON_SOCKS()
-NEON_LIBIDN()
 NEON_GSSAPI()
 
 AC_SUBST(NEON_CFLAGS)
@@ -686,17 +591,27 @@ ne="$NEON_EXTRAOBJS"
 NEON_EXTRAOBJS=
 for o in $ne; do
 	NEON_EXTRAOBJS="$NEON_EXTRAOBJS $o.$NEON_OBJEXT"
-done
+done	
 
-# Was DAV support explicitly turned off?
+AC_MSG_CHECKING(whether to enable WebDAV support in neon)
+
+dnl Did they want DAV support?
 if test "x$neon_no_webdav" = "xyes"; then
   # No WebDAV support
+  AC_MSG_RESULT(no)
   NEONOBJS="$NEONOBJS \$(NEON_BASEOBJS)"
-  NE_DISABLE_SUPPORT(DAV, [WebDAV support is not enabled])
+  NEON_CFLAGS="$NEON_CFLAGS -DNEON_NODAV"
+  NEON_SUPPORTS_DAV=no
+  AC_DEFINE(NEON_NODAV, 1, [Enable if built without WebDAV support])
 else
   # WebDAV support
+  NEON_SUPPORTS_DAV=yes
   NEONOBJS="$NEONOBJS \$(NEON_DAVOBJS)"
-  NE_ENABLE_SUPPORT(DAV, [WebDAV support is enabled])
+  # Turn on DAV locking please then.
+  AC_DEFINE(USE_DAV_LOCKS, 1, [Support WebDAV locking through the library])
+
+  AC_MSG_RESULT(yes)
+
 fi
 
 AC_SUBST(NEON_TARGET)
@@ -704,6 +619,7 @@ AC_SUBST(NEON_OBJEXT)
 AC_SUBST(NEONOBJS)
 AC_SUBST(NEON_EXTRAOBJS)
 AC_SUBST(NEON_LINK_FLAGS)
+AC_SUBST(NEON_SUPPORTS_DAV)
 
 ])
 
@@ -751,7 +667,7 @@ AC_CHECK_FUNCS(snprintf vsnprintf,,[
     AC_MSG_ERROR([trio installation problem? libtrio found but not trio.h]))
     AC_MSG_NOTICE(using trio printf replacement library)
     NEON_LIBS="$NEON_LIBS -ltrio -lm"
-    AC_DEFINE(HAVE_TRIO, 1, [Use trio printf replacement library])],
+    NEON_CFLAGS="$NEON_CFLAGS -DNEON_TRIO"],
    [AC_MSG_NOTICE([no vsnprintf/snprintf detected in C library])
     AC_MSG_ERROR([Install the trio library from http://daniel.haxx.se/trio/])])
    LIBS=$ne_save_LIBS
@@ -796,7 +712,7 @@ fi])
 dnl Check for OpenSSL
 AC_DEFUN([NEON_SSL], [
 
-AC_ARG_WITH(ssl, AS_HELP_STRING([--with-ssl], [enable OpenSSL support]))
+AC_ARG_WITH(ssl, [AC_HELP_STRING([--with-ssl], [enable OpenSSL support])])
 
 AC_ARG_WITH(egd,
 [[  --with-egd[=PATH]       enable EGD support [using EGD socket at PATH]]])
@@ -819,14 +735,14 @@ yes)
    NE_CHECK_SSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    if test "$ne_cv_lib_ssl097" = "yes"; then
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
-      NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL (0.9.7 or later)])
+      neon_ssl_message="OpenSSL (0.9.7 or later)"
    else
       # Fail if OpenSSL is older than 0.9.6
       NE_CHECK_SSLVER(ne_cv_lib_ssl096, 0.9.6, 0x00906000L)
       if test "$ne_cv_lib_ssl096" != "yes"; then
          AC_MSG_ERROR([OpenSSL 0.9.6 or later is required])
       fi
-      NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL (0.9.6 or later)])
+      neon_ssl_message="OpenSSL (0.9.6 or later)"
 
       case "$with_egd" in
       yes|no) ne_cv_lib_sslegd=$with_egd ;;
@@ -848,30 +764,18 @@ yes)
       fi
    fi
 
+   NEON_SUPPORTS_SSL=yes
+   NEON_CFLAGS="$NEON_CFLAGS -DNEON_SSL"
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
-   NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])
+   neon_ssl_message="No SSL support"
+   NEON_SUPPORTS_SSL=no
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_stubssl"
    ;;
 esac
 AC_SUBST(NEON_SUPPORTS_SSL)
 ])
-
-dnl Check for GNU libidn
-AC_DEFUN([NEON_LIBIDN], [
-AC_ARG_WITH(libidn, AS_HELP_STRING(--without-libidn, disable IDNA support))
-if test "$with_libidn" != "no"; then
-  ne_use_idna=no
-  AC_CHECK_HEADER(idna.h,
-    [NE_SEARCH_LIBS(idna_to_ascii_8z,idn,,,[ne_use_idna=yes])])
-  if test $ne_use_idna = yes; then
-    NE_ENABLE_SUPPORT(IDNA, [IDNA support enabled using GNU libidn])
-  else
-    NE_DISABLE_SUPPORT(IDNA, 
-      [IDNA support not enabled; GNU libidn >=0.2.0 required])
-  fi
-fi])
 
 dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
@@ -889,7 +793,7 @@ if test "x$KRB5_CONFIG" != "xnone"; then
       AC_MSG_NOTICE([GSSAPI authentication support enabled])
       AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
       AC_CHECK_HEADERS(gssapi/gssapi_generic.h)
-      # Older versions of MIT Kerberos lack GSS_C_NT_HOSTBASED_SERVICE
+      # MIT Kerberos lacks GSS_C_NT_HOSTBASED_SERVICE
       AC_CHECK_DECL([GSS_C_NT_HOSTBASED_SERVICE],,
         [AC_DEFINE([GSS_C_NT_HOSTBASED_SERVICE], gss_nt_service_name, 
           [Define if GSS_C_NT_HOSTBASED_SERVICE is not defined otherwise])],
@@ -911,12 +815,12 @@ AC_DEFUN([NEON_WARNINGS],[
 AC_REQUIRE([AC_PROG_CC]) dnl so that $GCC is set
 
 AC_ARG_ENABLE(warnings,
-AS_HELP_STRING(--enable-warnings, [enable compiler warnings]))
+AC_HELP_STRING(--enable-warnings, [enable compiler warnings]))
 
 if test "$enable_warnings" = "yes"; then
    case $GCC:`uname` in
    yes:*)
-      CFLAGS="$CFLAGS -Wall -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wcast-align -Wbad-function-cast -Wformat-security"
+      CFLAGS="$CFLAGS -Wall -ansi-pedantic -Wmissing-declarations -Winline -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wcast-align -Wbad-function-cast -Wimplicit-prototypes -Wformat-security"
       if test -z "$with_ssl" -o "$with_ssl" = "no"; then
 	 # OpenSSL headers fail strict prototypes checks
 	 CFLAGS="$CFLAGS -Wstrict-prototypes"
@@ -938,7 +842,7 @@ dnl
 AC_DEFUN([NEON_DEBUG], [
 
 AC_ARG_ENABLE(debug,
-AS_HELP_STRING(--disable-debug,[disable runtime debugging messages]))
+AC_HELP_STRING(--disable-debug,[disable runtime debugging messages]))
 
 # default is to enable debugging
 case $enable_debug in
@@ -953,21 +857,21 @@ esac])
 dnl Macro to optionally enable socks support
 AC_DEFUN([NEON_SOCKS], [
 
-AC_ARG_WITH([socks], AS_HELP_STRING([--with-socks],[use SOCKSv5 library]))
+AC_ARG_WITH([socks], AC_HELP_STRING([--with-socks],[use SOCKSv5 library]))
 
 if test "$with_socks" = "yes"; then
   ne_save_LIBS=$LIBS
 
   AC_CHECK_HEADERS(socks.h,
-    [AC_CHECK_LIB(socks5, connect, [:],
+    [AC_CHECK_LIB(socks5, connect,
+      [AC_MSG_NOTICE([SOCKSv5 support enabled])],
       [AC_MSG_ERROR([could not find libsocks5 for SOCKS support])])],
     [AC_MSG_ERROR([could not find socks.h for SOCKS support])])
 
-  NE_ENABLE_SUPPORT(SOCKS, [SOCKSv5 support is enabled])
+  CFLAGS="$CFLAGS -DNEON_SOCKS"
   NEON_LIBS="$NEON_LIBS -lsocks5"
   LIBS=$ne_save_LIBS
-else
-  NE_DISABLE_SUPPORT(SOCKS, [SOCKSv5 support is not enabled])
+
 fi])
 
 AC_DEFUN([NEON_WITH_LIBS], [

@@ -8,7 +8,7 @@ CONF=${srcdir}/openssl.conf
 REQ="${OPENSSL} req -config ${CONF}"
 CA="${OPENSSL} ca -config ${CONF} -batch"
 # MKCERT makes a self-signed cert
-MKCERT="${REQ} -x509 -new -days 900"
+MKCERT="${REQ} -x509 -new -days 9000"
 
 REQDN=reqDN
 STRMASK=default
@@ -117,7 +117,7 @@ fqdn=`hostname -f 2>/dev/null` || true
 if [ "x${hostname}.${domain}" = "x${fqdn}" ]; then
   csr_fields "Wildcard Cert Dept" "*.${domain}" | \
   ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
-  ${CA} -days 900 -in wildcard.csr -out wildcard.cert
+  ${CA} -days 9000 -in wildcard.csr -out wildcard.cert
 fi
 
 csr_fields "Neon Client Cert" ignored.example.com | \

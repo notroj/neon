@@ -3,8 +3,6 @@
 rm -f debug.log
 rm -f child.log
 
-ulimit -c unlimited
-
 # enable an safety-checking malloc in glibc which will abort() if
 # heap corruption is detected.
 MALLOC_CHECK_=2
