@@ -14,7 +14,7 @@ libdir = @libdir@
 
 # Build paths
 VPATH = @srcdir@
-top_builddir = ..
+top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # Toolchain settings.
