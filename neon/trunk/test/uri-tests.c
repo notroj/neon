@@ -357,13 +357,6 @@ static int unparse(void)
     return OK;    
 }
 
-static int leak_authinfo(void)
-{
-    ne_uri uri;
-    ne_uri_parse("http://fish@[ackack", &uri);
-    return OK;
-}
-
 ne_test tests[] = {
     T(simple),
     T(simple_ssl),
@@ -380,6 +373,5 @@ ne_test tests[] = {
     T(parse),
     T(failparse),
     T(unparse),
-    T_XLEAKY(leak_authinfo),
     T(NULL)
 };
