@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2004 Joe Orton <joe@manyfish.co.uk>
+# Copyright (C) 2001-2005 Joe Orton <joe@manyfish.co.uk>
 # Copyright (C) 1994, 1995-8, 1999, 2000 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
@@ -59,9 +59,9 @@ check: subdirs
 	cd test && $(MAKE) check
 
 # Useful for doing coverage analysis; use e.g.:
-#   make TESTS=string-tests MODULE=ne_string cover
+#   make TESTS=string-tests MODULE=ne_string.c cover
 cover: subdirs
-	@rm -f src/$(MODULE).*da test/common/*.*da test/*.*da
+	@rm -f src/*.*da test/common/*.*da test/*.*da
 	@cd test && $(MAKE) check
 	@cd src && $(GCOV) -cb $(MODULE)
 
