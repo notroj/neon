@@ -1,6 +1,6 @@
 /* 
    Replacement memory allocation handling etc.
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -32,8 +32,10 @@
 
 BEGIN_NEON_DECLS
 
+typedef void (*ne_oom_callback_fn)(void);
+
 /* Set callback which is called if malloc() returns NULL. */
-void ne_oom_callback(void (*callback)(void));
+void ne_oom_callback(ne_oom_callback_fn callback);
 
 #ifndef NEON_MEMLEAK
 /* Replacements for standard C library memory allocation functions,
