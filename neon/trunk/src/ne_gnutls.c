@@ -81,6 +81,7 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
 void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
                           char *from, char *until)
 {
+#warning FIXME strftime not portable
     if (from) {
         time_t t = gnutls_x509_crt_get_activation_time(cert->subject);
         strftime(from, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
@@ -102,16 +103,81 @@ static char *x509_get_dn(gnutls_x509_crt x5, int subject)
     else
         ret = gnutls_x509_crt_get_issuer_dn(x5, NULL, &len);
 
-    if (ret < 0)
+    if (ret < 0 && ret != GNUTLS_E_SHORT_MEMORY_BUFFER)
         return NULL;
 
-    dn = ne_malloc(len);
+    len++;
+    dn = ne_calloc(len);
     if (subject)
         gnutls_x509_crt_get_dn(x5, dn, &len);
     else
         gnutls_x509_crt_get_issuer_dn(x5, dn, &len);
 
     return dn;
+}
+
+/* Return non-zero if hostname from certificate (cn) matches hostname
+ * used for session (hostname).  (Wildcard matching is no longer
+ * mandated by RFC3280, but certs are deployed which use wildcards) */
+static int match_hostname(char *cn, const char *hostname)
+{
+    const char *dot;
+    NE_DEBUG(NE_DBG_SSL, "Match %s on %s...\n", cn, hostname);
+    dot = strchr(hostname, '.');
+    if (dot == NULL) {
+	char *pnt = strchr(cn, '.');
+	/* hostname is not fully-qualified; unqualify the cn. */
+	if (pnt != NULL) {
+	    *pnt = '\0';
+	}
+    }
+    else if (strncmp(cn, "*.", 2) == 0) {
+	hostname = dot + 1;
+	cn += 2;
+    }
+    return !strcasecmp(cn, hostname);
+}
+
+/* Check certificate identity.  Returns zero if identity matches; 1 if
+ * identity does not match, or <0 if the certificate had no identity.
+ * If 'identity' is non-NULL, store the malloc-allocated identity in
+ * *identity.  If 'server' is non-NULL, it must be the network address
+ * of the server in use, and identity must be NULL. */
+static int check_identity(const char *hostname, gnutls_x509_crt cert,
+                          char **identity, const ne_inet_addr *server)
+{
+    char name[255];
+    unsigned int critical;
+    int ret, len, seq = 0;
+    int match = 0, found = 0;
+
+    do {
+        len = sizeof name;
+        ret = gnutls_x509_crt_get_subject_alt_name(cert, seq, name, &len,
+                                                   &critical);
+        switch (ret) {
+        case GNUTLS_SAN_DNSNAME:
+        {
+            if (identity && !found) *identity = ne_strdup(name);
+            match = match_hostname(name, hostname);
+            found = 1;
+            break;
+        }
+        case GNUTLS_SAN_IPADDRESS:
+        {
+            /* TODO */
+        }
+        }
+    } while (ret == 0 && ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE);
+
+    /* Check against the commonName if no DNS alt. names were found,
+     * as per RFC3280. */
+    if (!found) {
+        /* TODO */
+    }
+
+    NE_DEBUG(NE_DBG_SSL, "Identity match: %s\n", match ? "good" : "bad");
+    return match ? 0 : 1;
 }
 
 /* Populate an ne_ssl_certificate structure from an X509 object. */
@@ -123,6 +189,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
+    check_identity("", x5, &cert->identity, NULL);
     return cert;
 }
 
@@ -336,14 +403,11 @@ void ne_ssl_cert_free(ne_ssl_certificate *cert)
 
 int ne_ssl_cert_cmp(const ne_ssl_certificate *c1, const ne_ssl_certificate *c2)
 {
-    int ret1, ret2;
-    char digest1[100], digest2[100];
+    char digest1[NE_SSL_DIGESTLEN], digest2[NE_SSL_DIGESTLEN];
 
-    ret1 = ne_ssl_cert_digest(c1, digest1);
-    ret2 = ne_ssl_cert_digest(c2, digest2);
-
-    if (ret1 < 0 || ret2 < 0)
+    if (ne_ssl_cert_digest(c1, digest1) || ne_ssl_cert_digest(c2, digest2)) {
         return -1;
+    }
 
     return strcmp(digest1, digest2);
 }
@@ -394,23 +458,12 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
-    int ret;
-    size_t len;
-    unsigned char *sha1;
-    unsigned int j;
-    char *p;
+    int ret, j, len = 20;
+    char sha1[20], *p;
 
-    ret = gnutls_x509_crt_get_fingerprint(cert->subject, GNUTLS_DIG_SHA,
-                                          NULL, &len);
-    if (ret < 0 || len != 20)
+    if (gnutls_x509_crt_get_fingerprint(cert->subject, GNUTLS_DIG_SHA,
+                                        sha1, &len) < 0)
         return -1;
-
-    sha1 = (unsigned char*) gnutls_malloc(len);
-    if (sha1 == NULL)
-        return -1;
-
-    gnutls_x509_crt_get_fingerprint(cert->subject, GNUTLS_DIG_SHA,
-                                    sha1, &len);
 
     for (j = 0, p = digest; j < 20; j++) {
         *p++ = NE_HEX2ASC((sha1[j] >> 4) & 0x0f);
