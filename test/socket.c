@@ -169,7 +169,7 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
     pair.userdata = ud;
     CALL(spawn_server(7777, wrap_serve, &pair));
     CALL(do_connect(sock, localhost, 7777));
-    ONV(ne_sock_connect_ssl(*sock, client_ctx),
+    ONV(ne_sock_connect_ssl(*sock, client_ctx, NULL),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
     return OK;
 }
