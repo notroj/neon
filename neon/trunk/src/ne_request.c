@@ -142,7 +142,6 @@ struct ne_request_s {
     } body;
 	    
     ne_off_t body_length; /* length of request body */
-    ne_off_t body_progress; /* number of bytes of body sent so far */
 
     /* temporary store for response lines. */
     char respbuf[BUFSIZ];
@@ -375,72 +374,68 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
     }
 }
 
-/* Pulls the request body from the source and pushes it to the given
- * callback.  Returns 0 on success, or NE_* code */
-int ne__pull_request_body(ne_request *req, ne_push_fn fn, void *ud)
+/* For accurate persistent connection handling, for any write() or
+ * read() operation for a new request on an already-open connection,
+ * an EOF or RST error MUST be treated as a persistent connection
+ * timeout, and the request retried on a new connection.  Once a
+ * read() operation has succeeded, any subsequent error MUST be
+ * treated as fatal.  A 'retry' flag is used; retry=1 represents the
+ * first case, retry=0 the latter. */
+
+/* RETRY_RET() crafts a function return value given the 'retry' flag,
+ * the socket error 'code', and the return value 'acode' from the
+ * aborted() function. */
+#define RETRY_RET(retry, code, acode) \
+((((code) == NE_SOCK_CLOSED || (code) == NE_SOCK_RESET || \
+ (code) == NE_SOCK_TRUNC) && retry) ? NE_RETRY : (acode))
+
+/* Sends the request body; returns 0 on success or an NE_* error code.
+ * If retry is non-zero; will return NE_RETRY on persistent connection
+ * timeout.  On error, the session error string is set and the
+ * connection is closed. */
+static int send_request_body(ne_request *req, int retry)
 {
-    int ret = 0;
+    ne_session *const sess = req->session;
+    ne_off_t progress = 0;
     char buffer[BUFSIZ];
     ssize_t bytes;
+
+    NE_DEBUG(NE_DBG_HTTP, "Sending request body:\n");
     
     /* tell the source to start again from the beginning. */
-    (void) req->body_cb(req->body_ud, NULL, 0);
+    if (req->body_cb(req->body_ud, NULL, 0) != 0) {
+        ne_close_connection(sess);
+        return NE_ERROR;
+    }
     
-    /* TODO: should this attempt to pull exactly the number of bytes
-     * they specified were in the body? Currently it just pulls until
-     * they return zero. That makes it possible to extend this to do
-     * chunked request bodies (i.e. indefinitely long, no C-L), so
-     * this is probably a better long-term interface. */
     while ((bytes = req->body_cb(req->body_ud, buffer, sizeof buffer)) > 0) {
-	ret = fn(ud, buffer, bytes);
-	if (ret < 0)
-	    break;
+	int ret = ne_sock_fullwrite(sess->socket, buffer, bytes);
+        if (ret < 0) {
+            int aret = aborted(req, _("Could not send request body"), ret);
+            return RETRY_RET(retry, ret, aret);
+        }
+
 	NE_DEBUG(NE_DBG_HTTPBODY, 
 		 "Body block (%" NE_FMT_SSIZE_T " bytes):\n[%.*s]\n",
 		 bytes, (int)bytes, buffer);
+
+        /* invoke progress callback */
+        if (sess->progress_cb) {
+            progress += bytes;
+            /* TODO: progress_cb offset type mismatch ick */
+            req->session->progress_cb(sess->progress_ud, progress,
+                                      req->body_length);
+        }
     }
 
-    if (bytes < 0) {
-	ne_set_error(req->session, _("Error reading request body."));
-	ret = NE_ERROR;
-    }
-
-    return ret;
-}
-
-static int send_with_progress(void *userdata, const char *data, size_t n)
-{
-    ne_request *req = userdata;
-    int ret;
-    
-    ret = ne_sock_fullwrite(req->session->socket, data, n);
-    if (ret == 0) {
-	req->body_progress += n;
-	req->session->progress_cb(req->session->progress_ud,
-				  req->body_progress, req->body_length);
-    }
-    
-    return ret;    
-}
-
-/* Sends the request body down the socket.
- * Returns 0 on success, or NE_* code */
-static int send_request_body(ne_request *req)
-{
-    int ret; 
-    NE_DEBUG(NE_DBG_HTTP, "Sending request body...\n");
-    if (req->session->progress_cb) {
-	/* with progress callbacks. */
-	req->body_progress = 0;
-	ret = ne__pull_request_body(req, send_with_progress, req);
+    if (bytes == 0) {
+        return NE_OK;
     } else {
-	/* without progress callbacks. */
-	ret = ne__pull_request_body(req, (ne_push_fn)ne_sock_fullwrite,
-				   req->session->socket);
+        NE_DEBUG(NE_DBG_HTTP, "Request body provider failed with "
+                 "%" NE_FMT_SSIZE_T "\n", bytes);
+        ne_close_connection(sess);
+        return NE_ERROR;
     }
-
-    NE_DEBUG(NE_DBG_HTTP, "Request body sent: %s.\n", ret?"failed":"okay");
-    return ret;
 }
 
 /* Lob the User-Agent, connection and host headers in to the request
@@ -918,21 +913,6 @@ static inline void strip_eol(char *buf, ssize_t *len)
     }
 }
 
-/* For accurate persistent connection handling, for any write() or
- * read() operation for a new request on an already-open connection,
- * an EOF or RST error MUST be treated as a persistent connection
- * timeout, and the request retried on a new connection.  Once a
- * read() operation has succeeded, any subsequent error MUST be
- * treated as fatal.  A 'retry' flag is used; retry=1 represents the
- * first case, retry=0 the latter. */
-
-/* RETRY_RET() crafts a function return value given the 'retry' flag,
- * the socket error 'code', and the return value 'acode' from the
- * aborted() function. */
-#define RETRY_RET(retry, code, acode) \
-((((code) == NE_SOCK_CLOSED || (code) == NE_SOCK_RESET || \
- (code) == NE_SOCK_TRUNC) && retry) ? NE_RETRY : (acode))
-
 /* Read and parse response status-line into 'status'.  'retry' is non-zero
  * if an NE_RETRY should be returned if an EOF is received. */
 static int read_status_line(ne_request *req, ne_status *status, int retry)
@@ -1004,10 +984,9 @@ static int send_request(ne_request *req, const ne_buffer *request)
     
     if (!req->use_expect100 && req->body_length > 0) {
 	/* Send request body, if not using 100-continue. */
-	ret = send_request_body(req);
-	if (ret < 0) {
-	    int aret = aborted(req, _("Could not send request body"), ret);
-	    return RETRY_RET(sess, ret, aret);
+	ret = send_request_body(req, retry);
+	if (ret) {
+            return ret;
 	}
     }
     
@@ -1025,7 +1004,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	if (req->use_expect100 && (status->code == 100)
             && req->body_length > 0 && !sentbody) {
 	    /* Send the body after receiving the first 100 Continue */
-	    if ((ret = send_request_body(req)) != NE_OK) break;	    
+	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
 	    sentbody = 1;
 	}
     }

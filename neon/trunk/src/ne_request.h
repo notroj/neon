@@ -73,8 +73,10 @@ void ne_set_request_body_fd64(ne_request *req, int fd,
  * once with buflen == 0.  The body may have to be provided >1 time
  * per request (for authentication retries etc.).
  *
- * The callback must return:
- *        <0           : error, abort request.
+ * For a call with buflen == 0, the callback must return zero on success
+ * on non-zero on error; the session error string must be set on error.
+ * For a call with buflen > 0, the callback must return:
+ *        <0           : error, abort request; session error string must be set.
  *         0           : ignore 'buffer' contents, end of body.
  *     0 < x <= buflen : buffer contains x bytes of body data.  */
 typedef ssize_t (*ne_provide_body)(void *userdata, 
