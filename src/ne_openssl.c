@@ -218,10 +218,8 @@ static int match_hostname(char *cn, const char *hostname)
 /* Check certificate identity.  Returns zero if identity matches; 1 if
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
- * *identity.  If 'server' is non-NULL, it must be the network address
- * of the server in use, and identity must be NULL. */
-static int check_identity(const char *hostname, X509 *cert, char **identity,
-                          const ne_inet_addr *server)
+ * *identity. */
+static int check_identity(const char *hostname, X509 *cert, char **identity)
 {
     STACK_OF(GENERAL_NAME) *names;
     int match = 0, found = 0;
@@ -241,7 +239,7 @@ static int check_identity(const char *hostname, X509 *cert, char **identity,
 		match = match_hostname(name, hostname);
 		ne_free(name);
 		found = 1;
-            } else if (nm->type == GEN_IPADD && server) {
+            } else if (nm->type == GEN_IPADD) {
                 /* compare IP address with server IP address. */
                 ne_inet_addr *ia;
                 if (nm->d.ip->length == 4)
@@ -252,7 +250,10 @@ static int check_identity(const char *hostname, X509 *cert, char **identity,
                     ia = NULL;
                 /* ne_iaddr_make returns NULL if address type is unsupported */
                 if (ia != NULL) { /* address type was supported. */
-                    match = ne_iaddr_cmp(server, ia) == 0;
+                    char buf[128];
+
+                    match = strcmp(hostname, 
+                                   ne_iaddr_print(ia, buf, sizeof buf)) == 0;
                     found = 1;
                     ne_iaddr_free(ia);
                 } else {
@@ -295,7 +296,8 @@ static int check_identity(const char *hostname, X509 *cert, char **identity,
 	ne_free(name);
     }
 
-    NE_DEBUG(NE_DBG_SSL, "Identity match: %s\n", match ? "good" : "bad");
+    NE_DEBUG(NE_DBG_SSL, "Identity match for '%s': %s\n", hostname, 
+             match ? "good" : "bad");
     return match ? 0 : 1;
 }
 
@@ -308,7 +310,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
     cert->subject = x5;
     /* Retrieve the cert identity; pass a dummy hostname to match. */
     cert->identity = NULL;
-    check_identity("", x5, &cert->identity, NULL);
+    check_identity("", x5, &cert->identity);
     return cert;
 }
 
@@ -357,8 +359,7 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
 
     /* Check certificate was issued to this server; pass network
      * address of server if a proxy is not in use. */
-    ret = check_identity(sess->server.hostname, cert, NULL, 
-                         sess->use_proxy ? NULL : sess->server.current);
+    ret = check_identity(sess->server.hostname, cert, NULL);
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));
