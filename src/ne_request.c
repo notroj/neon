@@ -955,25 +955,26 @@ static int discard_headers(ne_request *req)
  */
 static int send_request(ne_request *req, const ne_buffer *request)
 {
-    ne_session *sess = req->session;
-    ssize_t ret = NE_OK;
+    ne_session *const sess = req->session;
+    ne_status *const status = &req->status;
     int sentbody = 0; /* zero until body has been sent. */
-    int retry; /* non-zero whilst the request should be retried */
-    ne_status *status = &req->status;
+    int ret, retry; /* retry non-zero whilst the request should be retried */
+    ssize_t sret;
 
     /* Send the Request-Line and headers */
     NE_DEBUG(NE_DBG_HTTP, "Sending request-line and headers:\n");
     /* Open the connection if necessary */
-    HTTP_ERR(open_connection(req));
+    ret = open_connection(req);
+    if (ret) return ret;
 
     /* Allow retry if a persistent connection has been used. */
     retry = sess->persisted;
     
-    ret = ne_sock_fullwrite(req->session->socket, request->data, 
-			    ne_buffer_size(request));
-    if (ret < 0) {
+    sret = ne_sock_fullwrite(req->session->socket, request->data, 
+                             ne_buffer_size(request));
+    if (sret < 0) {
 	int aret = aborted(req, _("Could not send request"), ret);
-	return RETRY_RET(retry, ret, aret);
+	return RETRY_RET(retry, sret, aret);
     }
     
     if (!req->use_expect100 && req->body_length > 0) {
