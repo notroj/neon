@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@
 #include "child.h"
 #include "utils.h"
 
-#ifndef NEON_SSL
+#ifndef NE_HAVE_SSL
 /* this file shouldn't be built if SSL is not enabled. */
 #error SSL not supported
 #endif
@@ -190,7 +190,7 @@ static int ssl_server(ne_socket *sock, void *userdata)
     if (args->session) {
         SSL_SESSION *sess = SSL_get1_session(ssl);
 
-#if NE_DEBUGGING
+#ifdef NE_DEBUGGING
         /* dump session to child.log for debugging. */
         SSL_SESSION_print_fp(ne_debug_stream, sess);
 #endif
@@ -746,7 +746,7 @@ static int fail_ssl_request(char *cert, char *cacert,
 	("verification flags were %d not %d", gotf, failures));
 
     /* and check that the request was failed too. */
-    ONN(msg, ret == NE_OK);
+    ONV(ret == NE_OK, ("%s", msg));
 
     ne_session_destroy(sess);
 
@@ -1253,16 +1253,33 @@ static int dname_compare(void)
     return OK;
 }
 
+/* The dname with the UTF-8 encoding of the Unicode string: 
+ * "H<LATIN SMALL LETTER E WITH GRAVE>llo World". */
+#define I18N_DNAME "H\xc3\xa8llo World, Neon Hackers Ltd, Cambridge, Cambridgeshire, GB"
+
+/* N.B. t61subj.cert encodes an ISO-8859-1 string in a T61String
+ * field, which is strictly wrong but the common usage. */
+
 /* tests for ne_ssl_readable_dname */
 static int dname_readable(void)
 {
-    ne_ssl_certificate *cert;
+    struct {
+        const char *cert;
+        const char *subjdn, *issuerdn;
+    } ts[] = {
+        { "justmail.cert", "blah@example.com", NULL },
+        { "t61subj.cert", I18N_DNAME, NULL },
+        { "bmpsubj.cert", I18N_DNAME, NULL },
+        { "utf8subj.cert", I18N_DNAME, NULL }
+    };
+    size_t n;
 
-    cert = ne_ssl_cert_read("justmail.cert");
-    ONN("could not load justmail.cert", cert == NULL);
-
-    CALL(check_cert_dnames(cert, "blah@example.com", NULL));
-    ne_ssl_cert_free(cert);
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
+        ne_ssl_certificate *cert = ne_ssl_cert_read(ts[n].cert);
+        ONV(cert == NULL, ("could not load cert %s", ts[n].cert));
+        CALL(check_cert_dnames(cert, ts[n].subjdn, ts[n].issuerdn));
+        ne_ssl_cert_free(cert);
+    }
 
     return OK;
 }

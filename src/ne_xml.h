@@ -1,6 +1,6 @@
 /* 
    neon XML parser interface
-   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -86,16 +86,27 @@ void ne_xml_push_handler(ne_xml_parser *p,
                          ne_xml_endelm_cb *endelm,
                          void *userdata);
 
-/* Returns non-zero if the parse was valid, zero if it failed (e.g.,
- * any of the callbacks failed, the XML was not well-formed, etc).
- * Use ne_xml_get_error to retrieve the error message if it failed. */
-int ne_xml_valid(ne_xml_parser *p);
+/* ne_xml_failed returns non-zero if there was an error during
+ * parsing, or zero if the parse completed successfully.  If a handler
+ * callback aborts the parse by returning a negative number, that number
+ * is returned by ne_xml_failed.  If the XML could not be parsed, a
+ * positive number is returned. */
+int ne_xml_failed(ne_xml_parser *p);
+
+/* Set error string for parser: the string may be truncated. */
+void ne_xml_set_error(ne_xml_parser *p, const char *msg);
+
+/* Return the error string (never NULL).  After ne_xml_failed returns
+ * >0, this will describe the parse error.  Otherwise it will be a
+ * default error string. */
+const char *ne_xml_get_error(ne_xml_parser *p);
 
 /* Destroy the parser object. */
 void ne_xml_destroy(ne_xml_parser *p);
 
-/* Parse the given block of input of length len. Block does not need
- * to be NUL-terminated. */
+/* Parse the given block of input of length len.  Parser must be
+ * called with len=0 to signify the end of the document (for that
+ * case, the block argument is ignored). */
 void ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
 
 /* As above, casting (ne_xml_parser *)userdata internally.
@@ -104,12 +115,6 @@ void ne_xml_parse_v(void *userdata, const char *block, size_t len);
 
 /* Return current parse line for errors */
 int ne_xml_currentline(ne_xml_parser *p);
-
-/* Set error string for parser. */
-void ne_xml_set_error(ne_xml_parser *p, const char *msg);
-
-/* Return the error string for the parser and never NULL. */
-const char *ne_xml_get_error(ne_xml_parser *p);
 
 /* From a start_element callback which was passed 'attrs' using given
  * parser, return attribute of given name and namespace.  If nspace is

@@ -1,6 +1,6 @@
 /* 
    Framework for testing with a server process
-   Copyright (C) 2001-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -83,6 +83,10 @@ ssize_t server_send(ne_socket *sock, const char *data, size_t len);
 
 /* Utility macro: send given string down socket. */
 #define SEND_STRING(sock, str) server_send((sock), (str), strlen((str)))
+
+/* Tries to ensure that the socket will be closed using RST rather
+ * than FIN. */
+int reset_socket(ne_socket *sock);
 
 /* Utility function: discard request.  Sets context on error. */
 int discard_request(ne_socket *sock);

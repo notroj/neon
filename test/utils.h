@@ -1,6 +1,6 @@
 /* 
    neon-specific test utils
-   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -53,5 +53,16 @@ int make_session(ne_session **sess, server_fn fn, void *userdata);
 
 /* Server which sleeps for 10 seconds then closes the socket. */
 int sleepy_server(ne_socket *sock, void *userdata);
+
+struct string {
+    char *data;
+    size_t len;
+};
+
+/* Serve a struct string. */
+int serve_sstring(ne_socket *sock, void *ud);
+
+/* Serve a struct string slowly. */
+int serve_sstring_slowly(ne_socket *sock, void *ud);
 
 #endif /* UTILS_H */

@@ -1,6 +1,6 @@
 /* 
    WebDAV Properties manipulation
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -138,12 +138,13 @@ int ne_simple_propfind(ne_session *sess, const char *path, int depth,
  * non-NULL; or it can remove a property; in which case 'type' must be
  * ne_propremove, and 'value' is ignored.  In both cases, 'name' must
  * be set to the name of the property to alter. */
+enum ne_proppatch_optype {
+    ne_propset,
+    ne_propremove
+};
 typedef struct {
     const ne_propname *name;
-    enum {
-	ne_propset,
-	ne_propremove
-    } type;
+    enum ne_proppatch_optype type;
     const char *value;
 } ne_proppatch_operation;
 
