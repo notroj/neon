@@ -12,6 +12,8 @@ Known problems/bugs in neon                                      -*- text -*-
 * ne_lock_discover does not handle multiple (shared) locks on
   a single resource.
 
+* ne_lock_refresh does not update the passed-in lock structure.
+
 * SSL session caching issues; only cache for clean shutdowns, and
  only cache on shutdown, since the SSL_SESSION may change during
  an ne_session?
@@ -19,10 +21,6 @@ Known problems/bugs in neon                                      -*- text -*-
 * what is passed as 'path' to req create hook: auth needs Request-URI;
   how does that interact with proxies?  also they will be passed NULL
   for a CONNECT request, or "*" possibly as well.
-
-* expect100 support is broken: enable it per-request, don't bother
-caching support over the session, rely on the app only enabling it if
-it works.
 
 * It would be nice to fail with a friendly error message if a client
 cert is requested by the srever but one is not provided.  Currently,
