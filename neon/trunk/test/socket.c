@@ -815,13 +815,20 @@ static int ssl_truncate(void)
 }
 
 #else
-/* thanks to W Richard Stevens for the precise repro case for getting
- * an RST on demand. */
+
+/* use W Richard Stevens' SO_LINGER trick to elicit a TCP RST */
+static int serve_reset(ne_socket *sock, void *ud)
+{
+    reset_socket(sock);
+    exit(0);
+    return 0;
+}
+
 static int write_reset(void)
 {
     ne_socket *sock;
     int ret;
-    CALL(begin(&sock, serve_close, NULL));
+    CALL(begin(&sock, serve_reset, NULL));
     CALL(full_write(sock, "a", 1));
     CALL(await_server());
     ret = ne_sock_fullwrite(sock, "a", 1);
@@ -837,7 +844,7 @@ static int read_reset(void)
 {
     ne_socket *sock;
     ssize_t ret;
-    CALL(begin(&sock, serve_close, NULL));
+    CALL(begin(&sock, serve_reset, NULL));
     CALL(full_write(sock, "a", 1));
     CALL(await_server());
     ret = ne_sock_read(sock, buffer, 1);
