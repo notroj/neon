@@ -119,10 +119,10 @@ int ne_accept_2xx(void *userdata, ne_request *req, const ne_status *st);
 int ne_accept_always(void *userdata, ne_request *req, const ne_status *st);
 
 /* Callback for reading a block of data.  Returns zero on success, or
- * -1 on error.  If returning an error, the response will be aborted
- * and the callback will not be invoked again.  The request dispatch
- * (or ne_read_response_block call) will fail with NE_ERROR; the
- * session error string should have been set by the callback. */
+ * non-zero on error.  If returning an error, the response will be
+ * aborted and the callback will not be invoked again.  The request
+ * dispatch (or ne_read_response_block call) will fail with NE_ERROR;
+ * the session error string should have been set by the callback. */
 typedef int (*ne_block_reader)(void *userdata, const char *buf, size_t len);
 
 /* Add a response reader for the given request, with the given
