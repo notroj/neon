@@ -145,7 +145,13 @@ typedef struct in_addr ne_inet_addr;
 #define NE_ISCLOSED(e) ((e) == WSAESHUTDOWN || (e) == WSAENOTCONN)
 #define NE_ISINTR(e) (0)
 #else /* Unix */
+/* ECONNABORTED shouldn't really be returned by anything but accept()
+ * but apparently nobody told CygWin that... */
+#ifdef ECONNABORTED
+#define NE_ISRESET(e) ((e) == ECONNRESET || (e) == ECONNABORTED)
+#else
 #define NE_ISRESET(e) ((e) == ECONNRESET)
+#endif
 #define NE_ISCLOSED(e) ((e) == EPIPE)
 #define NE_ISINTR(e) ((e) == EINTR)
 #endif
@@ -863,9 +869,9 @@ int ne_sock_connect(ne_socket *sock,
 	return -1;
     }
     
-#ifndef NE_USE_POLL
+#if !defined(NE_USE_POLL) && !defined(WIN32)
     if (fd > FD_SETSIZE) {
-        close(fd);
+        ne_close(fd);
         set_error(sock, _("Socket descriptor number exceeds FD_SETSIZE"));
         return NE_SOCK_ERROR;
     }
