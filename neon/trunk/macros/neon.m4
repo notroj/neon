@@ -118,15 +118,27 @@ NEON_COMMON
 
 ])
 
-AC_DEFUN([NEON_VERSIONS], [
+AC_DEFUN([NE_DEFINE_VERSIONS], [
+
+NEON_VERSION="${NE_VERSION_MAJOR}.${NE_VERSION_MINOR}.${NE_VERSION_PATCH}${NE_VERSION_TAG}"
+
+AC_DEFINE_UNQUOTED([NEON_VERSION], ["${NEON_VERSION}"],
+                   [Define to be the neon version string])
+AC_DEFINE_UNQUOTED([NE_VERSION_MAJOR], [(${NE_VERSION_MAJOR})],
+                   [Define to be neon library major version])
+AC_DEFINE_UNQUOTED([NE_VERSION_MINOR], [(${NE_VERSION_MINOR})],
+                   [Define to be neon library minor version])
+AC_DEFINE_UNQUOTED([NE_VERSION_PATCH], [(${NE_VERSION_PATCH})],
+                   [Define to be neon library patch version])
+])
+
+AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
-NEON_VERSION_MAJOR=0
-NEON_VERSION_MINOR=25
-NEON_VERSION_RELEASE=0
-NEON_VERSION_TAG=-dev
-
-NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE}${NEON_VERSION_TAG}"
+NE_VERSION_MAJOR=0
+NE_VERSION_MINOR=25
+NE_VERSION_PATCH=0
+NE_VERSION_TAG=-dev
 
 # libtool library interface versioning.  Release policy dictates that
 # for neon 0.x.y, each x brings an incompatible interface change, and
@@ -135,14 +147,9 @@ NEON_VERSION="${NEON_VERSION_MAJOR}.${NEON_VERSION_MINOR}.${NEON_VERSION_RELEASE
 # 1.x.y, this will become N + x == CURRENT, y == RELEASE, x == AGE,
 # where N is constant (and equal to CURRENT + 1 from the final 0.x
 # release)
-NEON_INTERFACE_VERSION="${NEON_VERSION_MINOR}:${NEON_VERSION_RELEASE}:0"
+NEON_INTERFACE_VERSION="${NE_VERSION_MINOR}:${NE_VERSION_PATCH}:0"
 
-AC_DEFINE_UNQUOTED(NEON_VERSION, "${NEON_VERSION}", 
-	[Define to be the neon version string])
-AC_DEFINE_UNQUOTED(NEON_VERSION_MAJOR, [(${NEON_VERSION_MAJOR})],
-	[Define to be major number of neon version])
-AC_DEFINE_UNQUOTED(NEON_VERSION_MINOR, [(${NEON_VERSION_MINOR})],
-	[Define to be minor number of neon version])
+NE_DEFINE_VERSIONS
 
 ])
 
@@ -234,9 +241,14 @@ AC_DEFUN([NEON_USE_EXTERNAL], [
 # found at $NEON_CONFIG.
 neon_prefix=`$NEON_CONFIG --prefix`
 NEON_CHECK_VERSION([
+    # Pick up CFLAGS and LIBS needed
     CFLAGS="$CFLAGS `$NEON_CONFIG --cflags`"
     NEON_LIBS="$NEON_LIBS `$NEON_CONFIG --libs`"
-    neon_library_message="library in ${neon_prefix} (`$NEON_CONFIG --version`)"
+    # Pick up library version
+    set dummy `$NEON_CONFIG --version | sed 's/\./ /g'`
+    NE_VERSION_MAJOR=[$]3; NE_VERSION_MINOR=[$]4; NE_VERSION_PATCH=[$]5
+    NE_DEFINE_VERSIONS
+    neon_library_message="library in ${neon_prefix} (${NEON_VERSION})"
     neon_xml_parser_message="using whatever neon uses"
     NEON_CHECK_SUPPORT([ssl], [SSL], [SSL])
     NEON_CHECK_SUPPORT([zlib], [ZLIB], [zlib])
@@ -250,8 +262,6 @@ NEON_CHECK_VERSION([
 AC_DEFUN([NEON_COMMON],[
 
 AC_REQUIRE([NEON_COMMON_CHECKS])
-
-NEON_VERSIONS
 
 AC_ARG_WITH(neon,
 [  --with-neon[[=DIR]]       specify location of neon library],
@@ -303,10 +313,8 @@ if test "$neon_force_included" = "no"; then
     fi
 fi
 
-# This isn't a simple 'else' branch, since neon_force_included
-# is set to yes if the search fails.
-
 if test "$neon_force_included" = "yes"; then
+    NE_VERSIONS_BUNDLED
     AC_MSG_NOTICE([using bundled neon ($NEON_VERSION)])
     NEON_BUILD_BUNDLED="yes"
     LIBNEON_SOURCE_CHECKS
@@ -317,7 +325,7 @@ if test "$neon_force_included" = "yes"; then
 else
     # Don't need to configure an XML parser
     NEON_NEED_XML_PARSER=no
-    NEON_BUILD_BUNDLED="yes"
+    NEON_BUILD_BUNDLED=no
 fi
 
 AC_SUBST(NEON_BUILD_BUNDLED)
