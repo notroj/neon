@@ -1,6 +1,6 @@
 /* 
    String handling tests
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -84,7 +84,8 @@ static int buf_concat3(void)
     return OK;
 }
 
-static int append(void) {
+static int append(void)
+{
     ne_buffer *s = ne_buffer_create();
     ON(s == NULL);
     ne_buffer_append(s, "a", 1);
@@ -92,6 +93,11 @@ static int append(void) {
     ne_buffer_append(s, "c", 1);
     ONCMP(s->data, "abc");
     ON(ne_buffer_size(s) != 3);
+    ne_buffer_zappend(s, "hello");
+    ONCMP(s->data, "abchello");
+    ne_buffer_czappend(s, "world");
+    ONCMP(s->data, "abchelloworld");
+    ON(ne_buffer_size(s) != 13);
     ne_buffer_destroy(s);
     return OK;
 }    
