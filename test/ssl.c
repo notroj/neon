@@ -753,7 +753,7 @@ static int fail_ssl_request(char *cert, char *cacert,
     return OK;
 }
 
-/* Note that the certs used for fail_* are all self-signed, so the
+/* Note that the certs used for fail_* are mostly self-signed, so the
  * cert is passed as CA cert and server cert to fail_ssl_request. */
 
 /* Check that a certificate with the incorrect commonName attribute is
@@ -814,6 +814,13 @@ static int fail_missing_CN(void)
     ne_session_destroy(sess);
     return OK;
 }                            
+
+/* test for a bad ipAddress altname */
+static int fail_bad_ipaltname(void)
+{
+    return fail_ssl_request("altname6.cert", CA_CERT,
+                            "bad IP altname cert", NE_SSL_IDMISMATCH);
+}
 
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
@@ -1539,6 +1546,7 @@ ne_test tests[] = {
     T(fail_untrusted_ca),
     T(fail_self_signed),
     T(fail_missing_CN),
+    T(fail_bad_ipaltname),
 
     T(session_cache),
 	
