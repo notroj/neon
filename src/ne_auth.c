@@ -979,6 +979,7 @@ static int auth_challenge(auth_session *sess, const char *value)
                  * paramater token doesn't match the 2617 auth-param
                  * grammar: */
                 chall->opaque = ne_shave(ne_token(&pnt, ','), " \t");
+                if (!pnt) break; /* stop parsing at end-of-string. */
             }
 	    continue;
 	} else if (chall == NULL) {

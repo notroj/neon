@@ -337,6 +337,23 @@ static int tunnel_regress(void)
     return OK;
 }
 
+/* regression test for parsing a Negotiate challenge with on parameter
+ * token. */
+static int negotiate_regress(void)
+{
+    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    ne_set_server_auth(sess, fail_auth_cb, NULL);
+    CALL(spawn_server(7777, single_serve_string,
+		      "HTTP/1.1 401 Auth failed.\r\n"
+		      "WWW-Authenticate: Negotiate\r\n"
+		      "Content-Length: 0\r\n\r\n"));
+    any_request(sess, "/foo");
+    ne_session_destroy(sess);
+    CALL(await_server());
+    return OK;
+}
+
+
 /* test digest auth 2068-style. */
 
 /* test digest auth 2617-style. */
@@ -356,5 +373,6 @@ ne_test tests[] = {
     T(retries),
     T(forget_regress),
     T(tunnel_regress),
+    T(negotiate_regress),
     T(NULL)
 };
