@@ -25,6 +25,8 @@
 #include "ne_string.h"
 #include "ne_sspi.h"
 
+#ifdef HAVE_SSPI
+
 #define SEC_SUCCESS(Status) ((Status) >= 0)
 
 struct SSPIContextStruct {
@@ -48,7 +50,7 @@ static int initialized = 0;
 /*
  * Query specified package for it's maximum token size.
  */
-static int getMaxTokenSize(const char *package, ULONG * maxTokenSize)
+static int getMaxTokenSize(char *package, ULONG * maxTokenSize)
 {
     SECURITY_STATUS status;
     SecPkgInfo *packageSecurityInfo = NULL;
@@ -116,9 +118,8 @@ static void initDll(HINSTANCE hSecDll)
 /*
  * This function needs to be called at least once before using any other.
  */
-int sspiInit()
+int ne_sspi_init(void)
 {
-
     if (initialized) {
         return 0;
     }
@@ -148,7 +149,7 @@ int sspiInit()
 /*
  * This function can be called to free resources used by SSPI.
  */
-int ne_sspi_init(void)
+int ne_sspi_deinit(void)
 {
     NE_DEBUG(NE_DBG_SOCKET, "sspi: DeInit\n");
     if (initialized <= 0) {
@@ -544,3 +545,4 @@ int ne_sspi_authenticate(void *context, const char *base64Token, char **response
 
     return 0;
 }
+#endif /* HAVE_SSPI */

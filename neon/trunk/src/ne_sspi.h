@@ -32,7 +32,7 @@
 #include <security.h>
 
 int ne_sspi_init(void);
-fint ne_sspi_deinit(void);
+int ne_sspi_deinit(void);
 
 int ne_sspi_create_context(void **context, char * serverName, int ntlm);
 
