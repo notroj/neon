@@ -121,27 +121,32 @@ struct get_context {
     ne_content_range *range;
 };
 
-static void get_to_fd(void *userdata, const char *block, size_t length)
+static int get_to_fd(void *userdata, const char *block, size_t length)
 {
     struct get_context *ctx = userdata;
     ssize_t ret;
     
+    if (ctx->error) {
+        return -1;
+    }
+
     if (!ctx->error) {
 	while (length > 0) {
 	    ret = write(ctx->fd, block, length);
 	    if (ret < 0) {
 		char err[200];
-		ctx->error = 1;
 		ne_strerror(errno, err, sizeof err);
 		ne_set_error(ctx->session, _("Could not write to file: %s"),
 			     err);
-		break;
+                return -1;
 	    } else {
 		length -= ret;
 		block += ret;
 	    }
 	}
     }
+    
+    return 0;
 }
 
 static int accept_206(void *ud, ne_request *req, const ne_status *st)

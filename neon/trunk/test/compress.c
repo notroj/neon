@@ -47,7 +47,7 @@ static int init(void)
 
 #define EXTRA_DEBUG 0 /* disabled by default */
 
-static void reader(void *ud, const char *block, size_t len)
+static int reader(void *ud, const char *block, size_t len)
 {
     struct string *b = ud;
 
@@ -56,7 +56,7 @@ static void reader(void *ud, const char *block, size_t len)
              (int)len, block);
 #endif
 
-    if (failed == f_mismatch) return;
+    if (failed == f_mismatch) return -1;
 
     if (failed == f_partial && len == 0) {
         if (b->len != 0) {
@@ -66,7 +66,7 @@ static void reader(void *ud, const char *block, size_t len)
         } else {
             failed = f_complete;
         }
-        return;
+        return 0;
     }
 
     if (len > b->len || memcmp(b->data, block, len) != 0) {
@@ -81,6 +81,8 @@ static void reader(void *ud, const char *block, size_t len)
                  (int)b->len);
 #endif
     }
+
+    return 0;
 }
 
 static int file2buf(int fd, ne_buffer *buf)

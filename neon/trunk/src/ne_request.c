@@ -873,9 +873,10 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
 				  resp->mode==R_CLENGTH ? resp->body.clen.total:-1);
     }
 
-    /* TODO: call the readers when this fails too. */
     for (rdr = req->body_readers; rdr!=NULL; rdr=rdr->next) {
-	if (rdr->use) rdr->handler(rdr->userdata, buffer, readlen);
+	if (rdr->use && rdr->handler(rdr->userdata, buffer, readlen) != 0) {
+            return -1;
+        }
     }
     
     return readlen;

@@ -69,10 +69,11 @@ static int finish_request(void)
 #define TE_CHUNKED "Transfer-Encoding: chunked\r\n"
 
 /* takes response body chunks and appends them to a buffer. */
-static void collector(void *ud, const char *data, size_t len)
+static int collector(void *ud, const char *data, size_t len)
 {
     ne_buffer *buf = ud;
     ne_buffer_append(buf, data, len);
+    return 0;
 }
 
 typedef ne_request *(*construct_request)(ne_session *sess, void *userdata);
@@ -1629,12 +1630,47 @@ static int idna_hostname(void)
 
     ne_session_destroy(sess);
     return OK;
+}
 #else
 static int idna_hostname(void)
 {
     t_context("IDNA support not enabled");
     return SKIP;
+}
 #endif
+
+static int abortive_reader(void *userdata, const char *buf, size_t len)
+{
+    ne_session *sess = userdata;
+    if (len == 5 && strncmp(buf, "abcde", 5) == 0) {
+        ne_set_error(sess, "Reader callback failed");
+    } else {
+        ne_set_error(sess, "Reader callback called with length %" NE_FMT_SIZE_T,
+                     len);
+    }
+    return NE_ERROR;
+}
+
+static int abort_reader(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string, 
+                      RESP200 "Content-Length: 5\r\n\r\n"
+                      "abcde"));
+
+    req = ne_request_create(sess, "GET", "/foo");
+    ne_add_response_body_reader(req, ne_accept_2xx, abortive_reader, sess);
+    ret = ne_request_dispatch(req);
+    ONV(ret != NE_ERROR, ("request did not fail with NE_ERROR: %d", ret));
+    ONV(strcmp(ne_get_error(sess), "Reader callback failed") != 0,
+        ("unexpected session error string: %s", ne_get_error(sess)));
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+    CALL(await_server());
+    return OK;
 }
 
 ne_test tests[] = {
@@ -1710,5 +1746,6 @@ ne_test tests[] = {
     T(versions),
     T(hook_create_req),
     T(idna_hostname),
+    T(abort_reader),
     T(NULL)
 };

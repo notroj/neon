@@ -1098,12 +1098,13 @@ static int auth_challenge(auth_session *sess, const char *value)
 }
 
 /* The body reader callback. */
-static void auth_body_reader(void *cookie, const char *block, size_t length)
+static int auth_body_reader(void *cookie, const char *block, size_t length)
 {
     struct ne_md5_ctx *ctx = cookie;
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "Digesting %" NE_FMT_SIZE_T " bytes of response body.\n", length);
     ne_md5_process_bytes(block, length, ctx);
+    return 0;
 }
 
 /* Collect auth challenges into an ne_buffer */
