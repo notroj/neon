@@ -205,6 +205,11 @@ const char *ne_xml_doc_encoding(const ne_xml_parser *p)
 /* Return non-zero if 'ch' is an invalid start character for an NCName: */
 #define invalid_ncname_ch1(ch) ((ch) == '\0' || strchr("-.0123456789", (ch)) != NULL)
 
+/* Subversion repositories have been deployed which use property names
+ * marshalled as NCNames including a colon character; these should
+ * also be rejected but will be allowed for the time being. */
+#define invalid_ncname(xn) (invalid_ncname_ch1((xn)[0]))
+
 /* Extract the namespace prefix declarations from 'atts'. */
 static int declare_nspaces(ne_xml_parser *p, struct element *elm,
                            const ne_xml_char **atts)
@@ -212,19 +217,15 @@ static int declare_nspaces(ne_xml_parser *p, struct element *elm,
     int n;
     
     for (n = 0; atts && atts[n]; n += 2) {
-        if (strcasecmp(atts[n], "xmlns") == 0) {
+        if (strcmp(atts[n], "xmlns") == 0) {
             /* New default namespace */
             elm->default_ns = ne_strdup(atts[n+1]);
-        } else if (strncasecmp(atts[n], "xmlns:", 6) == 0) {
+        } else if (strncmp(atts[n], "xmlns:", 6) == 0) {
             struct namespace *ns;
             
             /* Reject some invalid NCNames as namespace prefix, and an
              * empty URI as the namespace URI */
-            if (invalid_ncname_ch1(atts[n][6]) || atts[n+1][0] == '\0' 
-#if 0 /* SVN has widely-deployed names using ':' so avoid breaking these */
-                || strchr(atts[n] + 6, ':') != NULL
-#endif
-                ) {
+            if (invalid_ncname(atts[n] + 6) || atts[n+1][0] == '\0') {
                 ne_snprintf(p->error, ERR_SIZE, 
                             ("XML parse error at line %d: invalid namespace "
                              "declaration"), ne_xml_currentline(p));
@@ -261,8 +262,7 @@ static int expand_qname(ne_xml_parser *p, struct element *elm,
         
         elm->name = ne_strdup(qname);
         elm->nspace = e->default_ns;
-    } else if (invalid_ncname_ch1(pfx[1]) || qname == pfx || 
-               strchr(pfx+1, ':') != NULL) {
+    } else if (invalid_ncname(pfx + 1) || qname == pfx) {
         ne_snprintf(p->error, ERR_SIZE, 
                     _("XML parse error at line %d: invalid element name"), 
                     ne_xml_currentline(p));
