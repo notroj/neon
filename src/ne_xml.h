@@ -111,7 +111,7 @@ void ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
 
 /* As above, casting (ne_xml_parser *)userdata internally.
  * (This function can be passed to ne_add_response_body_reader) */
-void ne_xml_parse_v(void *userdata, const char *block, size_t len);
+int ne_xml_parse_v(void *userdata, const char *block, size_t len);
 
 /* Return current parse line for errors */
 int ne_xml_currentline(ne_xml_parser *p);

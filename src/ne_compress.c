@@ -242,7 +242,7 @@ static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 }
 
 /* Callback which is passed blocks of the response body. */
-static void gz_reader(void *ud, const char *buf, size_t len)
+static int gz_reader(void *ud, const char *buf, size_t len)
 {
     ne_decompress *ctx = ud;
     const char *zbuf;
@@ -251,8 +251,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
     switch (ctx->state) {
     case NE_Z_PASSTHROUGH:
 	/* move along there. */
-	ctx->reader(ctx->userdata, buf, len);
-	return;
+	return ctx->reader(ctx->userdata, buf, len);
 
     case NE_Z_ERROR:
 	/* beyond hope. */
@@ -266,7 +265,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	    ne_set_error(ctx->session,
 			 "Unexpected content received after compressed stream");
 	}
-	break;
+        break;
 
     case NE_Z_BEFORE_DATA:
 	/* work out whether this is a compressed response or not. */
@@ -278,7 +277,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
             ret = inflateInit2(&ctx->zstr, -MAX_WBITS);
             if (ret != Z_OK) {
                 set_zlib_error(ctx, _("Could not initialize zlib"), ret);
-                return;
+                return -1;
             }
 	    ctx->zstrinit = 1;
 
@@ -288,8 +287,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	     * would require add_resp_body_rdr to have defined
 	     * ordering semantics etc etc */
 	    ctx->state = NE_Z_PASSTHROUGH;
-	    ctx->reader(ctx->userdata, buf, len);
-	    return;
+	    return ctx->reader(ctx->userdata, buf, len);
 	}
 
 	ctx->state = NE_Z_IN_HEADER;
@@ -306,7 +304,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	ctx->incount += count;
 	/* have we got the full header yet? */
 	if (ctx->incount != 10) {
-	    return;
+	    return 0;
 	}
 
 	buf += count;
@@ -315,14 +313,14 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	switch (parse_header(ctx)) {
 	case HDR_EXTENDED:
 	    if (len == 0)
-		return;
+		return 0;
 	    break;
 	case HDR_DONE:
 	    if (len > 0) {
 		do_inflate(ctx, buf, len);
 	    }
         default:
-	    return;
+	    return 0;
 	}
 
 	/* FALLTHROUGH */
@@ -332,7 +330,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	zbuf = memchr(buf, '\0', len);
 	if (zbuf == NULL) {
 	    /* not found it yet. */
-	    return;
+	    return 0;
 	}
 
 	NE_DEBUG(NE_DBG_HTTP,
@@ -344,7 +342,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	ctx->state = NE_Z_INFLATING;
 	if (len == 0) {
 	    /* end of string was at end of buffer. */
-	    return;
+	    return 0;
 	}
 
 	/* FALLTHROUGH */
@@ -358,6 +356,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	break;
     }
 
+    return 0;
 }
 
 int ne_decompress_destroy(ne_decompress *ctx)

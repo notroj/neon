@@ -464,13 +464,14 @@ void ne_xml_push_handler(ne_xml_parser *p,
     }
 }
 
-void ne_xml_parse_v(void *userdata, const char *block, size_t len) 
+int ne_xml_parse_v(void *userdata, const char *block, size_t len) 
 {
     ne_xml_parser *p = userdata;
     /* FIXME: The two XML parsers break all our nice abstraction by
      * choosing different char *'s. The swine. This cast will come
      * back and bite us someday, no doubt. */
     ne_xml_parse(p, block, len);
+    return 0;
 }
 
 #define BOM_UTF8 "\xEF\xBB\xBF" /* UTF-8 BOM */
