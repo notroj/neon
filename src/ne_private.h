@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -110,10 +110,6 @@ struct ne_session_s {
 /* Pushes block of 'count' bytes at 'buf'. Returns non-zero on
  * error. */
 typedef int (*ne_push_fn)(void *userdata, const char *buf, size_t count);
-
-/* Pulls the request body for the given request, passing blocks to the
- * given callback. */
-int ne__pull_request_body(ne_request *req, ne_push_fn fn, void *ud);
 
 /* Do the SSL negotiation. */
 int ne__negotiate_ssl(ne_request *req);
