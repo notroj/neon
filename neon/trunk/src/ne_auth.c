@@ -723,7 +723,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
  * NULL.  Otherwise, if return value is 0, *key and *value will be
  * non-NULL.  If return value is non-zero, parsing has ended.  If
  * 'sep' is non-NULL and ischall is 1, the separator character is
- * written to *sep when a challenge is passed*/
+ * written to *sep when a challenge is parsed. */
 static int tokenize(char **hdr, char **key, char **value, char *sep,
                     int ischall)
 {
