@@ -125,6 +125,7 @@ LIB32_OBJS= \
 	$(LIB32_OBJS) \
 	"$(INTDIR)\ne_207.obj" \
 	"$(INTDIR)\ne_xml.obj" \
+	"$(INTDIR)\ne_xmlreq.obj" \
 	"$(INTDIR)\ne_acl.obj" \
 	"$(INTDIR)\ne_props.obj" \
 	"$(INTDIR)\ne_locks.obj" 
@@ -175,6 +176,7 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_uri.obj"
 	-@erase "$(INTDIR)\ne_utils.obj"
 	-@erase "$(INTDIR)\ne_xml.obj"
+	-@erase "$(INTDIR)\ne_xmlreq.obj"
 	-@erase "$(TARGET)"
 	-@erase ".\src\config.h"
 
@@ -221,6 +223,7 @@ CLEAN: $(ZLIB_CLEAN)
 "$(INTDIR)\ne_uri.obj":      .\src\ne_uri.c
 "$(INTDIR)\ne_utils.obj":    .\src\ne_utils.c
 "$(INTDIR)\ne_xml.obj":      .\src\ne_xml.c
+"$(INTDIR)\ne_xmlreq.obj":   .\src\ne_xmlreq.c
 
 "$(ZLIB_SRC)\$(ZLIB_STATICLIB)":
 	<<tempfile.bat
