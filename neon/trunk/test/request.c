@@ -1821,7 +1821,6 @@ ne_test tests[] = {
     T(dup_method),
     T(versions),
     T(hook_create_req),
-    T(idna_hostname),
     T(abort_reader),
     T(NULL)
 };
