@@ -525,6 +525,10 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
             case GNUTLS_BAG_ENCRYPTED:
                 decrypted = 0;
                 break;
+            case GNUTLS_BAG_EMPTY:
+            case GNUTLS_BAG_UNKNOWN:
+            case GNUTLS_BAG_CRL:
+                break;
             }
         }
     }
