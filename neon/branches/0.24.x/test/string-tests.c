@@ -389,7 +389,7 @@ static int b64_check(const unsigned char *raw, size_t len,
 
     ONV(memcmp(raw, decoded, dlen), 
         ("decoded `%s' as `%.*s' not `%.*s'",
-         expected, dlen, decoded, dlen, raw));
+         expected, dlen, decoded, (int)dlen, raw));
 
     ne_free(decoded);
     ne_free(encoded);

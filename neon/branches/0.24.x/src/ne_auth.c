@@ -62,6 +62,15 @@
 #include "ne_uri.h"
 #include "ne_i18n.h"
 
+#ifdef HAVE_GSSAPI
+#ifdef HAVE_GSSAPI_GSSAPI_H /* MIT */
+#include <gssapi/gssapi.h>
+#include <gssapi/gssapi_generic.h>
+#else /* Heimdal. */
+#include <gssapi.h>
+#endif
+#endif
+
 /* TODO: should remove this eventually. Need it for
  * ne_pull_request_body. */
 #include "ne_private.h"
@@ -72,7 +81,8 @@
 /* The authentication scheme we are using */
 typedef enum {
     auth_scheme_basic,
-    auth_scheme_digest
+    auth_scheme_digest,
+    auth_scheme_gssapi
 } auth_scheme;
 
 typedef enum { 
@@ -137,6 +147,10 @@ typedef struct {
     unsigned int can_handle:1;
     /* This used for Basic auth */
     char *basic; 
+#ifdef HAVE_GSSAPI
+    /* This used for GSSAPI auth */
+    char *gssapi_token;
+#endif
     /* These all used for Digest auth */
     char *realm;
     char *nonce;
@@ -186,6 +200,9 @@ static void clean_session(auth_session *sess)
     NE_FREE(sess->cnonce);
     NE_FREE(sess->opaque);
     NE_FREE(sess->realm);
+#ifdef HAVE_GSSAPI
+    NE_FREE(sess->gssapi_token);
+#endif
 }
 
 /* Returns client nonce string. */
@@ -286,6 +303,73 @@ static char *request_basic(auth_session *sess)
 {
     return ne_concat("Basic ", sess->basic, "\r\n", NULL);
 }
+
+#ifdef HAVE_GSSAPI
+/* Add GSSAPI authentication credentials to a request */
+static char *request_gssapi(auth_session *sess) 
+{
+    return ne_concat("GSS-Negotiate ", sess->gssapi_token, "\r\n", NULL);
+}
+
+static int get_gss_name(gss_name_t *server, auth_session *sess)
+{
+    int major_status, minor_status;
+    gss_buffer_desc token = GSS_C_EMPTY_BUFFER;
+
+    token.value = ne_concat("khttp@", sess->sess->server.hostname, NULL);
+    token.length = strlen(token.value);
+
+    major_status = gss_import_name(&minor_status, &token,
+                                   GSS_C_NT_HOSTBASED_SERVICE,
+                                   server);
+    return GSS_ERROR(major_status) ? -1 : 0;
+}
+
+/* Examine a GSSAPI auth challenge; returns 0 if a valid challenge,
+ * else non-zero. */
+static int 
+gssapi_challenge(auth_session *sess, struct auth_challenge *parms) 
+{
+    gss_ctx_id_t context;
+    gss_name_t server_name;
+    int major_status, minor_status;
+    gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
+
+    clean_session(sess);
+
+    if (get_gss_name(&server_name, sess))
+        return -1;
+
+    major_status = gss_init_sec_context(&minor_status,
+                                        GSS_C_NO_CREDENTIAL,
+                                        &context,
+                                        server_name,
+                                        GSS_C_NO_OID,
+                                        GSS_C_DELEG_FLAG,
+                                        0,
+                                        GSS_C_NO_CHANNEL_BINDINGS,
+                                        &input_token,
+                                        NULL,
+                                        &output_token,
+                                        NULL,
+                                        NULL);
+    if (GSS_ERROR(major_status)) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "gss_init_sec_context failed.\n");
+        return -1;
+    }
+    
+    if (output_token.length == 0)
+        return -1;
+
+    sess->gssapi_token = ne_base64(output_token.value, output_token.length);
+
+    NE_DEBUG(NE_DBG_HTTPAUTH, 
+             "Base64 encoded GSSAPI challenge: %s.\n", sess->gssapi_token);
+    sess->scheme = auth_scheme_gssapi;
+    return 0;
+}
+#endif
 
 /* Examine a digest challenge: return 0 if it is a valid Digest challenge,
  * else non-zero. */
@@ -563,6 +647,10 @@ static int tokenize(char **hdr, char **key, char **value, int ischall)
 	}
     } while (*++pnt != '\0');
     
+    if (state == BEFORE_EQ && ischall && *key != NULL) {
+	*value = NULL;
+    }
+
     *hdr = pnt;
 
     /* End of string: */
@@ -751,6 +839,11 @@ static int auth_challenge(auth_session *sess, const char *value)
 	    } else if (strcasecmp(key, "digest") == 0) {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Digest scheme.\n");
 		chall->scheme = auth_scheme_digest;
+#ifdef HAVE_GSSAPI		
+	    } else if (strcasecmp(key, "gss-negotiate") == 0) {
+		NE_DEBUG(NE_DBG_HTTPAUTH, "GSSAPI scheme.\n");
+		chall->scheme = auth_scheme_gssapi;
+#endif
 	    } else {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Unknown scheme.\n");
 		ne_free(chall);
@@ -788,18 +881,16 @@ static int auth_challenge(auth_session *sess, const char *value)
 		chall->alg = auth_alg_unknown;
 	    }
 	} else if (strcasecmp(key, "qop") == 0) {
-	    char **qops;
-	    int qop;
-	    qops = split_string(val, ',', NULL, " \r\n\t");
-	    chall->got_qop = 1;
-	    for (qop = 0; qops[qop] != NULL; qop++) {
-		if (strcasecmp(qops[qop], "auth") == 0) {
-		    chall->qop_auth = 1;
-		} else if (strcasecmp(qops[qop], "auth-int") == 0) {
-		    chall->qop_auth_int = 1;
-		}
-	    }
-	    split_string_free(qops);
+            /* iterate over each token in the value */
+            do {
+                const char *tok = ne_shave(ne_token(&val, ','), " \t");
+                
+                if (strcasecmp(tok, "auth") == 0) {
+                    chall->qop_auth = 1;
+                } else if (strcasecmp(tok, "auth-int") == 0 ) {
+                    chall->qop_auth_int = 1;
+                }
+            } while (val);
 	}
     }
 
@@ -813,16 +904,30 @@ static int auth_challenge(auth_session *sess, const char *value)
     
     success = 0;
 
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for Digest challenges.\n");
-
-    /* Try a digest challenge */
+#ifdef HAVE_GSSAPI
+    NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for GSSAPI.\n");
+    /* Try a GSSAPI challenge */
     for (chall = challenges; chall != NULL; chall = chall->next) {
-	if (chall->scheme == auth_scheme_digest) {
-	    if (!digest_challenge(sess, chall)) {
+	if (chall->scheme == auth_scheme_gssapi) {
+	    if (!gssapi_challenge(sess, chall)) {
 		success = 1;
 		break;
 	    }
 	}
+    }
+#endif
+
+    /* Try a digest challenge */
+    if (!success) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "Looking for Digest challenges.\n");
+        for (chall = challenges; chall != NULL; chall = chall->next) {
+        	if (chall->scheme == auth_scheme_digest) {
+        	    if (!digest_challenge(sess, chall)) {
+        		success = 1;
+        		break;
+        	    }
+        	}
+        }
     }
 
     if (!success) {
@@ -921,6 +1026,11 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	case auth_scheme_digest:
 	    value = request_digest(sess, req);
 	    break;
+#ifdef HAVE_GSSAPI	    
+	case auth_scheme_gssapi:
+	    value = request_gssapi(sess);
+	    break;
+#endif
 	default:
 	    value = NULL;
 	    break;

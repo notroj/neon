@@ -50,6 +50,9 @@
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -318,10 +321,9 @@ int ne_sock_init(void)
 #ifdef NEON_SSL
     if (init_ssl()) {
 	NE_DEBUG(NE_DBG_SOCKET, "SSL initialization failed; lacking PRNG?\n");
-	init_result = -1;
-	return -1;
+    } else {
+        prng_seeded = 1;
     }
-    prng_seeded = 1;
 #endif
 
     init_result = 1;
@@ -859,6 +861,14 @@ int ne_sock_connect(ne_socket *sock,
 	return -1;
     }
     
+#if defined(TCP_NODELAY) && defined(HAVE_SETSOCKOPT) && defined(IPPROTO_TCP)
+    { /* Disable the Nagle algorithm; better to add write buffering
+       * instead of doing this. */
+        int flag = 1;
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
+    }
+#endif
+
     if (raw_connect(fd, addr, ntohs(port))) {
         set_strerror(sock, ne_errno);
 	ne_close(fd);

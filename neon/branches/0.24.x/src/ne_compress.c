@@ -31,6 +31,7 @@
 #include "ne_request.h"
 #include "ne_compress.h"
 #include "ne_utils.h"
+#include "ne_i18n.h"
 
 #ifdef NEON_ZLIB
 
@@ -170,6 +171,26 @@ static void process_footer(ne_decompress *ctx,
     }
 }
 
+/* A zlib function failed with 'code'; set the session error string
+ * appropriately. */
+static void set_zlib_error(ne_decompress *ctx, const char *msg, int code)
+{
+    if (ctx->zstr.msg)
+        ne_set_error(ctx->session, _("%s: %s"), msg, ctx->zstr.msg);
+    else {
+        const char *err;
+        switch (code) {
+        case Z_STREAM_ERROR: err = "stream error"; break;
+        case Z_DATA_ERROR: err = "data corrupt"; break;
+        case Z_MEM_ERROR: err = "out of memory"; break;
+        case Z_BUF_ERROR: err = "buffer error"; break;
+        case Z_VERSION_ERROR: err = "library version mismatch"; break;
+        default: err = "unknown error"; break;
+        }
+        ne_set_error(ctx->session, _("%s: %s (code %d)"), msg, err, code);
+    }
+}
+
 /* Inflate response buffer 'buf' of length 'len'. */
 static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 {
@@ -212,9 +233,7 @@ static void do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 	process_footer(ctx, ctx->zstr.next_in, ctx->zstr.avail_in);
     } else if (ret != Z_OK) {
 	ctx->state = NE_Z_ERROR;
-	ne_set_error(ctx->session, "Error reading compressed data.");
-	NE_DEBUG(NE_DBG_HTTP, "compress: inflate failed (%d): %s\n", 
-		 ret, ctx->zstr.msg?ctx->zstr.msg:"(no message)");
+        set_zlib_error(ctx, _("Could not inflate data"), ret);
     }
 }
 
@@ -248,16 +267,15 @@ static void gz_reader(void *ud, const char *buf, size_t len)
     case NE_Z_BEFORE_DATA:
 	/* work out whether this is a compressed response or not. */
 	if (ctx->enchdr && strcasecmp(ctx->enchdr, "gzip") == 0) {
+            int ret;
 	    NE_DEBUG(NE_DBG_HTTP, "compress: got gzipped stream.\n");
 
-	    /* This is the magic bit: using plain inflateInit()
-	     * doesn't work, and this does, but I have no idea why..
-	     * Google showed me the way. */
-	    if (inflateInit2(&ctx->zstr, -MAX_WBITS) != Z_OK) {
-		ne_set_error(ctx->session, ctx->zstr.msg);
-		ctx->state = NE_Z_ERROR;
-		return;
-	    }
+            /* inflateInit2() works here where inflateInit() doesn't. */
+            ret = inflateInit2(&ctx->zstr, -MAX_WBITS);
+            if (ret != Z_OK) {
+                set_zlib_error(ctx, _("Could not initialize zlib"), ret);
+                return;
+            }
 	    ctx->zstrinit = 1;
 
 	} else {
@@ -291,8 +309,6 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	len -= count;
 
 	switch (parse_header(ctx)) {
-	case HDR_ERROR:
-	    return;
 	case HDR_EXTENDED:
 	    if (len == 0)
 		return;
@@ -301,6 +317,7 @@ static void gz_reader(void *ud, const char *buf, size_t len)
 	    if (len > 0) {
 		do_inflate(ctx, buf, len);
 	    }
+        default:
 	    return;
 	}
 

@@ -53,7 +53,7 @@ parameter, combined with the <parameter>path</parameter> parameter.</para>
 <para>The <parameter>path</parameter> string used must conform to the
 <literal>abs_path</literal> definition given in RFC2396, with an
 optional "?query" part, and must be URI-escaped by the caller (for
-instance, using <function>ne_path_escape</function>.  If the string
+instance, using <function>ne_path_escape</function>).  If the string
 comes from an untrusted source, failure to perform URI-escaping
 results in a security vulnerability.</para>
 
@@ -145,7 +145,7 @@ non-zero error code otherwise.</para>
 	<title>Example</title>
 	
 	<para>An example of applying a <literal>MKCOL</literal>
-	operation to the resource at the location
+	operation to the resource at the location 
 	<literal>http://www.example.com/foo/bar/</literal>:</para>
 
 	<programlisting>ne_session *sess = ne_session_create("http", "www.example.com", 80);

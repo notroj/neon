@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -28,11 +28,6 @@
 #include "ne_ssl.h" /* for ne_ssl_context */
 
 BEGIN_NEON_DECLS
-
-/* define ssize_t for Win32 */
-#if defined(WIN32) && !defined(ssize_t)
-#define ssize_t int
-#endif
 
 #define NE_SOCK_ERROR (-1)
 /* Read/Write timed out */

@@ -51,16 +51,23 @@ creates a single-line, human-readable string out of an
       <refsect1>
 	<title>Return value</title>
 
-	<para><function>ne_ssl_readable_dname</function> returns a 
-	<function>malloc</function>-allocated string, and never
-	NULL.</para>
+	<para><function>ne_ssl_readable_dname</function> returns a <function>malloc</function>-allocated
+        string, and never &null;.</para>
+
+      </refsect1>
+
+      <refsect1>
+	<title>Examples</title>
+
+        <para>See <xref linkend="ne_ssl_cert_subject"/> for an example
+        use of <function>ne_ssl_readable_dname</function>.</para>
 
       </refsect1>
 
       <refsect1>
 	<title>See also</title>
 
-	<para><xref linkend="ne_ssl_certificate"/></para>
+	<para><xref linkend="ne_ssl_cert_subject"/></para>
       </refsect1>
 
     </refentry>

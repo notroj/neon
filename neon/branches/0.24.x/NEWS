@@ -1,3 +1,16 @@
+Changes in release 0.24.1:
+* Add support for "GSS-Negotiate" Kerberos authentication scheme (from
+ Risko Gergely and Burjan Gabor).
+* Disable Nagle to improve performance of small requests (thanks to
+ Jim Whitehead and Teng Xu).
+* Fix compatibility with OpenSSL 0.9.6 (broken in 0.24.0).
+* Fix prototype mismatch in ne_207.c.
+* Define ssize_t from ne_request.h for Win32.
+* Prevent segfault on zlib initialization failures.
+* ne_sock_init does not fail if PRNG could not be seeded.
+* Fix segfault in cookies code (Markus Mueller).
+* Documentation updates.
+
 Changes in release 0.24.0:
 * Major changes to XML interface:
  - have the start-element callback either accept, decline, abort, 

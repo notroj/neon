@@ -7,7 +7,9 @@ server
 regress
 compress
 *.gz
+*.lo
 *.tmp
+.libs
 acl
 auth
 lock
@@ -39,3 +41,5 @@ chain.pem
 *.p12
 client.*
 output.pem
+libtest.*
+clog

@@ -65,9 +65,9 @@ global initialization needed by any libraries used by &neon;.</para>
 	<para>To enable SSL/TLS for the session, pass the string
 <literal>"https"</literal> as the <parameter>scheme</parameter>
 parameter, and either register a certificate verification function
-(see <xref linkend="ne_ssl_set_verify"/>) or load the appropriate CA
-certificate (see <xref linkend="ne_ssl_load_ca"/>, <xref
-linkend="ne_ssl_load_default_ca"/>).</para>
+(see <xref linkend="ne_ssl_set_verify"/>) or trust the appropriate 
+certificate (see <xref linkend="ne_ssl_trust_cert"/>, <xref
+linkend="ne_ssl_trust_default_ca"/>).</para>
 
 	<para>If an HTTP proxy server should be used for the session,
 <function>ne_session_proxy</function> must be called giving the
@@ -91,7 +91,7 @@ session pointer produces undefined behaviour.</para>
 
         <para>The hostname passed to
 <function>ne_session_create</function> is resolved when the first
-request using the session is dispached; a DNS resolution failure can
+request using the session is dispatched; a DNS resolution failure can
 only be detected at that time (using the <literal>NE_LOOKUP</literal>
 error code); see <xref linkend="ne_request_dispatch"/> for
 details.</para>
@@ -117,7 +117,7 @@ ne_session_destroy(sess);
       <refsect1>
 	<title>See Also</title>
 
-	<para><xref linkend="ne_ssl_set_verify"/>, <xref linkend="ne_ssl_load_ca"/>, <xref linkend="ne_sock_init"/></para>
+	<para><xref linkend="ne_ssl_set_verify"/>, <xref linkend="ne_ssl_trust_cert"/>, <xref linkend="ne_sock_init"/></para>
       </refsect1>
 
     </refentry>

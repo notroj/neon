@@ -49,6 +49,7 @@ typedef struct {
 /* possible values for flags: */
 #define T_CHECK_LEAKS (1) /* check for memory leaks */
 #define T_EXPECT_FAIL (2) /* expect failure */
+#define T_EXPECT_LEAKS (4) /* expect memory leak failures */
 
 /* array of tests to run: must be defined by each test suite. */
 extern ne_test tests[];
@@ -60,6 +61,8 @@ extern ne_test tests[];
 #define T_XFAIL(fn) { fn, #fn, T_EXPECT_FAIL | T_CHECK_LEAKS }
 /* define a test function which isn't checked for memory leaks. */
 #define T_LEAKY(fn) { fn, #fn, 0 }
+/* define a test function which is expected to fail memory leak checks */
+#define T_XLEAKY(fn) { fn, #fn, T_EXPECT_LEAKS }
 
 /* current test number */
 extern int test_num;

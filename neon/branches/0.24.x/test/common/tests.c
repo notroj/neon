@@ -219,7 +219,12 @@ int main(int argc, char *argv[])
             ne_alloc_used > allocated) {
             t_context("memory leak of %" NE_FMT_SIZE_T " bytes",
                       ne_alloc_used - allocated);
+            fprintf(debug, "Blocks leaked: ");
             ne_alloc_dump(debug);
+            result = FAIL;
+        } else if (tests[n].flags & T_EXPECT_LEAKS && result == OK &&
+                   ne_alloc_used == allocated) {
+            t_context("expected memory leak not detected");
             result = FAIL;
         }
 #endif

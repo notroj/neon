@@ -13,3 +13,4 @@ checkincl.c
 *.bb
 *.da
 *.bbg
+*.[is]
