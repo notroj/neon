@@ -1,6 +1,6 @@
 /*
    neon SSL/TLS support using GNU TLS
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -706,7 +706,7 @@ const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *cc)
     return &cc->cert;
 }
 
-const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert)
+const char *ne_ssl_clicert_name(const ne_ssl_client_cert *ccert)
 {
     return ccert->friendly_name;
 }
