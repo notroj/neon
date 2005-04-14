@@ -787,7 +787,7 @@ const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *cc)
     return &cc->cert;
 }
 
-const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert)
+const char *ne_ssl_clicert_name(const ne_ssl_client_cert *ccert)
 {
     return ccert->friendly_name;
 }
