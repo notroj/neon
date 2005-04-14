@@ -217,25 +217,29 @@ static int regress_dates(void)
     return OK;
 }
 
-static int versioning(void)
-{
 #define GOOD(n,m,msg) ONV(ne_version_match(n,m), \
 ("match of " msg " failed (%d.%d)", n, m))
 #define BAD(n,m,msg) ONV(ne_version_match(n,m) == 0, \
 ("match of " msg " succeeded (%d.%d)", n, m))
-    GOOD(NEON_VERSION_MAJOR, NEON_VERSION_MINOR, "current version");
-    BAD(NEON_VERSION_MAJOR, NEON_VERSION_MINOR + 1, "later minor");
-    BAD(NEON_VERSION_MAJOR + 1, 0, "later major");
-#if NEON_VERSION_MINOR > 0
-    GOOD(NEON_VERSION_MAJOR, NEON_VERSION_MINOR - 1, "earlier minor");
+
+static int versioning(void)
+{
+    GOOD(NE_VERSION_MAJOR, NE_VERSION_MINOR, "current version");
+    BAD(NE_VERSION_MAJOR + 1, 0, "later major");
+    BAD(NE_VERSION_MAJOR, NE_VERSION_MINOR + 1, "later minor");
+#if NE_VERSION_MAJOR > 0
+    BAD(NE_VERSION_MAJOR - 1, 0, "earlier major");
+#if NE_VERSION_MINOR > 0
+    GOOD(NE_VERSION_MAJOR, NE_VERSION_MINOR - 1, "earlier minor");
+#endif /* NE_VERSION_MINOR > 0 */
+#else /* where NE_VERSION_MAJOR == 0 */
+    BAD(0, NE_VERSION_MINOR - 1, "earlier minor for 0.x");
 #endif
-#if NEON_VERSION_MAJOR > 0
-    BAD(NEON_VERSION_MAJOR - 1, 0, "earlier major");
-#endif
-#undef GOOD
-#undef BAD
     return OK;
 }
+
+#undef GOOD
+#undef BAD
 
 /* basic ne_version_string() sanity tests */
 static int version_string(void)
