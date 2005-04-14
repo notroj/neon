@@ -1,6 +1,6 @@
 #! /bin/sh
 # Originally from libxml, Copyright (C) Daniel Veillard
-# Modifications for neon Copyright (C) 2000-2004 Joe Orton.
+# Modifications for neon Copyright (C) 2000-2005 Joe Orton.
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -73,7 +73,7 @@ while test $# -gt 0; do
         LIBS="-lneon @NEON_LIBS@"
 	# Don't add standard library paths
         if test "$prefix" != "/usr"; then
-           LIBS="-L${libdir} ${LIBS}" ;;
+           LIBS="-L${libdir} ${LIBS}"
         fi
 	echo @user_LDFLAGS@ ${LIBS}
 	;;
