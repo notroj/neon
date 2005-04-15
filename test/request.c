@@ -30,6 +30,7 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#include <fcntl.h>
 
 #include "ne_request.h"
 #include "ne_socket.h"
@@ -1743,6 +1744,38 @@ static int abort_reader(void)
     return OK;
 }
 
+/* attempt and fail to send request from offset 500 of /dev/null. */
+static int send_bad_offset(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    int ret, fd = open("/dev/null", O_RDONLY);
+
+    ONN("missing /dev/null!", fd < 0);
+
+    CALL(make_session(&sess, single_serve_string,
+                      RESP200 "Content-Length: 0\r\n" "\r\n"));
+
+    req = ne_request_create(sess, "PUT", "/null");
+
+    ne_set_request_body_fd(req, fd, 500, 5);
+    
+    ret = ne_request_dispatch(req);
+
+    ONN("request dispatched with bad offset!", ret == NE_OK);
+    ONV(ret != NE_ERROR,
+        ("request failed with non-NE_ERROR: %s", ne_get_error(sess)));
+
+    ONV(strstr(ne_get_error(sess), "Could not seek") == NULL,
+        ("bad error message from seek failure: %s", ne_get_error(sess)));
+
+    reap_server();
+    ne_request_destroy(req);
+    close(fd);
+    ne_session_destroy(sess);
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -1822,5 +1855,6 @@ ne_test tests[] = {
     T(versions),
     T(hook_create_req),
     T(abort_reader),
+    T(send_bad_offset),
     T(NULL)
 };
