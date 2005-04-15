@@ -889,6 +889,7 @@ static int iterate_many(void)
         ONV(hdrs[n].seen == 0, ("unseen pair %d", n));
     }
     
+    ne_buffer_destroy(buf);
     ne_request_destroy(req);
     ne_session_destroy(sess);
     CALL(await_server());
