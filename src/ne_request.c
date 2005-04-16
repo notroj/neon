@@ -363,12 +363,26 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
             count = req->body.file.remain;
 	return read(req->body.file.fd, buffer, count);
     } else {
+        ne_off_t newoff;
+
         /* rewind for next send. */
-        if (ne_lseek(req->body.file.fd, req->body.file.offset, SEEK_SET)
-            == req->body.file.offset) {
+        newoff = ne_lseek(req->body.file.fd, req->body.file.offset, SEEK_SET);
+        if (newoff == req->body.file.offset) {
             req->body.file.remain = req->body.file.length;
             return 0;
         } else {
+            char err[200];
+
+            if (newoff == -1) {
+                /* errno was set */
+                ne_strerror(errno, err, sizeof err);
+            } else {
+                strcpy(err, _("offset invalid"));
+            }                       
+            ne_set_error(req->session, 
+                         _("Could not seek to offset %" FMT_NE_OFF_T 
+                           " of request body file: %s"), 
+                           req->body.file.offset, err);
             return -1;
         }
     }

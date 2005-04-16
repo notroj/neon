@@ -301,12 +301,16 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	    idx = X509_NAME_get_index_by_NID(subj, NID_commonName, lastidx);
 	} while (idx >= 0);
 	
-	if (lastidx < 0)
+	if (lastidx < 0) {
+            /* no commonNmae attributes at all. */
+            ne_buffer_destroy(cname);
 	    return -1;
+        }
 
 	/* extract the string from the entry */
         entry = X509_NAME_get_entry(subj, lastidx);
         if (append_dirstring(cname, X509_NAME_ENTRY_get_data(entry))) {
+            ne_buffer_destroy(cname);
             return -1;
         }
         if (identity) *identity = ne_strdup(cname->data);

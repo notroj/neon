@@ -96,7 +96,7 @@ void ne_set_request_body_provider64(ne_request *req, off64_t length,
                                     ne_provide_body provider, void *userdata);
 #endif
 
-/* Handling response bodies... you provide TWO callbacks:
+/* Handling response bodies; two callbacks must be provided:
  *
  * 1) 'acceptance' callback: determines whether you want to handle the
  * response body given the response-status information, e.g., if you
@@ -107,8 +107,8 @@ void ne_set_request_body_provider64(ne_request *req, off64_t length,
 
 /* 'acceptance' callback type. Return non-zero to accept the response,
  * else zero to ignore it. */
-typedef int (*ne_accept_response)(
-    void *userdata, ne_request *req, const ne_status *st);
+typedef int (*ne_accept_response)(void *userdata, ne_request *req, 
+                                  const ne_status *st);
 
 /* An 'acceptance' callback which only accepts 2xx-class responses.
  * Ignores userdata. */
@@ -169,17 +169,15 @@ void ne_print_request_header(ne_request *req, const char *name,
     ne_attribute((format(printf, 3, 4)));
 
 /* ne_request_dispatch: Sends the given request, and reads the
- * response. Response-Status information can be retrieve with
- * ne_get_status(req).
- *
- *  NE_OK         if request sent + response read okay.
- *  NE_AUTH       user not authorised on server
- *  NE_PROXYAUTH  user not authorised on proxy server
- *  NE_CONNECT    could not connect to server/proxy server
- *  NE_TIMEOUT    connection timed out mid-request
- *  NE_ERROR      for other errors, and ne_get_error() should
- *                  return a meaningful error string
- */
+ * response.  Returns:
+ *  - NE_OK if the request was sent and response read successfully
+ *  - NE_AUTH, NE_PROXYAUTH for a server or proxy server authentication error
+ *  - NE_CONNECT if connection could not be established
+ *  - NE_TIMEOUT if an timeout occurred sending or reading from the server
+ *  - NE_ERROR for other fatal dispatch errors
+ * On any error, the session error string is set.  On success or
+ * authentication error, the actual response-status can be retrieved using
+ * ne_get_status(). */
 int ne_request_dispatch(ne_request *req);
 
 /* Returns a pointer to the response status information for the given
@@ -187,7 +185,7 @@ int ne_request_dispatch(ne_request *req);
 const ne_status *ne_get_status(const ne_request *req) ne_attribute((const));
 
 /* Returns pointer to session associated with request. */
-ne_session *ne_get_session(const ne_request *req);
+ne_session *ne_get_session(const ne_request *req) ne_attribute((const));
 
 /* Destroy memory associated with request pointer */
 void ne_request_destroy(ne_request *req);
@@ -225,10 +223,11 @@ int ne_discard_response(ne_request *req);
  * given file descriptor.  Returns NE_ERROR on error. */
 int ne_read_response_to_fd(ne_request *req, int fd);
 
-/* Include the HTTP/1.1 header "Expect: 100-continue" in request 'req'
- * if 'flag' is non-zero.  Warning: 100-continue support is not
- * implemented correctly in some HTTP/1.1 servers, enabling this
- * feature may cause requests to hang or time out. */
+/* If 'flag' is non-zer, enable the HTTP/1.1 "Expect: 100-continue"
+ * feature for the request, which allows the server to send an error
+ * response before the request body is sent.  This should only be used
+ * if the server is known to support the feature (not all HTTP/1.1
+ * servers do); the request will time out and fail otherwise. */
 void ne_set_request_expect100(ne_request *req, int flag);
 
 /**** Request hooks handling *****/
