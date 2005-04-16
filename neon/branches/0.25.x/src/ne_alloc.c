@@ -94,6 +94,8 @@ char *ne_strndup(const char *s, size_t n)
 
 #else /* NEON_MEMLEAK */
 
+#include <assert.h>
+
 /* Memory-leak detection implementation: ne_malloc and friends are
  * #defined to ne_malloc_ml etc by memleak.h, which is conditionally
  * included by config.h. */
@@ -154,22 +156,27 @@ void *ne_calloc_ml(size_t size, const char *file, int line)
 
 void *ne_realloc_ml(void *ptr, size_t s, const char *file, int line)
 {
-    void *ret = realloc(ptr, s);
+    void *ret;
     struct block *b;
 
+    if (ptr == NULL)
+        return tracking_malloc(s, file, line);
+
+    ret = realloc(ptr, s);
     if (!ret) {
         if (oom) oom();
         abort();
     }
-
+    
     for (b = blocks; b != NULL; b = b->next) {
         if (b->ptr == ptr) {
-            ne_alloc_used = ne_alloc_used + s - b->len;
+            ne_alloc_used += s - b->len;
             b->ptr = ret;
             b->len = s;
             break;
         }
     }
+    assert(b != NULL);
 
     return ret;
 }
