@@ -1,6 +1,6 @@
 /* 
    tests for compressed response handling.
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -389,6 +389,6 @@ ne_test tests[] = {
     T(chunked_10b),
     T(chunked_10b_wn),
     T(retry_notcompress),
-    T_XFAIL(retry_compress),
+    T(retry_compress),
     T(NULL)
 };
