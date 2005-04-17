@@ -4,7 +4,7 @@ set -ex
 
 major=`echo $1 | awk -F. '{print $1;}'`
 minor=`echo $1 | awk -F. '{print $2;}'`
-rel=`echo $1 | awk -F. '{print $3;}'`
+release=`echo $1 | awk -F. '{print $3;}'`
 version=$1
 
 for f in config.hw; do
