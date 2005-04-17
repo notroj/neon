@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -239,19 +239,17 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
         return -1;
     }
 
-    ct->value = ne_strdup(value);
-    
-    stype = strchr(ct->value, '/');
+    ct->type = ct->value = ne_strdup(value);
 
+    stype = strchr(ct->value, '/');
     *stype++ = '\0';
-    ct->type = ct->value;
     
     sep = strchr(stype, ';');
 
     if (sep) {
 	char *tok;
-	/* look for the charset parameter. TODO; probably better to
-	 * hand-carve a parser than use ne_token/strstr/shave here. */
+
+	/* Look for the charset parameter: */
 	*sep++ = '\0';
 	do {
 	    tok = ne_qtoken(&sep, ';', "\"\'");
