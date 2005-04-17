@@ -35,6 +35,7 @@ Changes in release 0.25.0:
  - Win32: Fix timezone handling (Jiang Lei)
  - ne_lock_refresh() works and will update timeout of passed-in lock
  - persistent connection timeout handling fixes for CygWin et al
+ - impose hard limit of 1024 props per resource in ne_props.h response parsing
 * New platform-specific features:
  - Win32: Negotiate/NTLM support using SSPI (Vladimir Berezniker)
  - Win32: Add IPv6 support using ENABLE_IPV6 neon.mak flag (Kai Sommerfeld)
