@@ -138,7 +138,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 NE_VERSION_MAJOR=0
 NE_VERSION_MINOR=25
 NE_VERSION_PATCH=0
-NE_VERSION_TAG=-dev
+NE_VERSION_TAG=-pre1
 
 # libtool library interface versioning.  Release policy dictates that
 # for neon 0.x.y, each x brings an incompatible interface change, and
