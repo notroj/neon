@@ -1,6 +1,6 @@
 /* 
    Stubs for SSL support when no SSL library has been configured
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -114,7 +114,7 @@ const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
 }
 
 
-const char *ne_ssl_clicert_name(ne_ssl_client_cert *ccert)
+const char *ne_ssl_clicert_name(const ne_ssl_client_cert *ccert)
 {
     return NULL;
 }
