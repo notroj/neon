@@ -302,7 +302,7 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	} while (idx >= 0);
 	
 	if (lastidx < 0) {
-            /* no commonNmae attributes at all. */
+            /* no commonName attributes at all. */
             ne_buffer_destroy(cname);
 	    return -1;
         }
