@@ -136,7 +136,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
 NE_VERSION_MAJOR=0
-NE_VERSION_MINOR=25
+NE_VERSION_MINOR=26
 NE_VERSION_PATCH=0
 NE_VERSION_TAG=-dev
 
@@ -153,10 +153,14 @@ NE_DEFINE_VERSIONS
 
 ])
 
-dnl Define the minimum required version
-AC_DEFUN([NEON_REQUIRE], [
-neon_require_major=$1
-neon_require_minor=$2
+dnl Define the minimum required versions, usage:
+dnl   NE_REQUIRE_VERSIONS([major-version], [minor-versions])
+dnl e.g.
+dnl   NE_REQUIRE_VERSIONS([0], [24 25])
+dnl to require neon 0.24.x or neon 0.25.x.
+AC_DEFUN([NE_REQUIRE_VERSIONS], [
+m4_define([ne_require_major], [$1])
+m4_define([ne_require_minor], [$2])
 ])
 
 dnl Check that the external library found in a given location
@@ -168,11 +172,7 @@ dnl Usage:
 dnl    NEON_CHECK_VERSION(ACTIONS-IF-OKAY, ACTIONS-IF-FAILURE)
 dnl
 AC_DEFUN([NEON_CHECK_VERSION], [
-if test "x$neon_require_major" = "x"; then
-    # Nothing to check.
-    ne_goodver=yes
-    ne_libver="(version unknown)"
-else
+m4_ifdef([ne_require_major], [
     # Check whether the library is of required version
     ne_save_LIBS="$LIBS"
     ne_save_CFLAGS="$CFLAGS"
@@ -185,22 +185,27 @@ else
         [AC_LANG_PROGRAM([[#include <ne_utils.h>]], [[ne_version_match(0, 0);]])],
 	[ne_cv_lib_neon=yes], [ne_cv_lib_neon=no])])
     if test "$ne_cv_lib_neon" = "yes"; then
-       # Now check whether the neon library version is satisfactory
-       AC_CACHE_CHECK([neon library version], [ne_cv_lib_neonver],
-       [AC_RUN_IFELSE(
-         [AC_LANG_PROGRAM([[#include <ne_utils.h>]],
-                          [[return ne_version_match($neon_require_major, $neon_require_minor);]])],
-         [ne_cv_lib_neonver=yes], [ne_cv_lib_neonver=no], [ne_cv_lib_neonver=no])])
+       ne_cv_lib_neonver=no
+       for v in ne_require_minor; do
+          case $ne_libver in
+          ne_require_major.$v.*) ne_cv_lib_neonver=yes ;;
+          esac
+       done
     fi
     ne_goodver=$ne_cv_lib_neonver
     LIBS=$ne_save_LIBS
     CFLAGS=$ne_save_CFLAGS
-fi
+], [
+   # NE_REQUIRE_VERSIONS not used; presume all versions OK!
+    ne_goodver=yes
+    ne_libver="(version unknown)"
+])
+
 if test "$ne_goodver" = "yes"; then
     AC_MSG_NOTICE([using neon library $ne_libver])
     $1
 else
-    AC_MSG_NOTICE([incompatible neon library version $ne_libver: wanted $neon_require_major.$neon_require_minor])
+    AC_MSG_NOTICE([incompatible neon library version $ne_libver: wanted ne_require_major.ne_require_minor])
     $2
 fi])
 
