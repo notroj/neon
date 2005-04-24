@@ -51,13 +51,14 @@
 #ifndef NE_HAVE_ZLIB
 static int sd_result = OK;
 
-static void sd_reader(void *ud, const char *block, size_t len)
+static int sd_reader(void *ud, const char *block, size_t len)
 {
     const char *expect = ud;
     if (strncmp(expect, block, len) != 0) {
 	sd_result = FAIL;
 	t_context("decompress reader got bad data");
-    }    
+    }
+    return 0;
 }
 
 static int stub_decompress(void)
