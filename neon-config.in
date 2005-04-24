@@ -21,7 +21,7 @@ Known values for OPTION are:
   --help		display this help and exit
   --version		output version information
   --support FEATURE     exit with success if feature is supported
- Known features: dav [@NE_FLAG_DAV@], ssl [@NE_FLAG_SSL@], zlib [@NE_FLAG_ZLIB@], idna [@NE_FLAG_IDNA@], ipv6 [@NE_FLAG_IPV6@], lfs [@NE_FLAG_LFS@]
+ Known features: dav [@NE_FLAG_DAV@], ssl [@NE_FLAG_SSL@], zlib [@NE_FLAG_ZLIB@], ipv6 [@NE_FLAG_IPV6@], lfs [@NE_FLAG_LFS@]
 
 EOF
 
@@ -90,7 +90,6 @@ while test $# -gt 0; do
 	zlib|ZLIB) support @NE_FLAG_ZLIB@ ;;
 	ipv6|IPV6) support @NE_FLAG_IPV6@ ;;
 	dav|DAV) support @NE_FLAG_DAV@ ;;
-	idna|IDNA) support @NE_FLAG_IDNA@ ;;
 	lfs|LFS) support @NE_FLAG_LFS@ ;;
 	*) support no ;;
 	esac
