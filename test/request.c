@@ -797,7 +797,7 @@ static int reset_headers(void)
                       "X-Foo: bar\r\n" "\r\n"
 
                       "HTTP/1.1 200 Thank you kindly\r\n"
-                      "Connection: close\r\n"
+                      "Content-Length: 0\r\n"
                       "X-Foo: hello fair world\r\n" "\r\n"));
 
     ne_hook_post_send(sess, post_send_retry, NULL);
@@ -1750,18 +1750,24 @@ static int send_bad_offset(void)
 {
     ne_session *sess;
     ne_request *req;
-    int ret, fd = open("/dev/null", O_RDONLY);
-
-    ONN("missing /dev/null!", fd < 0);
+    char *fn = "empty.txt";
+    int ret, fd;
 
     CALL(make_session(&sess, single_serve_string,
                       RESP200 "Content-Length: 0\r\n" "\r\n"));
 
+    fd = open(fn, O_RDWR|O_CREAT);
+
+    ONV(fd < 0, ("could not find %s", fn));
+
     req = ne_request_create(sess, "PUT", "/null");
 
-    ne_set_request_body_fd(req, fd, 500, 5);
+    ne_set_request_body_fd(req, fd, -500, 5);
     
     ret = ne_request_dispatch(req);
+
+    close(fd);
+    unlink(fn);
 
     ONN("request dispatched with bad offset!", ret == NE_OK);
     ONV(ret != NE_ERROR,
@@ -1772,7 +1778,6 @@ static int send_bad_offset(void)
 
     reap_server();
     ne_request_destroy(req);
-    close(fd);
     ne_session_destroy(sess);
     return OK;
 }
