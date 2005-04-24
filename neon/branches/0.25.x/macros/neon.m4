@@ -948,7 +948,7 @@ AS_HELP_STRING(--enable-warnings, [enable compiler warnings]))
 if test "$enable_warnings" = "yes"; then
    case $GCC:`uname` in
    yes:*)
-      CFLAGS="$CFLAGS -Wall -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wcast-align -Wbad-function-cast -Wformat-security"
+      CFLAGS="$CFLAGS -Wall -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wbad-function-cast -Wformat-security"
       if test -z "$with_ssl" -o "$with_ssl" = "no"; then
 	 # OpenSSL headers fail strict prototypes checks
 	 CFLAGS="$CFLAGS -Wstrict-prototypes"
