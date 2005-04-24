@@ -79,7 +79,7 @@ clean:
 	rm -rf .libs
 
 c++.c:
-	find . -name ne_\*.h -print | sed 's/.*/#include "&"/;/ne_private/d' > $@
+	find . -name ne_\*.h -print | sed 's/.*/#include "&"/;/ne_priv/d' > $@
 	echo "int main(void) {}" >> $@
 
 check-c++: c++.c
