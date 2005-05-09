@@ -142,7 +142,7 @@ void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
 /* Retrieve the value of the response header field with given name;
  * returns NULL if no response header with given name was found.  The
  * return value is valid only until the next call to either
- * ne_request_create or ne_begin_request for this request. */
+ * ne_request_dispatch or ne_begin_request for this request. */
 const char *ne_get_response_header(ne_request *req, const char *name);
 
 /* Iterator interface for response headers: if passed a NULL cursor,
