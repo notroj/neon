@@ -53,20 +53,20 @@ Build neon with dynamically linked SSL support
 ______________________________________________
 
 To build neon on Windows with SSL support you need OpenSSL already
-installed on your system (I used OpenSSL 0.9.6g).  It can be
+installed on your system (I used OpenSSL 0.9.7g).  It can be
 downloaded from
 
-  http://www.openssl.org/source/openssl-0.9.6g.tar.gz
+  http://www.openssl.org/source/openssl-0.9.7g.tar.gz
 
 After compiling OpenSSL, now simply point make to the OpenSSL sources:
 
   nmake /f neon.mak OPENSSL_SRC=\path\to\openssl
 
 NOTE: The include files for OpenSSL reside in inc32/ directory
-("../openssl-0.9.6g/inc32").
+("../openssl-0.9.7g/inc32").
 
 NOTE: Make sure that your program is linked against libeay32.lib and
-ssleay32.lib (normally in "../openssl-0.9.6g/out32dll") and that
+ssleay32.lib (normally in "../openssl-0.9.7g/out32dll") and that
 libeay32.dll and ssleay32.dll is accessible, i.e. is in your PATH.
 
 
