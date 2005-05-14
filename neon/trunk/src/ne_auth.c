@@ -74,7 +74,7 @@
 #include "ne_sspi.h"
 #endif
 
-#ifdef HAVE_GSSAPI
+#if defined(HAVE_GSSAPI) || defined(HAVE_SSPI)
 #include "ne_private.h" /* only need to extract proxy hostname */
 #endif
 
