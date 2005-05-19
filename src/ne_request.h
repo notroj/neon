@@ -249,7 +249,9 @@ typedef void (*ne_pre_send_fn)(ne_request *req, void *userdata,
 			       ne_buffer *header);
 void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
 
-/* Hook called after the request is sent. May return:
+/* Hook called after the request is dispatched (request sent, and
+ * the entire response read).  If an error occurred reading the response,
+ * this hook will not run.  May return:
  *  NE_OK     everything is okay
  *  NE_RETRY  try sending the request again.
  * anything else signifies an error, and the request is failed. The return
