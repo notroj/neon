@@ -236,7 +236,7 @@ void ne_buffer_altered(ne_buffer *buf)
     buf->used = strlen(buf->data) + 1;
 }
 
-static const char *b64_alphabet =  
+static const char b64_alphabet[] =  
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/=";

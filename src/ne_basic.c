@@ -267,7 +267,7 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
     ct->subtype = ne_shave(stype, " \t");
     
     if (ct->charset == NULL && strcasecmp(ct->type, "text") == 0) {
-        /* 3280§3.1: text/xml without charset implies us-ascii. */
+        /* 3023§3.1: text/xml without charset implies us-ascii. */
         if (strcasecmp(ct->subtype, "xml") == 0)
             ct->charset = "us-ascii";
         /* 2616§3.7.1: subtypes of text/ default to charset ISO-8859-1. */
