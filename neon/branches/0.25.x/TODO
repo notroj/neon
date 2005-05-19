@@ -26,14 +26,6 @@ For one-point-oh
 Longer term
 -----------
 
-
-1. Support for HTTP-extended authoring methods ala WebRFM etc; using
-   New-URI header etc.  Also support the BROWSE and INDEX methods.  The
-   protocol is documented at:
-   http://www.ics.uci.edu/pub/ietf/webdav/ns_dav.html
-   DON'T do this inside ne_basic.c, do it separately in
-   ne_author.c or something. 
-
 2. Add proper domain support to authentication code. (requires full
    URI parsing support). Need to tell the auth layer the server
    details.
@@ -62,15 +54,10 @@ Longer term
     REALLY know what is going wrong with the server (probably), but it
     is maybe a bit frightening.
 
-20. Add decent and proper URI parser + handling. Or stop pretending we
-    are doing "URI" parsing, and just handle HTTP URL's.
-
 21. Storing multiple authentication "sessions" within an actual
     auth_session, so I can log into e.g. /foo/ and /bar/ (which are
     not in the same authentication domain) and switch between them
     without having to re-enter passwords all the time.
-
-28. Support response caching?
 
 35. Allow i18n'ization if building a shared library, iff gettext
     support is on the system (and hence add -lintl or whatever to
@@ -82,18 +69,6 @@ Longer term
 46. Asynchronous request-dispatching? Makes integration into GUI loop
     easy... any other reasons?  Must leave existing request_dispatch
     interface intact.
-
-47. Indexed table-based response-header access? Might simplify things
-    like response body acceptance callbacks (i.e., can get access to
-    Content-Type header for XML).
-
-48. Possibly, store the time of last interaction over the TCP socket,
-    call it 't'.  If the next request is made after t+20, presume the
-    persistent connection is dead, so re-connect automatically.  If we
-    don't do this, then we have two wasted write() calls making the
-    request, then failing, then re-connecting.  It's really only worth
-    doing this if this actually saves any packets on the wire, which
-    it probably doesn't. strace / tcpdump might help here.
 
 50. opendir/readdir/closedir-esque interface for PROPFIND depth 1, 
     a la EZDAV. (cadaver has it already)
@@ -107,3 +82,9 @@ Longer term
 
 65. Add ne_uri_copy function and use it in ne_lock_copy.  (patch
     sent to neon@webdav.org)
+
+66. Useful for subversion/ra_dav:
+
+    - a hook which runs *after* the response headers are read,
+      but *before* the response body is read
+

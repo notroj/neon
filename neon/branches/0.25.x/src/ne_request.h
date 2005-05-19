@@ -142,7 +142,7 @@ void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
 /* Retrieve the value of the response header field with given name;
  * returns NULL if no response header with given name was found.  The
  * return value is valid only until the next call to either
- * ne_request_create or ne_begin_request for this request. */
+ * ne_request_dispatch or ne_begin_request for this request. */
 const char *ne_get_response_header(ne_request *req, const char *name);
 
 /* Iterator interface for response headers: if passed a NULL cursor,
@@ -249,7 +249,9 @@ typedef void (*ne_pre_send_fn)(ne_request *req, void *userdata,
 			       ne_buffer *header);
 void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
 
-/* Hook called after the request is sent. May return:
+/* Hook called after the request is dispatched (request sent, and
+ * the entire response read).  If an error occurred reading the response,
+ * this hook will not run.  May return:
  *  NE_OK     everything is okay
  *  NE_RETRY  try sending the request again.
  * anything else signifies an error, and the request is failed. The return

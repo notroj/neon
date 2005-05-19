@@ -4,7 +4,7 @@ Changes in release 0.25.0:
  - ne_read_response_to_fd() and ne_discard_response() for use with
    ne_begin_request/ne_end_request style response handling
  - ne_xmlreq.h: ne_xml_parse_response() and ne_xml_dispatch_request()
- - ne_has_feature() for feature detection, replaces ne_support_ssl()
+ - ne_has_support() for feature detection, replaces ne_support_ssl()
  - ne_set_addrlist() can be used to bypass normal DNS hostname resolver
  - ne_buffer_czappend(), convenience wrapper for ne_buffer_append.
  - ne_iaddr_typeof() returns type of a socket object
