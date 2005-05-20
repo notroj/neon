@@ -1,6 +1,6 @@
 /* 
    Wrapper interface to XML parser
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -369,7 +369,8 @@ static void char_data(void *userdata, const ne_xml_char *data, int len)
     
     if (elm->handler->cdata_cb) {
         p->failure = elm->handler->cdata_cb(elm->handler->userdata, elm->state, data, len);
-        NE_DEBUG(NE_DBG_XML, "Cdata callback returned %d.\n", p->failure);
+        NE_DEBUG(NE_DBG_XML, "XML: char-data (%d) returns %d\n", 
+                 elm->state, p->failure);
     }        
 }
 
