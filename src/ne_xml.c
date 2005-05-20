@@ -328,7 +328,7 @@ static void start_element(void *userdata, const ne_xml_char *name,
                                   elm->nspace, elm->name, PASS_ATTS(atts));
     }
 
-    NE_DEBUG(NE_DBG_XMLPARSE, "XML: start-element (%d, {%s, %s}) => %d\n", 
+    NE_DEBUG(NE_DBG_XML, "XML: start-element (%d, {%s, %s}) => %d\n", 
              elm->parent->state, elm->nspace, elm->name, state);             
     
     if (state > 0)
@@ -489,23 +489,22 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
     int ret, flag;
     /* duck out if it's broken */
     if (p->failure) {
-	NE_DEBUG(NE_DBG_XML, "Not parsing %" NE_FMT_SIZE_T " bytes.\n", 
-		 len);
+	NE_DEBUG(NE_DBG_XMLPARSE, "XML: Failed; ignoring %" NE_FMT_SIZE_T 
+                 " bytes.\n", len);
 	return p->failure;
     }
     if (len == 0) {
 	flag = -1;
 	block = "";
-	NE_DEBUG(NE_DBG_XML, "Got 0-length buffer, end of document.\n");
+	NE_DEBUG(NE_DBG_XMLPARSE, "XML: End of document.\n");
     } else {	
-	NE_DEBUG(NE_DBG_XML, "Parsing %" NE_FMT_SIZE_T " length buffer.\n",
-		 len);
+	NE_DEBUG(NE_DBG_XMLPARSE, "XML: Parsing %" NE_FMT_SIZE_T " bytes.\n", len);
 	flag = 0;
     }
 
 #ifdef NEED_BOM_HANDLING
     if (p->bom_pos < 3) {
-        NE_DEBUG(NE_DBG_XML, "Checking for UTF-8 BOM.\n");
+        NE_DEBUG(NE_DBG_XMLPARSE, "Checking for UTF-8 BOM.\n");
         while (len > 0 && p->bom_pos < 3 && 
                block[0] == BOM_UTF8[p->bom_pos]) {
             block++;
@@ -527,24 +526,25 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
      * will already have been written in that case. */
 #ifdef HAVE_EXPAT
     ret = XML_Parse(p->parser, block, len, flag);
-    NE_DEBUG(NE_DBG_XMLPARSE, "XML_Parse returned %d\n", ret);
+    NE_DEBUG(NE_DBG_XMLPARSE, "XML: XML_Parse returned %d\n", ret);
     if (ret == 0 && p->failure == 0) {
 	ne_snprintf(p->error, ERR_SIZE,
 		    "XML parse error at line %d: %s", 
 		    XML_GetCurrentLineNumber(p->parser),
 		    XML_ErrorString(XML_GetErrorCode(p->parser)));
 	p->failure = 1;
+        NE_DEBUG(NE_DBG_XMLPARSE, "XML: Parse error: %s\n", p->error);
     }
 #else
     ret = xmlParseChunk(p->parser, block, len, flag);
-    NE_DEBUG(NE_DBG_XMLPARSE, "xmlParseChunk returned %d\n", ret);
+    NE_DEBUG(NE_DBG_XMLPARSE, "XML: xmlParseChunk returned %d\n", ret);
     /* Parse errors are normally caught by the sax_error() callback,
      * which clears p->valid. */
     if (p->parser->errNo && p->failure == 0) {
 	ne_snprintf(p->error, ERR_SIZE, "XML parse error at line %d.", 
 		    ne_xml_currentline(p));
 	p->failure = 1;
-        NE_DEBUG(NE_DBG_XMLPARSE, "XML parse error: %s\n", p->error);
+        NE_DEBUG(NE_DBG_XMLPARSE, "XML: Parse error: %s\n", p->error);
     }
 #endif
     return p->failure;
