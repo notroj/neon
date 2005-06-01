@@ -1,6 +1,6 @@
 /* 
    Tests for high-level HTTP interface (ne_basic.h)
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -71,11 +71,13 @@ static int content_type(void)
     };
 
     for (n = 0; ctypes[n].value != NULL; n++) {
-	ne_content_type ct = {0};
+        ne_content_type ct;
         ne_session *sess;
         ne_request *req;
         char resp[200];
         int rv;
+
+        ct.type = ct.subtype = ct.charset = ct.value = "unset";
 
         ne_snprintf(resp, sizeof resp,
                     "HTTP/1.0 200 OK\r\n" "Content-Length: 0\r\n"

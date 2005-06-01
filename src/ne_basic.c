@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -245,6 +245,7 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
 
     *stype++ = '\0';
     ct->type = ct->value;
+    ct->charset = NULL;
     
     sep = strchr(stype, ';');
 
