@@ -243,6 +243,7 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
 
     stype = strchr(ct->value, '/');
     *stype++ = '\0';
+    ct->charset = NULL;
     
     sep = strchr(stype, ';');
 

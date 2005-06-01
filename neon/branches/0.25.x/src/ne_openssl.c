@@ -628,8 +628,15 @@ int ne__negotiate_ssl(ne_request *req)
         sess->server_cert = cert;
     }
     
-    if (!ctx->sess) {
-	/* store the session. */
+    if (ctx->sess) {
+        SSL_SESSION *newsess = SSL_get0_session(ssl);
+        /* Replace the session if it has changed. */ 
+        if (newsess != ctx->sess || SSL_SESSION_cmp(ctx->sess, newsess)) {
+            SSL_SESSION_free(ctx->sess);
+            ctx->sess = SSL_get1_session(ssl); /* bumping the refcount */
+        }
+    } else {
+	/* Store the session. */
 	ctx->sess = SSL_get1_session(ssl);
     }
 
