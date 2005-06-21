@@ -1,8 +1,11 @@
 Changes in release 0.25.1:
 * ne_get_content_type(): fix cases where the charset field was not set
   to NULL after successful return (Johannes Schneider)
+* Compressed response handling fixes:
+ - fix double invocation of reader callback with len=0
+ - fix cases where the reader callback return value was ignored
 * Cache the new SSL session if the old one was expired (Robert Eiglmaier)
-* Win32: fix various build issues.
+* Win32: fix build issues.
 
 Changes in release 0.25.0:
 * New interfaces:
