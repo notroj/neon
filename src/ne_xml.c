@@ -393,7 +393,7 @@ static void end_element(void *userdata, const ne_xml_char *name)
         }
     }
     
-    NE_DEBUG(NE_DBG_XMLPARSE, "XML: end-element (%d, {%s, %s})\n",
+    NE_DEBUG(NE_DBG_XML, "XML: end-element (%d, {%s, %s})\n",
              elm->state, elm->nspace, elm->name);
 
     /* move back up the tree */
