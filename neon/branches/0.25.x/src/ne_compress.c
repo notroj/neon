@@ -154,8 +154,6 @@ static int process_footer(ne_decompress *ctx,
 	    uLong crc = BUF2UINT(ctx->footer) & 0xFFFFFFFF;
 	    if (crc == ctx->checksum) {
 		ctx->state = NE_Z_FINISHED;
-                /* reader requires a size=0 call at end-of-response */
-                ctx->reader(ctx->userdata, NULL, 0);
 		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum match.\n");
 	    } else {
 		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum mismatch: "
@@ -220,7 +218,9 @@ static int do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 
 	/* pass on the inflated data, if any */
         if (ctx->zstr.total_out > 0) {
-            ctx->reader(ctx->userdata, ctx->outbuf, ctx->zstr.total_out);
+            int rret = ctx->reader(ctx->userdata, ctx->outbuf,
+                                   ctx->zstr.total_out);
+            if (rret) return rret;
         }	
     } while (ret == Z_OK && ctx->zstr.avail_in > 0);
     
