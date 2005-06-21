@@ -1,6 +1,6 @@
 /* 
    Handling of compressed HTTP responses
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -32,6 +32,8 @@
 #include "ne_compress.h"
 #include "ne_utils.h"
 #include "ne_i18n.h"
+
+#include "ne_private.h"
 
 #ifdef NE_HAVE_ZLIB
 
@@ -152,8 +154,6 @@ static int process_footer(ne_decompress *ctx,
 	    uLong crc = BUF2UINT(ctx->footer) & 0xFFFFFFFF;
 	    if (crc == ctx->checksum) {
 		ctx->state = NE_Z_FINISHED;
-                /* reader requires a size=0 call at end-of-response */
-                ctx->reader(ctx->userdata, NULL, 0);
 		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum match.\n");
 	    } else {
 		NE_DEBUG(NE_DBG_HTTP, "compress: End of response; checksum mismatch: "
@@ -218,7 +218,9 @@ static int do_inflate(ne_decompress *ctx, const char *buf, size_t len)
 
 	/* pass on the inflated data, if any */
         if (ctx->zstr.total_out > 0) {
-            ctx->reader(ctx->userdata, ctx->outbuf, ctx->zstr.total_out);
+            int rret = ctx->reader(ctx->userdata, ctx->outbuf,
+                                   ctx->zstr.total_out);
+            if (rret) return rret;
         }	
     } while (ret == Z_OK && ctx->zstr.avail_in > 0);
     
@@ -372,6 +374,21 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     return 0;
 }
 
+/* Prepare for a compressed response */
+static void gz_pre_send(ne_request *r, void *ud, ne_buffer *req)
+{
+    ne_decompress *ctx = ud;
+
+    NE_DEBUG(NE_DBG_HTTP, "compress: Initialization.\n");
+
+    /* (Re-)Initialize the context */
+    ctx->state = NE_Z_BEFORE_DATA;
+    if (ctx->zstrinit) inflateEnd(&ctx->zstr);
+    ctx->zstrinit = 0;
+    ctx->hdrcount = ctx->footcount = 0;
+    ctx->checksum = crc32(0L, Z_NULL, 0);
+}
+
 void ne_decompress_destroy(ne_decompress *ctx)
 {
     if (ctx->zstrinit)
@@ -398,14 +415,13 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 
     ne_add_response_body_reader(req, gz_acceptor, gz_reader, ctx);
 
-    ctx->state = NE_Z_BEFORE_DATA;
     ctx->reader = rdr;
     ctx->userdata = userdata;
     ctx->session = ne_get_session(req);
     ctx->request = req;
-    /* initialize the checksum. */
-    ctx->checksum = crc32(0L, Z_NULL, 0);
     ctx->acceptor = acpt;
+
+    ne__reqhook_pre_send(req, gz_pre_send, ctx);
 
     return ctx;    
 }

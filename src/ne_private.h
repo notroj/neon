@@ -114,4 +114,7 @@ typedef int (*ne_push_fn)(void *userdata, const char *buf, size_t count);
 /* Do the SSL negotiation. */
 int ne__negotiate_ssl(ne_request *req);
 
+/* Hack to fix ne_compress layer problems */
+void ne__reqhook_pre_send(ne_request *sess, ne_pre_send_fn fn, void *userdata);
+
 #endif /* HTTP_PRIVATE_H */

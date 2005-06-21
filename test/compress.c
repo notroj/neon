@@ -1,6 +1,6 @@
 /* 
    tests for compressed response handling.
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -57,6 +57,14 @@ static int reader(void *ud, const char *block, size_t len)
 #endif
 
     if (failed == f_mismatch) return -1;
+
+    /* catch multiple len == 0 call as issued by 0.25.0 only: */
+    if (failed == f_complete) {
+        NE_DEBUG(NE_DBG_HTTP, "reader: called after complete, len=%d\n",
+                 (int)len);
+        failed = f_mismatch;
+        return -1;
+    }
 
     if (failed == f_partial && len == 0) {
         if (b->len != 0) {
@@ -357,6 +365,7 @@ static int retry_accept(void *ud, ne_request *req, const ne_status *st)
     }
 
     expect->len = 5;
+    failed = f_partial; /* reset the state */
     return 1;
 }
 
@@ -367,6 +376,52 @@ static int retry_compress(void)
     struct string resp = { retry_gz_resp2, sizeof(retry_gz_resp2) - 1 };
     struct string expect = { "fish", 4 };
     return retry_compress_helper(retry_accept, &resp, &expect);
+}
+
+#define READER_ABORT_ERR "reader_abort error string"
+
+static int reader_abort(void *ud, const char *buf, size_t len)
+{
+    ne_session *sess = ud;
+    ne_set_error(sess, READER_ABORT_ERR);
+    return len;
+}
+
+/* check that a callback abort does abort the response */
+static int compress_abort(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    struct serve_file_args sfargs;
+    ne_decompress *dc;
+    int ret;
+
+    sfargs.fname = "file1.gz";
+    sfargs.headers = "Content-Encoding: gzip\r\n";
+    sfargs.chunks = 0;
+
+    CALL(make_session(&sess, serve_file, &sfargs));
+
+    req = ne_request_create(sess, "GET", "/abort");
+
+    dc = ne_decompress_reader(req, ne_accept_2xx, reader_abort, sess);
+
+    ret = ne_request_dispatch(req);
+
+    reap_server();
+
+    ONN("request was not aborted", ret != NE_ERROR);
+    ONV(strcmp(ne_get_error(sess), READER_ABORT_ERR),
+        ("session error was %s not %s",
+         ne_get_error(sess), READER_ABORT_ERR));
+    
+    reap_server();
+    ne_decompress_destroy(dc);
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+
 }
 
 ne_test tests[] = {
@@ -389,6 +444,7 @@ ne_test tests[] = {
     T(chunked_10b),
     T(chunked_10b_wn),
     T(retry_notcompress),
-    T_XFAIL(retry_compress),
+    T(retry_compress),
+    T(compress_abort),
     T(NULL)
 };
