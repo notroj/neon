@@ -1210,8 +1210,6 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 
 }
 
-#define SAFELY(x) ((x) != NULL?(x):"null")
-
 static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 {
     auth_session *sess = cookie;
@@ -1242,7 +1240,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
 	     sess->attempt, status->code, sess->spec->status_code, 
-	     sess->spec->resp_hdr, auth_hdr);
+	     sess->spec->resp_hdr, auth_hdr ? auth_hdr : "(none)");
     if (auth_info_hdr && sess->scheme == auth_scheme_digest) {
         if (verify_digest_response(areq, sess, auth_info_hdr)) {
             NE_DEBUG(NE_DBG_HTTPAUTH, "Response authentication invalid.\n");
