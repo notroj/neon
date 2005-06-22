@@ -353,7 +353,7 @@ static void destroy_element(struct element *elm)
 	ne_free(this_ns->uri);
 	ne_free(this_ns);
 	this_ns = next_ns;
-    };
+    }
     if (elm->default_ns)
         ne_free(elm->default_ns);
     ne_free(elm);
@@ -393,7 +393,7 @@ static void end_element(void *userdata, const ne_xml_char *name)
         }
     }
     
-    NE_DEBUG(NE_DBG_XMLPARSE, "XML: end-element (%d, {%s, %s})\n",
+    NE_DEBUG(NE_DBG_XML, "XML: end-element (%d, {%s, %s})\n",
              elm->state, elm->nspace, elm->name);
 
     /* move back up the tree */
