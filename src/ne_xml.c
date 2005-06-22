@@ -353,7 +353,7 @@ static void destroy_element(struct element *elm)
 	ne_free(this_ns->uri);
 	ne_free(this_ns);
 	this_ns = next_ns;
-    };
+    }
     if (elm->default_ns)
         ne_free(elm->default_ns);
     ne_free(elm);
