@@ -58,9 +58,11 @@ typedef XML_Char ne_xml_char;
 #include <libxml/xmlversion.h>
 #include <libxml/parser.h>
 typedef xmlChar ne_xml_char;
-/* libxml-2.6.18 should have the fix:
- * http://bugzilla.gnome.org/show_bug.cgi?id=162613 */
+
+#if LIBXML_VERSION < 20619
+/* 2.6.19 and earlier have broken BOM handling */
 #define NEED_BOM_HANDLING
+#endif
 #else /* not HAVE_LIBXML */
 #  error need an XML parser
 #endif /* not HAVE_EXPAT */
