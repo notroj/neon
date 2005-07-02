@@ -23,7 +23,7 @@ BASIC_TESTS = uri-tests util-tests string-tests socket \
 	session request auth basic stubs redirect
 ZLIB_TESTS = compress
 ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz \
-	corrupt1.gz corrupt2.gz empty.gz
+	corrupt1.gz corrupt2.gz empty.gz random.txt
 DAV_TESTS = xml xmlreq acl props lock
 SSL_TESTS = socket-ssl ssl
 SSL_HELPERS = ca-stamp
@@ -40,8 +40,22 @@ LIBTEST = libtest.la
 LIBNEON = $(top_builddir)/src/libneon.la
 
 LIBTOOL = @LIBTOOL@ --silent
-LINK = $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -no-install
+TEST_LDFLAGS = @TEST_LDFLAGS@
+LINK = $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(TEST_LDFLAGS)
 COMPILE = $(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+libdir = @libdir@
+
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL = @INSTALL@
+
+INSTALL_HELPERS = $(HELPERS) server.key $(srcdir)/makekeys.sh \
+	$(srcdir)/openssl.conf $(srcdir)/notvalid.pem \
+	$(srcdir)/expired.pem
 
 .SUFFIXES:
 .SUFFIXES: .lo .c
@@ -64,6 +78,19 @@ grind: $(TESTS) $(HELPERS)
 
 lfs-check: largefile $(LFS_HELPERS)
 	@SRCDIR=$(srcdir) $(SHELL) $(srcdir)/run.sh largefile
+
+install: $(TESTS) $(HELPERS)
+	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests
+	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests/bin
+	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests/data
+	@for t in $(TESTS); do \
+	 $(LIBTOOL) --mode=install \
+	      $(INSTALL_PROGRAM) $$t $(DESTDIR)$(libdir)/neon-tests/bin; \
+	done
+	@for h in $(INSTALL_HELPERS); do \
+	 $(INSTALL_DATA) $$h $(DESTDIR)$(libdir)/neon-tests/data; \
+	done
+	@$(INSTALL_PROGRAM) $(srcdir)/run-tests.sh $(DESTDIR)$(libdir)/neon-tests
 
 NEWS = $(top_srcdir)/NEWS
 
@@ -94,6 +121,9 @@ corrupt2.gz:
 
 empty.gz:
 	touch $@
+
+random.txt:
+	cat $(NEWS) > $@
 
 # Dummy target to create the CA keys etc.  makekeys stderr is redirected
 # since it changes for every invocation; not helpful for regression
