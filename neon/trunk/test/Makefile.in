@@ -28,7 +28,7 @@ DAV_TESTS = xml xmlreq acl props lock
 SSL_TESTS = socket-ssl ssl
 SSL_HELPERS = ca-stamp
 TESTS = @TESTS@
-VALGRIND = valgrind --gdb-attach=yes --leak-check=yes
+VALGRIND = valgrind --tool=memcheck --leak-check=yes --trace-children=no --show-reachable=yes
 
 # Make every object depend on libneon.la to force a rebuild on any src/* changes
 OBJDEPS = $(srcdir)/common/tests.h $(srcdir)/common/child.h $(srcdir)/utils.h \
