@@ -402,7 +402,11 @@ Darwin) ne_cv_os_macosx=yes ;;
 esac])
 if test $ne_cv_os_macosx = yes; then
   CPPFLAGS="$CPPFLAGS -no-cpp-precomp"
-  LDFLAGS="$LDFLAGS -flat_namespace"
+  LDFLAGS="$LDFLAGS -flat_namespace" 
+  # poll has various issues in various Darwin releases
+  if test x${ac_cv_func_poll+set} != xset; then
+    ac_cv_func_poll=no
+  fi
 fi
 ])
 
