@@ -35,13 +35,10 @@
 
 static enum { f_partial = 0, f_mismatch, f_complete } failed;
 
-static char *newsfn = "../NEWS";
+static const char *newsfn = "random.txt";
 
 static int init(void)
 {
-    if (test_argc > 1) {
-	newsfn = ne_concat(test_argv[1], "/../NEWS", NULL);
-    }
     return lookup_localhost();
 }
 

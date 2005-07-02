@@ -117,6 +117,19 @@ if test x$enable_webdav != xno; then
    TESTS="$TESTS \$(DAV_TESTS)"
 fi
 
+AC_ARG_ENABLE(tests-install,
+  AS_HELP_STRING([--enable-tests-install],
+                 [enable installation of the test suite]),,
+  [enable_tests_install=no])
+
+# If test suite installation is not required, it's more
+# efficient to link the test programs using -no-install:
+if test "$enable_tests_install" = "no"; then
+  TEST_LDFLAGS="-no-install"
+fi
+
+AC_SUBST(TEST_LDFLAGS)
+
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
 AC_CONFIG_FILES([Makefile src/Makefile test/Makefile neon.pc])
 
