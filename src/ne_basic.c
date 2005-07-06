@@ -239,20 +239,18 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
         return -1;
     }
 
-    ct->value = ne_strdup(value);
-    
-    stype = strchr(ct->value, '/');
+    ct->type = ct->value = ne_strdup(value);
 
+    stype = strchr(ct->value, '/');
     *stype++ = '\0';
-    ct->type = ct->value;
     ct->charset = NULL;
     
     sep = strchr(stype, ';');
 
     if (sep) {
 	char *tok;
-	/* look for the charset parameter. TODO; probably better to
-	 * hand-carve a parser than use ne_token/strstr/shave here. */
+
+	/* Look for the charset parameter: */
 	*sep++ = '\0';
 	do {
 	    tok = ne_qtoken(&sep, ';', "\"\'");
@@ -270,7 +268,7 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
     ct->subtype = ne_shave(stype, " \t");
     
     if (ct->charset == NULL && strcasecmp(ct->type, "text") == 0) {
-        /* 3280§3.1: text/xml without charset implies us-ascii. */
+        /* 3023§3.1: text/xml without charset implies us-ascii. */
         if (strcasecmp(ct->subtype, "xml") == 0)
             ct->charset = "us-ascii";
         /* 2616§3.7.1: subtypes of text/ default to charset ISO-8859-1. */

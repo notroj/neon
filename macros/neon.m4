@@ -136,9 +136,9 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
 NE_VERSION_MAJOR=0
-NE_VERSION_MINOR=26
-NE_VERSION_PATCH=0
-NE_VERSION_TAG=-dev
+NE_VERSION_MINOR=25
+NE_VERSION_PATCH=2
+NE_VERSION_TAG=
 
 # libtool library interface versioning.  Release policy dictates that
 # for neon 0.x.y, each x brings an incompatible interface change, and
@@ -402,11 +402,7 @@ Darwin) ne_cv_os_macosx=yes ;;
 esac])
 if test $ne_cv_os_macosx = yes; then
   CPPFLAGS="$CPPFLAGS -no-cpp-precomp"
-  LDFLAGS="$LDFLAGS -flat_namespace" 
-  # poll has various issues in various Darwin releases
-  if test x${ac_cv_func_poll+set} != xset; then
-    ac_cv_func_poll=no
-  fi
+  LDFLAGS="$LDFLAGS -flat_namespace"
 fi
 ])
 
