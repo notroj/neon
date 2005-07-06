@@ -74,9 +74,9 @@ static int post_send(ne_request *req, void *private, const ne_status *status)
 	ne_buffer_zappend(path, red->requri);
 	pnt = strrchr(path->data, '/');
 
-	if (pnt && *(pnt+1) != '\0') {
+	if (pnt && pnt[1] != '\0') {
 	    /* Chop off last path segment. */
-	    *(pnt+1) = '\0';
+	    pnt[1] = '\0';
 	    ne_buffer_altered(path);
 	}
 	ne_buffer_zappend(path, location);
