@@ -1,3 +1,6 @@
+Changes in release 0.25.2:
+* Really fix the Win32 build.
+
 Changes in release 0.25.1:
 * ne_get_content_type(): fix cases where the charset field was not set
   to NULL after successful return (Johannes Schneider)
