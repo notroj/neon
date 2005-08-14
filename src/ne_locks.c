@@ -408,9 +408,7 @@ int ne_unlock(ne_session *sess, const struct ne_lock *lock)
 
     ret = ne_request_dispatch(req);
     
-    if (ret == NE_OK && ne_get_status(req)->klass == 2) {
-	ret = NE_OK;    
-    } else {
+    if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	ret = NE_ERROR;
     }
 
@@ -774,7 +772,7 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
 	    ne_set_error(sess, _("Response missing activelock for %s"), 
 			 ctx.token);
 	}
-    } else {
+    } else if (ret == NE_OK /* && status != 2xx */) {
 	ret = NE_ERROR;
     }
 
