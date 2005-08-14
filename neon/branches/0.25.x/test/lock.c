@@ -33,6 +33,7 @@
 #include "ne_locks.h"
 #include "ne_socket.h"
 #include "ne_basic.h"
+#include "ne_auth.h"
 
 #include "tests.h"
 #include "child.h"
@@ -123,7 +124,7 @@ static struct ne_lock *make_lock(const char *path, const char *token,
 {
     struct ne_lock *lock = ne_calloc(sizeof *lock);
 
-    lock->token = ne_strdup(token);
+    if (lock->token) lock->token = ne_strdup(token);
     lock->scope = scope;
     lock->depth = depth;
     lock->uri.host = ne_strdup("localhost");
@@ -524,6 +525,52 @@ static int fail_discover(void)
     return OK;
 }
 
+static int no_creds(void *ud, const char *realm, int attempt,
+                    char *username, char *password)
+{
+    return -1;
+}
+                    
+
+static int fail_lockauth(void)
+{
+    ne_session *sess;
+    struct ne_lock *lock;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 401 Auth Denied\r\n"
+                      "WWW-Authenticate: Basic realm=\"realm@host\"\r\n"
+                      "Content-Length: 0\r\n"
+                      "\r\n"
+                      "HTTP/1.1 401 Auth Denied\r\n"
+                      "WWW-Authenticate: Basic realm=\"realm@host\"\r\n"
+                      "Connection: close\r\n"
+                      "\r\n"));
+
+    ne_set_server_auth(sess, no_creds, NULL);
+
+    lock = make_lock("/foo", NULL, ne_lockscope_exclusive, NE_DEPTH_ZERO);
+    ret = ne_lock(sess, lock);
+    ONV(ret != NE_AUTH,
+        ("attempt to lock did not fail with NE_AUTH: %d (%s)",
+         ret, ne_get_error(sess)));
+    ne_lock_destroy(lock);
+
+    lock = make_lock("/bar", "fish", ne_lockscope_exclusive, NE_DEPTH_ZERO);
+    ret  = ne_unlock(sess, lock);
+    ONV(ret != NE_AUTH,
+        ("attempt to unlock did not fail with NE_AUTH: %d (%s)",
+         ret, ne_get_error(sess)));
+    ne_lock_destroy(lock);
+
+
+    CALL(await_server());
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(store_single),
@@ -537,6 +584,7 @@ ne_test tests[] = {
     T(lock_shared),
     T(discover),
     T_XLEAKY(fail_discover),
+    T(fail_lockauth),
     T(NULL)
 };
 
