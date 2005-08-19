@@ -806,7 +806,7 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 #endif
     }
 #else /* Use gethostbyname() */
-    unsigned long laddr;
+    in_addr_t laddr;
     struct hostent *hp;
     
     laddr = inet_addr(hostname);
