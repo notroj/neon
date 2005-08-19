@@ -769,7 +769,7 @@ ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t buflen)
 }
 
 #ifndef INADDR_NONE
-#define INADDR_NONE ((unsigned long) -1)
+#define INADDR_NONE ((in_addr_t) -1)
 #endif
 
 #if !defined(USE_GETADDRINFO) && !defined(HAVE_DECL_H_ERRNO) && !defined(WIN32)
