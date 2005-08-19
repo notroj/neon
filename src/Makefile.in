@@ -40,7 +40,8 @@ NEON_BASEOBJS = ne_request.@NEON_OBJEXT@ ne_session.@NEON_OBJEXT@ 	    \
 	ne_uri.@NEON_OBJEXT@ ne_dates.@NEON_OBJEXT@ ne_alloc.@NEON_OBJEXT@  \
 	ne_md5.@NEON_OBJEXT@ ne_utils.@NEON_OBJEXT@    \
 	ne_socket.@NEON_OBJEXT@ ne_auth.@NEON_OBJEXT@ 			    \
-	ne_redirect.@NEON_OBJEXT@ ne_compress.@NEON_OBJEXT@
+	ne_redirect.@NEON_OBJEXT@ ne_compress.@NEON_OBJEXT@		    \
+	ne_i18n.@NEON_OBJEXT@
 
 NEON_DAVOBJS = $(NEON_BASEOBJS) \
 	ne_207.@NEON_OBJEXT@ ne_xml.@NEON_OBJEXT@ \
@@ -92,10 +93,9 @@ check-incl:
 	 $(COMPILE) -c checkincl.c -o checkincl.o || exit 1; done
 
 neonreq = ne_request.h ne_session.h ne_utils.h ne_string.h ne_socket.h \
-	ne_alloc.h $(top_builddir)/config.h ne_private.h
+	ne_alloc.h $(top_builddir)/config.h ne_internal.h
 
-ne_request.@NEON_OBJEXT@: ne_request.c $(neonreq) ne_i18n.h ne_private.h \
-	ne_uri.h
+ne_request.@NEON_OBJEXT@: ne_request.c $(neonreq) ne_private.h ne_uri.h
 
 ne_session.@NEON_OBJEXT@: ne_session.c ne_session.h ne_alloc.h \
 	ne_utils.h ne_private.h $(top_builddir)/config.h
@@ -109,7 +109,7 @@ ne_gnutls.@NEON_OBJEXT@: ne_gnutls.c ne_session.h ne_ssl.h ne_privssl.h \
 ne_socket.@NEON_OBJEXT@: ne_socket.c ne_socket.h $(top_builddir)/config.h \
 	ne_privssl.h ne_string.h
 
-ne_auth.@NEON_OBJEXT@: ne_auth.c ne_auth.h $(neonreq) \
+ne_auth.@NEON_OBJEXT@: ne_auth.c ne_auth.h $(neonreq) ne_private.h \
 	ne_dates.h ne_md5.h ne_uri.h 
 
 ne_basic.@NEON_OBJEXT@: ne_basic.c ne_basic.h $(neonreq)
@@ -121,7 +121,7 @@ ne_xml.@NEON_OBJEXT@: ne_xml.c ne_xml.h ne_string.h ne_utils.h \
 	$(top_builddir)/config.h
 
 ne_207.@NEON_OBJEXT@: ne_207.c ne_207.h ne_xml.h \
-	$(top_builddir)/config.h ne_utils.h ne_i18n.h
+	$(top_builddir)/config.h ne_utils.h ne_internal.h
 
 ne_string.@NEON_OBJEXT@: ne_string.c ne_string.h ne_alloc.h \
 	$(top_builddir)/config.h
@@ -150,3 +150,5 @@ ne_acl.@NEON_OBJEXT@: ne_acl.c ne_acl.h $(neonreq)
 ne_xmlreq.@NEON_OBJEXT@: ne_xmlreq.c ne_xmlreq.h ne_xml.h $(neonreq)
 
 ne_stubssl.@NEON_OBJEXT@: ne_stubssl.c $(neonreq)
+
+ne_i18n.@NEON_OBJEXT@: ne_i18n.c ne_i18n.h $(top_builddir)/config.h

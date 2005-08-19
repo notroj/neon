@@ -44,7 +44,7 @@
 #include "ne_basic.h"
 #include "ne_props.h"
 #include "ne_207.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 #include "ne_xmlreq.h"
 
 #define HOOK_ID "http://webdav.org/neon/hooks/webdav-locking"

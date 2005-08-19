@@ -57,7 +57,7 @@
 #include "ne_utils.h"
 #include "ne_alloc.h"
 #include "ne_uri.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 #ifdef HAVE_GSSAPI
 #ifdef HAVE_GSSAPI_GSSAPI_H

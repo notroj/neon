@@ -129,7 +129,7 @@ typedef struct in_addr ne_inet_addr;
 #define USE_CHECK_IPV6
 #endif
 
-#include "ne_i18n.h"
+#include "ne_internal.h"
 #include "ne_utils.h"
 #include "ne_string.h"
 #include "ne_socket.h"

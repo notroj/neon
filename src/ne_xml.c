@@ -31,7 +31,7 @@
 #include <strings.h>
 #endif
 
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 #include "ne_alloc.h"
 #include "ne_xml.h"

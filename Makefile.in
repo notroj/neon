@@ -25,6 +25,7 @@ docdir = $(datadir)/doc/neon-@NEON_VERSION@
 includedir = @includedir@
 neonincludes = $(includedir)/neon
 pkgconfigdir = $(libdir)/pkgconfig
+localedir = $(datadir)/locale
 
 top_srcdir = @top_srcdir@
 top_builddir = .
@@ -43,9 +44,16 @@ INSTALL = @INSTALL@
 transform = @program_transform_name@
 
 LIBTOOL = @LIBTOOL@
-
 XMLTO = xmlto
 GCOV = gcov
+XGETTEXT_OPTS = --keyword=_ --keyword=N_ --msgid-bugs-address=neon@webdav.org \
+		--default-domain=neon
+POTFILE = $(top_srcdir)/po/neon.pot
+XGETTEXT = xgettext
+MSGFMT = msgfmt
+MSGMERGE = msgmerge
+
+LINGUAS = @ALL_LINGUAS@
 
 # The headers to distribute - making up the public interface of neon
 DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \
@@ -137,7 +145,7 @@ install-memleak:
 	@echo "ERROR: purposes only; this copy of neon must not be installed."
 	@false
 
-install-yes: install-lib install-headers install-config install-docs
+install-yes: install-lib install-headers install-config install-docs install-nls
 
 # libtool does all the necessary magic here
 install-lib: subdirs
@@ -164,6 +172,29 @@ install-config: neon-config neon.pc
 install-tests: install-lib
 	@cd test && make install
 
+install-nls: install-nls-@NE_FLAG_I18N@
+
+install-nls-no:
+	@echo NLS not enabled.
+
+install-nls-yes:
+	@for f in $(LINGUAS); do \
+	 $(INSTALL) -d $(DESTDIR)$(localedir)/$$f/LC_MESSAGES; \
+	 $(INSTALL_DATA) po/$$f.gmo $(DESTDIR)$(localedir)/$$f/LC_MESSAGES/neon.mo; \
+	done
+
 ChangeLog:
 	svn log > $@
 
+update-po:
+	@xgettext $(XGETTEXT_OPTS) $(top_srcdir)/src/ne*.c -o $(POTFILE)
+	@for f in $(LINGUAS); do \
+	 echo "> Updating \"$$f\" catalog:"; \
+	 $(MSGMERGE) --update $(top_srcdir)/po/$$f.po $(POTFILE); \
+	done
+
+compile-gmo:
+	@for f in $(LINGUAS); do \
+	 echo "> Compiling \"$$f\" catalog:"; \
+	 $(MSGFMT) --statistics -c -o po/$$f.gmo $(top_srcdir)/po/$$f.po; \
+	done

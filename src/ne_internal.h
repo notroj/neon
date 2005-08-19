@@ -1,6 +1,6 @@
 /* 
-   Internationalization of neon
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Global interfaces private to neon.
+   Copyright (C) 2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,22 +19,21 @@
 
 */
 
+/* NOTE WELL: The interfaces defined in this file are internal to neon
+ * and MUST NOT be used by neon-based applications. */
+
+#ifndef NE_INTERNAL_H
+#define NE_INTERNAL_H 1
+
 #include "config.h"
 
-#include "ne_i18n.h"
-
-#ifdef HAVE_LIBINTL_H
+#undef _
+#ifdef NE_HAVE_I18N
 #include <libintl.h>
-#endif
+#define _(str) dgettext(PACKAGE_NAME, str)
+#else
+#define _(str) (str)
+#endif /* NE_ENABLE_NLS */
+#define N_(str) (str)
 
-void ne_i18n_init(void)
-{
-#if defined(NE_HAVE_I18N) && defined(NEON_IS_LIBRARY)
-    /* The bindtextdomain call is only enabled if neon is built as a
-     * library rather than as a bundled source; it would be possible
-     * in the future to allow it for bundled builds too, if the neon
-     * message catalogs could be installed alongside the app's own
-     * message catalogs. */
-    bindtextdomain("neon", LOCALEDIR);
-#endif
-}
+#endif /* NE_INTERNAL_H */
