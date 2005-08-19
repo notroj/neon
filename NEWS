@@ -1,3 +1,9 @@
+Changes in release 0.25.3:
+* ne_lock() and ne_unlock(): fix cases where NE_ERROR would be returned 
+  instead of e.g. NE_AUTH on auth failure.
+* Prevent use of poll() on Darwin.
+* Fix gethostbyname-based resolver on LP64 platforms (Matthew Sanderson).
+
 Changes in release 0.25.2:
 * Really fix the Win32 build.
 
