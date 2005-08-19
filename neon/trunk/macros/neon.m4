@@ -628,8 +628,18 @@ else
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
-   AC_CHECK_DECL(h_errno,,,[#define _XOPEN_SOURCE_EXTENDED 1
+   AC_CHECK_DECLS(h_errno,,,[#define _XOPEN_SOURCE_EXTENDED 1
 #include <netdb.h>])
+   AC_CHECK_TYPE(in_addr_t,,[
+     AC_DEFINE([in_addr_t], [unsigned int], 
+                            [Define if in_addr_t is not availale])], [
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+])
 fi
 
 AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
