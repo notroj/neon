@@ -78,6 +78,9 @@ LIBNEON_SOURCE_CHECKS
 NEON_LIBTOOL_BUILD
 # Find an XML parser
 NEON_XML_PARSER
+# Internationalization support.
+NEON_I18N()
+
 # Extra checks for debugging, compiler warnings
 NEON_DEBUG
 # Leave till last to prevent CFLAGS affecting checks.
@@ -129,6 +132,10 @@ if test "$enable_tests_install" = "no"; then
 fi
 
 AC_SUBST(TEST_LDFLAGS)
+
+# Bundled language catalogs
+ALL_LINGUAS="cs de fr it ja nn ru tr"
+AC_SUBST(ALL_LINGUAS)
 
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
 AC_CONFIG_FILES([Makefile src/Makefile test/Makefile neon.pc])

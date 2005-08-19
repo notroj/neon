@@ -33,7 +33,7 @@
 #include "ne_alloc.h"
 #include "ne_uri.h"
 #include "ne_redirect.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 #include "ne_string.h"
 
 #define REDIRECT_ID "http://www.webdav.org/neon/hooks/http-redirect"

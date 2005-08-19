@@ -34,7 +34,7 @@
 #include "ne_uri.h"
 #include "ne_basic.h"
 
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 struct ne_207_parser_s {
     ne_207_start_response *start_response;

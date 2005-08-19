@@ -22,7 +22,7 @@
 #include "config.h"
 
 #include "ne_xmlreq.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 /* Handle an XML response parse error, setting session error string
  * and closing the connection. */

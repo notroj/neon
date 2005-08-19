@@ -31,7 +31,7 @@
 #include "ne_request.h"
 #include "ne_compress.h"
 #include "ne_utils.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 #ifdef NE_HAVE_ZLIB
 

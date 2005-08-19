@@ -40,7 +40,7 @@
 #include "ne_ssl.h"
 #include "ne_string.h"
 #include "ne_session.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 #include "ne_private.h"
 #include "ne_privssl.h"

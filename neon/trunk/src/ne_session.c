@@ -36,7 +36,7 @@
 #include "ne_session.h"
 #include "ne_alloc.h"
 #include "ne_utils.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 #include "ne_string.h"
 
 #include "ne_private.h"

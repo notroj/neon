@@ -1,6 +1,6 @@
 /* 
    Stupidly simple test framework
-   Copyright (C) 2001-2002, 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2002, 2004, 2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,10 +40,14 @@
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+#ifdef HAVE_LOCALE_H
+#include <locale.h>
+#endif
 
 #include "ne_string.h"
 #include "ne_utils.h"
 #include "ne_socket.h"
+#include "ne_i18n.h"
 
 #include "tests.h"
 #include "child.h"
@@ -150,6 +154,12 @@ int main(int argc, char *argv[])
     } else {
 	test_suite++;
     }
+
+#ifdef HAVE_SETLOCALE
+    setlocale(LC_MESSAGES, "");
+#endif
+
+    ne_i18n_init();
 
 #if defined(HAVE_ISATTY) && defined(STDOUT_FILENO)
     if (isatty(STDOUT_FILENO)) {

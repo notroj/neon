@@ -48,7 +48,7 @@
 #endif
 
 #include "ne_dates.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 int ne_getmodtime(ne_session *sess, const char *uri, time_t *modtime) 
 {

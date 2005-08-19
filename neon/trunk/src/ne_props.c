@@ -33,7 +33,7 @@
 #include "ne_props.h"
 #include "ne_basic.h"
 #include "ne_locks.h"
-#include "ne_i18n.h"
+#include "ne_internal.h"
 
 /* don't store flat props with a value > 10K */
 #define MAX_FLATPROP_LEN (102400)
