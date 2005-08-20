@@ -40,7 +40,7 @@
 #include "ne_ssl.h"
 #include "ne_string.h"
 #include "ne_session.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 #include "ne_private.h"
 #include "ne_privssl.h"
@@ -302,7 +302,7 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	} while (idx >= 0);
 	
 	if (lastidx < 0) {
-            /* no commonName attributes at all. */
+            /* no commonNmae attributes at all. */
             ne_buffer_destroy(cname);
 	    return -1;
         }

@@ -1,6 +1,6 @@
 /* 
    Internationalization of neon
-   Copyright (C) 2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,16 +19,19 @@
 
 */
 
-#ifndef NE_I18N_H
-#define NE_I18N_H
+#ifndef NEON_I18N_H
+#define NEON_I18N_H
 
-/* Initialize translated error messages within neon.  This call is
- * strictly only necessary if this copy of the neon library has been
- * installed into a different prefix than the gettext() implementation
- * on which it depends for i18n purposes.  If this call is not made,
- * the message catalogs will not be found in that case, but the
- * library will operate otherwise correctly (albeit giving
- * English-only error messages). */
-void ne_i18n_init(void);
+#undef _
+#ifdef ENABLE_NLS
+#include <libintl.h>
+#define _(str) gettext(str)
+#else
+#define _(str) (str)
+#endif /* ENABLE_NLS */
+#define N_(str) (str)
 
-#endif /* NE_I18N_H */
+/* Initialize i18n in neon */
+void neon_i18n_init(void);
+
+#endif /* NEON_I18N_H */
