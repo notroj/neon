@@ -27,7 +27,7 @@
 #include <libintl.h>
 #endif
 
-void ne_i18n_init(void)
+void ne_i18n_init(const char *encoding)
 {
 #if defined(NE_HAVE_I18N) && defined(NEON_IS_LIBRARY)
     /* The bindtextdomain call is only enabled if neon is built as a
@@ -36,5 +36,12 @@ void ne_i18n_init(void)
      * message catalogs could be installed alongside the app's own
      * message catalogs. */
     bindtextdomain("neon", LOCALEDIR);
+
+#ifdef HAVE_BIND_TEXTDOMAIN_CODESET
+    if (encoding) {
+        bind_textdomain_codeset("neon", encoding);
+    }
+#endif /* HAVE_BIND_TEXTDOMAIN_CODESET */
+
 #endif
 }

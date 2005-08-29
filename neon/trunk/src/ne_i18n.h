@@ -28,7 +28,11 @@
  * on which it depends for i18n purposes.  If this call is not made,
  * the message catalogs will not be found in that case, but the
  * library will operate otherwise correctly (albeit giving
- * English-only error messages). */
-void ne_i18n_init(void);
+ * English-only error messages).
+ *
+ * If 'encoding' is non-NULL, it specifies the character encoding for
+ * the generated translated strings.  If it is NULL, the appropriate
+ * character encoding for the locale will be used. */
+void ne_i18n_init(const char *encoding);
 
 #endif /* NE_I18N_H */
