@@ -1041,7 +1041,7 @@ esac])])
 AC_DEFUN([NEON_I18N], [
 
 AC_ARG_ENABLE(nls, 
-  AS_HELP_STRING(--disable-nls, [disable internationalization support]),,,
+  AS_HELP_STRING(--disable-nls, [disable internationalization support]),,
   [enable_nls=yes])
 
 if test "x${enable_nls}${ac_cv_header_libintl_h}" = "xyesyes"; then
@@ -1049,6 +1049,7 @@ if test "x${enable_nls}${ac_cv_header_libintl_h}" = "xyesyes"; then
   # checking for dgettext() itself is awkward because gcc has a 
   # builtin of that function, which confuses AC_CHECK_FUNCS et al.
   NE_SEARCH_LIBS(bindtextdomain, intl,,[enable_nls=no])
+  NE_CHECK_FUNCS(bind_textdomain_codeset)
 fi
 
 if test "$enable_nls" = "no"; then

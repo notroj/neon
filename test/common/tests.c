@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     setlocale(LC_MESSAGES, "");
 #endif
 
-    ne_i18n_init();
+    ne_i18n_init(NULL);
 
 #if defined(HAVE_ISATTY) && defined(STDOUT_FILENO)
     if (isatty(STDOUT_FILENO)) {
