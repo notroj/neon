@@ -198,3 +198,10 @@ compile-gmo:
 	 echo "> Compiling \"$$f\" catalog:"; \
 	 $(MSGFMT) --statistics -c -o po/$$f.gmo $(top_srcdir)/po/$$f.po; \
 	done
+
+doc-status:
+	@echo -n "Missing docs for:"
+	@for f in `nm src/.libs/libneon.so | grep ' T ' | colrm 1 11`; do \
+	   test -f doc/man/$$f.3 || echo -n " $$f"; \
+	done; echo
+
