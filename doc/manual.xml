@@ -52,6 +52,7 @@
 <!ENTITY refssltrust SYSTEM "ref/ssltrust.xml">
 <!ENTITY refreq SYSTEM "ref/req.xml">
 <!ENTITY refreqhdr SYSTEM "ref/reqhdr.xml">
+<!ENTITY refreqopts SYSTEM "ref/reqopts.xml">
 <!ENTITY refstatus SYSTEM "ref/status.xml">
 <!ENTITY refgetst SYSTEM "ref/getst.xml">
 <!ENTITY refreqbody SYSTEM "ref/reqbody.xml">
@@ -157,6 +158,7 @@ ignoring the WebDAV support if desired.</para>
     &refreq; <!-- ne_request_create -->
     &refsess; <!-- ne_session_create -->
     &refopts; <!-- ne_set_useragent -->
+    &refreqopts; <!-- ne_set_useragent -->
     &refreqbody; <!-- ne_set_request_body_buffer -->
     &refauth; <!-- ne_set_server_auth -->
     &refshave; <!-- ne_shave -->

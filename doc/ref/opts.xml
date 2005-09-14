@@ -79,23 +79,6 @@ timeout interval, call <function>ne_set_read_timeout</function> giving
 the desired number of seconds as the <parameter>timeout</parameter>
 parameter.</para>
 
-	<para>An extension introduced in the HTTP/1.1 specification
-was the use of the <literal>Expect: 100-continue</literal> header.
-This header allows an HTTP client to be informed of the expected
-response status before the request message body is sent: a useful
-optimisation for situations where a large message body is to be sent.
-The <function>ne_set_expect100</function> function can be used to
-enable this feature by passing the <parameter>flag</parameter>
-parameter as any non-zero integer.</para>
-
-<warning><para>Unfortunately, if this header is sent to a server which
-is not fully compliant with the HTTP/1.1 specification, a deadlock
-occurs resulting in a temporarily "hung" connection.  neon will
-recover gracefully from this situation, but only after a 15 second
-timeout.  It is highly recommended that this option is not enabled
-unless it is known that the server in use correctly implements
-<literal>Expect: 100-continue</literal> support.</para></warning>
-
          <para>The scheme used to initially create the session will be
          returned by <function>ne_get_scheme</function>.</para>
 
