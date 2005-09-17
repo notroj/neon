@@ -370,7 +370,6 @@ static int provide_client_cert(gnutls_session session,
                                const gnutls_pk_algorithm *sign_algos,
                                int sign_algos_length, gnutls_retr_st *st)
 {
-    int ret;
     ne_session *sess = gnutls_session_get_ptr(session);
     
     if (!sess) {
@@ -616,7 +615,7 @@ static int read_to_datum(const char *filename, gnutls_datum *datum)
     }
     
     datum->size = ne_buffer_size(buf);
-    datum->data = ne_buffer_finish(buf);
+    datum->data = (unsigned char *)ne_buffer_finish(buf);
     return 0;
 }
 
@@ -809,7 +808,7 @@ ne_ssl_certificate *ne_ssl_cert_read(const char *filename)
 int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
 {
     unsigned char buffer[10*1024];
-    int len = sizeof buffer;
+    size_t len = sizeof buffer;
 
     FILE *fp = fopen(filename, "w");
 
@@ -908,8 +907,9 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
-    int j, len = 20;
     char sha1[20], *p;
+    int j;
+    size_t len = sizeof sha1;
 
     if (gnutls_x509_crt_get_fingerprint(cert->subject, GNUTLS_DIG_SHA,
                                         sha1, &len) < 0)
