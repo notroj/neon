@@ -371,18 +371,20 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
             req->body.file.remain = req->body.file.length;
             return 0;
         } else {
-            char err[200];
+            char err[200], offstr[20];
 
             if (newoff == -1) {
                 /* errno was set */
                 ne_strerror(errno, err, sizeof err);
             } else {
                 strcpy(err, _("offset invalid"));
-            }                       
+            }
+            ne_snprintf(offstr, sizeof offstr, "%" FMT_NE_OFF_T,
+                        req->body.file.offset);
             ne_set_error(req->session, 
-                         _("Could not seek to offset %" FMT_NE_OFF_T 
+                         _("Could not seek to offset %s"
                            " of request body file: %s"), 
-                           req->body.file.offset, err);
+                           offstr, err);
             return -1;
         }
     }
