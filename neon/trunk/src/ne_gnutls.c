@@ -365,11 +365,14 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx,
 int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
                               const char *ca_names, const char *verify_cas)
 {
+    ctx->verify = required;
     if (verify_cas) {
         gnutls_certificate_set_x509_trust_file(ctx->cred, verify_cas,
                                                GNUTLS_X509_FMT_PEM);
     }
-#warning argh
+    /* gnutls_certificate_send_x509_rdn_sequence in gnutls >= 1.2 can
+     * be used to *suppress* sending the CA names, but not control it,
+     * it seems. */
     return 0;
 }
 
