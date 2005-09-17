@@ -1138,12 +1138,18 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     gnutls_init(&ssl, GNUTLS_SERVER);
     gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
     gnutls_set_default_priority(ssl);
+    if (ctx->verify)
+        gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUEST);
 
     sock->ssl = ssl;
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
     ret = gnutls_handshake(ssl);
     if (ret < 0) {
         return error_gnutls(sock, ret);
+    }
+    if (ctx->verify && gnutls_certificate_verify_peers(ssl)) {
+        set_error(sock, _("SSL peer certificate could not be verified"));
+        return NE_SOCK_ERROR;
     }
 #endif
     sock->ops = &iofns_ssl;
