@@ -287,7 +287,7 @@ static gnutls_x509_crt x509_crt_copy(gnutls_x509_crt src)
     gnutls_datum tmp;
     gnutls_x509_crt dest;
     
-    if (gnutls_x509_crt_init(&dest) == 0) {
+    if (gnutls_x509_crt_init(&dest) != 0) {
         return NULL;
     }
 
