@@ -114,13 +114,9 @@ static void append_rdn(ne_buffer *buf, gnutls_x509_crt x5, int subject, const ch
     }
 }
 
-
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 {
     ne_buffer *buf = ne_buffer_create();
-#if 0
-    /* this code can be used once there is a released version of GnuTLS
-     * with fixed _get_dn_oid functions */
     int ret, idx = 0;
 
     do {
@@ -136,29 +132,34 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
             idx++;
         }
     } while (ret != GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE);
-#else
-
-#define APPEND_RDN(x) append_rdn(buf, name->cert, name->subject, GNUTLS_OID_##x)
-
-    APPEND_RDN(X520_ORGANIZATIONAL_UNIT_NAME);
-    APPEND_RDN(X520_ORGANIZATION_NAME);
-    APPEND_RDN(X520_LOCALITY_NAME);
-    APPEND_RDN(X520_STATE_OR_PROVINCE_NAME);
-    APPEND_RDN(X520_COUNTRY_NAME);
-
-    if (buf->used == 1) APPEND_RDN(X520_COMMON_NAME);
-    if (buf->used == 1) APPEND_RDN(PKCS9_EMAIL);
-
-#undef APPEND_RDN
-#endif
 
     return ne_buffer_finish(buf);
 }
 
 int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
 {
-#warning incomplete
-    return 1;
+    char c1[1024], c2[1024];
+    size_t s1 = sizeof c1, s2 = sizeof c2;
+    int ret;
+
+    if (dn1->subject)
+        ret = gnutls_x509_crt_get_dn(dn1->cert, c1, &s1);
+    else
+        ret = gnutls_x509_crt_get_issuer_dn(dn1->cert, c1, &s1);
+    if (ret)
+        return 1;
+
+    if (dn2->subject)
+        ret = gnutls_x509_crt_get_dn(dn2->cert, c2, &s2);
+    else
+        ret = gnutls_x509_crt_get_issuer_dn(dn2->cert, c2, &s2);
+    if (ret)
+        return -1;
+    
+    if (s1 != s2)
+        return s2 - s1;
+
+    return memcmp(c1, c2, s1);
 }
 
 void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
