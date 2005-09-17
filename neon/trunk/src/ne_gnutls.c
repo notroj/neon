@@ -373,6 +373,10 @@ static int provide_client_cert(gnutls_session session,
     int ret;
     ne_session *sess = gnutls_session_get_ptr(session);
     
+    if (!sess) {
+        return -1;
+    }
+
     if (!sess->client_cert && sess->ssl_provide_fn) {
         /* TODO: convert req_ca_rdn into an ne_ssl_dname array.  */
         sess->ssl_provide_fn(sess->ssl_provide_ud, sess,
@@ -410,7 +414,7 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 
 ne_ssl_context *ne_ssl_context_create(int flags)
 {
-    ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
+    ne_ssl_context *ctx = ne_calloc(sizeof *ctx);
     gnutls_certificate_allocate_credentials(&ctx->cred);
     if (flags == NE_SSL_CTX_CLIENT) {
         gnutls_certificate_client_set_retrieve_function(ctx->cred,
