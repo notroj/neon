@@ -235,6 +235,28 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
             match = match_hostname(name, hostname);
             found = 1;
             break;
+        case GNUTLS_SAN_IPADDRESS: {
+            ne_inet_addr *ia;
+            if (len == 4)
+                ia = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)name);
+            else if (len == 16)
+                ia = ne_iaddr_make(ne_iaddr_ipv6, (unsigned char *)name);
+            else 
+                ia = NULL;
+            if (ia) {
+                char buf[128];
+                
+                match = strcmp(hostname, 
+                               ne_iaddr_print(ia, buf, sizeof buf)) == 0;
+                if (identity) *identity = ne_strdup(buf);
+                found = 1;
+                ne_iaddr_free(ia);
+            } else {
+                NE_DEBUG(NE_DBG_SSL, "iPAddress name with unsupported "
+                         "address type (length %" NE_FMT_SIZE_T "), skipped.\n",
+                         len);
+            }
+        } break;
         default:
             break;
         }
