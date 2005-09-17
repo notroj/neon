@@ -47,7 +47,9 @@ LIBTOOL = @LIBTOOL@
 XMLTO = xmlto
 GCOV = gcov
 XGETTEXT_OPTS = --keyword=_ --keyword=N_ --msgid-bugs-address=neon@webdav.org \
-		--default-domain=neon
+		--default-domain=neon --flag ne_print_request_header:3:c-format \
+		--flag ne_snprintf:3:c-format --flag ne_vsnprintf:3:c-format \
+		--flag ne_set_error:2:c-format
 POTFILE = $(top_srcdir)/po/neon.pot
 XGETTEXT = xgettext
 MSGFMT = msgfmt
@@ -191,6 +193,7 @@ update-po:
 	@for f in $(LINGUAS); do \
 	 echo "> Updating \"$$f\" catalog:"; \
 	 $(MSGMERGE) --update $(top_srcdir)/po/$$f.po $(POTFILE); \
+	 $(MSGFMT) --check-format $(top_srcdir)/po/$$f.po || exit 1; \
 	done
 
 compile-gmo:
