@@ -342,6 +342,45 @@ dup_error:
     return NULL;
 }    
 
+/* Callback invoked when the SSL server requests a client certificate.  */
+static int provide_client_cert(gnutls_session session,
+                               const gnutls_datum *req_ca_rdn, int nreqs,
+                               const gnutls_pk_algorithm *sign_algos,
+                               int sign_algos_length, gnutls_retr_st *st)
+{
+    int ret;
+    ne_session *sess = gnutls_session_get_ptr(session);
+    
+    if (!sess->client_cert && sess->ssl_provide_fn) {
+        /* TODO: convert req_ca_rdn into an ne_ssl_dname array.  */
+        sess->ssl_provide_fn(sess->ssl_provide_ud, sess,
+                             NULL, 0);
+    }
+
+    NE_DEBUG(NE_DBG_SSL, "In client cert provider callback.\n");
+
+    if (sess->client_cert) {
+        gnutls_certificate_type type = gnutls_certificate_type_get(session);
+        if (type == GNUTLS_CRT_X509) {
+            NE_DEBUG(NE_DBG_SSL, "Supplying client certificate.\n");
+
+            st->type = type;
+            st->ncerts = 1;
+            st->cert.x509 = &sess->client_cert->cert.subject;
+            st->key.x509 = sess->client_cert->pkey;
+            
+            /* tell GNU TLS not to deallocate the certs. */
+            st->deinit_all = 0;
+        } else {
+            return -1;
+        }
+    } else {
+        NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
+    }
+
+    return 0;
+}
+
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 {
     sess->client_cert = dup_client_cert(cc);
@@ -351,6 +390,10 @@ ne_ssl_context *ne_ssl_context_create(int flags)
 {
     ne_ssl_context *ctx = ne_malloc(sizeof *ctx);
     gnutls_certificate_allocate_credentials(&ctx->cred);
+    if (flags == NE_SSL_CTX_CLIENT) {
+        gnutls_certificate_client_set_retrieve_function(ctx->cred,
+                                                        provide_client_cert);
+    }
     return ctx;
 }
 
