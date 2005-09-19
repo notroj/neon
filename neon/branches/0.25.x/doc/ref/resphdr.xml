@@ -47,7 +47,7 @@
     used.  This function takes a <parameter>cursor</parameter>
     parameter which should be &null; to retrieve the first header. The
     function stores the name and value of the next header header in
-    the <paramater>name</paramater> and <paramater>value</paramater>
+    the <parameter>name</parameter> and <parameter>value</parameter>
     parameters, and returns a new cursor pointer which can be passed
     to <function>ne_response_header_iterate</function> to retrieve the
     next header.</para>
