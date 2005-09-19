@@ -82,7 +82,7 @@ typedef enum {
     buffer, for instance the string
     <literal>"127.0.0.1"</literal>.</para>
 
-    <para><function>ne_iaddr_type</function> returns the type of the
+    <para><function>ne_iaddr_typeof</function> returns the type of the
     given network address.</para>
 
     <para><function>ne_iaddr_free</function> releases the memory
