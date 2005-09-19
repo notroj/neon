@@ -18,7 +18,7 @@
 
       <funcprototype>
         <funcdef>void <function>ne_set_request_expect100</function></funcdef>
-        <paramdef>ne_session *<parameter>session</parameter></paramdef>
+        <paramdef>ne_request *<parameter>request</parameter></paramdef>
         <paramdef>int <parameter>flag</parameter></paramdef>
       </funcprototype>
 
