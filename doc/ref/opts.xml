@@ -9,8 +9,9 @@
 	<refname id="ne_set_useragent">ne_set_useragent</refname>
 	<refname id="ne_set_persist">ne_set_persist</refname>
 	<refname id="ne_set_read_timeout">ne_set_read_timeout</refname>
-	<refname id="ne_set_expect100">ne_set_expect100</refname>
-	<refpurpose>common settings for HTTP sessions</refpurpose>
+	<refname id="ne_get_scheme">ne_get_scheme</refname>
+	<refname id="ne_get_server_hostport">ne_get_server_hostport</refname>
+	<refpurpose>common properties for HTTP sessions</refpurpose>
       </refnamediv>
       
       <refsynopsisdiv>
@@ -38,13 +39,6 @@
 	  </funcprototype>
 
 	  <funcprototype>
-	    <funcdef>void <function>ne_set_expect100</function></funcdef>
-	    <paramdef>ne_session *<parameter>session</parameter></paramdef>
-	    <paramdef>int <parameter>flag</parameter></paramdef>
-	  </funcprototype>
-
-<!--
-	  <funcprototype>
 	    <funcdef>const char *<function>ne_get_scheme</function></funcdef>
 	    <paramdef>ne_sesssion *<parameter>session</parameter></paramdef>
 	  </funcprototype>
@@ -53,7 +47,6 @@
 	    <funcdef>const char *<function>ne_get_server_hostport</function></funcdef>
 	    <paramdef>ne_sesssion *<parameter>session</parameter></paramdef>
 	  </funcprototype>
--->
 
 	</funcsynopsis>
 	
@@ -62,8 +55,6 @@
       <refsect1>
 	<title>Description</title>
 	
-	<!-- TODO: intro para? -->
-
 	<para>The <literal>User-Agent</literal> request header is used
 to identify the software which generated the request for statistical
 or debugging purposes.  neon does not send a
@@ -88,22 +79,15 @@ timeout interval, call <function>ne_set_read_timeout</function> giving
 the desired number of seconds as the <parameter>timeout</parameter>
 parameter.</para>
 
-	<para>An extension introduced in the HTTP/1.1 specification
-was the use of the <literal>Expect: 100-continue</literal> header.
-This header allows an HTTP client to be informed of the expected
-response status before the request message body is sent: a useful
-optimisation for situations where a large message body is to be sent.
-The <function>ne_set_expect100</function> function can be used to
-enable this feature by passing the <parameter>flag</parameter>
-parameter as any non-zero integer.</para>
+         <para>The scheme used to initially create the session will be
+         returned by <function>ne_get_scheme</function>.</para>
 
-<warning><para>Unfortunately, if this header is sent to a server which
-is not fully compliant with the HTTP/1.1 specification, a deadlock
-occurs resulting in a temporarily "hung" connection.  neon will
-recover gracefully from this situation, but only after a 15 second
-timeout.  It is highly recommended that this option is not enabled
-unless it is known that the server in use correctly implements
-<literal>Expect: 100-continue</literal> support.</para></warning>
+         <para>The hostport pair with which the session is associated
+         will be returned by the
+         <function>ne_get_server_hostport</function>; for example
+         <literal>www.example.com:8080</literal>.  Note that the
+         <literal>:port</literal> will be omitted if the default port
+         for the scheme is used.</para>
 
       </refsect1>      
 
