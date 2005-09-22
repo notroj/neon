@@ -47,9 +47,9 @@
 #endif
 typedef XML_Char ne_xml_char;
 
-#if !defined(XML_MAJOR_VERSION) || (XML_MAJOR_VERSION < 2 \
-                                    && XML_MINOR_VERSION == 95 \
-                                    && XML_MICRO_VERSION < 2)
+#if !defined(XML_MAJOR_VERSION)
+#define NEED_BOM_HANDLING
+#elif XML_MAJOR_VERSION < 2 && XML_MINOR_VERSION == 95 && XML_MICRO_VERSION < 2
 #define NEED_BOM_HANDLING
 #endif
 
