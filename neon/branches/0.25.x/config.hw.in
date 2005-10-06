@@ -52,6 +52,10 @@
 #define inline                          __inline
 #define off_t                           _off_t
 
+#ifndef USE_GETADDRINFO
+#define in_addr_t                       unsigned int
+#endif
+
 #include <io.h>
 #define read _read
 
