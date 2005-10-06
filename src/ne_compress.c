@@ -1,6 +1,6 @@
 /* 
    Handling of compressed HTTP responses
-   Copyright (C) 2001-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -47,7 +47,7 @@ struct ne_decompress_s {
     ne_request *request; /* associated request. */
     ne_session *session; /* associated session. */
     /* temporary buffer for holding inflated data. */
-    char outbuf[BUFSIZ];
+    char outbuf[NE_BUFSIZ];
     z_stream zstr;
     int zstrinit; /* non-zero if zstr has been initialized */
 
