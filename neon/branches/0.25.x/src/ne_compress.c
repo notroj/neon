@@ -49,7 +49,7 @@ struct ne_decompress_s {
     ne_request *request; /* associated request. */
     ne_session *session; /* associated session. */
     /* temporary buffer for holding inflated data. */
-    char outbuf[BUFSIZ];
+    char outbuf[NE_BUFSIZ];
     z_stream zstr;
     int zstrinit; /* non-zero if zstr has been initialized */
 
