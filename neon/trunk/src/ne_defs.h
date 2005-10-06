@@ -1,6 +1,6 @@
 /* 
    Standard definitions for neon headers
-   Copyright (C) 2003-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -44,4 +44,8 @@
 #else
 #define ne_attribute(x)
 #define ne_attribute_malloc
+#endif
+
+#ifndef NE_BUFSIZ
+#define NE_BUFSIZ 8192
 #endif

@@ -144,7 +144,7 @@ struct ne_request_s {
     ne_off_t body_length; /* length of request body */
 
     /* temporary store for response lines. */
-    char respbuf[BUFSIZ];
+    char respbuf[NE_BUFSIZ];
 
     /**** Response ***/
 
@@ -413,7 +413,7 @@ static int send_request_body(ne_request *req, int retry)
 {
     ne_session *const sess = req->session;
     ne_off_t progress = 0;
-    char buffer[BUFSIZ];
+    char buffer[NE_BUFSIZ];
     ssize_t bytes;
 
     NE_DEBUG(NE_DBG_HTTP, "Sending request body:\n");
@@ -599,7 +599,7 @@ void ne_print_request_header(ne_request *req, const char *name,
 			     const char *format, ...)
 {
     va_list params;
-    char buf[BUFSIZ];
+    char buf[NE_BUFSIZ];
     
     va_start(params, format);
     ne_vsnprintf(buf, sizeof buf, format, params);
