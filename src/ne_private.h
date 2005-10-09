@@ -104,7 +104,7 @@ struct ne_session_s {
     void *ssl_provide_ud;
 
     /* Error string */
-    char error[BUFSIZ];
+    char error[512];
 };
 
 /* Pushes block of 'count' bytes at 'buf'. Returns non-zero on
