@@ -71,24 +71,33 @@ struct body_reader {
     struct body_reader *next;
 };
 
+#if !defined(LONG_LONG_MAX) && defined(LLONG_MAX)
+#define LONG_LONG_MAX LLONG_MAX
+#endif
+
 #ifdef NE_LFS
 #define ne_lseek lseek64
 typedef off64_t ne_off_t;
 #define FMT_NE_OFF_T NE_FMT_OFF64_T
-#if defined(LONG_LONG_MAX) && !defined(LLONG_MAX)
-#define LLONG_MAX LONG_LONG_MAX
-#endif
-#define NE_OFFT_MAX LLONG_MAX
+#define NE_OFFT_MAX LONG_LONG_MAX
 #ifdef HAVE_STRTOLL
 #define ne_strtoff strtoll
 #else
 #define ne_strtoff strtoq
 #endif
 #else /* !NE_LFS */
+
 typedef off_t ne_off_t;
 #define ne_lseek lseek
 #define FMT_NE_OFF_T NE_FMT_OFF_T
+
+#if defined(SIZEOF_LONG_LONG) && defined(LONG_LONG_MAX) \
+    && SIZEOF_OFF_T == SIZEOF_LONG_LONG
+#define NE_OFFT_MAX LONG_LONG_MAX
+#else
 #define NE_OFFT_MAX LONG_MAX
+#endif
+
 #if SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOLL)
 #define ne_strtoff strtoll
 #elif SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOQ)
