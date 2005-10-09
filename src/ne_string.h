@@ -27,7 +27,7 @@
 
 #include <stdarg.h>
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* ne_token and ne_qtoken return the next token in *str between *str
  * and separator character 'sep' or the NUL terminator. ne_qtoken
@@ -134,6 +134,6 @@ size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)
 size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
     ne_attribute((format(printf, 3, 0)));
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_STRING_H */

@@ -24,7 +24,7 @@
 
 #include "ne_request.h"
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* Register redirect handling: if a redirection response is given, the
  * request will fail with the NE_REDIRECT code, and the destinsation
@@ -36,6 +36,6 @@ void ne_redirect_register(ne_session *sess);
  * encountered could not be parsed. */
 const ne_uri *ne_redirect_location(ne_session *sess);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_REDIRECT_H */

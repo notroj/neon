@@ -25,7 +25,7 @@
 #include "ne_request.h"
 #include "ne_xml.h"
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* Read the HTTP response body using calls to ne_read_response_block
  * (so must be enclosed by ne_begin_request/ne_end_request calls), and
@@ -42,6 +42,6 @@ int ne_xml_parse_response(ne_request *req, ne_xml_parser *parser);
  * NE_ERROR is returned.  */
 int ne_xml_dispatch_request(ne_request *req, ne_xml_parser *parser);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_XMLREQ_H */

@@ -26,7 +26,7 @@
 #include "ne_string.h" /* For ne_buffer */
 #include "ne_session.h"
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 #define NE_OK (0) /* Success */
 #define NE_ERROR (1) /* Generic error; use ne_get_error(session) for message */
@@ -277,6 +277,6 @@ void ne_hook_destroy_session(ne_session *sess,
 void ne_set_request_private(ne_request *req, const char *id, void *priv);
 void *ne_get_request_private(ne_request *req, const char *id);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_REQUEST_H */
