@@ -25,7 +25,7 @@
 #include "ne_request.h"
 #include "ne_207.h"
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* There are two interfaces for fetching properties. The first is
  * 'ne_simple_propfind', which is relatively simple, and easy to use,
@@ -240,6 +240,6 @@ int ne_propfind_named(ne_propfind_handler *handler,
 /* Destroy a propfind handler after use. */
 void ne_propfind_destroy(ne_propfind_handler *handler);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_PROPS_H */

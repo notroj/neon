@@ -24,7 +24,7 @@
 
 #include "ne_defs.h"
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* Initialize translated error messages within neon.  This call is
  * strictly only necessary if this copy of the neon library has been
@@ -39,6 +39,6 @@ BEGIN_NEON_DECLS
  * character encoding for the locale will be used. */
 void ne_i18n_init(const char *encoding);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_I18N_H */

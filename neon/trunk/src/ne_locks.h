@@ -25,7 +25,7 @@
 #include "ne_request.h" /* for ne_session + ne_request */
 #include "ne_uri.h" /* for ne_uri */
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* The scope of a lock */
 enum ne_lock_scope {
@@ -161,6 +161,6 @@ void ne_lock_using_resource(ne_request *req, const char *path, int depth);
  * resource from the collection). */
 void ne_lock_using_parent(ne_request *req, const char *path);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_LOCKS_H */

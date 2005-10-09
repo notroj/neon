@@ -27,7 +27,7 @@
 #include "ne_defs.h"
 #include "ne_ssl.h" /* for ne_ssl_context */
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 #define NE_SOCK_ERROR (-1)
 /* Read/Write timed out */
@@ -187,6 +187,6 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
                         void *userdata);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_SOCKET_H */

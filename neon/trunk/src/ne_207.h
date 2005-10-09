@@ -25,7 +25,7 @@
 #include "ne_xml.h"
 #include "ne_request.h" /* for ne_request */
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* The defined state integer for the '{DAV:}prop' element. */
 #define NE_207_STATE_PROP (50)
@@ -95,6 +95,6 @@ void *ne_207_get_current_response(ne_207_parser *p);
  * The request object is destroyed in both cases. */
 int ne_simple_request(ne_session *sess, ne_request *req);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* DAV207_H */

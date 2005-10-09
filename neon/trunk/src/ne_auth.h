@@ -24,7 +24,7 @@
 
 #include "ne_session.h" /* for ne_session */
 
-BEGIN_NEON_DECLS
+NE_BEGIN_DECLS
 
 /* Size of username/password buffers passed to ne_auth_creds
  * callback. */
@@ -57,6 +57,6 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
 /* Clear any stored authentication details for the given session. */
 void ne_forget_auth(ne_session *sess);
 
-END_NEON_DECLS
+NE_END_DECLS
 
 #endif /* NE_AUTH_H */
