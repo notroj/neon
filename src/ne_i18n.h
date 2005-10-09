@@ -22,6 +22,10 @@
 #ifndef NE_I18N_H
 #define NE_I18N_H
 
+#include "ne_defs.h"
+
+BEGIN_NEON_DECLS
+
 /* Initialize translated error messages within neon.  This call is
  * strictly only necessary if this copy of the neon library has been
  * installed into a different prefix than the gettext() implementation
@@ -34,5 +38,7 @@
  * the generated translated strings.  If it is NULL, the appropriate
  * character encoding for the locale will be used. */
 void ne_i18n_init(const char *encoding);
+
+END_NEON_DECLS
 
 #endif /* NE_I18N_H */
