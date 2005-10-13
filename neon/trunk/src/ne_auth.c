@@ -220,12 +220,8 @@ static void clean_session(auth_session *sess)
         unsigned int major;
 
         if (sess->gssctx != GSS_C_NO_CONTEXT)
-            gss_delete_sec_context(&major, sess->gssctx, GSS_C_NO_BUFFER);
+            gss_delete_sec_context(&major, &sess->gssctx, GSS_C_NO_BUFFER);
         
-        if (sess->gssmech != GSS_C_NO_OID) {
-            gss_release_oid(&major, &sess->gssmech);
-            sess->gssmech = GSS_C_NO_OID;
-        }
     }
     NE_FREE(sess->gssapi_token);
 #endif
@@ -395,7 +391,6 @@ static int continue_negotiate(auth_session *sess, const char *token)
     gss_buffer_desc output = GSS_C_EMPTY_BUFFER;
     unsigned char *bintoken = NULL;
     int ret;
-    gss_OID mech = sess->gssmech;
 
     if (token) {
         input.length = ne_unbase64(token, &bintoken);
@@ -413,7 +408,7 @@ static int continue_negotiate(auth_session *sess, const char *token)
     }
 
     major = gss_init_sec_context(&minor, GSS_C_NO_CREDENTIAL, &sess->gssctx,
-                                 sess->gssname, mech, 
+                                 sess->gssname, sess->gssmech, 
                                  GSS_C_MUTUAL_FLAG, GSS_C_INDEFINITE, 
                                  GSS_C_NO_CHANNEL_BINDINGS,
                                  &input, &sess->gssmech, &output, NULL, NULL);
@@ -1295,7 +1290,7 @@ static void free_auth(void *cookie)
 #ifdef HAVE_GSSAPI
     if (sess->gssname != GSS_C_NO_NAME) {
         unsigned int major;
-        gss_release_name(&major, sess->gssname);
+        gss_release_name(&major, &sess->gssname);
     }
 #endif
 
