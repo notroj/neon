@@ -83,15 +83,15 @@ csr_fields "Bad Hostname Department" nohost.example.com | \
 ${MKCERT} -key ${srcdir}/server.key -out wrongcn.pem
 
 # default => T61String
-csr_fields "`echo -e 'H\350llo World'`" localhost |
+csr_fields "`echo -e 'H\0350llo World'`" localhost |
 ${MKCERT} -key ${srcdir}/server.key -out t61subj.cert
 
 STRMASK=pkix # => BMPString
-csr_fields "`echo -e 'H\350llo World'`" localhost |
+csr_fields "`echo -e 'H\0350llo World'`" localhost |
 ${MKCERT} -key ${srcdir}/server.key -out bmpsubj.cert
 
 STRMASK=utf8only # => UTF8String
-csr_fields "`echo -e 'H\350llo World'`" localhost |
+csr_fields "`echo -e 'H\0350llo World'`" localhost |
 ${MKCERT} -key ${srcdir}/server.key -out utf8subj.cert
 
 STRMASK=default
@@ -112,11 +112,13 @@ ${MKCERT} -key ${srcdir}/server.key -out ca4.pem
 
 cat ca[1234].pem > calist.pem
 
-# Only works with a Linuxy hostname command: continue without it,
-# as appropriate tests are skipped if these fail.
-hostname=`hostname -s 2>/dev/null` || true
-domain=`hostname -d 2>/dev/null` || true
-fqdn=`hostname -f 2>/dev/null` || true
+# The hostname munging only works if `hostname` always reports the
+# FQDN; continue if anything fails since appropriate tests will be
+# skipped if this fails.
+
+hostname=`hostname | sed 's,\..*,,'` || true
+domain=`hostname | sed 's,.*\.,,'` || true
+fqdn=`hostname` || true
 if [ "x${hostname}.${domain}" = "x${fqdn}" ]; then
   csr_fields "Wildcard Cert Dept" "*.${domain}" | \
   ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
