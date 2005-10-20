@@ -24,7 +24,7 @@
 
 #include "ne_defs.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* Return a copy of a path string with anything other than
  * "unreserved" and the forward-slash character percent-encoded
@@ -83,7 +83,7 @@ int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2);
  * fields are then zero-initialized. */
 void ne_uri_free(ne_uri *parsed);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_URI_H */
 

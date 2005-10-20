@@ -19,14 +19,14 @@
 
 */
 
-#undef NE_BEGIN_DECLS
-#undef NE_END_DECLS
+#undef BEGIN_NEON_DECLS
+#undef END_NEON_DECLS
 #ifdef __cplusplus
-# define NE_BEGIN_DECLS extern "C" {
-# define NE_END_DECLS }
+# define BEGIN_NEON_DECLS extern "C" {
+# define END_NEON_DECLS }
 #else
-# define NE_BEGIN_DECLS /* empty */
-# define NE_END_DECLS /* empty */
+# define BEGIN_NEON_DECLS /* empty */
+# define END_NEON_DECLS /* empty */
 #endif
 
 /* define ssize_t for Win32 */

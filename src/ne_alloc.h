@@ -30,7 +30,7 @@
 
 #include "ne_defs.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 typedef void (*ne_oom_callback_fn)(void);
 
@@ -55,6 +55,6 @@ char *ne_strndup(const char *s, size_t n) ne_attribute_malloc;
  * afterwards. */
 #define NE_FREE(x) do { if ((x) != NULL) ne_free((x)); (x) = NULL; } while (0)
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_ALLOC_H */

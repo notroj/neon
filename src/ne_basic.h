@@ -26,7 +26,7 @@
 
 #include "ne_request.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* Perform a GET request on resource at 'path', writing the entity
  * body which is returned to 'fd'. */
@@ -123,6 +123,6 @@ int ne_get_range(ne_session *sess, const char *path,
 /* Post using buffer as request-body: stream response into f */
 int ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_BASIC_H */

@@ -1,6 +1,6 @@
 /* 
    Internationalization of neon
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2003, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,29 +19,14 @@
 
 */
 
-#include "config.h"
-
-#include "ne_i18n.h"
-
-#ifdef HAVE_LIBINTL_H
-#include <libintl.h>
-#endif
-
-void ne_i18n_init(const char *encoding)
+void neon_i18n_init(void)
 {
-#if defined(NE_HAVE_I18N) && defined(NEON_IS_LIBRARY)
-    /* The bindtextdomain call is only enabled if neon is built as a
-     * library rather than as a bundled source; it would be possible
-     * in the future to allow it for bundled builds too, if the neon
-     * message catalogs could be installed alongside the app's own
-     * message catalogs. */
+#if defined(ENABLE_NLS) && defined(NEON_IS_LIBRARY)
+    /* if neon is build bundled in (i.e., not as a standalone
+     * library), then there is probably no point in this, since the
+     * messages won't be pointing in the right direction.
+     * there's not really any point in doing this if neon is
+     * a library since the messages aren't i18n'ized, but... */
     bindtextdomain("neon", LOCALEDIR);
-
-#ifdef HAVE_BIND_TEXTDOMAIN_CODESET
-    if (encoding) {
-        bind_textdomain_codeset("neon", encoding);
-    }
-#endif /* HAVE_BIND_TEXTDOMAIN_CODESET */
-
 #endif
 }

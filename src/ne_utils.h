@@ -34,7 +34,7 @@
 #include <trio.h>
 #endif
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* Returns a human-readable version string like:
  * "neon 0.2.0: Library build, OpenSSL support"
@@ -112,6 +112,6 @@ typedef struct {
  */
 int ne_parse_statusline(const char *status_line, ne_status *s);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_UTILS_H */

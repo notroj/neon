@@ -47,7 +47,7 @@
 #include <unistd.h>
 #endif
 
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 #include "ne_alloc.h"
 #include "ne_request.h"
@@ -180,7 +180,7 @@ struct ne_request_s {
         ne_off_t progress; /* number of bytes read of response */
     } resp;
     
-    struct hook *private;
+    struct hook *private, *pre_send_hooks;
 
     /* response header fields */
     struct field *response_headers[HH_HASHSIZE];
@@ -331,6 +331,12 @@ void ne_hook_destroy_session(ne_session *sess,
     ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
 }
 
+/* Hack to fix ne_compress layer problems */
+void ne__reqhook_pre_send(ne_request *req, ne_pre_send_fn fn, void *userdata)
+{
+    ADD_HOOK(req->pre_send_hooks, fn, userdata);
+}
+
 void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
 {
     add_hook(&sess->private, id, NULL, userdata);
@@ -380,20 +386,18 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
             req->body.file.remain = req->body.file.length;
             return 0;
         } else {
-            char err[200], offstr[20];
+            char err[200];
 
             if (newoff == -1) {
                 /* errno was set */
                 ne_strerror(errno, err, sizeof err);
             } else {
                 strcpy(err, _("offset invalid"));
-            }
-            ne_snprintf(offstr, sizeof offstr, "%" FMT_NE_OFF_T,
-                        req->body.file.offset);
+            }                       
             ne_set_error(req->session, 
-                         _("Could not seek to offset %s"
+                         _("Could not seek to offset %" FMT_NE_OFF_T 
                            " of request body file: %s"), 
-                           offstr, err);
+                           req->body.file.offset, err);
             return -1;
         }
     }
@@ -745,6 +749,10 @@ void ne_request_destroy(ne_request *req)
 	next_hk = hk->next;
 	ne_free(hk);
     }
+    for (hk = req->pre_send_hooks; hk; hk = next_hk) {
+	next_hk = hk->next;
+	ne_free(hk);
+    }
 
     if (req->status.reason_phrase)
 	ne_free(req->status.reason_phrase);
@@ -895,6 +903,10 @@ static ne_buffer *build_request(ne_request *req)
 
     NE_DEBUG(NE_DBG_HTTP, "Running pre_send hooks\n");
     for (hk = req->session->pre_send_hooks; hk!=NULL; hk = hk->next) {
+	ne_pre_send_fn fn = (ne_pre_send_fn)hk->fn;
+	fn(req, hk->userdata, buf);
+    }
+    for (hk = req->pre_send_hooks; hk!=NULL; hk = hk->next) {
 	ne_pre_send_fn fn = (ne_pre_send_fn)hk->fn;
 	fn(req, hk->userdata, buf);
     }
