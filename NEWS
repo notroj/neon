@@ -1,3 +1,10 @@
+Changes in release 0.25.4:
+* GSSAPI fixes for non-MIT implementations (Mikhail Teterin).
+* Fix ne_print_request_header() et al to use 8K buffer size on all
+ platforms (fixes issue with long Destination: URLs on Win32).
+* Win32 build fix for !USE_GETADDRINFO configuration.
+* Documentation updates.
+
 Changes in release 0.25.3:
 * ne_lock() and ne_unlock(): fix cases where NE_ERROR would be returned 
   instead of e.g. NE_AUTH on auth failure.
