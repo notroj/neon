@@ -517,10 +517,12 @@ static void free_propset(ne_prop_result_set *set)
 	struct propstat *p = &set->pstats[n];
 
 	for (m = 0; m < p->numprops; m++) {
-	    NE_FREE(p->props[m].nspace);
-	    ne_free(p->props[m].name);
-	    NE_FREE(p->props[m].lang);
-	    NE_FREE(p->props[m].value);
+            if (p->props[m].nspace) ne_free(p->props[m].nspace);
+            ne_free(p->props[m].name);
+            if (p->props[m].lang) ne_free(p->props[m].lang);
+            if (p->props[m].value) ne_free(p->props[m].value);
+            p->props[m].nspace = p->props[m].lang = 
+                p->props[m].value = NULL;
 	}
 
 	if (p->status.reason_phrase)
