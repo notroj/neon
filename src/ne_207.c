@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -167,7 +167,7 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
     switch (state) {
     case ELM_responsedescription:
 	if (HAVE_CDATA(p)) {
-	    NE_FREE(p->description);
+            if (p->description) ne_free(p->description);
 	    p->description = ne_strdup(cdata);
 	}
 	break;
@@ -180,7 +180,7 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
 	break;
     case ELM_status:
 	if (HAVE_CDATA(p)) {
-	    NE_FREE(p->status.reason_phrase);
+            if (p->status.reason_phrase) ne_free(p->status.reason_phrase);
 	    if (ne_parse_statusline(cdata, &p->status)) {
 		char buf[500];
 		NE_DEBUG(NE_DBG_HTTP, "Status line: %s\n", cdata);
@@ -200,8 +200,9 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
 	    p->end_propstat(p->userdata, p->propstat, GIVE_STATUS(p),
 			    p->description);
 	p->propstat = NULL;
-	NE_FREE(p->description);
-	NE_FREE(p->status.reason_phrase);
+        if (p->description) ne_free(p->description);
+        if (p->status.reason_phrase) ne_free(p->status.reason_phrase);
+        p->description = p->status.reason_phrase = NULL;
 	break;
     case ELM_response:
         if (!p->in_response) break;
@@ -210,8 +211,9 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
 			    p->description);
 	p->response = NULL;
 	p->in_response = 0;
-	NE_FREE(p->status.reason_phrase);
-	NE_FREE(p->description);
+        if (p->description) ne_free(p->description);
+        if (p->status.reason_phrase) ne_free(p->status.reason_phrase);
+        p->description = p->status.reason_phrase = NULL;
 	break;
     }
     return 0;
@@ -260,7 +262,7 @@ struct context {
 static void *start_response(void *userdata, const char *href)
 {
     struct context *ctx = userdata;
-    NE_FREE(ctx->href);
+    if (ctx->href) ne_free(ctx->href);
     ctx->href = ne_strdup(href);
     return NULL;
 }
@@ -340,7 +342,7 @@ int ne_simple_request(ne_session *sess, ne_request *req)
     ne_207_destroy(p207);
     ne_xml_destroy(p);
     ne_buffer_destroy(ctx.buf);
-    NE_FREE(ctx.href);
+    if (ctx.href) ne_free(ctx.href);
 
     ne_request_destroy(req);
 
