@@ -210,11 +210,13 @@ struct auth_request {
 static void clean_session(auth_session *sess) 
 {
     sess->can_handle = 0;
-    NE_FREE(sess->basic);
-    NE_FREE(sess->nonce);
-    NE_FREE(sess->cnonce);
-    NE_FREE(sess->opaque);
-    NE_FREE(sess->realm);
+    if (sess->basic) ne_free(sess->basic);
+    if (sess->nonce) ne_free(sess->nonce);
+    if (sess->cnonce) ne_free(sess->cnonce);
+    if (sess->opaque) ne_free(sess->opaque);
+    if (sess->realm) ne_free(sess->realm);
+    sess->realm = sess->basic = sess->cnonce = sess->nonce =
+        sess->opaque = NULL;
 #ifdef HAVE_GSSAPI
     {
         unsigned int major;
@@ -223,10 +225,12 @@ static void clean_session(auth_session *sess)
             gss_delete_sec_context(&major, &sess->gssctx, GSS_C_NO_BUFFER);
         
     }
-    NE_FREE(sess->gssapi_token);
+    if (sess->gssapi_token) ne_free(sess->gssapi_token);
+    sess->gssapi_token = NULL;
 #endif
 #ifdef HAVE_SSPI
-    NE_FREE(sess->sspi_token);
+    if (sess->sspi_token) ne_free(sess->sspi_token);
+    sess->sspi_token = NULL;
     ne_sspi_destroy_context(sess->sspi_context);
     sess->sspi_context = NULL;
 #endif
