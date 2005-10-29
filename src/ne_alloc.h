@@ -51,10 +51,6 @@ char *ne_strndup(const char *s, size_t n) ne_attribute_malloc;
 #define ne_free free
 #endif
 
-/* Handy macro to free things: takes an lvalue, and sets to NULL
- * afterwards. */
-#define NE_FREE(x) do { if ((x) != NULL) ne_free((x)); (x) = NULL; } while (0)
-
 NE_END_DECLS
 
 #endif /* NE_ALLOC_H */
