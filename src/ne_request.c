@@ -199,7 +199,7 @@ struct ne_request_s {
     ne_status status;
 };
 
-static int open_connection(ne_request *req);
+static int open_connection(ne_session *sess);
 
 /* Returns hash value for header 'name', converting it to lower-case
  * in-place. */
@@ -996,7 +996,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     /* Send the Request-Line and headers */
     NE_DEBUG(NE_DBG_HTTP, "Sending request-line and headers:\n");
     /* Open the connection if necessary */
-    ret = open_connection(req);
+    ret = open_connection(sess);
     if (ret) return ret;
 
     /* Allow retry if a persistent connection has been used. */
@@ -1483,9 +1483,8 @@ static const ne_inet_addr *resolve_next(ne_session *sess,
  * that once a connection to a particular network address has
  * succeeded, that address will be used first for the next attempt to
  * connect. */
-static int do_connect(ne_request *req, struct host_info *host, const char *err)
+static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 {
-    ne_session *const sess = req->session;
     int ret;
 
     if ((sess->socket = ne_sock_create()) == NULL) {
@@ -1526,17 +1525,16 @@ static int do_connect(ne_request *req, struct host_info *host, const char *err)
     return NE_OK;
 }
 
-static int open_connection(ne_request *req) 
+static int open_connection(ne_session *sess) 
 {
-    ne_session *sess = req->session;
     int ret;
     
     if (sess->connected) return NE_OK;
 
     if (!sess->use_proxy)
-	ret = do_connect(req, &sess->server, _("Could not connect to server"));
+	ret = do_connect(sess, &sess->server, _("Could not connect to server"));
     else
-	ret = do_connect(req, &sess->proxy,
+	ret = do_connect(sess, &sess->proxy,
 			 _("Could not connect to proxy server"));
 
     if (ret != NE_OK) return ret;
@@ -1545,11 +1543,11 @@ static int open_connection(ne_request *req)
     /* Negotiate SSL layer if required. */
     if (sess->use_ssl && !sess->in_connect) {
         /* CONNECT tunnel */
-        if (req->session->use_proxy)
+        if (sess->use_proxy)
             ret = proxy_tunnel(sess);
         
         if (ret == NE_OK) {
-            ret = ne__negotiate_ssl(req);
+            ret = ne__negotiate_ssl(sess);
             if (ret != NE_OK)
                 ne_close_connection(sess);
         }

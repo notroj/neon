@@ -112,6 +112,6 @@ struct ne_session_s {
 typedef int (*ne_push_fn)(void *userdata, const char *buf, size_t count);
 
 /* Do the SSL negotiation. */
-int ne__negotiate_ssl(ne_request *req);
+int ne__negotiate_ssl(ne_session *sess);
 
 #endif /* HTTP_PRIVATE_H */
