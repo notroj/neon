@@ -569,9 +569,8 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
 }
 
 /* For internal use only. */
-int ne__negotiate_ssl(ne_request *req)
+int ne__negotiate_ssl(ne_session *sess)
 {
-    ne_session *sess = ne_get_session(req);
     ne_ssl_context *ctx = sess->ssl_context;
     SSL *ssl;
     STACK_OF(X509) *chain;

@@ -530,9 +530,8 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
 }
 
 /* Negotiate an SSL connection. */
-int ne__negotiate_ssl(ne_request *req)
+int ne__negotiate_ssl(ne_session *sess)
 {
-    ne_session *const sess = ne_get_session(req);
     ne_ssl_context *const ctx = sess->ssl_context;
     ne_ssl_certificate *chain;
     gnutls_session sock;
