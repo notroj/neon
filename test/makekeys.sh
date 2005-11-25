@@ -117,7 +117,7 @@ cat ca[1234].pem > calist.pem
 # skipped if this fails.
 
 hostname=`hostname | sed 's,\..*,,'` || true
-domain=`hostname | sed 's,.*\.,,'` || true
+domain=`hostname | sed 's,[^.]*\.,,'` || true
 fqdn=`hostname` || true
 if [ "x${hostname}.${domain}" = "x${fqdn}" ]; then
   csr_fields "Wildcard Cert Dept" "*.${domain}" | \
