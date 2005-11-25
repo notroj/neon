@@ -53,6 +53,13 @@
 #define OBJ_cmp(a,b) OBJ_cmp((ASN1_OBJECT *)(a), (ASN1_OBJECT *)(b))
 #endif
 
+/* Second argument for d2i_X509() changed type in 0.9.8. */
+#if OPENSSL_VERSION_NUMBER < 0x0090800fL
+typedef unsigned char ne_d2i_uchar;
+#else
+typedef const unsigned char ne_d2i_uchar;
+#endif
+
 struct ne_ssl_dname_s {
     X509_NAME *dn;
 };
@@ -862,7 +869,8 @@ int ne_ssl_cert_cmp(const ne_ssl_certificate *c1, const ne_ssl_certificate *c2)
 
 ne_ssl_certificate *ne_ssl_cert_import(const char *data)
 {
-    unsigned char *der, *p;
+    unsigned char *der;
+    ne_d2i_uchar *p;
     size_t len;
     X509 *x5;
     
