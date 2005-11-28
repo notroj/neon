@@ -642,7 +642,8 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
 	break;
     case GNUTLS_E_FATAL_ALERT_RECEIVED:
         ret = NE_SOCK_ERROR;
-        ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
+        ne_snprintf(sock->error, sizeof sock->error, 
+                    _("SSL alert received: %s"),
                     gnutls_alert_get_name(gnutls_alert_get(sock->ssl)));
         break;
     case GNUTLS_E_UNEXPECTED_PACKET_LENGTH:
