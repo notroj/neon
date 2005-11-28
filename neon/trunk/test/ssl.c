@@ -489,7 +489,7 @@ static int wildcard_init(void)
     struct stat stbuf;
     
     t_context("wildcard.cert not found:\n"
-	      "This test requires a Linux-like hostname command, see makekeys.sh");
+	      "Could not determine hostname/FQDN from makekeys.sh");
     PRECOND(stat("wildcard.cert", &stbuf) == 0);
 
     PRECOND(lookup_hostname() == OK);
