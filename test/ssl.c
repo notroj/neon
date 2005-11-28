@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -366,6 +366,13 @@ static int load_client_cert(void)
     ONN("could not load noclient.p12", cc == NULL);
     name = ne_ssl_clicert_name(cc);
     ONV(name != NULL, ("noclient.p12 had friendly name `%s'", name));
+    ne_ssl_clicert_free(cc);
+
+    /* test for ccert without a friendly name, noclient.p12 */
+    cc = ne_ssl_clicert_read("clientca.p12");
+    ONN("could not load clientca.p12", cc == NULL);
+    ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
+    ONN("could not decrypt clientca.p12", ne_ssl_clicert_decrypt(cc, "foobar"));
     ne_ssl_clicert_free(cc);
 
     /* tests for loading bogus files. */
