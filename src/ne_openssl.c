@@ -791,6 +791,14 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *cc, const char *password)
         return -1;
     }
     
+    if (X509_check_private_key(cert, pkey) != 1) {
+        ERR_clear_error();
+        X509_free(cert);
+        EVP_PKEY_free(pkey);
+        NE_DEBUG(NE_DBG_SSL, "Decrypted private key/cert are not matched.");
+        return -1;
+    }
+
     PKCS12_free(cc->p12);
     populate_cert(&cc->cert, cert);
     cc->pkey = pkey;
