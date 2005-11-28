@@ -1,6 +1,6 @@
 /* 
    Date manipulation routines
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2002, 2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,8 +19,8 @@
 
 */
 
-#ifndef DATES_H
-#define DATES_H
+#ifndef NE_DATES_H
+#define NE_DATES_H
 
 #include <sys/types.h>
 
@@ -51,4 +51,4 @@ time_t ne_httpdate_parse(const char *date);
 
 NE_END_DECLS
 
-#endif /* DATES_H */
+#endif /* NE_DATES_H */

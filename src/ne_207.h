@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,8 +19,8 @@
 
 */
 
-#ifndef DAV207_H
-#define DAV207_H
+#ifndef NE_207_H
+#define NE_207_H
 
 #include "ne_xml.h"
 #include "ne_request.h" /* for ne_request */
@@ -97,4 +97,4 @@ int ne_simple_request(ne_session *sess, ne_request *req);
 
 NE_END_DECLS
 
-#endif /* DAV207_H */
+#endif /* NE_207_H */
