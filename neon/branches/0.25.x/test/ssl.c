@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -368,6 +368,13 @@ static int load_client_cert(void)
     ONV(name != NULL, ("noclient.p12 had friendly name `%s'", name));
     ne_ssl_clicert_free(cc);
 
+    /* test for ccert without a friendly name, noclient.p12 */
+    cc = ne_ssl_clicert_read("clientca.p12");
+    ONN("could not load clientca.p12", cc == NULL);
+    ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
+    ONN("could not decrypt clientca.p12", ne_ssl_clicert_decrypt(cc, "foobar"));
+    ne_ssl_clicert_free(cc);
+
     /* tests for loading bogus files. */
     cc = ne_ssl_clicert_read("Makefile");
     ONN("loaded Makefile as client cert!?", cc != NULL);
@@ -482,7 +489,7 @@ static int wildcard_init(void)
     struct stat stbuf;
     
     t_context("wildcard.cert not found:\n"
-	      "This test requires a Linux-like hostname command, see makekeys.sh");
+	      "Could not determine hostname/FQDN from makekeys.sh");
     PRECOND(stat("wildcard.cert", &stbuf) == 0);
 
     PRECOND(lookup_hostname() == OK);
