@@ -464,16 +464,16 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
     }
     
     for (n = 0; n < count; n++) {
-        ne_ssl_certificate *cert = ne_malloc(sizeof *cert);
+        ne_ssl_certificate *cert;
         gnutls_x509_crt x5;
 
         if (gnutls_x509_crt_init(&x5) ||
             gnutls_x509_crt_import(x5, &certs[n], GNUTLS_X509_FMT_DER)) {
-            /* leak! */
+            ne_ssl_cert_free(top);
             return NULL;
         }
 
-        populate_cert(cert, x5);
+        cert = populate_cert(ne_malloc(sizeof *cert), x5);
         
         if (top == NULL) {
             current = top = cert;
