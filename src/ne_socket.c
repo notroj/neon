@@ -641,9 +641,23 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
 	set_error(sock, _("Connection closed"));
 	break;
     case GNUTLS_E_FATAL_ALERT_RECEIVED:
-	ret = NE_SOCK_RESET;
+        ret = NE_SOCK_ERROR;
         ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
                     gnutls_alert_get_name(gnutls_alert_get(sock->ssl)));
+        break;
+    case GNUTLS_E_UNEXPECTED_PACKET_LENGTH:
+        /* It's not exactly an API guarantee but this error will
+         * always mean a premature EOF. */
+        ret = NE_SOCK_TRUNC;
+        set_error(sock, _("Secure connection truncated"));
+        break;
+    case GNUTLS_E_PUSH_ERROR:
+        ret = NE_SOCK_RESET;
+        set_error(sock, ("SSL socket write failed"));
+        break;
+    case GNUTLS_E_PULL_ERROR:
+        ret = NE_SOCK_RESET;
+        set_error(sock, _("SSL socket read failed"));
         break;
     default:
         ret = NE_SOCK_ERROR;
