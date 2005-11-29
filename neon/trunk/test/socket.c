@@ -959,11 +959,11 @@ static int ssl_session_id(void)
 {
     ne_socket *sock;
     unsigned char buf[128];
-    size_t len1, len2;
+    size_t len1;
 
     CALL(begin(&sock, serve_close, NULL));
 
-#ifdef NE_HAVE_SSL
+#ifdef SOCKET_SSL
     len1 = 0;
     ONN("retrieve session id length",
         ne_sock_sessid(sock, NULL, &len1));
@@ -972,23 +972,28 @@ static int ssl_session_id(void)
         buf[len1] = 'Z';
     }
     
-    len2 = len1;
-    ONN("could not retrieve session id",
-        ne_sock_sessid(sock, buf, &len2));
+    {
+        size_t len2;
 
-    ONN("buffer size changed!?", len1 != len2);
+        len2 = len1;
+        ONN("could not retrieve session id",
+            ne_sock_sessid(sock, buf, &len2));
+        
+        ONN("buffer size changed!?", len1 != len2);
+    }        
 
     ONN("buffer written past end", 
         len1 < sizeof buf && buf[len1] != 'Z');
 
     /* Attempt retrieval into too-short buffer: */
-    len2 = 0;
+    len1 = 0;
     ONN("success for buffer overflow case",
-        ne_sock_sessid(sock, buf, &len2) == 0);
+        ne_sock_sessid(sock, buf, &len1) == 0);
 
 #else
+    len1 = sizeof buf;
     ONN("retrieved session id for non-SSL socket!?",
-        ne_sock_sessid(sock, buf, &len) == 0);
+        ne_sock_sessid(sock, buf, &len1) == 0);
 #endif
 
     ne_sock_close(sock);
