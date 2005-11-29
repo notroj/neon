@@ -885,8 +885,6 @@ yes|openssl)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
    ;;
 gnutls)
-   AC_MSG_ERROR([GNU TLS support is not yet complete])
-
    AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
 
    if test "$GNUTLS_CONFIG" = "no"; then
