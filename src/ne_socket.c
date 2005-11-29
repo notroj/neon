@@ -1314,6 +1314,32 @@ ne_ssl_socket ne__sock_sslsock(ne_socket *sock)
 
 #endif
 
+int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen)
+{
+#ifdef NE_HAVE_SSL
+#ifdef HAVE_GNUTLS
+    return gnutls_session_get_id(sock->ssl, buf, buflen);
+#else
+    SSL_SESSION *sess = SSL_get0_session(sock->ssl);
+
+    if (!buf) {
+        *buflen = sess->session_id_length;
+        return 0;
+    }
+
+    if (*buflen < sess->session_id_length) {
+        return -1;
+    }
+
+    memcpy(buf, sess->session_id, *buflen);
+    *buflen = sess->session_id_length;
+    return 0;
+#endif
+#else
+    return -1;
+#endif
+}
+
 const char *ne_sock_error(const ne_socket *sock)
 {
     return sock->error;
