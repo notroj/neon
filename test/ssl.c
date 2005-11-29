@@ -33,6 +33,7 @@
 
 #include "ne_request.h"
 #include "ne_socket.h"
+#include "ne_ssl.h"
 #include "ne_auth.h"
 
 #include "tests.h"
@@ -44,11 +45,6 @@
 #error SSL not supported
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
-
-#define ERROR_SSL_STRING (ERR_reason_error_string(ERR_get_error()))
 
 #define SERVER_CERT "server.cert"
 #define CA_CERT "ca/cert.pem"
@@ -66,21 +62,10 @@ static ne_ssl_client_cert *def_cli_cert;
 static int check_dname(const ne_ssl_dname *dn, const char *expected,
                        const char *which);
 
-static int s_strwrite(SSL *s, const char *buf)
-{
-    size_t len = strlen(buf);
-    
-    ONV(SSL_write(s, buf, len) != (int)len,
-	("SSL_write failed: %s", ERROR_SSL_STRING));
-
-    return OK;
-}
-
 /* Arguments for running the SSL server */
 struct ssl_server_args {
     char *cert; /* the server cert to present. */
     const char *response; /* the response to send. */
-    int unclean; /* use an unclean shutdown if non-NULL */
     int numreqs; /* number of request/responses to handle over the SSL connection. */
 
     /* client cert handling: */
@@ -90,7 +75,10 @@ struct ssl_server_args {
     
     /* session caching: */
     int cache; /* use the session cache if non-zero */
-    SSL_SESSION *session; /* use to store copy of cached session. */
+    struct ssl_session {
+        unsigned char id[128];
+        size_t len;
+    } session;
     int count; /* internal use. */
 
     int use_ssl2; /* force use of SSLv2 only */
@@ -103,74 +91,43 @@ struct ssl_server_args {
 static int ssl_server(ne_socket *sock, void *userdata)
 {
     struct ssl_server_args *args = userdata;
-    int fd = ne_sock_fd(sock), ret;
-    /* we don't want OpenSSL to close this socket for us. */
-    BIO *bio = BIO_new_socket(fd, BIO_NOCLOSE);
+    int ret;
     char buf[BUFSIZ];
-    SSL *ssl;
-    static SSL_CTX *ctx = NULL;
+    static ne_ssl_context *ctx = NULL;
 
     if (ctx == NULL) {
-        ctx = SSL_CTX_new(args->use_ssl2 ? SSLv2_server_method()
-                          : SSLv23_server_method());
+        ctx = ne_ssl_context_create(args->use_ssl2 ? NE_SSL_CTX_SERVERv2
+                                    : NE_SSL_CTX_SERVER);
     }
 
-    ONV(ctx == NULL,
-	("could not create SSL_CTX: %s", ERROR_SSL_STRING));
-    ONV(!SSL_CTX_use_PrivateKey_file(ctx, server_key, SSL_FILETYPE_PEM),
-         ("failed to load private key: %s", ERROR_SSL_STRING));
+    ONV(ctx == NULL, ("could not create SSL context"));
+
+    ONV(ne_ssl_context_keypair(ctx, args->cert, server_key),
+        ("failed to load server keypair: ..."));
 
     NE_DEBUG(NE_DBG_HTTP, "using server cert %s\n", args->cert);
-    ONN("failed to load certificate",
-	!SSL_CTX_use_certificate_file(ctx, args->cert, SSL_FILETYPE_PEM));
 
-    if (args->require_cc) {
-        /* require a client cert. */
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | 
-                           SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
- 
-        if (args->send_ca) {
-            /* the list of issuer DNs of these CAs is included in the
-            * certificate request message sent to the client */
-            SSL_CTX_set_client_CA_list(ctx, 
-                                       SSL_load_client_CA_file(args->send_ca));
-        }
-
-        /* set default ca_list */
-        if (!args->ca_list) args->ca_list = CA_CERT;
-    }
-    
-    if (args->ca_list) {
-        /* load the CA used to verify the client cert; also sent in the
-         * certificate exchange message. */
-        ONN("failed to load CA cert",
-            SSL_CTX_load_verify_locations(ctx, args->ca_list, NULL) != 1);
+    if (args->require_cc && !args->ca_list) {
+        args->ca_list = CA_CERT;
     }
 
-    if (args->cache && args->count == 0) {
-	/* enable OpenSSL's internal session cache, enabling the
-	 * negotiation to re-use a session if both sides support it. */
-	SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
-    }
+    ne_ssl_context_set_verify(ctx, args->require_cc, args->send_ca,
+                              args->ca_list);
 
-    ssl = SSL_new(ctx);
-    ONN("SSL_new failed", ssl == NULL);
+    ONV(ne_sock_accept_ssl(sock, ctx),
+        ("SSL accept failed: %s", ne_sock_error(sock)));
 
     args->count++;
-
-    SSL_set_bio(ssl, bio, bio);
-
-    ONV(SSL_accept(ssl) != 1,
-	("SSL_accept failed: %s", ERROR_SSL_STRING));
 
     /* loop handling requests: */
     do {
         const char *response = args->response ? args->response : DEF_RESP;
 
-        ret = SSL_read(ssl, buf, BUFSIZ - 1);
-        if (ret == 0)
+        ret = ne_sock_read(sock, buf, BUFSIZ - 1);
+        if (ret == NE_SOCK_CLOSED)
             return 0; /* connection closed by parent; give up. */
-        ONV(ret < 0, ("SSL_read failed (%d): %s", ret, ERROR_SSL_STRING));
+        ONV(ret < 0, ("SSL read failed (%d): %s", ret, 
+                      ne_sock_error(sock)));
         
         buf[ret] = '\0';
         
@@ -182,40 +139,40 @@ static int ssl_server(ne_socket *sock, void *userdata)
                 "Content-Length: 0\r\n" "\r\n";
         }
         
-        CALL(s_strwrite(ssl, response));
+        ONV(ne_sock_fullwrite(sock, response, strlen(response)),
+            ("SSL write failed: %s", ne_sock_error(sock)));
         
     } while (--args->numreqs > 0);
 
-    /* copy out the session if requested. */
-    if (args->session) {
-        SSL_SESSION *sess = SSL_get1_session(ssl);
 
+    if (args->cache) {
+        unsigned char sessid[128];
+        size_t len = sizeof sessid;
+
+        ONN("could not retrieve session ID",
+            ne_sock_sessid(sock, sessid, &len));
+        
 #ifdef NE_DEBUGGING
-        /* dump session to child.log for debugging. */
-        SSL_SESSION_print_fp(ne_debug_stream, sess);
+        {
+            char *b64 = ne_base64(sessid, len);
+            NE_DEBUG(NE_DBG_SSL, "Session id retrieved (%d): [%s]\n", 
+                     args->count, b64);
+            ne_free(b64);
+        }
 #endif
-
-        if (args->count == 0) {
-            /* save the session */
-            args->session = sess;
+        
+        if (args->count == 1) {
+            /* save the session. */
+            memcpy(args->session.id, sessid, len);
+            args->session.len = len;
         } else {
-            /* could just to do this with SSL_CTX_sess_hits really,
-             * but this is a more thorough test. */
-            ONN("cached SSL session not used",
-                SSL_SESSION_cmp(args->session, sess));
-            SSL_SESSION_free(args->session);
-            SSL_SESSION_free(sess);
+            /* Compare with stored session. */
+            ONN("cached session not used", 
+                args->session.len != len
+                || memcmp(args->session.id, sessid, len));
         }
     }	
     
-    if (!args->unclean) {
-	/* Erk, shutdown is messy! See Eric Rescorla's article:
-	 * http://www.linuxjournal.com/article.php?sid=4822 ; we'll just
-	 * hide our heads in the sand here. */
-	SSL_shutdown(ssl);
-	SSL_free(ssl);
-    }
-
     return 0;
 }
 
