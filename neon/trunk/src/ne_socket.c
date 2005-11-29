@@ -106,8 +106,6 @@
 #include <gnutls/gnutls.h>
 #endif
 
-#include <assert.h>
-
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
@@ -1160,8 +1158,6 @@ static int store_sess(void *userdata, gnutls_datum key, gnutls_datum data)
     copy_datum(&ctx->cache.server.key, &key);
     copy_datum(&ctx->cache.server.data, &data);
 
-    NE_DEBUG(NE_DBG_SSL, "sesscache: Store.\n");
-
     return 0;
 }
 
@@ -1180,9 +1176,6 @@ static gnutls_datum retrieve_sess(void *userdata, gnutls_datum key)
 
     if (match_datum(&ctx->cache.server.key, &key)) {
         copy_datum(&ret, &ctx->cache.server.data);
-        NE_DEBUG(NE_DBG_SSL, "sesscache: Retrieve hit.\n");
-    } else {
-        NE_DEBUG(NE_DBG_SSL, "sesscache: Retrieve miss.\n");
     }
 
     return ret;
