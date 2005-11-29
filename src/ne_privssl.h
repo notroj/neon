@@ -58,10 +58,14 @@ struct ne_ssl_context_s {
         struct {
             gnutls_datum key, data;
         } server;
+#if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
+        gnutls_datum client;
+#else
         struct {
             char *data;
             size_t len;
         } client;
+#endif
     } cache;
 };
 

@@ -106,6 +106,8 @@
 #include <gnutls/gnutls.h>
 #endif
 
+#include <assert.h>
+
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
@@ -1158,6 +1160,8 @@ static int store_sess(void *userdata, gnutls_datum key, gnutls_datum data)
     copy_datum(&ctx->cache.server.key, &key);
     copy_datum(&ctx->cache.server.data, &data);
 
+    NE_DEBUG(NE_DBG_SSL, "sesscache: Store.\n");
+
     return 0;
 }
 
@@ -1176,6 +1180,9 @@ static gnutls_datum retrieve_sess(void *userdata, gnutls_datum key)
 
     if (match_datum(&ctx->cache.server.key, &key)) {
         copy_datum(&ret, &ctx->cache.server.data);
+        NE_DEBUG(NE_DBG_SSL, "sesscache: Retrieve hit.\n");
+    } else {
+        NE_DEBUG(NE_DBG_SSL, "sesscache: Retrieve miss.\n");
     }
 
     return ret;
@@ -1283,9 +1290,15 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
 
     if (ctx->cache.client.data) {
+#if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
+        gnutls_session_set_data(sock->ssl, 
+                                ctx->cache.client.data, 
+                                ctx->cache.client.size);
+#else
         gnutls_session_set_data(sock->ssl, 
                                 ctx->cache.client.data, 
                                 ctx->cache.client.len);
+#endif
     }
     sock->ops = &iofns_ssl;
 
@@ -1296,13 +1309,20 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     }
 
     if (!gnutls_session_is_resumed(sock->ssl)) {
-        /* New session. */
-        gnutls_session_get_data(sock->ssl, NULL, &ctx->cache.client.len);
-        ctx->cache.client.data = ne_malloc(ctx->cache.client.len);
-        gnutls_session_get_data(sock->ssl, ctx->cache.client.data, 
-                                &ctx->cache.client.len);
+        /* New session.  The old method of using the _get_data
+         * function seems to be broken with 1.3.0 and later*/
+#if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
+        gnutls_session_get_data2(sock->ssl, &ctx->cache.client);
+#else
+        ctx->cache.client.len = 0;
+        if (gnutls_session_get_data(sock->ssl, NULL, 
+                                    &ctx->cache.client.len) == 0) {
+            ctx->cache.client.data = ne_malloc(ctx->cache.client.len);
+            gnutls_session_get_data(sock->ssl, ctx->cache.client.data, 
+                                    &ctx->cache.client.len);
+        }
+#endif
     }
-
 #endif
     return 0;
 }
