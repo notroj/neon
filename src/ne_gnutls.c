@@ -559,10 +559,20 @@ int ne__negotiate_ssl(ne_session *sess)
         return NE_ERROR;
     }
 
+    if (sess->server_cert && ne_ssl_cert_cmp(sess->server_cert, chain) == 0) {
+        /* Same cert as last time; presume OK.  This is not optimal as
+         * make_peers_chain() has already gone through and done the
+         * expensive DER parsing stuff for the whole chain by now. */
+        ne_ssl_cert_free(chain);
+        return NE_OK;
+    }
+
     if (check_certificate(sess, sock, chain)) {
         ne_ssl_cert_free(chain);
         return NE_ERROR;
     }
+
+    sess->server_cert = chain;
 
     return NE_OK;
 }
