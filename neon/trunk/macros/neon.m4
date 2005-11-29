@@ -908,6 +908,9 @@ gnutls)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_gnutls"
    NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
+
+   # Check for functions in later releases.
+   NE_CHECK_FUNCS(gnutls_session_get_data2)
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
    NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])
