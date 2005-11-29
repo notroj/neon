@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -955,6 +955,47 @@ static int block_timeout(void)
     TO_FINISH;
 }
 
+static int ssl_session_id(void)
+{
+    ne_socket *sock;
+    unsigned char buf[128];
+    size_t len1, len2;
+
+    CALL(begin(&sock, serve_close, NULL));
+
+#ifdef NE_HAVE_SSL
+    len1 = 0;
+    ONN("retrieve session id length",
+        ne_sock_sessid(sock, NULL, &len1));
+
+    if (len1 < sizeof buf) {
+        buf[len1] = 'Z';
+    }
+    
+    len2 = len1;
+    ONN("could not retrieve session id",
+        ne_sock_sessid(sock, buf, &len2));
+
+    ONN("buffer size changed!?", len1 != len2);
+
+    ONN("buffer written past end", 
+        len1 < sizeof buf && buf[len1] != 'Z');
+
+    /* Attempt retrieval into too-short buffer: */
+    len2 = 0;
+    ONN("success for buffer overflow case",
+        ne_sock_sessid(sock, buf, &len2) == 0);
+
+#else
+    ONN("retrieved session id for non-SSL socket!?",
+        ne_sock_sessid(sock, buf, &len) == 0);
+#endif
+
+    ne_sock_close(sock);
+    return await_server();
+}
+
+
 ne_test tests[] = {
     T(multi_init),
     T_LEAKY(resolve),
@@ -974,6 +1015,7 @@ ne_test tests[] = {
     T(small_reads),
     T(read_and_peek),
     T(larger_read),
+    T(ssl_session_id),
     T(line_simple),
     T(line_closure),
     T(line_empty),
