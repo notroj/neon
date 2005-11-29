@@ -448,6 +448,12 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
     gnutls_certificate_free_credentials(ctx->cred);
+    if (ctx->cache.client.data) {
+        ne_free(ctx->cache.client.data);
+    } else if (ctx->cache.server.key.data) {
+        gnutls_free(ctx->cache.server.key.data);
+        gnutls_free(ctx->cache.server.data.data);
+    }    
     ne_free(ctx);
 }
 

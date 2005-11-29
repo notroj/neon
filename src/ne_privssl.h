@@ -1,6 +1,6 @@
 /* 
    SSL interface definitions internal to neon.
-   Copyright (C) 2003, 2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2005, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -52,7 +52,17 @@ typedef SSL *ne_ssl_socket;
 struct ne_ssl_context_s {
     gnutls_certificate_credentials cred;
     int verify; /* non-zero if client cert verification required */
-    /* TODO: store session here too */
+
+    /* Session cache. */
+    union ne_ssl_scache {
+        struct {
+            gnutls_datum key, data;
+        } server;
+        struct {
+            char *data;
+            size_t len;
+        } client;
+    } cache;
 };
 
 typedef gnutls_session ne_ssl_socket;

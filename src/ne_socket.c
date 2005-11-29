@@ -1134,6 +1134,61 @@ void ne_sock_read_timeout(ne_socket *sock, int timeout)
 
 #ifdef NE_HAVE_SSL
 
+#ifdef HAVE_GNUTLS
+/* Dumb server session cache implementation for GNUTLS; holds a single
+ * session. */
+
+/* Copy datum 'src' to 'dest'. */
+static void copy_datum(gnutls_datum *dest, gnutls_datum *src)
+{
+    dest->size = src->size;
+    dest->data = memcpy(gnutls_malloc(src->size), src->data, src->size);
+}
+
+/* Callback to store a session 'data' with id 'key'. */
+static int store_sess(void *userdata, gnutls_datum key, gnutls_datum data)
+{
+    ne_ssl_context *ctx = userdata;
+
+    if (ctx->cache.server.key.data) { 
+        gnutls_free(ctx->cache.server.key.data);
+        gnutls_free(ctx->cache.server.data.data);
+    }
+
+    copy_datum(&ctx->cache.server.key, &key);
+    copy_datum(&ctx->cache.server.data, &data);
+
+    return 0;
+}
+
+/* Returns non-zero if d1 and d2 are the same datum. */
+static int match_datum(gnutls_datum *d1, gnutls_datum *d2)
+{
+    return d1->size == d2->size
+        && memcmp(d1->data, d2->data, d1->size) == 0;
+}
+
+/* Callback to retrieve a session of id 'key'. */
+static gnutls_datum retrieve_sess(void *userdata, gnutls_datum key)
+{
+    ne_ssl_context *ctx = userdata;
+    gnutls_datum ret = { NULL, 0 };
+
+    if (match_datum(&ctx->cache.server.key, &key)) {
+        copy_datum(&ret, &ctx->cache.server.data);
+    }
+
+    return ret;
+}
+
+/* Callback to remove a session of id 'key'; stub needed but
+ * implementation seems unnecessary. */
+static int remove_sess(void *userdata, gnutls_datum key)
+{
+    return -1;
+}
+#endif
+
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
 {
     int ret;
@@ -1153,6 +1208,13 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     gnutls_init(&ssl, GNUTLS_SERVER);
     gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
     gnutls_set_default_priority(ssl);
+
+    /* Set up dummy session cache. */
+    gnutls_db_set_store_function(ssl, store_sess);
+    gnutls_db_set_retrieve_function(ssl, retrieve_sess);    
+    gnutls_db_set_remove_function(ssl, remove_sess);    
+    gnutls_db_set_ptr(ssl, ctx);
+
     if (ctx->verify)
         gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUEST);
 
@@ -1163,7 +1225,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
         return error_gnutls(sock, ret);
     }
     if (ctx->verify && gnutls_certificate_verify_peers(ssl)) {
-        set_error(sock, _("SSL peer certificate could not be verified"));
+        set_error(sock, _("Client certificate verification failed"));
         return NE_SOCK_ERROR;
     }
 #endif
@@ -1219,6 +1281,12 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     gnutls_credentials_set(sock->ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
+
+    if (ctx->cache.client.data) {
+        gnutls_session_set_data(sock->ssl, 
+                                ctx->cache.client.data, 
+                                ctx->cache.client.len);
+    }
     sock->ops = &iofns_ssl;
 
     ret = gnutls_handshake(sock->ssl);
@@ -1226,6 +1294,15 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
 	error_gnutls(sock, ret);
         return NE_SOCK_ERROR;
     }
+
+    if (!gnutls_session_is_resumed(sock->ssl)) {
+        /* New session. */
+        gnutls_session_get_data(sock->ssl, NULL, &ctx->cache.client.len);
+        ctx->cache.client.data = ne_malloc(ctx->cache.client.len);
+        gnutls_session_get_data(sock->ssl, ctx->cache.client.data, 
+                                &ctx->cache.client.len);
+    }
+
 #endif
     return 0;
 }
