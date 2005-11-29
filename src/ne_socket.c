@@ -1318,9 +1318,19 @@ int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen)
 {
 #ifdef NE_HAVE_SSL
 #ifdef HAVE_GNUTLS
-    return gnutls_session_get_id(sock->ssl, buf, buflen);
+    if (sock->ssl) {
+        return gnutls_session_get_id(sock->ssl, buf, buflen);
+    } else {
+        return -1;
+    }
 #else
-    SSL_SESSION *sess = SSL_get0_session(sock->ssl);
+    SSL_SESSION *sess;
+
+    if (!sock->ssl) {
+        return -1;
+    }
+
+    sess = SSL_get0_session(sock->ssl);
 
     if (!buf) {
         *buflen = sess->session_id_length;
