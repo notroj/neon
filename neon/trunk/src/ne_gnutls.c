@@ -377,7 +377,8 @@ static int provide_client_cert(gnutls_session session,
     }
 
     if (!sess->client_cert && sess->ssl_provide_fn) {
-        /* TODO: convert req_ca_rdn into an ne_ssl_dname array.  */
+        /* The dname array cannot be converted without better dname
+         * support from GNUTLS. */
         sess->ssl_provide_fn(sess->ssl_provide_ud, sess,
                              NULL, 0);
     }
@@ -594,7 +595,11 @@ void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cer
 
 void ne_ssl_trust_default_ca(ne_session *sess)
 {
-#warning incomplete
+#ifdef NE_SSL_CA_BUNDLE
+    gnutls_certificate_set_x509_trust_file(sess->ssl_context->cred,
+                                           NE_SSL_CA_BUNDLE,
+                                           GNUTLS_X509_FMT_PEM);
+#endif
 }
 
 /* Read the contents of file FILENAME into *DATUM. */

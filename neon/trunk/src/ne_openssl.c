@@ -685,7 +685,11 @@ void ne_ssl_trust_default_ca(ne_session *sess)
 {
     X509_STORE *store = SSL_CTX_get_cert_store(sess->ssl_context->ctx);
     
+#ifdef NE_SSL_CA_BUNDLE
+    X509_STORE_load_locations(store, NE_SSL_CA_BUNDLE, NULL);
+#else
     X509_STORE_set_default_paths(store);
+#endif
 }
 
 /* Find a friendly name in a PKCS12 structure the hard way, without

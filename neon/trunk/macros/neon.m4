@@ -915,6 +915,18 @@ gnutls)
    ;;
 esac
 AC_SUBST(NEON_SUPPORTS_SSL)
+
+AC_ARG_WITH(ca-bundle, 
+  AS_HELP_STRING(--with-ca-bundle, specify filename of an SSL CA root bundle))
+
+case ${NE_FLAG_SSL}-${with_ca_bundle} in
+*-no) ;;
+yes-*)
+   AC_DEFINE_UNQUOTED([NE_SSL_CA_BUNDLE], ["${with_ca_bundle}"],
+                      [Define to be filename of an SSL CA root bundle])
+   AC_MSG_NOTICE([Using ${with_ca_bundle} as default SSL CA bundle])
+   ;;
+esac
 ])
 
 dnl Check for Kerberos installation
