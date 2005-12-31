@@ -1,6 +1,6 @@
 /* 
    Tests for session handling
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,9 +41,9 @@ static int fill_uri(void)
     
     ne_fill_server_uri(sess, &uri);
 
-    ONN("hostname mis-match", strcmp(uri.host, "localhost"));
+    ONCMP("localhost", uri.host, "fill_uri", "host");
     ONN("port mis-match", uri.port != 7777);
-    ONN("scheme mis-match", strcmp(uri.scheme, "http"));
+    ONCMP("http", uri.scheme, "fill_uri", "scheme");
 
     ne_session_destroy(sess);
     ne_uri_free(&uri);
