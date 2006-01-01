@@ -540,7 +540,7 @@ char *ne_uri_unparse(const ne_uri *uri)
     if (uri->host) {
         ne_buffer_czappend(buf, "//");
         if (uri->userinfo) {
-            ne_buffer_concat(buf, uri->userinfo, "@");
+            ne_buffer_concat(buf, uri->userinfo, "@", NULL);
         }
         ne_buffer_zappend(buf, uri->host);
     }
