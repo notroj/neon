@@ -469,7 +469,8 @@ static int resolve(void)
         ONV(ne_uri_parse(ts[n].relative, &relative),
             ("could not parse input URI '%s'", ts[n].relative));
 
-        ne_uri_resolve(&base, &relative, &resolved);
+        ONN("bad pointer was returned", 
+            ne_uri_resolve(&base, &relative, &resolved) != &resolved);
 
         actual = ne_uri_unparse(&resolved);
         

@@ -366,8 +366,8 @@ static void copy_authority(ne_uri *dest, const ne_uri *src)
 
 /* This function directly implements the "Transform References"
  * algorithm described in RFC 3986 section 5.2.2. */
-void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
-                    ne_uri *target)
+ne_uri *ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
+                       ne_uri *target)
 {
     memset(target, 0, sizeof *target);
 
@@ -405,6 +405,8 @@ void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
     }
     
     if (relative->fragment) target->fragment = ne_strdup(relative->fragment);
+
+    return target;
 }
 
 ne_uri *ne_uri_copy(ne_uri *dest, const ne_uri *src)
