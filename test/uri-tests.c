@@ -77,6 +77,8 @@ static int escapes(void)
     ne_free(esc);
     ONN("unescape accepted invalid URI", 
         ne_path_unescape("/foo%zzbar") != NULL);
+    ONN("unescape accepted invalid URI", 
+        ne_path_unescape("/foo%1zbar") != NULL);
     /* no-escape path */
     esc = ne_path_escape("/foobar");
     ON(strcmp(esc, "/foobar"));
@@ -312,6 +314,8 @@ static int failparse(void)
     static const char *uris[] = {
 	"",
 	"http://[::1/",
+	"http://[::1]f:80/",
+	"http://[::1]]:80/",
         "http://foo/bar asda",
         "http://fish/[foo]/bar",
 	NULL
@@ -336,6 +340,7 @@ static int unparse(void)
 	"http://www.random.com:8000/",
 	"http://[::1]:8080/",
 	"ftp://ftp.foo.bar/abc/def",
+	"ftp://joe@bar.com/abc/def",
 	"http://a/b?c#d",
 	"http://a/b?c",
 	"http://a/b#d",
