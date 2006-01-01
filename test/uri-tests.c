@@ -279,6 +279,14 @@ static int parse(void)
         { "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL, NULL, NULL },
 
         { "DAV:", "DAV", NULL, 0, "", NULL, NULL, NULL },
+        
+        /* Some odd cases: heir-part and relative-ref will both match
+         * with a zero-length expansion of "authority" (since *
+         * reg-name can be zero-length); so a triple-slash URI-ref
+         * will be matched as "//" followed by a zero-length authority
+         * followed by a path of "/". */
+        { "foo:///", "foo", "", 0, "/", NULL, NULL, NULL },
+        { "///", NULL, "", 0, "/", NULL, NULL, NULL },
 
         /* URI-references: */
         { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL, NULL, NULL },
