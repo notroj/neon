@@ -93,7 +93,7 @@ check-incl:
 	 $(COMPILE) -c checkincl.c -o checkincl.o || exit 1; done
 
 neonreq = ne_request.h ne_session.h ne_utils.h ne_string.h ne_socket.h \
-	ne_alloc.h $(top_builddir)/config.h ne_internal.h
+	ne_alloc.h $(top_builddir)/config.h ne_internal.h ne_uri.h
 
 ne_request.@NEON_OBJEXT@: ne_request.c $(neonreq) ne_private.h ne_uri.h
 
