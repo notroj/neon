@@ -77,9 +77,9 @@ char *ne_uri_unparse(const ne_uri *uri);
  * placing the resultant URI in '*result'.  On return, all the 'char
  * *' fields of *result are either set to NULL or point to
  * malloc-allocated NUL-terminated strings.  ne_uri_free can be used
- * to free the structure after use. */
-void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
-                    ne_uri *result);
+ * to free the structure after use.  Returns 'result'. */
+ne_uri *ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
+                       ne_uri *result);
 
 /* Compares URIs u1 and u2, returns non-zero if they are found to be
  * non-equal.  The sign of the return value is <0 if 'u1' is less than
