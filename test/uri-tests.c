@@ -278,6 +278,8 @@ static int parse(void)
         { "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL, NULL, NULL },
         { "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL, NULL, NULL },
 
+        { "DAV:", "DAV", NULL, 0, "", NULL, NULL, NULL },
+
         /* URI-references: */
         { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL, NULL, NULL },
         { "//foo.com", NULL, "foo.com", 0, "/", NULL, NULL, NULL },
