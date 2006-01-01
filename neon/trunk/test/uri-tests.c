@@ -345,6 +345,7 @@ static int unparse(void)
 	"http://a/b?c",
 	"http://a/b#d",
         "mailto:foo@bar.com",
+        "//foo.com/bar",
 	NULL
     };
     int n;
@@ -356,7 +357,7 @@ static int unparse(void)
 	ONV(ne_uri_parse(uris[n], &parsed),
 	    ("failed to parse %s", uris[n]));
 	
-        if (parsed.port == 0)
+        if (parsed.port == 0 && parsed.scheme)
             parsed.port = ne_uri_defaultport(parsed.scheme);
 
 	unp = ne_uri_unparse(&parsed);
@@ -421,6 +422,28 @@ static int resolve(void)
         { BASE, "g#s/./x", "http://a/b/c/g#s/./x" },
         { BASE, "g#s/../x", "http://a/b/c/g#s/../x" },
         { BASE, "http:g", "http:g" },
+        /* Additional examples: */
+        { BASE, ".", "http://a/b/c/" },
+        { "http://foo.com/alpha/beta", "../gamma", "http://foo.com/gamma" },
+        { "http://foo.com/alpha//beta", "../gamma", "http://foo.com/alpha/gamma" },
+
+        { "http://foo.com", "../gamma", "http://foo.com/gamma" },
+        { "", "zzz:.", "zzz:" },
+        { "", "zzz:./foo", "zzz:foo" },
+        { "", "zzz:../foo", "zzz:foo" },
+        { "", "zzz:/./foo", "zzz:/foo" },
+        { "", "zzz:/.", "zzz:/" },
+        { "", "zzz:/../", "zzz:/" },
+        { "", "zzz:.", "zzz:" },
+        { "", "zzz:..", "zzz:" },
+        { "", "zzz://foo@bar/", "zzz://foo@bar/" },
+        { "", "zzz://foo/?bar", "zzz://foo/?bar" },
+        { "zzz://foo/?bar", "//baz/?jam", "zzz://baz/?jam" },
+        { "zzz://foo/baz?biz", "", "zzz://foo/baz?biz" },
+        { "zzz://foo/baz", "", "zzz://foo/baz" },
+        { "//foo/baz", "", "//foo/baz" },
+
+
         { NULL, NULL, NULL }
     };
     size_t n;

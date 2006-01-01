@@ -292,7 +292,7 @@ static char *remove_dot_segments(const char *path)
 
     while (in[0]) {
         /* case 2.A: */
-        if (in[0] == '.' && in[1] == '\0') {
+        if (strncmp(in, "./", 2) == 0) {
             in += 2;
         } 
         else if (strncmp(in, "../", 3) == 0) {
@@ -361,7 +361,7 @@ static void copy_authority(ne_uri *dest, const ne_uri *src)
 {
     if (src->host) dest->host = ne_strdup(src->host);
     dest->port = src->port;
-    if (src->userinfo) dest->userinfo = src->userinfo;
+    if (src->userinfo) dest->userinfo = ne_strdup(src->userinfo);
 }
 
 /* This function directly implements the "Transform References"
@@ -401,7 +401,7 @@ void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
             if (relative->query) target->query = ne_strdup(relative->query);
             copy_authority(target, base);
         }
-        target->scheme = ne_strdup(base->scheme);
+        if (base->scheme) target->scheme = ne_strdup(base->scheme);
     }
     
     if (relative->fragment) target->fragment = ne_strdup(relative->fragment);
@@ -533,13 +533,16 @@ char *ne_uri_unparse(const ne_uri *uri)
 {
     ne_buffer *buf = ne_buffer_create();
 
-    if (uri->host) {
-        ne_buffer_concat(buf, uri->scheme, "://", 
-                         uri->userinfo ? uri->userinfo : "",
-                         uri->userinfo ? "@" : "",
-                         uri->host, NULL);
-    } else {
+    if (uri->scheme) {
         ne_buffer_concat(buf, uri->scheme, ":", NULL);
+    }
+
+    if (uri->host) {
+        ne_buffer_czappend(buf, "//");
+        if (uri->userinfo) {
+            ne_buffer_concat(buf, uri->userinfo, "@");
+        }
+        ne_buffer_zappend(buf, uri->host);
     }
         
     if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
