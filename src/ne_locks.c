@@ -243,7 +243,7 @@ struct ne_lock *ne_lockstore_findbyuri(ne_lock_store *store,
 void ne_lock_using_parent(ne_request *req, const char *path)
 {
     struct lh_req_cookie *lrc = ne_get_request_private(req, HOOK_ID);
-    ne_uri u;
+    ne_uri u = {0};
     struct lock_list *item;
     char *parent;
 
@@ -254,7 +254,6 @@ void ne_lock_using_parent(ne_request *req, const char *path)
     if (parent == NULL)
 	return;
     
-    u.userinfo = NULL;
     ne_fill_server_uri(ne_get_session(req), &u);
 
     for (item = lrc->store->locks; item != NULL; item = item->next) {
