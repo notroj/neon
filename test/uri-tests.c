@@ -284,6 +284,7 @@ static int parse(void)
         { "//[::1]/foo", NULL, "[::1]", 0, "/foo", NULL, NULL, NULL },
         { "/bar", NULL, NULL, 0, "/bar", NULL, NULL, NULL }, /* path-absolute */
         { "foo/bar", NULL, NULL, 0, "foo/bar", NULL, NULL, NULL }, /* path-noscheme */
+        { "", NULL, NULL, 0, "", NULL, NULL, NULL }, /* path-empty */
 
 	{ NULL }
     };
@@ -312,7 +313,6 @@ static int parse(void)
 static int failparse(void)
 {
     static const char *uris[] = {
-	"",
 	"http://[::1/",
 	"http://[::1]f:80/",
 	"http://[::1]]:80/",
@@ -344,6 +344,7 @@ static int unparse(void)
 	"http://a/b?c#d",
 	"http://a/b?c",
 	"http://a/b#d",
+        "mailto:foo@bar.com",
 	NULL
     };
     int n;

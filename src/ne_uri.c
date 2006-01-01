@@ -151,10 +151,6 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
 
     memset(parsed, 0, sizeof *parsed);
 
-    if (uri[0] == '\0') {
-	return -1;
-    }
-
     p = s = uri;
 
     if (uri_lookup(*p) & URI_ALPHA) {
@@ -387,11 +383,15 @@ char *ne_uri_unparse(const ne_uri *uri)
 {
     ne_buffer *buf = ne_buffer_create();
 
-    ne_buffer_concat(buf, uri->scheme, "://", 
-                     uri->userinfo ? uri->userinfo : "",
-                     uri->userinfo ? "@" : "",
-                     uri->host, NULL);
-
+    if (uri->host) {
+        ne_buffer_concat(buf, uri->scheme, "://", 
+                         uri->userinfo ? uri->userinfo : "",
+                         uri->userinfo ? "@" : "",
+                         uri->host, NULL);
+    } else {
+        ne_buffer_concat(buf, uri->scheme, ":", NULL);
+    }
+        
     if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
 	char str[20];
 	ne_snprintf(str, 20, ":%d", uri->port);
