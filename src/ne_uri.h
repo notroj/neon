@@ -86,6 +86,10 @@ void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
  * 'u2', or >0 if 'u2' is greater than 'u1'. */
 int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2);
 
+/* Copy components of URI 'src' to destination 'dest'.  Returns
+ * 'dest'. */
+ne_uri *ne_uri_copy(ne_uri *dest, const ne_uri *src);
+
 /* Frees any non-NULL fields of parsed URI structure *parsed.  All
  * fields are then zero-initialized. */
 void ne_uri_free(ne_uri *parsed);

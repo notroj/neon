@@ -407,6 +407,19 @@ void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
     if (relative->fragment) target->fragment = ne_strdup(relative->fragment);
 }
 
+ne_uri *ne_uri_copy(ne_uri *dest, const ne_uri *src)
+{
+    memset(dest, 0, sizeof *dest);
+
+    if (src->scheme) dest->scheme = ne_strdup(src->scheme);
+    copy_authority(dest, src);
+    if (src->path) dest->path = ne_strdup(src->path);
+    if (src->query) dest->query = ne_strdup(src->query);
+    if (src->fragment) dest->fragment = ne_strdup(src->fragment);
+
+    return dest;
+}
+
 void ne_uri_free(ne_uri *u)
 {
     if (u->host) ne_free(u->host);
