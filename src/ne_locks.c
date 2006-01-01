@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -350,10 +350,7 @@ struct ne_lock *ne_lock_copy(const struct ne_lock *lock)
 {
     struct ne_lock *ret = ne_calloc(sizeof *ret);
 
-    ret->uri.path = ne_strdup(lock->uri.path);
-    ret->uri.host = ne_strdup(lock->uri.host);
-    ret->uri.scheme = ne_strdup(lock->uri.scheme);
-    ret->uri.port = lock->uri.port;
+    ne_uri_copy(&ret->uri, &lock->uri);
     ret->token = ne_strdup(lock->token);
     ret->depth = lock->depth;
     ret->type = lock->type;
