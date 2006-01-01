@@ -371,6 +371,85 @@ static int unparse(void)
     return OK;    
 }
 
+#define BASE "http://a/b/c/d;p?q"
+
+static int resolve(void)
+{
+    static const struct {
+        const char *base, *relative, *expected;
+    } ts[] = {
+        /* Examples from RFC3986§5.4: */
+        { BASE, "g:h", "g:h" },
+        { BASE, "g", "http://a/b/c/g" },
+        { BASE, "./g", "http://a/b/c/g" },
+        { BASE, "g/", "http://a/b/c/g/" },
+        { BASE, "/g", "http://a/g" },
+        { BASE, "//g", "http://g/" }, /* NOTE: modified to mandate non-empty path */
+        { BASE, "?y", "http://a/b/c/d;p?y" },
+        { BASE, "g?y", "http://a/b/c/g?y" },
+        { BASE, "#s", "http://a/b/c/d;p?q#s" },
+        { BASE, "g#s", "http://a/b/c/g#s" },
+        { BASE, "g?y#s", "http://a/b/c/g?y#s" },
+        { BASE, ";x", "http://a/b/c/;x" },
+        { BASE, "g;x", "http://a/b/c/g;x" },
+        { BASE, "g;x?y#s", "http://a/b/c/g;x?y#s" },
+        { BASE, "", "http://a/b/c/d;p?q" },
+        { BASE, ".", "http://a/b/c/" },
+        { BASE, "./", "http://a/b/c/" },
+        { BASE, "..", "http://a/b/" },
+        { BASE, "../", "http://a/b/" },
+        { BASE, "../g", "http://a/b/g" },
+        { BASE, "../..", "http://a/" },
+        { BASE, "../../", "http://a/" },
+        { BASE, "../../g", "http://a/g" },
+        { BASE, "../../../g", "http://a/g" },
+        { BASE, "../../../../g", "http://a/g" },
+        { BASE, "/./g", "http://a/g" },
+        { BASE, "/../g", "http://a/g" },
+        { BASE, "g.", "http://a/b/c/g." },
+        { BASE, ".g", "http://a/b/c/.g" },
+        { BASE, "g..", "http://a/b/c/g.." },
+        { BASE, "..g", "http://a/b/c/..g" },
+        { BASE, "./../g", "http://a/b/g" },
+        { BASE, "./g/.", "http://a/b/c/g/" },
+        { BASE, "g/./h", "http://a/b/c/g/h" },
+        { BASE, "g/../h", "http://a/b/c/h" },
+        { BASE, "g;x=1/./y", "http://a/b/c/g;x=1/y" },
+        { BASE, "g;x=1/../y", "http://a/b/c/y" },
+        { BASE, "g?y/./x", "http://a/b/c/g?y/./x" },
+        { BASE, "g?y/../x", "http://a/b/c/g?y/../x" },
+        { BASE, "g#s/./x", "http://a/b/c/g#s/./x" },
+        { BASE, "g#s/../x", "http://a/b/c/g#s/../x" },
+        { BASE, "http:g", "http:g" },
+        { NULL, NULL, NULL }
+    };
+    size_t n;
+
+    for (n = 0; ts[n].base; n++) {
+        ne_uri base, relative, resolved;
+        char *actual;
+
+        ONV(ne_uri_parse(ts[n].base, &base),
+            ("could not parse base URI '%s'", ts[n].base));
+
+        ONV(ne_uri_parse(ts[n].relative, &relative),
+            ("could not parse input URI '%s'", ts[n].relative));
+
+        ne_uri_resolve(&base, &relative, &resolved);
+
+        actual = ne_uri_unparse(&resolved);
+        
+        ONCMP(ts[n].expected, actual, ts[n].relative, "output mismatch");
+        
+        ne_uri_free(&relative);
+        ne_uri_free(&resolved);
+        ne_uri_free(&base);
+        ne_free(actual);
+    }
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(simple_ssl),
@@ -385,5 +464,6 @@ ne_test tests[] = {
     T(parse),
     T(failparse),
     T(unparse),
+    T(resolve),
     T(NULL)
 };

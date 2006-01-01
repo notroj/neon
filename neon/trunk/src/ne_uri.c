@@ -257,6 +257,156 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
     return 0;
 }
 
+/* This function directly implements the "Merge Paths" algorithm
+ * described in RFC 3986 section 5.2.3. */
+static char *merge_paths(const ne_uri *base, const char *path)
+{
+    const char *p;
+
+    if (base->host && base->path[0] == '\0') {
+        return ne_concat("/", path, NULL);
+    }
+    
+    p = strrchr(base->path, '/');
+    if (p == NULL) {
+        return ne_strdup(path);
+    } else {
+        size_t len = p - base->path + 1;
+        char *ret = ne_malloc(strlen(path) + len + 1);
+
+        memcpy(ret, base->path, len);
+        memcpy(ret + len, path, strlen(path) + 1);
+        return ret;
+    }
+}
+
+/* This function directly implements the "Remove Dot Segments"
+ * algorithm described in RFC 3986 section 5.2.4. */
+static char *remove_dot_segments(const char *path)
+{
+    char *in, *inc, *out;
+
+    inc = in = ne_strdup(path);
+    out = ne_strdup(path);
+    out[0] = '\0';
+
+    while (in[0]) {
+        /* case 2.A: */
+        if (in[0] == '.' && in[1] == '\0') {
+            in += 2;
+        } 
+        else if (strncmp(in, "../", 3) == 0) {
+            in += 3;
+        }
+
+        /* case 2.B: */
+        else if (strncmp(in, "/./", 3) == 0) {
+            in += 2;
+        }
+        else if (strcmp(in, "/.") == 0) {
+            in[1] = '\0';
+        }
+
+        /* case 2.C: */
+        else if (strncmp(in, "/../", 4) == 0 || strcmp(in, "/..") == 0) {
+            char *p;
+
+            /* Make the next character in the input buffer a "/": */
+            if (in[3] == '\0') {
+                /* terminating "/.." case */
+                in += 2;
+                in[0] = '/';
+            } else {
+                /* "/../" prefix case */
+                in += 3;
+            }
+
+            /* Trim the last component from the output buffer, or
+             * empty it. */
+            p = strrchr(out, '/');
+            if (p) {
+                *p = '\0';
+            } else {
+                out[0] = '\0';
+            }
+        }
+
+        /* case 2.D: */
+        else if (strcmp(in, ".") == 0 || strcmp(in, "..") == 0) {
+            in[0] = '\0';
+        }
+
+        /* case 2.E */
+        else {
+            char *p;
+
+            /* Search for the *second* "/" if the leading character is
+             * already "/": */
+            p = strchr(in + (in[0] == '/'), '/');
+            /* Otherwise, copy the whole string */
+            if (p == NULL) p = strchr(in, '\0');
+
+            strncat(out, in, p - in);
+            in = p;
+        }
+    }
+
+    ne_free(inc);
+
+    return out;
+}
+
+/* Copy authority components from 'src' to 'dest' if defined. */
+static void copy_authority(ne_uri *dest, const ne_uri *src)
+{
+    if (src->host) dest->host = ne_strdup(src->host);
+    dest->port = src->port;
+    if (src->userinfo) dest->userinfo = src->userinfo;
+}
+
+/* This function directly implements the "Transform References"
+ * algorithm described in RFC 3986 section 5.2.2. */
+void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
+                    ne_uri *target)
+{
+    memset(target, 0, sizeof *target);
+
+    if (relative->scheme) {
+        target->scheme = ne_strdup(relative->scheme);
+        copy_authority(target, relative);
+        target->path = remove_dot_segments(relative->path);
+        if (relative->query) target->query = ne_strdup(relative->query);
+    } else {
+        if (relative->host) {
+            copy_authority(target, relative);
+            target->path = remove_dot_segments(relative->path);
+            if (relative->query) target->query = ne_strdup(relative->query);
+        } else {
+            if (relative->path[0] == '\0') {
+                target->path = ne_strdup(base->path);
+                if (relative->query) {
+                    target->query = ne_strdup(relative->query);
+                } else if (base->query) {
+                    target->query = ne_strdup(base->query);
+                }
+            } else {
+                if (relative->path[0] == '/') {
+                    target->path = remove_dot_segments(relative->path);
+                } else {
+                    char *merged = merge_paths(base, relative->path);
+                    target->path = remove_dot_segments(merged);
+                    ne_free(merged);
+                }
+            }
+            if (relative->query) target->query = ne_strdup(relative->query);
+            copy_authority(target, base);
+        }
+        target->scheme = ne_strdup(base->scheme);
+    }
+    
+    if (relative->fragment) target->fragment = ne_strdup(relative->fragment);
+}
+
 void ne_uri_free(ne_uri *u)
 {
     if (u->host) ne_free(u->host);
