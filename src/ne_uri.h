@@ -1,6 +1,6 @@
 /* 
    URI manipulation routines.
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -63,7 +63,7 @@ typedef struct {
     char *authinfo;
 } ne_uri;
 
-/* Parse absoluteURI 'uri' and place parsed segments in *parsed.
+/* Parse a URI-reference 'uri' and place parsed components in *parsed.
  * Returns zero on success, non-zero on parse error.  On successful or
  * error return, all the 'char *' fields of *parsed are either set to
  * NULL, or point to malloc-allocated NUL-terminated strings.
