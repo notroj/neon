@@ -287,7 +287,7 @@ static char *remove_dot_segments(const char *path)
     char *in, *inc, *out;
 
     inc = in = ne_strdup(path);
-    out = ne_strdup(path);
+    out = ne_malloc(strlen(path) + 1);
     out[0] = '\0';
 
     while (in[0]) {
