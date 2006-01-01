@@ -474,6 +474,35 @@ static int resolve(void)
     return OK;
 }
 
+static int copy(void)
+{
+    static const char *ts[] = {
+        "http://jim@foo.com:8080/bar?baz#bee",
+        "",
+        NULL,
+    };
+    size_t n;
+
+    for (n = 0; ts[n]; n++) {
+        ne_uri parsed, parsed2;
+        char *actual;
+
+        ONV(ne_uri_parse(ts[n], &parsed), ("could not parse URI '%s'", ts[n]));
+        ONN("ne_uri_copy returned wrong pointer",
+            ne_uri_copy(&parsed2, &parsed) != &parsed2);
+
+        actual = ne_uri_unparse(&parsed2);
+
+        ONCMP(ts[n], actual, "copied URI", "unparsed URI");
+
+        ne_uri_free(&parsed2);
+        ne_uri_free(&parsed);
+        ne_free(actual);
+    }
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(simple_ssl),
@@ -489,5 +518,6 @@ ne_test tests[] = {
     T(failparse),
     T(unparse),
     T(resolve),
+    T(copy),
     T(NULL)
 };
