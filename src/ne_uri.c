@@ -397,8 +397,8 @@ void ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
                     target->path = remove_dot_segments(merged);
                     ne_free(merged);
                 }
+                if (relative->query) target->query = ne_strdup(relative->query);
             }
-            if (relative->query) target->query = ne_strdup(relative->query);
             copy_authority(target, base);
         }
         if (base->scheme) target->scheme = ne_strdup(base->scheme);
@@ -426,6 +426,8 @@ void ne_uri_free(ne_uri *u)
     if (u->path) ne_free(u->path);
     if (u->scheme) ne_free(u->scheme);
     if (u->userinfo) ne_free(u->userinfo);
+    if (u->fragment) ne_free(u->fragment);
+    if (u->query) ne_free(u->query);
     memset(u, 0, sizeof *u);
 }
 
