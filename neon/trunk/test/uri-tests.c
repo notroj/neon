@@ -40,7 +40,7 @@ static int simple(void)
     ON(strcmp(p.path, "/foo"));
     ON(strcmp(p.scheme, "http"));
     ON(p.port);
-    ON(p.authinfo != NULL);
+    ON(p.userinfo != NULL);
     ne_uri_free(&p);
     return 0;
 }
@@ -236,45 +236,52 @@ static int parse(void)
     static const struct test_uri {
 	const char *uri, *scheme, *host;
 	unsigned int port;
-	const char *path, *authinfo;
+	const char *path, *userinfo, *query, *fragment;
     } uritests[] = {
-        { "http://webdav.org/norman", "http", "webdav.org", 0, "/norman", NULL },
-        { "http://webdav.org:/norman", "http", "webdav.org", 0, "/norman", NULL },
-        { "https://webdav.org/foo", "https", "webdav.org", 0, "/foo", NULL },
-        { "http://webdav.org:8080/bar", "http", "webdav.org", 8080, "/bar", NULL },
-        { "http://a/b", "http", "a", 0, "/b", NULL },
-        { "http://webdav.org/bar:fish", "http", "webdav.org", 0, "/bar:fish", NULL },
-        { "http://webdav.org", "http", "webdav.org", 0, "/", NULL },
-        { "http://webdav.org/fish@food", "http", "webdav.org", 0, "/fish@food", NULL },
+        { "http://webdav.org/norman", "http", "webdav.org", 0, "/norman", NULL, NULL, NULL },
+        { "http://webdav.org:/norman", "http", "webdav.org", 0, "/norman", NULL, NULL, NULL },
+        { "https://webdav.org/foo", "https", "webdav.org", 0, "/foo", NULL, NULL, NULL },
+        { "http://webdav.org:8080/bar", "http", "webdav.org", 8080, "/bar", NULL, NULL, NULL },
+        { "http://a/b", "http", "a", 0, "/b", NULL, NULL, NULL },
+        { "http://webdav.org/bar:fish", "http", "webdav.org", 0, "/bar:fish", NULL, NULL, NULL },
+        { "http://webdav.org", "http", "webdav.org", 0, "/", NULL, NULL, NULL },
+        { "http://webdav.org/fish@food", "http", "webdav.org", 0, "/fish@food", NULL, NULL, NULL },
+
+        /* query/fragments */
+        { "http://foo/bar?alpha", "http", "foo", 0, "/bar", NULL, "alpha", NULL },
+        { "http://foo/bar?alpha#beta", "http", "foo", 0, "/bar", NULL, "alpha", "beta" },
+        { "http://foo/bar#alpha?beta", "http", "foo", 0, "/bar", NULL, NULL, "alpha?beta" },
+        { "http://foo/bar#beta", "http", "foo", 0, "/bar", NULL, NULL, "beta" },
+        { "http://foo/bar?#beta", "http", "foo", 0, "/bar", NULL, "", "beta" },
+        { "http://foo/bar?alpha?beta", "http", "foo", 0, "/bar", NULL, "alpha?beta", NULL },
 
         /* Examples from RFC3986§1.1.2: */
-        { "ftp://ftp.is.co.za/rfc/rfc1808.txt", "ftp", "ftp.is.co.za", 0, "/rfc/rfc1808.txt", NULL },
-        { "http://www.ietf.org/rfc/rfc2396.txt", "http", "www.ietf.org", 0, "/rfc/rfc2396.txt", NULL },
-        { "ldap://[2001:db8::7]/c=GB?objectClass?one", "ldap", "[2001:db8::7]", 0, "/c=GB?objectClass?one", NULL },
-        { "mailto:John.Doe@example.com", "mailto", NULL, 0, "John.Doe@example.com", NULL }, 
-        { "news:comp.infosystems.www.servers.unix", "news", NULL, 0, "comp.infosystems.www.servers.unix", NULL },
-        { "tel:+1-816-555-1212", "tel", NULL, 0, "+1-816-555-1212", NULL },
-        { "telnet://192.0.2.16:80/", "telnet", "192.0.2.16", 80, "/", NULL },
+        { "ftp://ftp.is.co.za/rfc/rfc1808.txt", "ftp", "ftp.is.co.za", 0, "/rfc/rfc1808.txt", NULL, NULL, NULL },
+        { "http://www.ietf.org/rfc/rfc2396.txt", "http", "www.ietf.org", 0, "/rfc/rfc2396.txt", NULL, NULL, NULL },
+        { "ldap://[2001:db8::7]/c=GB?objectClass?one", "ldap", "[2001:db8::7]", 0, "/c=GB", NULL, "objectClass?one", NULL },
+        { "mailto:John.Doe@example.com", "mailto", NULL, 0, "John.Doe@example.com", NULL, NULL, NULL }, 
+        { "news:comp.infosystems.www.servers.unix", "news", NULL, 0, "comp.infosystems.www.servers.unix", NULL, NULL, NULL },
+        { "tel:+1-816-555-1212", "tel", NULL, 0, "+1-816-555-1212", NULL, NULL, NULL },
+        { "telnet://192.0.2.16:80/", "telnet", "192.0.2.16", 80, "/", NULL, NULL, NULL },
         { "urn:oasis:names:specification:docbook:dtd:xml:4.1.2", "urn", NULL, 0, 
           "oasis:names:specification:docbook:dtd:xml:4.1.2", NULL}, 
 
         /* userinfo */
-        { "ftp://jim:bob@jim.com", "ftp", "jim.com", 0, "/", "jim:bob" },
+        { "ftp://jim:bob@jim.com", "ftp", "jim.com", 0, "/", "jim:bob", NULL, NULL },
         { "ldap://fred:bloggs@fish.com/foobar", "ldap", "fish.com", 0, 
-          "/foobar", "fred:bloggs" },
+          "/foobar", "fred:bloggs", NULL, NULL },
         /* IPv6 hex strings allowed even if IPv6 not supported. */
-        { "http://[::1]/foo", "http", "[::1]", 0, "/foo", NULL },
-        { "http://[a:a:a:a::0]/foo", "http", "[a:a:a:a::0]", 0, "/foo", NULL },
-        { "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL },
-        { "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL },
-        { "http://fish/[foo]/bar", "http", "fish", 0, "/[foo]/bar", NULL },
+        { "http://[::1]/foo", "http", "[::1]", 0, "/foo", NULL, NULL, NULL },
+        { "http://[a:a:a:a::0]/foo", "http", "[a:a:a:a::0]", 0, "/foo", NULL, NULL, NULL },
+        { "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL, NULL, NULL },
+        { "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL, NULL, NULL },
 
         /* URI-references: */
-        { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL },
-        { "//foo.com", NULL, "foo.com", 0, "/", NULL },
-        { "//[::1]/foo", NULL, "[::1]", 0, "/foo", NULL },
-        { "/bar", NULL, NULL, 0, "/bar", NULL }, /* path-absolute */
-        { "foo/bar", NULL, NULL, 0, "foo/bar", NULL }, /* path-noscheme */
+        { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL, NULL, NULL },
+        { "//foo.com", NULL, "foo.com", 0, "/", NULL, NULL, NULL },
+        { "//[::1]/foo", NULL, "[::1]", 0, "/foo", NULL, NULL, NULL },
+        { "/bar", NULL, NULL, 0, "/bar", NULL, NULL, NULL }, /* path-absolute */
+        { "foo/bar", NULL, NULL, 0, "foo/bar", NULL, NULL, NULL }, /* path-noscheme */
 
 	{ NULL }
     };
@@ -291,7 +298,9 @@ static int parse(void)
 	ONCMP(e->host, res.host, e->uri, "host");
 	ONV(strcmp(res.path, e->path),
 	    ("%s: parsed path was %s not %s", e->uri, res.path, e->path));
-        ONCMP(e->authinfo, res.authinfo, e->uri, "authinfo");
+        ONCMP(e->userinfo, res.userinfo, e->uri, "userinfo");
+        ONCMP(e->query, res.query, e->uri, "query");
+        ONCMP(e->fragment, res.fragment, e->uri, "fragment");
 	ne_uri_free(&res);
     }
 
@@ -303,6 +312,8 @@ static int failparse(void)
     static const char *uris[] = {
 	"",
 	"http://[::1/",
+        "http://foo/bar asda",
+        "http://fish/[foo]/bar",
 	NULL
     };
     int n;
@@ -325,6 +336,9 @@ static int unparse(void)
 	"http://www.random.com:8000/",
 	"http://[::1]:8080/",
 	"ftp://ftp.foo.bar/abc/def",
+	"http://a/b?c#d",
+	"http://a/b?c",
+	"http://a/b#d",
 	NULL
     };
     int n;

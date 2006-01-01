@@ -254,7 +254,7 @@ void ne_lock_using_parent(ne_request *req, const char *path)
     if (parent == NULL)
 	return;
     
-    u.authinfo = NULL;
+    u.userinfo = NULL;
     ne_fill_server_uri(ne_get_session(req), &u);
 
     for (item = lrc->store->locks; item != NULL; item = item->next) {
