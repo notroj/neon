@@ -543,12 +543,14 @@ char *ne_uri_unparse(const ne_uri *uri)
             ne_buffer_concat(buf, uri->userinfo, "@", NULL);
         }
         ne_buffer_zappend(buf, uri->host);
-    }
         
-    if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
-	char str[20];
-	ne_snprintf(str, 20, ":%d", uri->port);
-	ne_buffer_zappend(buf, str);
+        if (uri->port > 0
+            && (!uri->scheme 
+                || ne_uri_defaultport(uri->scheme) != uri->port)) {
+            char str[20];
+            ne_snprintf(str, 20, ":%d", uri->port);
+            ne_buffer_zappend(buf, str);
+        }
     }
 
     ne_buffer_zappend(buf, uri->path);

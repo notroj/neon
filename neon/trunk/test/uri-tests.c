@@ -346,6 +346,7 @@ static int unparse(void)
 	"http://a/b#d",
         "mailto:foo@bar.com",
         "//foo.com/bar",
+        "//foo.com:8080/bar",
 	NULL
     };
     int n;
