@@ -57,10 +57,9 @@ unsigned int ne_uri_defaultport(const char *scheme);
 
 typedef struct {
     char *scheme;
-    char *host;
+    char *host, *userinfo;
     unsigned int port;
-    char *path;
-    char *authinfo;
+    char *path, *query, *fragment;
 } ne_uri;
 
 /* Parse a URI-reference 'uri' and place parsed components in *parsed.

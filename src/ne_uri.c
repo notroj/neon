@@ -52,12 +52,14 @@
 #define TD (0x0020) /* "~" */
 #define FS (0x0040) /* "/" */
 #define CL (0x0080) /* ":" */
+#define AT (0x0100) /* "@" */
+#define QU (0x0200) /* "?" */
 
-#define DG (0x0100) /* DIGIT */
-#define AL (0x0200) /* ALPHA */
+#define DG (0x0400) /* DIGIT */
+#define AL (0x0800) /* ALPHA */
 
-#define GD (0x1000) /* gen-delims    = ":" / "?" / "#" / "[" / "]" / "@" 
-                     * ... except ":" and "/" which are CL and FS */
+#define GD (0x1000) /* gen-delims    = "#" / "[" / "]" 
+                     * ... except ":", "/", "@", and "?" */
 
 #define SD (0x2000) /* sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
                      *               / "*" / "+" / "," / ";" / "=" 
@@ -74,10 +76,16 @@
 #define URI_SCHEME (AL | DG | PS | DS | DT)
 /* real sub-delims definition, including "+" */
 #define URI_SUBDELIM (PS | SD)
-/* real gen-delims definition, including ":" and "/" */
-#define URI_GENDELIM (GD | CL | FS)
+/* real gen-delims definition, including ":", "/", "@" and "?" */
+#define URI_GENDELIM (GD | CL | FS | AT | QU)
 /* userinfo = *( unreserved / pct-encoded / sub-delims / ":" ) */
 #define URI_USERINFO (URI_UNRESERVED | PC | URI_SUBDELIM | CL)
+/* pchar = unreserved / pct-encoded / sub-delims / ":" / "@" */
+#define URI_PCHAR (URI_UNRESERVED | PC | URI_SUBDELIM | CL | AT)
+/* invented: segchar = pchar / "/" */
+#define URI_SEGCHAR (URI_PCHAR | FS)
+/* query = fragment = *( pchar / "/" / "?" ) */
+#define URI_QUERY (URI_PCHAR | FS | QU)
 
 /* any characters which should be path-escaped: */
 #define URI_ESCAPE ((URI_GENDELIM & ~(FS)) | URI_SUBDELIM | OT)
@@ -87,8 +95,8 @@ static const unsigned int uri_chars[256] = {
 /*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
 /*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
 /*   2x */ OT, SD, OT, GD, SD, PC, SD, SD, SD, SD, SD, PS, SD, DS, DT, FS,
-/*   3x */ DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, CL, SD, OT, SD, OT, GD,
-/*   4x */ GD, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
+/*   3x */ DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, CL, SD, OT, SD, OT, QU,
+/*   4x */ AT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
 /*   5x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, GD, OT, GD, OT, US,
 /*   6x */ OT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
 /*   7x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, OT, OT, OT, TD, OT,
@@ -141,12 +149,8 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
 {
     const char *p, *s;
 
-    parsed->scheme = NULL;
-    parsed->authinfo = NULL;
-    parsed->host = NULL;
-    parsed->port = 0;
-    parsed->path = NULL;
-    
+    memset(parsed, 0, sizeof *parsed);
+
     if (uri[0] == '\0') {
 	return -1;
     }
@@ -167,7 +171,7 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
         const char *pa;
 
         /* hier-part = "//" authority path-abempty 
-         * authority = [ authinfo "@" ] host [ ":" port ] */
+         * authority = [ userinfo "@" ] host [ ":" port ] */
 
         s = pa = s + 2; /* => s = authority */
 
@@ -180,7 +184,7 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
             p++;
 
         if (*p == '@') {
-            parsed->authinfo = ne_strndup(s, p - s);
+            parsed->userinfo = ne_strndup(s, p - s);
             s = p + 1;
         }
         /* => s = host */
@@ -216,13 +220,44 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
         s = pa;        
 
         if (*s == '\0') {
-            s = "/"; /* FIXME: only true for the http scheme. */
+            s = "/"; /* FIXME: scheme-specific. */
         }
     } 
     /* else, the path begins at s */
-       
-    parsed->path = ne_strdup(s);
 
+    p = s;
+
+    while (uri_lookup(*p) & URI_SEGCHAR)
+        p++;
+
+    parsed->path = ne_strndup(s, p - s);
+
+    if (*p != '\0') {
+        s = p++;
+
+        while (uri_lookup(*p) & URI_QUERY)
+            p++;
+
+        if (*s == '?') {
+            parsed->query = ne_strndup(s + 1, p - s - 1);
+            
+            if (*p != '\0') {
+                s = p++;
+
+                while (uri_lookup(*p) & URI_QUERY)
+                    p++;
+            }
+        }
+        /* p must now point to the end of the input string */
+
+        if (*s == '#') {
+            parsed->fragment = ne_strndup(s + 1, p - s - 1);
+        }
+        else if (*p || *s != '?') {
+            return -1;
+        }
+    }
+    
     return 0;
 }
 
@@ -231,7 +266,7 @@ void ne_uri_free(ne_uri *u)
     if (u->host) ne_free(u->host);
     if (u->path) ne_free(u->path);
     if (u->scheme) ne_free(u->scheme);
-    if (u->authinfo) ne_free(u->authinfo);
+    if (u->userinfo) ne_free(u->userinfo);
     memset(u, 0, sizeof *u);
 }
 
@@ -353,8 +388,8 @@ char *ne_uri_unparse(const ne_uri *uri)
     ne_buffer *buf = ne_buffer_create();
 
     ne_buffer_concat(buf, uri->scheme, "://", 
-                     uri->authinfo ? uri->authinfo : "",
-                     uri->authinfo ? "@" : "",
+                     uri->userinfo ? uri->userinfo : "",
+                     uri->userinfo ? "@" : "",
                      uri->host, NULL);
 
     if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
@@ -364,6 +399,14 @@ char *ne_uri_unparse(const ne_uri *uri)
     }
 
     ne_buffer_zappend(buf, uri->path);
+
+    if (uri->query) {
+        ne_buffer_concat(buf, "?", uri->query, NULL);
+    }
+    
+    if (uri->fragment) {
+        ne_buffer_concat(buf, "#", uri->fragment, NULL);
+    }
 
     return ne_buffer_finish(buf);
 }
