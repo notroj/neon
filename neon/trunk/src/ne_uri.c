@@ -1,6 +1,6 @@
 /* 
    URI manipulation routines.
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -42,6 +42,68 @@
 #include "ne_alloc.h"
 #include "ne_uri.h"
 
+/* URI ABNF from RFC 3986: */
+
+#define PS (0x0001) /* "+" */
+#define PC (0x0002) /* "%" */
+#define DS (0x0004) /* "-" */
+#define DT (0x0008) /* "." */
+#define US (0x0010) /* "_" */
+#define TD (0x0020) /* "~" */
+#define FS (0x0040) /* "/" */
+#define CL (0x0080) /* ":" */
+
+#define DG (0x0100) /* DIGIT */
+#define AL (0x0200) /* ALPHA */
+
+#define GD (0x1000) /* gen-delims    = ":" / "?" / "#" / "[" / "]" / "@" 
+                     * ... except ":" and "/" which are CL and FS */
+
+#define SD (0x2000) /* sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
+                     *               / "*" / "+" / "," / ";" / "=" 
+                     * ... except "+" which is PS */
+
+#define OT (0x4000) /* others */
+
+#define URI_ALPHA (AL)
+#define URI_DIGIT (DG)
+
+/* unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" */
+#define URI_UNRESERVED (AL | DG | DS | DT | US | TD)
+/* scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) */
+#define URI_SCHEME (AL | DG | PS | DS | DT)
+/* real sub-delims definition, including "+" */
+#define URI_SUBDELIM (PS | SD)
+/* real gen-delims definition, including ":" and "/" */
+#define URI_GENDELIM (GD | CL | FS)
+/* userinfo = *( unreserved / pct-encoded / sub-delims / ":" ) */
+#define URI_USERINFO (URI_UNRESERVED | PC | URI_SUBDELIM | CL)
+
+/* any characters which should be path-escaped: */
+#define URI_ESCAPE ((URI_GENDELIM & ~(FS)) | URI_SUBDELIM | OT)
+
+static const unsigned int uri_chars[256] = {
+/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
+/*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   2x */ OT, SD, OT, GD, SD, PC, SD, SD, SD, SD, SD, PS, SD, DS, DT, FS,
+/*   3x */ DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, CL, SD, OT, SD, OT, GD,
+/*   4x */ GD, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
+/*   5x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, GD, OT, GD, OT, US,
+/*   6x */ OT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
+/*   7x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, OT, OT, OT, TD, OT,
+/*   8x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   9x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Ax */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Bx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Cx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Dx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Ex */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
+/*   Fx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT
+};
+
+#define uri_lookup(ch) (uri_chars[(unsigned)ch])
+
 char *ne_path_parent(const char *uri) 
 {
     size_t len = strlen(uri);
@@ -75,74 +137,91 @@ unsigned int ne_uri_defaultport(const char *scheme)
 	return 0;
 }
 
-/* TODO: Also, maybe stop malloc'ing here, take a "char *" uri, modify
- * it in-place, and have fields point inside passed uri.  More work
- * for the caller then though. */
-/* TODO: not a proper URI parser */
 int ne_uri_parse(const char *uri, ne_uri *parsed)
 {
-    const char *pnt, *slash, *colon, *atsign, *openbk;
+    const char *p, *s;
 
-    parsed->port = 0;
-    parsed->host = NULL;
-    parsed->path = NULL;
     parsed->scheme = NULL;
     parsed->authinfo = NULL;
-
+    parsed->host = NULL;
+    parsed->port = 0;
+    parsed->path = NULL;
+    
     if (uri[0] == '\0') {
 	return -1;
     }
 
-    pnt = strstr(uri, "://");
-    if (pnt) {
-	parsed->scheme = ne_strndup(uri, pnt - uri);
-	pnt += 3; /* start of hostport segment */
-    } else {
-	pnt = uri;
-    }
-    
-    atsign = strchr(pnt, '@');
-    slash = strchr(pnt, '/');
-    openbk = strchr(pnt, '[');
+    p = s = uri;
 
-    /* Check for an authinfo segment in the hostport segment. */
-    if (atsign != NULL && (slash == NULL || atsign < slash)) {
-	parsed->authinfo = ne_strndup(pnt, atsign - pnt);
-	pnt = atsign + 1;
-    }
-    
-    if (openbk && (!slash || openbk < slash)) {
-	const char *closebk = strchr(openbk, ']');
-	if (closebk == NULL)
-	    return -1;
-	colon = strchr(closebk + 1, ':');
-    } else {
-	colon = strchr(pnt, ':');
+    if (uri_lookup(*p) & URI_ALPHA) {
+        while (uri_lookup(*p) & URI_SCHEME)
+            p++;
+        
+        if (*p == ':') {
+            parsed->scheme = ne_strndup(uri, p - s);
+            s = p + 1;
+        }
     }
 
-    if (slash == NULL) {
-	parsed->path = ne_strdup("/");
-	if (colon == NULL) {
-	    parsed->host = ne_strdup(pnt);
-	} else {
-	    parsed->port = atoi(colon+1);
-	    parsed->host = ne_strndup(pnt, colon - pnt);
-	}
-    } else {
-	if (colon == NULL || colon > slash) {
-	    /* No port segment */
-	    if (slash != uri) {
-		parsed->host = ne_strndup(pnt, slash - pnt);
-	    } else {
-		/* No hostname segment. */
-	    }
-	} else {
-	    /* Port segment */
-	    parsed->port = atoi(colon + 1);
-	    parsed->host = ne_strndup(pnt, colon - pnt);
-	}
-	parsed->path = ne_strdup(slash);
-    }
+    if (s[0] == '/' && s[1] == '/') {
+        const char *pa;
+
+        /* hier-part = "//" authority path-abempty 
+         * authority = [ authinfo "@" ] host [ ":" port ] */
+
+        s = pa = s + 2; /* => s = authority */
+
+        while (*pa != '/' && *pa != '\0')
+            pa++;
+        /* => pa = path-abempty */
+        
+        p = s;
+        while (p < pa && uri_lookup(*p) & URI_USERINFO)
+            p++;
+
+        if (*p == '@') {
+            parsed->authinfo = ne_strndup(s, p - s);
+            s = p + 1;
+        }
+        /* => s = host */
+
+        if (s[0] == '[') {
+            p = s + 1;
+
+            while (*p != ']' && p < pa)
+                p++;
+
+            if (p == pa || (p + 1 != pa && p[1] != ':')) {
+                /* Ill-formed IP-literal. */
+                return -1;
+            }
+
+            p++; /* => p = colon */
+        } else {
+            /* Find the colon. */
+            p = pa;
+            while (*p != ':' && p > s)
+                p--;
+        }
+
+        if (p == s) {
+            p = pa;
+            /* No colon; => p = path-abempty */
+        } else if (p + 1 != pa) {
+            /* => p = colon */
+            parsed->port = atoi(p + 1);
+        }
+        parsed->host = ne_strndup(s, p - s);
+        
+        s = pa;        
+
+        if (*s == '\0') {
+            s = "/"; /* FIXME: only true for the http scheme. */
+        }
+    } 
+    /* else, the path begins at s */
+       
+    parsed->path = ne_strdup(s);
 
     return 0;
 }
@@ -179,41 +258,9 @@ char *ne_path_unescape(const char *uri)
     return ret;
 }
 
-/* ABNF definitions derived from RFC3986, except with "/" removed from
- * gen-delims since it's special: */
-
-#define GD (1) /* gen-delims    = ":" / "?" / "#" / "[" / "]" / "@" */
-#define SD (1) /* sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
-                               / "*" / "+" / "," / ";" / "=" */
-
-#define SL (0) /* forward-slash = "/" */
-#define UN (0) /* unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" */
-
-#define OT (1) /* others */
-
-/* Lookup table for percent-encoding logic: value is non-zero if
- * character should be percent-encoded. */
-static const unsigned char uri_chars[128] = {
-/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
-/*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
-/*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
-/*   2x */ OT, SD, OT, GD, SD, OT, SD, SD, SD, SD, SD, SD, SD, UN, UN, SL,
-/*   3x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, SD, OT, SD, OT, GD,
-/*   4x */ GD, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
-/*   5x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, OT, GD, OT, OT,
-/*   6x */ OT, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
-/*   7x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, OT, OT, OT, UN, OT 
-};
-
-#undef SD
-#undef GD
-#undef SL
-#undef UN
-#undef OT
-
 /* CH must be an unsigned char; evaluates to 1 if CH should be
  * percent-encoded. */
-#define path_escape_ch(ch) ((ch) > 127 || uri_chars[(ch)])
+#define path_escape_ch(ch) (uri_lookup(ch) & URI_ESCAPE)
 
 char *ne_path_escape(const char *path) 
 {
@@ -305,7 +352,10 @@ char *ne_uri_unparse(const ne_uri *uri)
 {
     ne_buffer *buf = ne_buffer_create();
 
-    ne_buffer_concat(buf, uri->scheme, "://", uri->host, NULL);
+    ne_buffer_concat(buf, uri->scheme, "://", 
+                     uri->authinfo ? uri->authinfo : "",
+                     uri->authinfo ? "@" : "",
+                     uri->host, NULL);
 
     if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
 	char str[20];

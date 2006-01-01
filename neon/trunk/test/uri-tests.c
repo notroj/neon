@@ -1,6 +1,6 @@
 /* 
    URI handling tests
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -223,24 +223,6 @@ static int slash(void)
     return OK;
 }
 
-static int just_hostname(void)
-{
-    ne_uri p = {0};
-    ON(ne_uri_parse("host.name.com", &p));
-    ON(strcmp(p.host, "host.name.com"));
-    ne_uri_free(&p);
-    return 0;
-}
-
-static int just_path(void)
-{
-    ne_uri p = {0};
-    ON(ne_uri_parse("/argh", &p));
-    ON(strcmp(p.path, "/argh"));
-    ne_uri_free(&p);
-    return 0;
-}
-
 static int default_port(void)
 {
     ONN("default http: port incorrect", ne_uri_defaultport("http") != 80);
@@ -256,32 +238,44 @@ static int parse(void)
 	unsigned int port;
 	const char *path, *authinfo;
     } uritests[] = {
-	{ "http://webdav.org/norman", "http", "webdav.org", 0, "/norman", NULL },
-	{ "http://webdav.org:/norman", "http", "webdav.org", 0, "/norman", NULL },
-	{ "https://webdav.org/foo", "https", "webdav.org", 0, "/foo", NULL },
-	{ "http://webdav.org:8080/bar", "http", "webdav.org", 8080, "/bar", NULL },
-	{ "http://a/b", "http", "a", 0, "/b", NULL },
-	{ "http://webdav.org/bar:fish", "http", "webdav.org", 0, "/bar:fish", NULL },
-	{ "http://webdav.org", "http", "webdav.org", 0, "/", NULL },
+        { "http://webdav.org/norman", "http", "webdav.org", 0, "/norman", NULL },
+        { "http://webdav.org:/norman", "http", "webdav.org", 0, "/norman", NULL },
+        { "https://webdav.org/foo", "https", "webdav.org", 0, "/foo", NULL },
+        { "http://webdav.org:8080/bar", "http", "webdav.org", 8080, "/bar", NULL },
+        { "http://a/b", "http", "a", 0, "/b", NULL },
+        { "http://webdav.org/bar:fish", "http", "webdav.org", 0, "/bar:fish", NULL },
+        { "http://webdav.org", "http", "webdav.org", 0, "/", NULL },
         { "http://webdav.org/fish@food", "http", "webdav.org", 0, "/fish@food", NULL },
-        /* authinfo */
+
+        /* Examples from RFC3986§1.1.2: */
+        { "ftp://ftp.is.co.za/rfc/rfc1808.txt", "ftp", "ftp.is.co.za", 0, "/rfc/rfc1808.txt", NULL },
+        { "http://www.ietf.org/rfc/rfc2396.txt", "http", "www.ietf.org", 0, "/rfc/rfc2396.txt", NULL },
+        { "ldap://[2001:db8::7]/c=GB?objectClass?one", "ldap", "[2001:db8::7]", 0, "/c=GB?objectClass?one", NULL },
+        { "mailto:John.Doe@example.com", "mailto", NULL, 0, "John.Doe@example.com", NULL }, 
+        { "news:comp.infosystems.www.servers.unix", "news", NULL, 0, "comp.infosystems.www.servers.unix", NULL },
+        { "tel:+1-816-555-1212", "tel", NULL, 0, "+1-816-555-1212", NULL },
+        { "telnet://192.0.2.16:80/", "telnet", "192.0.2.16", 80, "/", NULL },
+        { "urn:oasis:names:specification:docbook:dtd:xml:4.1.2", "urn", NULL, 0, 
+          "oasis:names:specification:docbook:dtd:xml:4.1.2", NULL}, 
+
+        /* userinfo */
         { "ftp://jim:bob@jim.com", "ftp", "jim.com", 0, "/", "jim:bob" },
         { "ldap://fred:bloggs@fish.com/foobar", "ldap", "fish.com", 0, 
           "/foobar", "fred:bloggs" },
-	/* relativeURIs accepted for dubious legacy reasons. */
-	{ "a/b", NULL, "a", 0, "/b", NULL },
-	{ "a:8080/b", NULL, "a", 8080, "/b", NULL },
-	{ "/fish", NULL, NULL, 0, "/fish", NULL },
-	{ "webdav.org:8080", NULL, "webdav.org", 8080, "/", NULL },
-	/* IPv6 hex strings allowed even if IPv6 not supported. */
-	{ "http://[::1]/foo", "http", "[::1]", 0, "/foo", NULL },
-	{ "http://[a:a:a:a::0]/foo", "http", "[a:a:a:a::0]", 0, "/foo", NULL },
-	{ "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL },
-	{ "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL },
-	{ "http://fish/[foo]/bar", "http", "fish", 0, "/[foo]/bar", NULL },
-	/* and some dubious ones: */
-	{ "[::1]/foo", NULL, "[::1]", 0, "/foo", NULL },
-	{ "[::1]:8000/foo", NULL, "[::1]", 8000, "/foo", NULL },
+        /* IPv6 hex strings allowed even if IPv6 not supported. */
+        { "http://[::1]/foo", "http", "[::1]", 0, "/foo", NULL },
+        { "http://[a:a:a:a::0]/foo", "http", "[a:a:a:a::0]", 0, "/foo", NULL },
+        { "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL },
+        { "ftp://[feed::cafe]:555", "ftp", "[feed::cafe]", 555, "/", NULL },
+        { "http://fish/[foo]/bar", "http", "fish", 0, "/[foo]/bar", NULL },
+
+        /* URI-references: */
+        { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL },
+        { "//foo.com", NULL, "foo.com", 0, "/", NULL },
+        { "//[::1]/foo", NULL, "[::1]", 0, "/foo", NULL },
+        { "/bar", NULL, NULL, 0, "/bar", NULL }, /* path-absolute */
+        { "foo/bar", NULL, NULL, 0, "foo/bar", NULL }, /* path-noscheme */
+
 	{ NULL }
     };
     int n;
@@ -367,8 +361,6 @@ ne_test tests[] = {
     T(cmp),
     T(children),
     T(slash),
-    T(just_hostname),
-    T(just_path),
     T(default_port),
     T(parse),
     T(failparse),
