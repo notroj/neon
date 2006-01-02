@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -43,6 +43,8 @@ struct ne_207_parser_s {
     ne_207_end_propstat *end_propstat;
     ne_xml_parser *parser;
     void *userdata;
+
+    ne_uri base;
 
     ne_buffer *cdata;
 
@@ -174,8 +176,16 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
     case ELM_href:
 	/* Now we have the href, begin the response */
 	if (p->start_response && HAVE_CDATA(p)) {
-	    p->response = p->start_response(p->userdata, cdata);
-	    p->in_response = 1;
+            ne_uri ref, resolved;
+
+            if (ne_uri_parse(cdata, &ref) == 0) {
+                ne_uri_resolve(&p->base, &ref, &resolved);
+
+                p->response = p->start_response(p->userdata, &resolved);
+                p->in_response = 1;
+                ne_uri_free(&resolved);
+            }
+            ne_uri_free(&ref);
 	}
 	break;
     case ELM_status:
@@ -219,13 +229,16 @@ end_element(void *userdata, int state, const char *nspace, const char *name)
     return 0;
 }
 
-ne_207_parser *ne_207_create(ne_xml_parser *parser, void *userdata)
+ne_207_parser *ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
+                             void *userdata)
 {
     ne_207_parser *p = ne_calloc(sizeof *p);
 
     p->parser = parser;
     p->userdata = userdata;
     p->cdata = ne_buffer_create();
+
+    ne_uri_copy(&p->base, base);
 
     /* Add handler for the standard 207 elements */
     ne_xml_push_handler(parser, start_element, cdata_207, end_element, p);
@@ -237,6 +250,7 @@ void ne_207_destroy(ne_207_parser *p)
 {
     if (p->status.reason_phrase) ne_free(p->status.reason_phrase);
     ne_buffer_destroy(p->cdata);
+    ne_uri_free(&p->base);
     ne_free(p);
 }
 
@@ -259,11 +273,11 @@ struct context {
     unsigned int is_error;
 };
 
-static void *start_response(void *userdata, const char *href)
+static void *start_response(void *userdata, const ne_uri *uri)
 {
     struct context *ctx = userdata;
     if (ctx->href) ne_free(ctx->href);
-    ctx->href = ne_strdup(href);
+    ctx->href = ne_uri_unparse(uri);
     return NULL;
 }
 
@@ -307,10 +321,16 @@ int ne_simple_request(ne_session *sess, ne_request *req)
     int ret;
     struct context ctx = {0};
     ne_207_parser *p207;
-    ne_xml_parser *p;
-    
-    p = ne_xml_create();
-    p207 = ne_207_create(p, &ctx);
+    ne_xml_parser *p = ne_xml_create();
+    ne_uri base = {0};
+
+    /* Mock up a base URI; it should really be retrieved from the
+     * request object. */
+    ne_fill_server_uri(sess, &base);
+    base.path = ne_strdup("/");
+    p207 = ne_207_create(p, &base, &ctx);
+    ne_uri_free(&base);    
+
     /* The error string is progressively written into the
      * ne_buffer by the element callbacks */
     ctx.buf = ne_buffer_create();

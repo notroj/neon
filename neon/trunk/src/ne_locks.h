@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -137,13 +137,12 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock);
  * If lock is non-NULL, at least lock->uri and lock->token will be
  * filled in; and status will be NULL. */
 typedef void (*ne_lock_result)(void *userdata, const struct ne_lock *lock, 
-			       const char *uri, const ne_status *status);
+			       const ne_uri *uri, const ne_status *status);
 
 /* Perform lock discovery on the given path.  'result' is called with
  * the results (possibly >1 times).  */
 int ne_lock_discover(ne_session *sess, const char *path,
 		     ne_lock_result result, void *userdata);
-
 
 /* The ne_lock_using_* functions should be used before dispatching a
  * request which modify resources.  If a lock store has been
