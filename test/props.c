@@ -1,6 +1,6 @@
 /* 
    Tests for property handling
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ static int patch_simple(void)
 
 #define RESP207 "HTTP/1.0 207 Stuff\r\n" "Server: foo\r\n\r\n"
 
-static void dummy_results(void *ud, const char *href,
+static void dummy_results(void *ud, const ne_uri *uri,
 			  const ne_prop_result_set *rset)
 {
     NE_DEBUG(NE_DBG_HTTP, "dummy_results.\n");
@@ -142,11 +142,11 @@ static int pstat_count;
 
 /* tos_*: set of 207 callbacks which serialize the data back into a
  * text stream, which can be easily checked for correctness. */
-static void *tos_startresp(void *buf, const char *href)
+static void *tos_startresp(void *buf, const ne_uri *uri)
 {
-    ne_buffer_concat(buf, "start-resp[", href, "];", NULL);
+    ne_buffer_concat(buf, "start-resp[", uri->path, "];", NULL);
     pstat_count = 0;
-    return ne_strdup(href);
+    return ne_strdup(uri->path);
 }
 
 static void tos_status_descr(ne_buffer *buf, const ne_status *status,
@@ -244,9 +244,15 @@ static int run_207_response(char *resp, const char *expected)
     ne_buffer *buf = ne_buffer_create();
     ne_session *sess = ne_session_create("http", "localhost", 7777);
     ne_xml_parser *p = ne_xml_create();
-    ne_207_parser *p207 = ne_207_create(p, buf);
+    ne_207_parser *p207;
     ne_request *req = ne_request_create(sess, "PROPFIND", "/foo");
+    ne_uri base = {0};
     struct propctx ctx;
+
+    ne_fill_server_uri(sess, &base);
+    base.path = ne_strdup("/foo");
+    p207 = ne_207_create(p, &base, buf);
+    ne_uri_free(&base);
 
     ne_add_response_body_reader(req, ne_accept_207, ne_xml_parse_v, p);
 
@@ -423,12 +429,12 @@ static int simple_iterator(void *buf, const ne_propname *name,
     return 0;
 }
 
-static void simple_results(void *buf, const char *href,
+static void simple_results(void *buf, const ne_uri *uri,
                            const ne_prop_result_set *rset)
 {
-    ne_buffer_concat(buf, "results(", href, ",", NULL);
+    ne_buffer_concat(buf, "results(", uri->path, ",", NULL);
     ne_propset_iterate(rset, simple_iterator, buf);
-    ne_buffer_zappend(buf, ")//");
+    ne_buffer_czappend(buf, ")//");
 }
 
 static int diffcmp(const char *expected, const char *actual)
@@ -527,7 +533,7 @@ static int pfind_simple(void)
         { MULTI_207(RESP_207("\r\nhttp://localhost:7777/alpha ",
                              PSTAT_207(PROPS_207(APROP_207("alpha", "beta"))
                                        "<D:status>\r\nHTTP/1.1 200 OK </D:status>"))),
-          "results(http://localhost:7777/alpha,prop:[{DAV:,alpha}='beta':{200 OK}];)//",
+          "results(/alpha,prop:[{DAV:,alpha}='beta':{200 OK}];)//",
           0, 0}
     };
     const ne_propname pset1[] = {

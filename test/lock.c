@@ -1,6 +1,6 @@
 /* 
    lock tests
-   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -410,7 +410,7 @@ static int lock_compare(const char *ctx,
 }
 
 static void discover_result(void *userdata, const struct ne_lock *lk,
-			    const char *path, const ne_status *st)
+			    const ne_uri *uri, const ne_status *st)
 {
     struct result_args *args = userdata;
     args->result = lock_compare("discovered lock", lk, args->lock);
@@ -498,7 +498,7 @@ static int lock_shared(void)
 }
 
 static void dummy_discover(void *userdata, const struct ne_lock *lock,
-                           const char *uri, const ne_status *status)
+                           const ne_uri *uri, const ne_status *status)
 {
 }
 

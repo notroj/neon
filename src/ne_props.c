@@ -1,6 +1,6 @@
 /* 
    WebDAV property manipulation
-   Copyright (C) 2000-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2000-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -88,7 +88,7 @@ struct ne_prop_result_set_s {
     struct propstat *pstats;
     int numpstats, counter;
     void *private;
-    char *href;
+    ne_uri uri;
 };
 
 #define MAX_PROP_COUNTER (1024)
@@ -345,15 +345,15 @@ const ne_status *ne_propset_status(const ne_prop_result_set *set,
     }
 }
 
-static void *start_response(void *userdata, const char *href)
+static void *start_response(void *userdata, const ne_uri *uri)
 {
     ne_prop_result_set *set = ne_calloc(sizeof(*set));
     ne_propfind_handler *hdl = userdata;
 
-    set->href = ne_strdup(href);
+    ne_uri_copy(&set->uri, uri);
 
     if (hdl->private_creator != NULL) {
-	set->private = hdl->private_creator(hdl->private_userdata, href);
+	set->private = hdl->private_creator(hdl->private_userdata, &set->uri);
     }
 
     hdl->current = set;
@@ -533,7 +533,7 @@ static void free_propset(ne_prop_result_set *set)
 
     if (set->pstats)
 	ne_free(set->pstats);
-    ne_free(set->href);
+    ne_uri_free(&set->uri);
     ne_free(set);
 }
 
@@ -546,7 +546,7 @@ static void end_response(void *userdata, void *resource,
 
     /* Pass back the results for this resource. */
     if (handler->callback && set->numpstats > 0)
-	handler->callback(handler->userdata, set->href, set);
+	handler->callback(handler->userdata, &set->uri, set);
 
     /* Clean up the propset tree we've just built. */
     free_propset(set);
@@ -557,9 +557,13 @@ ne_propfind_handler *
 ne_propfind_create(ne_session *sess, const char *uri, int depth)
 {
     ne_propfind_handler *ret = ne_calloc(sizeof(ne_propfind_handler));
+    ne_uri base = {0};
+
+    ne_fill_server_uri(sess, &base);
+    base.path = ne_strdup(uri);
 
     ret->parser = ne_xml_create();
-    ret->parser207 = ne_207_create(ret->parser, ret);
+    ret->parser207 = ne_207_create(ret->parser, &base, ret);
     ret->sess = sess;
     ret->body = ne_buffer_create();
     ret->request = ne_request_create(sess, "PROPFIND", uri);
@@ -577,6 +581,8 @@ ne_propfind_create(ne_session *sess, const char *uri, int depth)
     ne_buffer_concat(ret->body, 
 		    "<?xml version=\"1.0\" encoding=\"utf-8\"?>" EOL 
 		    "<propfind xmlns=\"DAV:\">", NULL);
+
+    ne_uri_free(&base);
 
     return ret;
 }

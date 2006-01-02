@@ -69,7 +69,6 @@ struct lh_req_cookie {
 
 /* Context for PROPFIND/lockdiscovery callbacks */
 struct discover_ctx {
-    ne_session *session;
     ne_lock_result results;
     void *userdata;
     ne_buffer *cdata;
@@ -438,7 +437,7 @@ static long parse_timeout(const char *timeout)
     }
 }
 
-static void discover_results(void *userdata, const char *href,
+static void discover_results(void *userdata, const ne_uri *uri,
 			     const ne_prop_result_set *set)
 {
     struct discover_ctx *ctx = userdata;
@@ -448,18 +447,18 @@ static void discover_results(void *userdata, const char *href,
     /* Require at least that the lock has a token. */
     if (lock->token) {
 	if (status && status->klass != 2) {
-	    ctx->results(ctx->userdata, NULL, lock->uri.path, status);
+	    ctx->results(ctx->userdata, NULL, uri, status);
 	} else {
-	    ctx->results(ctx->userdata, lock, lock->uri.path, NULL);
+	    ctx->results(ctx->userdata, lock, uri, NULL);
 	}
     }
     else if (status) {
-	ctx->results(ctx->userdata, NULL, href, status);
+	ctx->results(ctx->userdata, NULL, uri, status);
     }
-	
+
     ne_lock_destroy(lock);
 
-    NE_DEBUG(NE_DBG_LOCKS, "End of response for %s\n", href);
+    NE_DEBUG(NE_DBG_LOCKS, "End of response for %s\n", uri->path);
 }
 
 static int 
@@ -632,18 +631,11 @@ static int lk_endelm(void *userdata, int state,
     return 0;
 }
 
-static void *ld_create(void *userdata, const char *href)
+static void *ld_create(void *userdata, const ne_uri *uri)
 {
-    struct discover_ctx *ctx = userdata;
     struct ne_lock *lk = ne_lock_create();
 
-    if (ne_uri_parse(href, &lk->uri) != 0) {
-	ne_lock_destroy(lk);
-	return NULL;
-    }
-    
-    if (!lk->uri.host)
-	ne_fill_server_uri(ctx->session, &lk->uri);
+    ne_uri_copy(&lk->uri, uri);
 
     return lk;
 }
@@ -658,7 +650,6 @@ int ne_lock_discover(ne_session *sess, const char *uri,
     
     ctx.results = callback;
     ctx.userdata = userdata;
-    ctx.session = sess;
     ctx.cdata = ne_buffer_create();
 
     handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
