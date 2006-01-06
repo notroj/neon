@@ -490,34 +490,36 @@ char *ne_path_escape(const char *path)
 
 #undef path_escape_ch
 
-#define CASECMP(field) do { \
-n = strcasecmp(u1->field, u2->field); if (n) return n; } while(0)
+#define CMPWITH(field, func) do {               \
+    if (!u2->field && u1->field) return -1;     \
+    if (!u1->field && u2->field) return 1;      \
+    if (u1->field && u2->field) {               \
+        n = func(u1->field, u2->field);         \
+        if (n) return n;                        \
+     }                                          \
+} while(0)
 
-#define CMP(field) do { \
-n = strcmp(u1->field, u2->field); if (n) return n; } while(0)
+#define CMP(field) CMPWITH(field, strcmp)
+#define CASECMP(field) CMPWITH(field, ne_strcasecmp)
 
 /* As specified by RFC 2616, section 3.2.3. */
 int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2)
 {
     int n;
     
-    if (u1->path[0] == '\0' && strcmp(u2->path, "/") == 0)
-	return 0;
-    if (u2->path[0] == '\0' && strcmp(u1->path, "/") == 0)
-	return 0;
-
     CMP(path);
     CASECMP(host);
     CASECMP(scheme);
-    if (u1->port > u2->port)
-	return 1;
-    else if (u1->port < u2->port)
-	return -1;
-    return 0;
+    CMP(query);
+    CMP(fragment);
+    CMP(userinfo);
+
+    return u2->port - u1->port;
 }
 
 #undef CMP
 #undef CASECMP
+#undef CMPWITH
 
 #ifndef WIN32
 #undef min
