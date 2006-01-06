@@ -1,6 +1,6 @@
 /* 
    String handling tests
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -503,6 +503,92 @@ static int printing(void)
     return OK;
 }
 
+static int casecmp(void)
+{
+    static const struct {
+        const char *left, *right;
+        int expect;
+    } ts[] = {
+        { "abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0 },
+        { "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", 0 },
+        { "foo", "bar", 1 },
+        { "!#:[@\377", "!#:[@\377", 0 },
+        { "bar", "foo", -1 },
+        { "foop", "foo", 1 },
+        { "foo", "foop", -1 },
+        { NULL, NULL, 0 }
+    };
+    size_t n;
+    
+    for (n = 0; ts[n].left; n++) {
+        int actual;
+
+        actual = ne_strcasecmp(ts[n].left, ts[n].right);
+        
+        ONV(ts[n].expect == 0 && actual != 0,
+            ("strcasecmp(%s, %s) gave %d, expected 0",
+             ts[n].left, ts[n].right, actual));
+
+        ONV(ts[n].expect > 0 && actual <= 0,
+            ("strcasecmp(%s, %s) gave %d, expected > 0",
+             ts[n].left, ts[n].right, actual));
+
+        ONV(ts[n].expect < 0 && actual >= 0,
+            ("strcasecmp(%s, %s) gave %d, expected < 0",
+             ts[n].left, ts[n].right, actual));
+    }
+
+    ONN("comparison of identical pointers did not give zero",
+        ne_strcasecmp(ts[0].left, ts[0].left) != 0);
+
+    return OK;
+}
+
+static int casencmp(void)
+{
+    static const struct {
+        const char *left, *right;
+        size_t n;
+        int expect;
+    } ts[] = {
+        { "abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 30, 0 },
+        { "abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 0 }, 
+        { "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", 0, 0 },
+        { "foo", "bar", 3, 1 },
+        { "bar", "foo", 4, -1 },
+        { "bar", "foo", 3, -1 },
+        { "foop", "foo", 4, 1 },
+        { "foo", "foop", 4, -1 },
+        { "bee", "bar", 0, 0},
+        { NULL, NULL, 0, 0 }
+    };
+    size_t n;
+    
+    for (n = 0; ts[n].left; n++) {
+        int actual;
+
+        actual = ne_strncasecmp(ts[n].left, ts[n].right, ts[n].n);
+        
+        ONV(ts[n].expect == 0 && actual != 0,
+            ("strncasecmp(%s, %s, %" NE_FMT_SIZE_T ") gave %d, expected 0",
+             ts[n].left, ts[n].right, ts[n].n, actual));
+
+        ONV(ts[n].expect > 0 && actual <= 0,
+            ("strncasecmp(%s, %s, %" NE_FMT_SIZE_T ") gave %d, expected > 0",
+             ts[n].left, ts[n].right, ts[n].n, actual));
+
+        ONV(ts[n].expect < 0 && actual >= 0,
+            ("strncasecmp(%s, %s, %" NE_FMT_SIZE_T ") gave %d, expected < 0",
+             ts[n].left, ts[n].right, ts[n].n, actual));
+    }
+
+    ONN("comparison of identical pointers did not give zero",
+        ne_strncasecmp(ts[0].left, ts[0].left, 5) != 0);
+
+    return OK;
+}
+
+
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -527,6 +613,8 @@ ne_test tests[] = {
     T(base64),
     T(unbase64),
     T(printing),
+    T(casecmp),
+    T(casencmp),
     T(NULL)
 };
 
