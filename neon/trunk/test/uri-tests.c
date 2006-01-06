@@ -137,69 +137,73 @@ static int compares(void)
     return OK;
 }
 
-/* Checks that a URI comparison of 'u1' and 'u2', which have differing
- * 'field', doesn't compare to equal; and that they are ordered
- * correctly. */
-static int cmp_differ(const char *field,
-		      const ne_uri *u1, const ne_uri *u2)
-{
-    ONV(ne_uri_cmp(u1, u2) == 0,
-	("URIs with different %s were equal", field));
-
-    ONV(ne_uri_cmp(u2, u1) == 0,
-	("URIs with different %s were equal (reversed)", field));
-
-    /* relies on strcmp return value being of equal magnitude when
-     * arguments are reversed; not sure if this is portable
-     * assumption. */
-    ONV(ne_uri_cmp(u1, u2) + ne_uri_cmp(u2, u1) != 0,
-	("relative ordering of URIs with different %s incorrect", field));
-
-    return OK;
-}
-
 static int cmp(void)
 {
-    ne_uri alpha, beta;
+    static const struct {
+        const char *left, *right;
+    } eq[] = {
+        { "http://example.com/alpha", "http://example.com/alpha" },
+        { "//example.com/alpha", "//example.com/alpha" },
+        { "http://example.com/alpha#foo", "http://example.com/alpha#foo" },
+        { "http://example.com/alpha?bar", "http://example.com/alpha?bar" },
+        { "http://jim@example.com/alpha", "http://jim@example.com/alpha" },
+        { "HTTP://example.com/alpha", "http://example.com/alpha" },
+        { "http://example.com/", "http://example.com" },
+        { "http://Example.Com/", "http://example.com" },
+        { NULL, NULL}
+    }, diff[] = {
+        { "http://example.com/alpha", "http://example.com/beta" },
+        { "http://example.com/alpha", "https://example.com/alpha" },
+        { "http://example.com/alpha", "http://www.example.com/alpha" },
+        { "http://example.com:443/alpha", "http://example.com:8080/alpha" },
+        { "http://example.com/alpha", "http://jim@example.com/alpha" },
+        { "http://jim@example.com/alpha", "http://example.com/alpha" },
+        { "http://bobexample.com/alpha", "http://jim@example.com/alpha" },
+        { "http://example.com/alpha", "http://example.com/alpha?fish" },
+        { "http://example.com/alpha?fish", "http://example.com/alpha" },
+        { "http://example.com/alpha?fish", "http://example.com/alpha?food" },
+        { "http://example.com/alpha", "http://example.com/alpha#foo" },
+        { "http://example.com/alpha#foo", "http://example.com/alpha" },
+        { "http://example.com/alpha#bar", "http://example.com/alpha#foo" },
+        { "http://example.com/alpha", "//example.com/alpha" },
+        { "http://example.com/alpha", "///alpha" },
+        { NULL, NULL}
+    };
+    size_t n;
+
+    for (n = 0; eq[n].left; n++) {
+        ne_uri alpha, beta;
     
-    alpha.path = "/alpha";
-    alpha.scheme = "http";
-    alpha.host = "example.com";
-    alpha.port = 80;
+        ONV(ne_uri_parse(eq[n].left, &alpha),
+            ("could not parse left URI '%s'", eq[n].left));
 
-    beta = alpha; /* structure copy. */
+        ONV(ne_uri_parse(eq[n].right, &beta),
+            ("could not parse right URI '%s'", eq[n].right));
 
-    ONN("equal URIs not equal", ne_uri_cmp(&alpha, &beta) != 0);
+        ONV(ne_uri_cmp(&alpha, &beta) != 0,
+            ("URIs '%s' and '%s' did not compare as equal",
+             eq[n].left, eq[n].right));
 
-    beta.path = "/beta";
-    CALL(cmp_differ("path", &alpha, &beta));
+        ne_uri_free(&alpha);
+        ne_uri_free(&beta);
+    }
 
-    beta = alpha; beta.scheme = "https";
-    CALL(cmp_differ("scheme", &alpha, &beta));
+    for (n = 0; diff[n].left; n++) {
+        ne_uri alpha, beta;
     
-    beta = alpha; beta.port = 433;
-    CALL(cmp_differ("port", &alpha, &beta));
+        ONV(ne_uri_parse(diff[n].left, &alpha),
+            ("could not parse left URI '%s'", diff[n].left));
 
-    beta = alpha; beta.host = "fish.com";
-    CALL(cmp_differ("host", &alpha, &beta));
+        ONV(ne_uri_parse(diff[n].right, &beta),
+            ("could not parse right URI '%s'", diff[n].right));
 
-    beta = alpha; beta.host = "EXAMPLE.CoM";
-    ONN("hostname comparison not case-insensitive",
-	ne_uri_cmp(&alpha, &beta) != 0);
-    
-    beta = alpha; beta.scheme = "HtTp";
-    ONN("scheme comparison not case-insensitive",
-	ne_uri_cmp(&alpha, &beta) != 0);
-    
-    beta = alpha; beta.path = ""; alpha.path = "/";
-    ONN("empty abspath doesn't match '/'",
-	ne_uri_cmp(&alpha, &beta) != 0);
-    ONN("'/' doesn't match empty abspath",
-	ne_uri_cmp(&beta, &alpha) != 0);
+        ONV(ne_uri_cmp(&alpha, &beta) == 0,
+            ("URIs '%s' and '%s' did not compare as different",
+             diff[n].left, diff[n].right));
 
-    beta = alpha; alpha.path = ""; beta.path = "/foo";
-    ONN("empty abspath matched '/foo'", ne_uri_cmp(&alpha, &beta) == 0);
-    ONN("'/foo' matched empty abspath ", ne_uri_cmp(&beta, &alpha) == 0);
+        ne_uri_free(&alpha);
+        ne_uri_free(&beta);
+    }
 
     return OK;
 }
