@@ -157,13 +157,10 @@ static int cmp(void)
         { "http://example.com/alpha", "http://www.example.com/alpha" },
         { "http://example.com:443/alpha", "http://example.com:8080/alpha" },
         { "http://example.com/alpha", "http://jim@example.com/alpha" },
-        { "http://jim@example.com/alpha", "http://example.com/alpha" },
-        { "http://bobexample.com/alpha", "http://jim@example.com/alpha" },
+        { "http://bob@example.com/alpha", "http://jim@example.com/alpha" },
         { "http://example.com/alpha", "http://example.com/alpha?fish" },
-        { "http://example.com/alpha?fish", "http://example.com/alpha" },
         { "http://example.com/alpha?fish", "http://example.com/alpha?food" },
         { "http://example.com/alpha", "http://example.com/alpha#foo" },
-        { "http://example.com/alpha#foo", "http://example.com/alpha" },
         { "http://example.com/alpha#bar", "http://example.com/alpha#foo" },
         { "http://example.com/alpha", "//example.com/alpha" },
         { "http://example.com/alpha", "///alpha" },
@@ -173,16 +170,24 @@ static int cmp(void)
 
     for (n = 0; eq[n].left; n++) {
         ne_uri alpha, beta;
-    
+        int r1, r2;
+
         ONV(ne_uri_parse(eq[n].left, &alpha),
             ("could not parse left URI '%s'", eq[n].left));
 
         ONV(ne_uri_parse(eq[n].right, &beta),
             ("could not parse right URI '%s'", eq[n].right));
 
-        ONV(ne_uri_cmp(&alpha, &beta) != 0,
-            ("URIs '%s' and '%s' did not compare as equal",
-             eq[n].left, eq[n].right));
+        r1 = ne_uri_cmp(&alpha, &beta); 
+        r2 = ne_uri_cmp(&beta, &alpha); 
+
+        ONV(r1 != 0,
+            ("cmp('%s', '%s') = %d not zero",
+             eq[n].left, eq[n].right, r1));
+
+        ONV(r2 != 0,
+            ("cmp('%s', '%s') = %d not zero",
+             eq[n].right, eq[n].left, r2));
 
         ne_uri_free(&alpha);
         ne_uri_free(&beta);
@@ -190,16 +195,24 @@ static int cmp(void)
 
     for (n = 0; diff[n].left; n++) {
         ne_uri alpha, beta;
-    
+        int r1, r2;
+
         ONV(ne_uri_parse(diff[n].left, &alpha),
             ("could not parse left URI '%s'", diff[n].left));
 
         ONV(ne_uri_parse(diff[n].right, &beta),
             ("could not parse right URI '%s'", diff[n].right));
 
-        ONV(ne_uri_cmp(&alpha, &beta) == 0,
-            ("URIs '%s' and '%s' did not compare as different",
+        r1 = ne_uri_cmp(&alpha, &beta); 
+        r2 = ne_uri_cmp(&beta, &alpha); 
+
+        ONV(r1 == 0,
+            ("'%s' and '%s' did not compare as different",
              diff[n].left, diff[n].right));
+
+        ONV(r1 + r2 != 0,
+            ("'%s' and '%s' did not compare reflexively (%d vs %d)",
+             diff[n].left, diff[n].right, r1, r2));
 
         ne_uri_free(&alpha);
         ne_uri_free(&beta);
