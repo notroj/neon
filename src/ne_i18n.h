@@ -1,6 +1,6 @@
 /* 
    Internationalization of neon
-   Copyright (C) 2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2005-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -26,17 +26,28 @@
 
 NE_BEGIN_DECLS
 
-/* Initialize translated error messages within neon.  This call is
- * strictly only necessary if this copy of the neon library has been
- * installed into a different prefix than the gettext() implementation
- * on which it depends for i18n purposes.  If this call is not made,
- * the message catalogs will not be found in that case, but the
- * library will operate otherwise correctly (albeit giving
- * English-only error messages).
+/* Initialize translated error messages within neon.  If 'encoding' is
+ * non-NULL, it specifies the character encoding for the generated
+ * translated strings.  If it is NULL, the appropriate character
+ * encoding for the locale will be used.
  *
- * If 'encoding' is non-NULL, it specifies the character encoding for
- * the generated translated strings.  If it is NULL, the appropriate
- * character encoding for the locale will be used. */
+ * This call is only strictly necessary if either:
+ *
+ * a) neon has been installed into a different prefix than the
+ * gettext() implementation on which it depends for i18n purposes, or
+ *
+ * b) the caller requires that translated messages are in a particular
+ * character encoding.
+ *
+ * If ne_i18n_init() is never called, the message catalogs will not be
+ * found if case (a) applies (and so English error messages will be
+ * used), and will use the default character encoding specified by the
+ * process locale.  The library will otherwise operate correctly.
+ *
+ * Note that the encoding used is a process-global setting and so
+ * results may be unexpected if other users of neon within the process
+ * call ne_i18n_init() with a different encoding parameter.
+ */
 void ne_i18n_init(const char *encoding);
 
 NE_END_DECLS
