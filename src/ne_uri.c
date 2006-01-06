@@ -137,9 +137,9 @@ int ne_path_has_trailing_slash(const char *uri)
 unsigned int ne_uri_defaultport(const char *scheme)
 {
     /* RFC2616/3.2.3 says use case-insensitive comparisons here. */
-    if (strcasecmp(scheme, "http") == 0)
+    if (ne_strcasecmp(scheme, "http") == 0)
 	return 80;
-    else if (strcasecmp(scheme, "https") == 0)
+    else if (ne_strcasecmp(scheme, "https") == 0)
 	return 443;
     else
 	return 0;
@@ -531,7 +531,7 @@ int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2)
 /* TODO: implement properly */
 int ne_path_compare(const char *a, const char *b) 
 {
-    int ret = strcasecmp(a, b);
+    int ret = ne_strcasecmp(a, b);
     if (ret) {
 	/* This logic says: "If the lengths of the two URIs differ by
 	 * exactly one, and the LONGER of the two URIs has a trailing

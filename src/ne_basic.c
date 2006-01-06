@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -269,9 +269,9 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
     /* set subtype, losing any trailing whitespace */
     ct->subtype = ne_shave(stype, " \t");
     
-    if (ct->charset == NULL && strcasecmp(ct->type, "text") == 0) {
+    if (ct->charset == NULL && ne_strcasecmp(ct->type, "text") == 0) {
         /* 3280§3.1: text/xml without charset implies us-ascii. */
-        if (strcasecmp(ct->subtype, "xml") == 0)
+        if (ne_strcasecmp(ct->subtype, "xml") == 0)
             ct->charset = "us-ascii";
         /* 2616§3.7.1: subtypes of text/ default to charset ISO-8859-1. */
         else

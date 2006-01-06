@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -834,20 +834,20 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     while (tokenize(&pnt, &key, &val, NULL, 0) == 0) {
 	val = ne_shave(val, "\"");
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Pair: [%s] = [%s]\n", key, val);
-	if (strcasecmp(key, "qop") == 0) {
+	if (ne_strcasecmp(key, "qop") == 0) {
             qop_value = val;
-            if (strcasecmp(val, "auth") == 0) {
+            if (ne_strcasecmp(val, "auth") == 0) {
 		qop = auth_qop_auth;
 	    } else {
 		qop = auth_qop_none;
 	    }
-	} else if (strcasecmp(key, "nextnonce") == 0) {
+	} else if (ne_strcasecmp(key, "nextnonce") == 0) {
 	    nextnonce = val;
-	} else if (strcasecmp(key, "rspauth") == 0) {
+	} else if (ne_strcasecmp(key, "rspauth") == 0) {
 	    rspauth = val;
-	} else if (strcasecmp(key, "cnonce") == 0) {
+	} else if (ne_strcasecmp(key, "cnonce") == 0) {
 	    cnonce = val;
-	} else if (strcasecmp(key, "nc") == 0) { 
+	} else if (ne_strcasecmp(key, "nc") == 0) { 
 	    nc = val;
 	    if (sscanf(val, "%x", &nonce_count) != 1) {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Couldn't find nonce count.\n");
@@ -912,7 +912,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 			 "[%s]\n", rspauth);
 
 		/* And... do they match? */
-		okay = (strcasecmp(rdig_md5_ascii, rspauth) == 0)?0:-1;
+		okay = (ne_strcasecmp(rdig_md5_ascii, rspauth) == 0)?0:-1;
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Matched: %s\n", okay?"nope":"YES!");
 	    }
 	}
@@ -956,20 +956,20 @@ static int auth_challenge(auth_session *sess, const char *value)
 	if (val == NULL) {
             auth_scheme scheme;
 
-	    if (strcasecmp(key, "basic") == 0) {
+	    if (ne_strcasecmp(key, "basic") == 0) {
 		scheme = auth_scheme_basic;
-	    } else if (strcasecmp(key, "digest") == 0) {
+	    } else if (ne_strcasecmp(key, "digest") == 0) {
 		scheme = auth_scheme_digest;
             }
 #ifdef HAVE_GSSAPI
-            else if (strcasecmp(key, "negotiate") == 0) {
+            else if (ne_strcasecmp(key, "negotiate") == 0) {
                 scheme = auth_scheme_gssapi;
             }
 #else
 #ifdef HAVE_SSPI
-            else if (strcasecmp(key, "negotiate") == 0) {
+            else if (ne_strcasecmp(key, "negotiate") == 0) {
                 scheme = auth_scheme_sspi_negotiate;
-            } else if (strcasecmp(key, "ntlm") == 0) {
+            } else if (ne_strcasecmp(key, "ntlm") == 0) {
                 scheme = auth_scheme_sspi_ntlm;
             }
 #endif
@@ -1010,29 +1010,29 @@ static int auth_challenge(auth_session *sess, const char *value)
 
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got pair: [%s] = [%s]\n", key, val);
 
-	if (strcasecmp(key, "realm") == 0) {
+	if (ne_strcasecmp(key, "realm") == 0) {
 	    chall->realm = val;
-	} else if (strcasecmp(key, "nonce") == 0) {
+	} else if (ne_strcasecmp(key, "nonce") == 0) {
 	    chall->nonce = val;
-	} else if (strcasecmp(key, "opaque") == 0) {
+	} else if (ne_strcasecmp(key, "opaque") == 0) {
 	    chall->opaque = val;
-	} else if (strcasecmp(key, "stale") == 0) {
+	} else if (ne_strcasecmp(key, "stale") == 0) {
 	    /* Truth value */
-	    chall->stale = (strcasecmp(val, "true") == 0);
-	} else if (strcasecmp(key, "algorithm") == 0) {
-	    if (strcasecmp(val, "md5") == 0) {
+	    chall->stale = (ne_strcasecmp(val, "true") == 0);
+	} else if (ne_strcasecmp(key, "algorithm") == 0) {
+	    if (ne_strcasecmp(val, "md5") == 0) {
 		chall->alg = auth_alg_md5;
-	    } else if (strcasecmp(val, "md5-sess") == 0) {
+	    } else if (ne_strcasecmp(val, "md5-sess") == 0) {
 		chall->alg = auth_alg_md5_sess;
 	    } else {
 		chall->alg = auth_alg_unknown;
 	    }
-	} else if (strcasecmp(key, "qop") == 0) {
+	} else if (ne_strcasecmp(key, "qop") == 0) {
             /* iterate over each token in the value */
             do {
                 const char *tok = ne_shave(ne_token(&val, ','), " \t");
                 
-                if (strcasecmp(tok, "auth") == 0) {
+                if (ne_strcasecmp(tok, "auth") == 0) {
                     chall->qop_auth = 1;
                 }
             } while (val);

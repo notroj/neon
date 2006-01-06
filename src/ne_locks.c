@@ -218,7 +218,7 @@ static void submit_lock(struct lh_req_cookie *lrc, struct ne_lock *lock)
 
     /* Check for dups */
     for (item = lrc->submit; item != NULL; item = item->next) {
-	if (strcasecmp(item->lock->token, lock->token) == 0)
+	if (ne_strcasecmp(item->lock->token, lock->token) == 0)
 	    return;
     }
 
@@ -414,7 +414,7 @@ int ne_unlock(ne_session *sess, const struct ne_lock *lock)
 
 static int parse_depth(const char *depth)
 {
-    if (strcasecmp(depth, "infinity") == 0) {
+    if (ne_strcasecmp(depth, "infinity") == 0) {
 	return NE_DEPTH_INFINITE;
     } else if (isdigit(depth[0])) {
 	return atoi(depth);
@@ -425,7 +425,7 @@ static int parse_depth(const char *depth)
 
 static long parse_timeout(const char *timeout)
 {
-    if (strcasecmp(timeout, "infinite") == 0) {
+    if (ne_strcasecmp(timeout, "infinite") == 0) {
 	return NE_TIMEOUT_INFINITE;
     } else if (strncasecmp(timeout, "Second-", 7) == 0) {
 	long to = strtol(timeout+7, NULL, 10);
