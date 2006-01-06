@@ -1,6 +1,6 @@
 /* 
    Handling of compressed HTTP responses
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -248,7 +248,7 @@ static int gz_reader(void *ud, const char *buf, size_t len)
         switch (ctx->state) {
         case NE_Z_BEFORE_DATA:
             hdr = ne_get_response_header(ctx->request, "Content-Encoding");
-            if (hdr && strcasecmp(hdr, "gzip") == 0) {
+            if (hdr && ne_strcasecmp(hdr, "gzip") == 0) {
                 /* response was truncated: return error. */
                 break;
             }
@@ -283,7 +283,7 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     case NE_Z_BEFORE_DATA:
 	/* work out whether this is a compressed response or not. */
         hdr = ne_get_response_header(ctx->request, "Content-Encoding");
-        if (hdr && strcasecmp(hdr, "gzip") == 0) {
+        if (hdr && ne_strcasecmp(hdr, "gzip") == 0) {
             int ret;
 	    NE_DEBUG(NE_DBG_HTTP, "compress: got gzipped stream.\n");
 
