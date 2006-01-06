@@ -1,6 +1,9 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   strcasecmp/strncasecmp implementations are:
+   Copyright (C) 1991, 1992, 1995, 1996, 1997 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -380,4 +383,51 @@ size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
 #endif
     str[size-1] = '\0';
     return strlen(str);
+}
+
+/* Locale-independent strcasecmp implementations. */
+
+static int ascii_tolower(unsigned char ch)
+{
+    return ch >= 'A' && ch <= 'Z' ? (ch | 0x20) : ch;
+}
+
+#define TOLOWER(ch) ascii_tolower(ch)
+
+int ne_strcasecmp(const char *s1, const char *s2)
+{
+    const unsigned char *p1 = (const unsigned char *) s1;
+    const unsigned char *p2 = (const unsigned char *) s2;
+    unsigned char c1, c2;
+
+    if (p1 == p2)
+        return 0;
+    
+    do {
+        c1 = TOLOWER(*p1++);
+        c2 = TOLOWER(*p2++);
+        if (c1 == '\0')
+            break;
+    } while (c1 == c2);
+    
+    return c1 - c2;
+}
+
+int ne_strncasecmp(const char *s1, const char *s2, size_t n)
+{
+    const unsigned char *p1 = (const unsigned char *) s1;
+    const unsigned char *p2 = (const unsigned char *) s2;
+    unsigned char c1, c2;
+    
+    if (p1 == p2 || n == 0)
+        return 0;
+    
+    do {
+        c1 = TOLOWER(*p1++);
+        c2 = TOLOWER(*p2++);
+        if (c1 == '\0' || c1 != c2)
+            return c1 - c2;
+    } while (--n > 0);
+    
+    return c1 - c2;
 }

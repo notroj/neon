@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -133,6 +133,16 @@ size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)
 /* Wrapper for vsnprintf. */
 size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
     ne_attribute((format(printf, 3, 0)));
+
+/* Implementations of strcasecmp and strncasecmp which behave as
+ * defined by the POSIX strcasecmp() and strncasecmp() when in the
+ * POSIX locale; i.e. ignoring the process locale. */
+
+/* Compares 's1' and 's2', ignoring differences in case. */
+int ne_strcasecmp(const char *s1, const char *s2);
+/* Compares up to 'n' characters of 's1' and 's2', ignoring
+ * differences in case. */
+int ne_strncasecmp(const char *s1, const char *s2, size_t n);
 
 NE_END_DECLS
 
