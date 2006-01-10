@@ -484,6 +484,7 @@ int ne_sspi_authenticate(void *context, const char *base64Token, char **response
         SecBuffer inBuffer;
 
         if (!sspiContext->continueNeeded) {
+            freeBuffer(&outBufferDesc);
             NE_DEBUG(NE_DBG_HTTPAUTH, "sspi: Got an unexpected token.\n");
             return -1;
         }
@@ -492,6 +493,7 @@ int ne_sspi_authenticate(void *context, const char *base64Token, char **response
 
         status = base64ToBuffer(base64Token, &inBufferDesc);
         if (status) {
+            freeBuffer(&outBufferDesc);
             return status;
         }
 
@@ -501,11 +503,26 @@ int ne_sspi_authenticate(void *context, const char *base64Token, char **response
                                       sspiContext->serverName, contextFlags,
                                       &inBufferDesc, &(sspiContext->context),
                                       &outBufferDesc);
+        if (securityStatus == SEC_E_OK)
+        {
+            sspiContext->authfinished = 1;
+        }
         freeBuffer(&inBufferDesc);
     } else {
         if (sspiContext->continueNeeded) {
+            freeBuffer(&outBufferDesc);
             NE_DEBUG(NE_DBG_HTTPAUTH, "sspi: Expected a token from server.\n");
             return -1;
+        }
+        if (sspiContext->authfinished && (sspiContext->credentials.dwLower || sspiContext->credentials.dwUpper)) {
+            if (sspiContext->authfinished)
+            {
+                freeBuffer(&outBufferDesc);
+                sspiContext->authfinished = 0;
+                NE_DEBUG(NE_DBG_HTTPAUTH,"sspi: failing because starting over from failed try.\n");
+                return -1;
+            }
+            sspiContext->authfinished = 0;
         }
 
         /* Reset any existing context since we are starting over */
@@ -513,9 +530,10 @@ int ne_sspi_authenticate(void *context, const char *base64Token, char **response
 
         if (acquireCredentialsHandle
             (&sspiContext->credentials, sspiContext->mechanism) != SEC_E_OK) {
-            NE_DEBUG(NE_DBG_HTTPAUTH,
-                     "sspi: acquireCredentialsHandle failed.\n");
-            return -1;
+                freeBuffer(&outBufferDesc);
+                NE_DEBUG(NE_DBG_HTTPAUTH,
+                    "sspi: acquireCredentialsHandle failed.\n");
+                return -1;
         }
 
         securityStatus =
