@@ -490,15 +490,15 @@ char *ne_path_escape(const char *path)
 
 #undef path_escape_ch
 
-#define CMPWITH(field, func) \
-    do {                     \
-        if (u1->field) { \
-            if (!u2->field) return -1; \
+#define CMPWITH(field, func)                    \
+    do {                                        \
+        if (u1->field) {                        \
+            if (!u2->field) return -1;          \
             n = func(u1->field, u2->field);     \
             if (n) return n;                    \
-        } else if (u2->field) { \
-            return 1; \
-        } \
+        } else if (u2->field) {                 \
+            return 1;                           \
+        }                                       \
     } while (0)
 
 #define CMP(field) CMPWITH(field, strcmp)
