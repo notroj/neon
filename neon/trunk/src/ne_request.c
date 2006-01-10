@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -27,10 +27,12 @@
 
 #include <sys/types.h>
 
+#ifdef HAVE_SYS_LIMITS_H
+#include <sys/limits.h>
+#endif
 #ifdef HAVE_LIMITS_H
 #include <limits.h> /* for UINT_MAX etc */
 #endif
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -73,6 +75,8 @@ struct body_reader {
 
 #if !defined(LONG_LONG_MAX) && defined(LLONG_MAX)
 #define LONG_LONG_MAX LLONG_MAX
+#elif !defined(LONG_LONG_MAX) && defined(LONGLONG_MAX)
+#define LONG_LONG_MAX LONGLONG_MAX
 #endif
 
 #ifdef NE_LFS
