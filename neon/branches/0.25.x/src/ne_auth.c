@@ -1269,6 +1269,11 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 	    ret = sess->spec->fail_code;
 	}
     }
+#ifdef HAVE_SSPI
+    else if (sess->sspi_context) {
+        ne_sspi_clear_context(sess->sspi_context);
+    }
+#endif
 
     return ret;
 }
