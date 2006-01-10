@@ -1273,6 +1273,9 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 	    ret = sess->spec->fail_code;
 	}
     }
+    else {
+        ne_sspi_clear_context(sess->sspi_context);
+    }
 
     return ret;
 }
