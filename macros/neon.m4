@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2005 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2006 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -560,7 +560,8 @@ dnl Is strerror_r present; if so, which variant
 AC_REQUIRE([AC_FUNC_STRERROR_R])
 
 AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h libintl.h \
-	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h],,,
+	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h \
+	sys/limits.h],,,
 [AC_INCLUDES_DEFAULT
 /* netinet/tcp.h requires netinet/in.h on some platforms. */
 #ifdef HAVE_NETINET_IN_H
