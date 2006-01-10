@@ -69,6 +69,7 @@ struct lh_req_cookie {
 
 /* Context for PROPFIND/lockdiscovery callbacks */
 struct discover_ctx {
+    ne_propfind_handler *phandler;
     ne_lock_result results;
     void *userdata;
     ne_buffer *cdata;
@@ -502,8 +503,8 @@ end_element_common(struct ne_lock *l, int state, const char *cdata)
 static int end_element_ldisc(void *userdata, int state, 
                              const char *nspace, const char *name)
 {
-    struct ne_lock *lock = ne_propfind_current_private(userdata);
     struct discover_ctx *ctx = userdata;
+    struct ne_lock *lock = ne_propfind_current_private(ctx->phandler);
 
     return end_element_common(lock, state, ctx->cdata->data);
 }
@@ -651,13 +652,12 @@ int ne_lock_discover(ne_session *sess, const char *uri,
     ctx.results = callback;
     ctx.userdata = userdata;
     ctx.cdata = ne_buffer_create();
-
-    handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
+    ctx.phandler = handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
 
     ne_propfind_set_private(handler, ld_create, &ctx);
     
     ne_xml_push_handler(ne_propfind_get_parser(handler), 
-                        ld_startelm, ld_cdata, end_element_ldisc, handler);
+                        ld_startelm, ld_cdata, end_element_ldisc, &ctx);
     
     ret = ne_propfind_named(handler, lock_props, discover_results, &ctx);
     
