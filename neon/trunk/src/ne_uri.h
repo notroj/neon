@@ -66,10 +66,10 @@ typedef struct {
  * Returns zero on success, non-zero on parse error.  On successful or
  * error return, all the 'char *' fields of *parsed are either set to
  * NULL, or point to malloc-allocated NUL-terminated strings.
- * ne_uri_free can be used to free the structure after use.*/
+ * ne_uri_free can be used to free the structure after use. */
 int ne_uri_parse(const char *uri, ne_uri *parsed);
 
-/* Turns a URI structure back into a string.  String is
+/* Turns a URI structure back into a string.  The returned string is
  * malloc-allocated, and must be freed by the caller. */
 char *ne_uri_unparse(const ne_uri *uri);
 
