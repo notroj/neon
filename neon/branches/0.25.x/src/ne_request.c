@@ -27,10 +27,12 @@
 
 #include <sys/types.h>
 
+#ifdef HAVE_SYS_LIMITS_H
+#include <sys/limits.h>
+#endif
 #ifdef HAVE_LIMITS_H
 #include <limits.h> /* for UINT_MAX etc */
 #endif
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -73,6 +75,8 @@ struct body_reader {
 
 #if !defined(LONG_LONG_MAX) && defined(LLONG_MAX)
 #define LONG_LONG_MAX LLONG_MAX
+#elif !defined(LONG_LONG_MAX) && defined(LONGLONG_MAX)
+#define LONG_LONG_MAX LONGLONG_MAX
 #endif
 
 #ifdef NE_LFS
