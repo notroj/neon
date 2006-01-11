@@ -289,7 +289,8 @@ static int parse(void)
         { "ftp://jim:bob@jim.com", "ftp", "jim.com", 0, "/", "jim:bob", NULL, NULL },
         { "ldap://fred:bloggs@fish.com/foobar", "ldap", "fish.com", 0, 
           "/foobar", "fred:bloggs", NULL, NULL },
-        /* IPv6 hex strings allowed even if IPv6 not supported. */
+
+        /* IPv6 literals: */
         { "http://[::1]/foo", "http", "[::1]", 0, "/foo", NULL, NULL, NULL },
         { "http://[a:a:a:a::0]/foo", "http", "[a:a:a:a::0]", 0, "/foo", NULL, NULL, NULL },
         { "http://[::1]:8080/bar", "http", "[::1]", 8080, "/bar", NULL, NULL, NULL },
@@ -304,6 +305,10 @@ static int parse(void)
          * followed by a path of "/". */
         { "foo:///", "foo", "", 0, "/", NULL, NULL, NULL },
         { "///", NULL, "", 0, "/", NULL, NULL, NULL },
+        /* port grammar is "*DIGIT" so may be empty: */        
+        { "ftp://[feed::cafe]:", "ftp", "[feed::cafe]", 0, "/", NULL, NULL, NULL },
+        { "ftp://[feed::cafe]:/", "ftp", "[feed::cafe]", 0, "/", NULL, NULL, NULL },
+        { "http://foo:/", "http", "foo", 0, "/", NULL, NULL, NULL },
 
         /* URI-references: */
         { "//foo.com/bar", NULL, "foo.com", 0, "/bar", NULL, NULL, NULL },
@@ -321,13 +326,13 @@ static int parse(void)
 	ne_uri res;
 	const struct test_uri *e = &uritests[n];
 	ONV(ne_uri_parse(e->uri, &res) != 0,
-	    ("%s: parse failed", e->uri));
+	    ("'%s': parse failed", e->uri));
 	ONV(res.port != e->port,
-	    ("%s: parsed port was %d not %d", e->uri, res.port, e->port));
+	    ("'%s': parsed port was %d not %d", e->uri, res.port, e->port));
 	ONCMP(e->scheme, res.scheme, e->uri, "scheme");
 	ONCMP(e->host, res.host, e->uri, "host");
 	ONV(strcmp(res.path, e->path),
-	    ("%s: parsed path was %s not %s", e->uri, res.path, e->path));
+	    ("'%s': parsed path was '%s' not '%s'", e->uri, res.path, e->path));
         ONCMP(e->userinfo, res.userinfo, e->uri, "userinfo");
         ONCMP(e->query, res.query, e->uri, "query");
         ONCMP(e->fragment, res.fragment, e->uri, "fragment");
