@@ -1,3 +1,10 @@
+Changes in release 0.25.5:
+* ne_ssl_clicert_decrypt(): catch and fail to load a client cert
+  with mismatched key/cert pair.
+* Fix build issue on AIX 5.1.
+* Fix warnings if built against OpenSSL >= 0.9.8.
+* Win32: fix issues in SSPI implementation (Stefan Küng).
+
 Changes in release 0.25.4:
 * GSSAPI fixes for non-MIT implementations (Mikhail Teterin).
 * Fix ne_print_request_header() et al to use 8K buffer size on all
