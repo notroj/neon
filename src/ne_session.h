@@ -29,7 +29,7 @@
 #include "ne_defs.h"
 #include "ne_socket.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 typedef struct ne_session_s ne_session;
 
@@ -184,6 +184,6 @@ void ne_set_error(ne_session *sess, const char *format, ...)
 /* Retrieve the error string for the session */
 const char *ne_get_error(ne_session *sess);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_SESSION_H */

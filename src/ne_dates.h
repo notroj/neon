@@ -1,6 +1,6 @@
 /* 
    Date manipulation routines
-   Copyright (C) 1999-2002, 2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,14 +19,14 @@
 
 */
 
-#ifndef NE_DATES_H
-#define NE_DATES_H
+#ifndef DATES_H
+#define DATES_H
 
 #include <sys/types.h>
 
 #include "ne_defs.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* Date manipulation routines as per RFC1123 and RFC1036 */
 
@@ -49,6 +49,6 @@ time_t ne_asctime_parse(const char *date);
 /* Parse an HTTP-date as per RFC2616 */
 time_t ne_httpdate_parse(const char *date);
 
-NE_END_DECLS
+END_NEON_DECLS
 
-#endif /* NE_DATES_H */
+#endif /* DATES_H */

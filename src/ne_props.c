@@ -1,6 +1,6 @@
 /* 
    WebDAV property manipulation
-   Copyright (C) 2000-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2000-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -33,7 +33,7 @@
 #include "ne_props.h"
 #include "ne_basic.h"
 #include "ne_locks.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 /* don't store flat props with a value > 10K */
 #define MAX_FLATPROP_LEN (102400)
@@ -88,7 +88,7 @@ struct ne_prop_result_set_s {
     struct propstat *pstats;
     int numpstats, counter;
     void *private;
-    ne_uri uri;
+    char *href;
 };
 
 #define MAX_PROP_COUNTER (1024)
@@ -345,15 +345,15 @@ const ne_status *ne_propset_status(const ne_prop_result_set *set,
     }
 }
 
-static void *start_response(void *userdata, const ne_uri *uri)
+static void *start_response(void *userdata, const char *href)
 {
     ne_prop_result_set *set = ne_calloc(sizeof(*set));
     ne_propfind_handler *hdl = userdata;
 
-    ne_uri_copy(&set->uri, uri);
+    set->href = ne_strdup(href);
 
     if (hdl->private_creator != NULL) {
-	set->private = hdl->private_creator(hdl->private_userdata, &set->uri);
+	set->private = hdl->private_creator(hdl->private_userdata, href);
     }
 
     hdl->current = set;
@@ -517,12 +517,10 @@ static void free_propset(ne_prop_result_set *set)
 	struct propstat *p = &set->pstats[n];
 
 	for (m = 0; m < p->numprops; m++) {
-            if (p->props[m].nspace) ne_free(p->props[m].nspace);
-            ne_free(p->props[m].name);
-            if (p->props[m].lang) ne_free(p->props[m].lang);
-            if (p->props[m].value) ne_free(p->props[m].value);
-            p->props[m].nspace = p->props[m].lang = 
-                p->props[m].value = NULL;
+	    NE_FREE(p->props[m].nspace);
+	    ne_free(p->props[m].name);
+	    NE_FREE(p->props[m].lang);
+	    NE_FREE(p->props[m].value);
 	}
 
 	if (p->status.reason_phrase)
@@ -533,7 +531,7 @@ static void free_propset(ne_prop_result_set *set)
 
     if (set->pstats)
 	ne_free(set->pstats);
-    ne_uri_free(&set->uri);
+    ne_free(set->href);
     ne_free(set);
 }
 
@@ -546,7 +544,7 @@ static void end_response(void *userdata, void *resource,
 
     /* Pass back the results for this resource. */
     if (handler->callback && set->numpstats > 0)
-	handler->callback(handler->userdata, &set->uri, set);
+	handler->callback(handler->userdata, set->href, set);
 
     /* Clean up the propset tree we've just built. */
     free_propset(set);
@@ -557,13 +555,9 @@ ne_propfind_handler *
 ne_propfind_create(ne_session *sess, const char *uri, int depth)
 {
     ne_propfind_handler *ret = ne_calloc(sizeof(ne_propfind_handler));
-    ne_uri base = {0};
-
-    ne_fill_server_uri(sess, &base);
-    base.path = ne_strdup(uri);
 
     ret->parser = ne_xml_create();
-    ret->parser207 = ne_207_create(ret->parser, &base, ret);
+    ret->parser207 = ne_207_create(ret->parser, ret);
     ret->sess = sess;
     ret->body = ne_buffer_create();
     ret->request = ne_request_create(sess, "PROPFIND", uri);
@@ -581,8 +575,6 @@ ne_propfind_create(ne_session *sess, const char *uri, int depth)
     ne_buffer_concat(ret->body, 
 		    "<?xml version=\"1.0\" encoding=\"utf-8\"?>" EOL 
 		    "<propfind xmlns=\"DAV:\">", NULL);
-
-    ne_uri_free(&base);
 
     return ret;
 }

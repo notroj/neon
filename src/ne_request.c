@@ -49,7 +49,7 @@
 #include <unistd.h>
 #endif
 
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 #include "ne_alloc.h"
 #include "ne_request.h"
@@ -184,7 +184,7 @@ struct ne_request_s {
         ne_off_t progress; /* number of bytes read of response */
     } resp;
     
-    struct hook *private;
+    struct hook *private, *pre_send_hooks;
 
     /* response header fields */
     struct field *response_headers[HH_HASHSIZE];
@@ -203,7 +203,7 @@ struct ne_request_s {
     ne_status status;
 };
 
-static int open_connection(ne_session *sess);
+static int open_connection(ne_request *req);
 
 /* Returns hash value for header 'name', converting it to lower-case
  * in-place. */
@@ -335,6 +335,12 @@ void ne_hook_destroy_session(ne_session *sess,
     ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
 }
 
+/* Hack to fix ne_compress layer problems */
+void ne__reqhook_pre_send(ne_request *req, ne_pre_send_fn fn, void *userdata)
+{
+    ADD_HOOK(req->pre_send_hooks, fn, userdata);
+}
+
 void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
 {
     add_hook(&sess->private, id, NULL, userdata);
@@ -384,20 +390,18 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
             req->body.file.remain = req->body.file.length;
             return 0;
         } else {
-            char err[200], offstr[20];
+            char err[200];
 
             if (newoff == -1) {
                 /* errno was set */
                 ne_strerror(errno, err, sizeof err);
             } else {
                 strcpy(err, _("offset invalid"));
-            }
-            ne_snprintf(offstr, sizeof offstr, "%" FMT_NE_OFF_T,
-                        req->body.file.offset);
+            }                       
             ne_set_error(req->session, 
-                         _("Could not seek to offset %s"
+                         _("Could not seek to offset %" FMT_NE_OFF_T 
                            " of request body file: %s"), 
-                           offstr, err);
+                           req->body.file.offset, err);
             return -1;
         }
     }
@@ -749,6 +753,10 @@ void ne_request_destroy(ne_request *req)
 	next_hk = hk->next;
 	ne_free(hk);
     }
+    for (hk = req->pre_send_hooks; hk; hk = next_hk) {
+	next_hk = hk->next;
+	ne_free(hk);
+    }
 
     if (req->status.reason_phrase)
 	ne_free(req->status.reason_phrase);
@@ -902,6 +910,10 @@ static ne_buffer *build_request(ne_request *req)
 	ne_pre_send_fn fn = (ne_pre_send_fn)hk->fn;
 	fn(req, hk->userdata, buf);
     }
+    for (hk = req->pre_send_hooks; hk!=NULL; hk = hk->next) {
+	ne_pre_send_fn fn = (ne_pre_send_fn)hk->fn;
+	fn(req, hk->userdata, buf);
+    }
     
     ne_buffer_append(buf, "\r\n", 2);
     return buf;
@@ -963,8 +975,20 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     if (status->reason_phrase) ne_free(status->reason_phrase);
     memset(status, 0, sizeof *status);
 
-    if (ne_parse_statusline(buffer, status))
+    if (strncmp(buffer, "ICY ", 4) == 0 && strlen(buffer) > 8
+        && buffer[7] == ' ') {
+        /* Hack for ShoutCast support; will be conditional in future
+         * releases. */
+        status->code = atoi(buffer + 4);
+        status->major_version = 1;
+        status->minor_version = 0;
+        status->reason_phrase = ne_strclean(ne_strdup(buffer + 8));
+        status->klass = buffer[4] - '0';
+        NE_DEBUG(NE_DBG_HTTP, "[status-line] ICY protocol; code %d\n", 
+                 status->code);
+    } else if (ne_parse_statusline(buffer, status)) {
 	return aborted(req, _("Could not parse response status line."), 0);
+    }
 
     return 0;
 }
@@ -1000,7 +1024,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     /* Send the Request-Line and headers */
     NE_DEBUG(NE_DBG_HTTP, "Sending request-line and headers:\n");
     /* Open the connection if necessary */
-    ret = open_connection(sess);
+    ret = open_connection(req);
     if (ret) return ret;
 
     /* Allow retry if a persistent connection has been used. */
@@ -1487,8 +1511,9 @@ static const ne_inet_addr *resolve_next(ne_session *sess,
  * that once a connection to a particular network address has
  * succeeded, that address will be used first for the next attempt to
  * connect. */
-static int do_connect(ne_session *sess, struct host_info *host, const char *err)
+static int do_connect(ne_request *req, struct host_info *host, const char *err)
 {
+    ne_session *const sess = req->session;
     int ret;
 
     if ((sess->socket = ne_sock_create()) == NULL) {
@@ -1529,16 +1554,17 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
     return NE_OK;
 }
 
-static int open_connection(ne_session *sess) 
+static int open_connection(ne_request *req) 
 {
+    ne_session *sess = req->session;
     int ret;
     
     if (sess->connected) return NE_OK;
 
     if (!sess->use_proxy)
-	ret = do_connect(sess, &sess->server, _("Could not connect to server"));
+	ret = do_connect(req, &sess->server, _("Could not connect to server"));
     else
-	ret = do_connect(sess, &sess->proxy,
+	ret = do_connect(req, &sess->proxy,
 			 _("Could not connect to proxy server"));
 
     if (ret != NE_OK) return ret;
@@ -1547,11 +1573,11 @@ static int open_connection(ne_session *sess)
     /* Negotiate SSL layer if required. */
     if (sess->use_ssl && !sess->in_connect) {
         /* CONNECT tunnel */
-        if (sess->use_proxy)
+        if (req->session->use_proxy)
             ret = proxy_tunnel(sess);
         
         if (ret == NE_OK) {
-            ret = ne__negotiate_ssl(sess);
+            ret = ne__negotiate_ssl(req);
             if (ret != NE_OK)
                 ne_close_connection(sess);
         }

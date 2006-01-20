@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -40,7 +40,7 @@
 #include "ne_ssl.h"
 #include "ne_string.h"
 #include "ne_session.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 #include "ne_private.h"
 #include "ne_privssl.h"
@@ -238,7 +238,7 @@ static int match_hostname(char *cn, const char *hostname)
 	hostname = dot + 1;
 	cn += 2;
     }
-    return !ne_strcasecmp(cn, hostname);
+    return !strcasecmp(cn, hostname);
 }
 
 /* Check certificate identity.  Returns zero if identity matches; 1 if
@@ -309,7 +309,7 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 	} while (idx >= 0);
 	
 	if (lastidx < 0) {
-            /* no commonName attributes at all. */
+            /* no commonNmae attributes at all. */
             ne_buffer_destroy(cname);
 	    return -1;
         }
@@ -569,8 +569,9 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
 }
 
 /* For internal use only. */
-int ne__negotiate_ssl(ne_session *sess)
+int ne__negotiate_ssl(ne_request *req)
 {
+    ne_session *sess = ne_get_session(req);
     ne_ssl_context *ctx = sess->ssl_context;
     SSL *ssl;
     STACK_OF(X509) *chain;
@@ -685,11 +686,7 @@ void ne_ssl_trust_default_ca(ne_session *sess)
 {
     X509_STORE *store = SSL_CTX_get_cert_store(sess->ssl_context->ctx);
     
-#ifdef NE_SSL_CA_BUNDLE
-    X509_STORE_load_locations(store, NE_SSL_CA_BUNDLE, NULL);
-#else
     X509_STORE_set_default_paths(store);
-#endif
 }
 
 /* Find a friendly name in a PKCS12 structure the hard way, without

@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,14 +19,13 @@
 
 */
 
-#ifndef NE_207_H
-#define NE_207_H
+#ifndef DAV207_H
+#define DAV207_H
 
 #include "ne_xml.h"
 #include "ne_request.h" /* for ne_request */
-#include "ne_uri.h" /* for ne_uri */
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* The defined state integer for the '{DAV:}prop' element. */
 #define NE_207_STATE_PROP (50)
@@ -41,11 +40,11 @@ NE_BEGIN_DECLS
  * and failure description. */
 
 /* Start and end response callbacks trigger at the start and end of
- * each "response" within the multistatus body. 'uri' gives the URI
+ * each "response" within the multistatus body. 'href' gives the URI
  * of the resource which is subject of this response.  The return
  * value of a 'start_response' callback is passed as the 'response'
  * parameter to the corresponding 'end_response' parameter. */
-typedef void *ne_207_start_response(void *userdata, const ne_uri *uri);
+typedef void *ne_207_start_response(void *userdata, const char *href);
 typedef void ne_207_end_response(void *userdata, void *response,
                                  const ne_status *status,
                                  const char *description);
@@ -66,10 +65,8 @@ typedef void ne_207_end_propstat(void *userdata, void *propstat,
 typedef struct ne_207_parser_s ne_207_parser;
 
 /* Create 207 parser an add the handlers the the given parser's
- * handler stack.  URI references in the 207 response will be resolved
- * relative to the base URI 'base'. */
-ne_207_parser *ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
-                             void *userdata);
+ * handler stack. */
+ne_207_parser *ne_207_create(ne_xml_parser *parser, void *userdata);
 
 /* Register response handling callbacks. */
 void ne_207_set_response_handlers(ne_207_parser *p,
@@ -98,6 +95,6 @@ void *ne_207_get_current_response(ne_207_parser *p);
  * The request object is destroyed in both cases. */
 int ne_simple_request(ne_session *sess, ne_request *req);
 
-NE_END_DECLS
+END_NEON_DECLS
 
-#endif /* NE_207_H */
+#endif /* DAV207_H */

@@ -24,7 +24,7 @@
 
 #include "ne_session.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 typedef struct
 {
@@ -51,6 +51,6 @@ typedef struct
 int ne_acl_set(ne_session *sess, const char *uri,
 	       ne_acl_entry entries[], int numentries);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_ACL_H */

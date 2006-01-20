@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -48,7 +48,7 @@
 #endif
 
 #include "ne_dates.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 int ne_getmodtime(ne_session *sess, const char *uri, time_t *modtime) 
 {
@@ -239,20 +239,18 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
         return -1;
     }
 
-    ct->value = ne_strdup(value);
-    
-    stype = strchr(ct->value, '/');
+    ct->type = ct->value = ne_strdup(value);
 
+    stype = strchr(ct->value, '/');
     *stype++ = '\0';
-    ct->type = ct->value;
     ct->charset = NULL;
     
     sep = strchr(stype, ';');
 
     if (sep) {
 	char *tok;
-	/* look for the charset parameter. TODO; probably better to
-	 * hand-carve a parser than use ne_token/strstr/shave here. */
+
+	/* Look for the charset parameter: */
 	*sep++ = '\0';
 	do {
 	    tok = ne_qtoken(&sep, ';', "\"\'");
@@ -269,9 +267,9 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
     /* set subtype, losing any trailing whitespace */
     ct->subtype = ne_shave(stype, " \t");
     
-    if (ct->charset == NULL && ne_strcasecmp(ct->type, "text") == 0) {
-        /* 3280§3.1: text/xml without charset implies us-ascii. */
-        if (ne_strcasecmp(ct->subtype, "xml") == 0)
+    if (ct->charset == NULL && strcasecmp(ct->type, "text") == 0) {
+        /* 3023§3.1: text/xml without charset implies us-ascii. */
+        if (strcasecmp(ct->subtype, "xml") == 0)
             ct->charset = "us-ascii";
         /* 2616§3.7.1: subtypes of text/ default to charset ISO-8859-1. */
         else

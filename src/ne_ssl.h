@@ -27,7 +27,7 @@
 
 #include "ne_defs.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* A "distinguished name"; a unique name for some entity. */
 typedef struct ne_ssl_dname_s ne_ssl_dname;
@@ -162,6 +162,6 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
 /* Destroy an SSL context. */
 void ne_ssl_context_destroy(ne_ssl_context *ctx);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif

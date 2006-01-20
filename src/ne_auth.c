@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -57,7 +57,7 @@
 #include "ne_utils.h"
 #include "ne_alloc.h"
 #include "ne_uri.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 
 #ifdef HAVE_GSSAPI
 #ifdef HAVE_GSSAPI_GSSAPI_H
@@ -210,13 +210,11 @@ struct auth_request {
 static void clean_session(auth_session *sess) 
 {
     sess->can_handle = 0;
-    if (sess->basic) ne_free(sess->basic);
-    if (sess->nonce) ne_free(sess->nonce);
-    if (sess->cnonce) ne_free(sess->cnonce);
-    if (sess->opaque) ne_free(sess->opaque);
-    if (sess->realm) ne_free(sess->realm);
-    sess->realm = sess->basic = sess->cnonce = sess->nonce =
-        sess->opaque = NULL;
+    NE_FREE(sess->basic);
+    NE_FREE(sess->nonce);
+    NE_FREE(sess->cnonce);
+    NE_FREE(sess->opaque);
+    NE_FREE(sess->realm);
 #ifdef HAVE_GSSAPI
     {
         unsigned int major;
@@ -225,12 +223,10 @@ static void clean_session(auth_session *sess)
             gss_delete_sec_context(&major, &sess->gssctx, GSS_C_NO_BUFFER);
         
     }
-    if (sess->gssapi_token) ne_free(sess->gssapi_token);
-    sess->gssapi_token = NULL;
+    NE_FREE(sess->gssapi_token);
 #endif
 #ifdef HAVE_SSPI
-    if (sess->sspi_token) ne_free(sess->sspi_token);
-    sess->sspi_token = NULL;
+    NE_FREE(sess->sspi_token);
     ne_sspi_destroy_context(sess->sspi_context);
     sess->sspi_context = NULL;
 #endif
@@ -834,20 +830,20 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     while (tokenize(&pnt, &key, &val, NULL, 0) == 0) {
 	val = ne_shave(val, "\"");
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Pair: [%s] = [%s]\n", key, val);
-	if (ne_strcasecmp(key, "qop") == 0) {
+	if (strcasecmp(key, "qop") == 0) {
             qop_value = val;
-            if (ne_strcasecmp(val, "auth") == 0) {
+            if (strcasecmp(val, "auth") == 0) {
 		qop = auth_qop_auth;
 	    } else {
 		qop = auth_qop_none;
 	    }
-	} else if (ne_strcasecmp(key, "nextnonce") == 0) {
+	} else if (strcasecmp(key, "nextnonce") == 0) {
 	    nextnonce = val;
-	} else if (ne_strcasecmp(key, "rspauth") == 0) {
+	} else if (strcasecmp(key, "rspauth") == 0) {
 	    rspauth = val;
-	} else if (ne_strcasecmp(key, "cnonce") == 0) {
+	} else if (strcasecmp(key, "cnonce") == 0) {
 	    cnonce = val;
-	} else if (ne_strcasecmp(key, "nc") == 0) { 
+	} else if (strcasecmp(key, "nc") == 0) { 
 	    nc = val;
 	    if (sscanf(val, "%x", &nonce_count) != 1) {
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Couldn't find nonce count.\n");
@@ -912,7 +908,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 			 "[%s]\n", rspauth);
 
 		/* And... do they match? */
-		okay = (ne_strcasecmp(rdig_md5_ascii, rspauth) == 0)?0:-1;
+		okay = (strcasecmp(rdig_md5_ascii, rspauth) == 0)?0:-1;
 		NE_DEBUG(NE_DBG_HTTPAUTH, "Matched: %s\n", okay?"nope":"YES!");
 	    }
 	}
@@ -956,20 +952,20 @@ static int auth_challenge(auth_session *sess, const char *value)
 	if (val == NULL) {
             auth_scheme scheme;
 
-	    if (ne_strcasecmp(key, "basic") == 0) {
+	    if (strcasecmp(key, "basic") == 0) {
 		scheme = auth_scheme_basic;
-	    } else if (ne_strcasecmp(key, "digest") == 0) {
+	    } else if (strcasecmp(key, "digest") == 0) {
 		scheme = auth_scheme_digest;
             }
 #ifdef HAVE_GSSAPI
-            else if (ne_strcasecmp(key, "negotiate") == 0) {
+            else if (strcasecmp(key, "negotiate") == 0) {
                 scheme = auth_scheme_gssapi;
             }
 #else
 #ifdef HAVE_SSPI
-            else if (ne_strcasecmp(key, "negotiate") == 0) {
+            else if (strcasecmp(key, "negotiate") == 0) {
                 scheme = auth_scheme_sspi_negotiate;
-            } else if (ne_strcasecmp(key, "ntlm") == 0) {
+            } else if (strcasecmp(key, "ntlm") == 0) {
                 scheme = auth_scheme_sspi_ntlm;
             }
 #endif
@@ -1010,29 +1006,29 @@ static int auth_challenge(auth_session *sess, const char *value)
 
 	NE_DEBUG(NE_DBG_HTTPAUTH, "Got pair: [%s] = [%s]\n", key, val);
 
-	if (ne_strcasecmp(key, "realm") == 0) {
+	if (strcasecmp(key, "realm") == 0) {
 	    chall->realm = val;
-	} else if (ne_strcasecmp(key, "nonce") == 0) {
+	} else if (strcasecmp(key, "nonce") == 0) {
 	    chall->nonce = val;
-	} else if (ne_strcasecmp(key, "opaque") == 0) {
+	} else if (strcasecmp(key, "opaque") == 0) {
 	    chall->opaque = val;
-	} else if (ne_strcasecmp(key, "stale") == 0) {
+	} else if (strcasecmp(key, "stale") == 0) {
 	    /* Truth value */
-	    chall->stale = (ne_strcasecmp(val, "true") == 0);
-	} else if (ne_strcasecmp(key, "algorithm") == 0) {
-	    if (ne_strcasecmp(val, "md5") == 0) {
+	    chall->stale = (strcasecmp(val, "true") == 0);
+	} else if (strcasecmp(key, "algorithm") == 0) {
+	    if (strcasecmp(val, "md5") == 0) {
 		chall->alg = auth_alg_md5;
-	    } else if (ne_strcasecmp(val, "md5-sess") == 0) {
+	    } else if (strcasecmp(val, "md5-sess") == 0) {
 		chall->alg = auth_alg_md5_sess;
 	    } else {
 		chall->alg = auth_alg_unknown;
 	    }
-	} else if (ne_strcasecmp(key, "qop") == 0) {
+	} else if (strcasecmp(key, "qop") == 0) {
             /* iterate over each token in the value */
             do {
                 const char *tok = ne_shave(ne_token(&val, ','), " \t");
                 
-                if (ne_strcasecmp(tok, "auth") == 0) {
+                if (strcasecmp(tok, "auth") == 0) {
                     chall->qop_auth = 1;
                 }
             } while (val);

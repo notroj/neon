@@ -136,9 +136,9 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
 NE_VERSION_MAJOR=0
-NE_VERSION_MINOR=26
-NE_VERSION_PATCH=0
-NE_VERSION_TAG=-dev
+NE_VERSION_MINOR=25
+NE_VERSION_PATCH=5
+NE_VERSION_TAG=
 
 # libtool library interface versioning.  Release policy dictates that
 # for neon 0.x.y, each x brings an incompatible interface change, and
@@ -218,7 +218,7 @@ else
 fi
 ])
 
-dnl enable support for feature $1 with define NE_HAVE_$1, message $2
+dnl enable support for feature $1 with define $2, message $2
 AC_DEFUN([NE_ENABLE_SUPPORT], [
 NE_FLAG_$1=yes
 AC_SUBST(NE_FLAG_$1)
@@ -230,7 +230,7 @@ m4_if([$2], [],
   AC_MSG_NOTICE([$2])])
 ])
 
-dnl Disable support for feature $1, giving message $2
+dnl Disable support for feature $1 with define $1, message $3
 AC_DEFUN([NE_DISABLE_SUPPORT], [
 NE_FLAG_$1=no
 AC_SUBST(NE_FLAG_$1)
@@ -559,7 +559,7 @@ AC_REQUIRE([AC_C_BIGENDIAN])
 dnl Is strerror_r present; if so, which variant
 AC_REQUIRE([AC_FUNC_STRERROR_R])
 
-AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h libintl.h \
+AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h \
 	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h \
 	sys/limits.h],,,
 [AC_INCLUDES_DEFAULT
@@ -886,6 +886,8 @@ yes|openssl)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
    ;;
 gnutls)
+   AC_MSG_ERROR([GNU TLS support is not yet complete])
+
    AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
 
    if test "$GNUTLS_CONFIG" = "no"; then
@@ -909,9 +911,6 @@ gnutls)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_gnutls"
    NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
-
-   # Check for functions in later releases.
-   NE_CHECK_FUNCS(gnutls_session_get_data2)
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
    NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])
@@ -919,18 +918,6 @@ gnutls)
    ;;
 esac
 AC_SUBST(NEON_SUPPORTS_SSL)
-
-AC_ARG_WITH(ca-bundle, 
-  AS_HELP_STRING(--with-ca-bundle, specify filename of an SSL CA root bundle))
-
-case ${NE_FLAG_SSL}-${with_ca_bundle} in
-*-no) ;;
-yes-*)
-   AC_DEFINE_UNQUOTED([NE_SSL_CA_BUNDLE], ["${with_ca_bundle}"],
-                      [Define to be filename of an SSL CA root bundle])
-   AC_MSG_NOTICE([Using ${with_ca_bundle} as default SSL CA bundle])
-   ;;
-esac
 ])
 
 dnl Check for Kerberos installation
@@ -1051,28 +1038,3 @@ yes|no) AC_MSG_ERROR([--with-libs must be passed a directory argument]) ;;
    LDFLAGS="${ne_add_LDFLAGS} $LDFLAGS"
    PATH=${ne_add_PATH}$PATH ;;
 esac])])
-
-AC_DEFUN([NEON_I18N], [
-
-AC_ARG_ENABLE(nls, 
-  AS_HELP_STRING(--disable-nls, [disable internationalization support]),,
-  [enable_nls=yes])
-
-if test "x${enable_nls}${ac_cv_header_libintl_h}" = "xyesyes"; then
-  # presume that dgettext() is available if bindtextdomain() is...
-  # checking for dgettext() itself is awkward because gcc has a 
-  # builtin of that function, which confuses AC_CHECK_FUNCS et al.
-  NE_SEARCH_LIBS(bindtextdomain, intl,,[enable_nls=no])
-  NE_CHECK_FUNCS(bind_textdomain_codeset)
-fi
-
-if test "$enable_nls" = "no"; then
-  NE_DISABLE_SUPPORT(I18N, [Internationalization support not enabled])
-else
-  NE_ENABLE_SUPPORT(I18N, [Internationalization support enabled])
-  eval localedir="${datadir}/locale"
-  AC_DEFINE_UNQUOTED([LOCALEDIR], "$localedir", 
-                     [Define to be location of localedir])
-fi
-
-])

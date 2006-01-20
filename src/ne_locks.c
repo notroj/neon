@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -44,7 +44,7 @@
 #include "ne_basic.h"
 #include "ne_props.h"
 #include "ne_207.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 #include "ne_xmlreq.h"
 
 #define HOOK_ID "http://webdav.org/neon/hooks/webdav-locking"
@@ -69,7 +69,7 @@ struct lh_req_cookie {
 
 /* Context for PROPFIND/lockdiscovery callbacks */
 struct discover_ctx {
-    ne_propfind_handler *phandler;
+    ne_session *session;
     ne_lock_result results;
     void *userdata;
     ne_buffer *cdata;
@@ -219,7 +219,7 @@ static void submit_lock(struct lh_req_cookie *lrc, struct ne_lock *lock)
 
     /* Check for dups */
     for (item = lrc->submit; item != NULL; item = item->next) {
-	if (ne_strcasecmp(item->lock->token, lock->token) == 0)
+	if (strcasecmp(item->lock->token, lock->token) == 0)
 	    return;
     }
 
@@ -243,7 +243,7 @@ struct ne_lock *ne_lockstore_findbyuri(ne_lock_store *store,
 void ne_lock_using_parent(ne_request *req, const char *path)
 {
     struct lh_req_cookie *lrc = ne_get_request_private(req, HOOK_ID);
-    ne_uri u = {0};
+    ne_uri u;
     struct lock_list *item;
     char *parent;
 
@@ -254,6 +254,7 @@ void ne_lock_using_parent(ne_request *req, const char *path)
     if (parent == NULL)
 	return;
     
+    u.authinfo = NULL;
     ne_fill_server_uri(ne_get_session(req), &u);
 
     for (item = lrc->store->locks; item != NULL; item = item->next) {
@@ -349,7 +350,10 @@ struct ne_lock *ne_lock_copy(const struct ne_lock *lock)
 {
     struct ne_lock *ret = ne_calloc(sizeof *ret);
 
-    ne_uri_copy(&ret->uri, &lock->uri);
+    ret->uri.path = ne_strdup(lock->uri.path);
+    ret->uri.host = ne_strdup(lock->uri.host);
+    ret->uri.scheme = ne_strdup(lock->uri.scheme);
+    ret->uri.port = lock->uri.port;
     ret->token = ne_strdup(lock->token);
     ret->depth = lock->depth;
     ret->type = lock->type;
@@ -415,7 +419,7 @@ int ne_unlock(ne_session *sess, const struct ne_lock *lock)
 
 static int parse_depth(const char *depth)
 {
-    if (ne_strcasecmp(depth, "infinity") == 0) {
+    if (strcasecmp(depth, "infinity") == 0) {
 	return NE_DEPTH_INFINITE;
     } else if (isdigit(depth[0])) {
 	return atoi(depth);
@@ -426,7 +430,7 @@ static int parse_depth(const char *depth)
 
 static long parse_timeout(const char *timeout)
 {
-    if (ne_strcasecmp(timeout, "infinite") == 0) {
+    if (strcasecmp(timeout, "infinite") == 0) {
 	return NE_TIMEOUT_INFINITE;
     } else if (strncasecmp(timeout, "Second-", 7) == 0) {
 	long to = strtol(timeout+7, NULL, 10);
@@ -438,7 +442,7 @@ static long parse_timeout(const char *timeout)
     }
 }
 
-static void discover_results(void *userdata, const ne_uri *uri,
+static void discover_results(void *userdata, const char *href,
 			     const ne_prop_result_set *set)
 {
     struct discover_ctx *ctx = userdata;
@@ -448,18 +452,18 @@ static void discover_results(void *userdata, const ne_uri *uri,
     /* Require at least that the lock has a token. */
     if (lock->token) {
 	if (status && status->klass != 2) {
-	    ctx->results(ctx->userdata, NULL, uri, status);
+	    ctx->results(ctx->userdata, NULL, lock->uri.path, status);
 	} else {
-	    ctx->results(ctx->userdata, lock, uri, NULL);
+	    ctx->results(ctx->userdata, lock, lock->uri.path, NULL);
 	}
     }
     else if (status) {
-	ctx->results(ctx->userdata, NULL, uri, status);
+	ctx->results(ctx->userdata, NULL, href, status);
     }
-
+	
     ne_lock_destroy(lock);
 
-    NE_DEBUG(NE_DBG_LOCKS, "End of response for %s\n", uri->path);
+    NE_DEBUG(NE_DBG_LOCKS, "End of response for %s\n", href);
 }
 
 static int 
@@ -503,8 +507,8 @@ end_element_common(struct ne_lock *l, int state, const char *cdata)
 static int end_element_ldisc(void *userdata, int state, 
                              const char *nspace, const char *name)
 {
+    struct ne_lock *lock = ne_propfind_current_private(userdata);
     struct discover_ctx *ctx = userdata;
-    struct ne_lock *lock = ne_propfind_current_private(ctx->phandler);
 
     return end_element_common(lock, state, ctx->cdata->data);
 }
@@ -632,11 +636,18 @@ static int lk_endelm(void *userdata, int state,
     return 0;
 }
 
-static void *ld_create(void *userdata, const ne_uri *uri)
+static void *ld_create(void *userdata, const char *href)
 {
+    struct discover_ctx *ctx = userdata;
     struct ne_lock *lk = ne_lock_create();
 
-    ne_uri_copy(&lk->uri, uri);
+    if (ne_uri_parse(href, &lk->uri) != 0) {
+	ne_lock_destroy(lk);
+	return NULL;
+    }
+    
+    if (!lk->uri.host)
+	ne_fill_server_uri(ctx->session, &lk->uri);
 
     return lk;
 }
@@ -651,13 +662,15 @@ int ne_lock_discover(ne_session *sess, const char *uri,
     
     ctx.results = callback;
     ctx.userdata = userdata;
+    ctx.session = sess;
     ctx.cdata = ne_buffer_create();
-    ctx.phandler = handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
+
+    handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
 
     ne_propfind_set_private(handler, ld_create, &ctx);
     
     ne_xml_push_handler(ne_propfind_get_parser(handler), 
-                        ld_startelm, ld_cdata, end_element_ldisc, &ctx);
+                        ld_startelm, ld_cdata, end_element_ldisc, handler);
     
     ret = ne_propfind_named(handler, lock_props, discover_results, &ctx);
     

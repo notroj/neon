@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1782,6 +1782,21 @@ static int send_bad_offset(void)
     return OK;
 }
 
+static int icy_protocol(void)
+{
+    ne_session *sess;
+    
+    CALL(make_session(&sess, single_serve_string,
+                      "ICY 200 OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+    
+    ONREQ(any_request(sess, "/foo"));
+
+    ne_session_destroy(sess);
+
+    return await_server();
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -1862,5 +1877,6 @@ ne_test tests[] = {
     T(hook_create_req),
     T(abort_reader),
     T(send_bad_offset),
+    T(icy_protocol),
     T(NULL)
 };

@@ -1,6 +1,6 @@
 /* 
    WebDAV Properties manipulation
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -25,7 +25,7 @@
 #include "ne_request.h"
 #include "ne_207.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* There are two interfaces for fetching properties. The first is
  * 'ne_simple_propfind', which is relatively simple, and easy to use,
@@ -48,7 +48,7 @@ NE_BEGIN_DECLS
  * For each resource found, the results callback is called, passing
  * you two things along with the userdata you passed in originally:
  *
- *   - the URI of the resource (const ne_uri *uri)
+ *   - the URI of the resource (const char *href)
  *   - the properties results set (const ne_prop_result_set *results)
  * */
 
@@ -102,11 +102,10 @@ int ne_propset_iterate(const ne_prop_result_set *set,
 			ne_propset_iterator iterator, void *userdata);
 
 /* Callback for handling the results of fetching properties for a
- * single resource (identified by URI 'uri').  The results are stored
- * in the result set 'results': use ne_propset_* to examine this
- * object.  */
-typedef void (*ne_props_result)(void *userdata, const ne_uri *uri,
-                                const ne_prop_result_set *results);
+ * single resource (named by 'href').  The results are stored in the
+ * result set 'results': use ne_propset_* to examine this object.  */
+typedef void (*ne_props_result)(void *userdata, const char *href,
+				 const ne_prop_result_set *results);
 
 /* Fetch properties for a resource (if depth == NE_DEPTH_ZERO),
  * or a tree of resources (if depth == NE_DEPTH_ONE or _INFINITE).
@@ -216,7 +215,7 @@ ne_request *ne_propfind_get_request(ne_propfind_handler *handler);
  * results callback, simply call 'ne_propset_private'.
  * */
 typedef void *(*ne_props_create_complex)(void *userdata,
-					 const ne_uri *uri);
+					 const char *href);
 
 void ne_propfind_set_private(ne_propfind_handler *handler,
 			     ne_props_create_complex creator,
@@ -241,6 +240,6 @@ int ne_propfind_named(ne_propfind_handler *handler,
 /* Destroy a propfind handler after use. */
 void ne_propfind_destroy(ne_propfind_handler *handler);
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_PROPS_H */

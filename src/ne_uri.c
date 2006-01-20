@@ -1,6 +1,6 @@
 /* 
    URI manipulation routines.
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -42,76 +42,6 @@
 #include "ne_alloc.h"
 #include "ne_uri.h"
 
-/* URI ABNF from RFC 3986: */
-
-#define PS (0x0001) /* "+" */
-#define PC (0x0002) /* "%" */
-#define DS (0x0004) /* "-" */
-#define DT (0x0008) /* "." */
-#define US (0x0010) /* "_" */
-#define TD (0x0020) /* "~" */
-#define FS (0x0040) /* "/" */
-#define CL (0x0080) /* ":" */
-#define AT (0x0100) /* "@" */
-#define QU (0x0200) /* "?" */
-
-#define DG (0x0400) /* DIGIT */
-#define AL (0x0800) /* ALPHA */
-
-#define GD (0x1000) /* gen-delims    = "#" / "[" / "]" 
-                     * ... except ":", "/", "@", and "?" */
-
-#define SD (0x2000) /* sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
-                     *               / "*" / "+" / "," / ";" / "=" 
-                     * ... except "+" which is PS */
-
-#define OT (0x4000) /* others */
-
-#define URI_ALPHA (AL)
-#define URI_DIGIT (DG)
-
-/* unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" */
-#define URI_UNRESERVED (AL | DG | DS | DT | US | TD)
-/* scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) */
-#define URI_SCHEME (AL | DG | PS | DS | DT)
-/* real sub-delims definition, including "+" */
-#define URI_SUBDELIM (PS | SD)
-/* real gen-delims definition, including ":", "/", "@" and "?" */
-#define URI_GENDELIM (GD | CL | FS | AT | QU)
-/* userinfo = *( unreserved / pct-encoded / sub-delims / ":" ) */
-#define URI_USERINFO (URI_UNRESERVED | PC | URI_SUBDELIM | CL)
-/* pchar = unreserved / pct-encoded / sub-delims / ":" / "@" */
-#define URI_PCHAR (URI_UNRESERVED | PC | URI_SUBDELIM | CL | AT)
-/* invented: segchar = pchar / "/" */
-#define URI_SEGCHAR (URI_PCHAR | FS)
-/* query = fragment = *( pchar / "/" / "?" ) */
-#define URI_QUERY (URI_PCHAR | FS | QU)
-
-/* any characters which should be path-escaped: */
-#define URI_ESCAPE ((URI_GENDELIM & ~(FS)) | URI_SUBDELIM | OT)
-
-static const unsigned int uri_chars[256] = {
-/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
-/*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
-/*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
-/*   2x */ OT, SD, OT, GD, SD, PC, SD, SD, SD, SD, SD, PS, SD, DS, DT, FS,
-/*   3x */ DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, CL, SD, OT, SD, OT, QU,
-/*   4x */ AT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
-/*   5x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, GD, OT, GD, OT, US,
-/*   6x */ OT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
-/*   7x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, OT, OT, OT, TD, OT,
-/*   8x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   9x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Ax */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Bx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Cx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Dx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Ex */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, 
-/*   Fx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT
-};
-
-#define uri_lookup(ch) (uri_chars[(unsigned)ch])
-
 char *ne_path_parent(const char *uri) 
 {
     size_t len = strlen(uri);
@@ -137,289 +67,84 @@ int ne_path_has_trailing_slash(const char *uri)
 unsigned int ne_uri_defaultport(const char *scheme)
 {
     /* RFC2616/3.2.3 says use case-insensitive comparisons here. */
-    if (ne_strcasecmp(scheme, "http") == 0)
+    if (strcasecmp(scheme, "http") == 0)
 	return 80;
-    else if (ne_strcasecmp(scheme, "https") == 0)
+    else if (strcasecmp(scheme, "https") == 0)
 	return 443;
     else
 	return 0;
 }
 
+/* TODO: Also, maybe stop malloc'ing here, take a "char *" uri, modify
+ * it in-place, and have fields point inside passed uri.  More work
+ * for the caller then though. */
+/* TODO: not a proper URI parser */
 int ne_uri_parse(const char *uri, ne_uri *parsed)
 {
-    const char *p, *s;
+    const char *pnt, *slash, *colon, *atsign, *openbk;
 
-    memset(parsed, 0, sizeof *parsed);
+    parsed->port = 0;
+    parsed->host = NULL;
+    parsed->path = NULL;
+    parsed->scheme = NULL;
+    parsed->authinfo = NULL;
 
-    p = s = uri;
-
-    if (uri_lookup(*p) & URI_ALPHA) {
-        while (uri_lookup(*p) & URI_SCHEME)
-            p++;
-        
-        if (*p == ':') {
-            parsed->scheme = ne_strndup(uri, p - s);
-            s = p + 1;
-        }
+    if (uri[0] == '\0') {
+	return -1;
     }
 
-    if (s[0] == '/' && s[1] == '/') {
-        const char *pa;
-
-        /* hier-part = "//" authority path-abempty 
-         * authority = [ userinfo "@" ] host [ ":" port ] */
-
-        s = pa = s + 2; /* => s = authority */
-
-        while (*pa != '/' && *pa != '\0')
-            pa++;
-        /* => pa = path-abempty */
-        
-        p = s;
-        while (p < pa && uri_lookup(*p) & URI_USERINFO)
-            p++;
-
-        if (*p == '@') {
-            parsed->userinfo = ne_strndup(s, p - s);
-            s = p + 1;
-        }
-        /* => s = host */
-
-        if (s[0] == '[') {
-            p = s + 1;
-
-            while (*p != ']' && p < pa)
-                p++;
-
-            if (p == pa || (p + 1 != pa && p[1] != ':')) {
-                /* Ill-formed IP-literal. */
-                return -1;
-            }
-
-            p++; /* => p = colon */
-        } else {
-            /* Find the colon. */
-            p = pa;
-            while (*p != ':' && p > s)
-                p--;
-        }
-
-        if (p == s) {
-            p = pa;
-            /* No colon; => p = path-abempty */
-        } else if (p + 1 != pa) {
-            /* => p = colon */
-            parsed->port = atoi(p + 1);
-        }
-        parsed->host = ne_strndup(s, p - s);
-        
-        s = pa;        
-
-        if (*s == '\0') {
-            s = "/"; /* FIXME: scheme-specific. */
-        }
-    } 
-    /* else, the path begins at s */
-
-    p = s;
-
-    while (uri_lookup(*p) & URI_SEGCHAR)
-        p++;
-
-    parsed->path = ne_strndup(s, p - s);
-
-    if (*p != '\0') {
-        s = p++;
-
-        while (uri_lookup(*p) & URI_QUERY)
-            p++;
-
-        if (*s == '?') {
-            parsed->query = ne_strndup(s + 1, p - s - 1);
-            
-            if (*p != '\0') {
-                s = p++;
-
-                while (uri_lookup(*p) & URI_QUERY)
-                    p++;
-            }
-        }
-        /* p must now point to the end of the input string */
-
-        if (*s == '#') {
-            parsed->fragment = ne_strndup(s + 1, p - s - 1);
-        }
-        else if (*p || *s != '?') {
-            return -1;
-        }
+    pnt = strstr(uri, "://");
+    if (pnt) {
+	parsed->scheme = ne_strndup(uri, pnt - uri);
+	pnt += 3; /* start of hostport segment */
+    } else {
+	pnt = uri;
     }
     
+    atsign = strchr(pnt, '@');
+    slash = strchr(pnt, '/');
+    openbk = strchr(pnt, '[');
+
+    /* Check for an authinfo segment in the hostport segment. */
+    if (atsign != NULL && (slash == NULL || atsign < slash)) {
+	parsed->authinfo = ne_strndup(pnt, atsign - pnt);
+	pnt = atsign + 1;
+    }
+    
+    if (openbk && (!slash || openbk < slash)) {
+	const char *closebk = strchr(openbk, ']');
+	if (closebk == NULL)
+	    return -1;
+	colon = strchr(closebk + 1, ':');
+    } else {
+	colon = strchr(pnt, ':');
+    }
+
+    if (slash == NULL) {
+	parsed->path = ne_strdup("/");
+	if (colon == NULL) {
+	    parsed->host = ne_strdup(pnt);
+	} else {
+	    parsed->port = atoi(colon+1);
+	    parsed->host = ne_strndup(pnt, colon - pnt);
+	}
+    } else {
+	if (colon == NULL || colon > slash) {
+	    /* No port segment */
+	    if (slash != uri) {
+		parsed->host = ne_strndup(pnt, slash - pnt);
+	    } else {
+		/* No hostname segment. */
+	    }
+	} else {
+	    /* Port segment */
+	    parsed->port = atoi(colon + 1);
+	    parsed->host = ne_strndup(pnt, colon - pnt);
+	}
+	parsed->path = ne_strdup(slash);
+    }
+
     return 0;
-}
-
-/* This function directly implements the "Merge Paths" algorithm
- * described in RFC 3986 section 5.2.3. */
-static char *merge_paths(const ne_uri *base, const char *path)
-{
-    const char *p;
-
-    if (base->host && base->path[0] == '\0') {
-        return ne_concat("/", path, NULL);
-    }
-    
-    p = strrchr(base->path, '/');
-    if (p == NULL) {
-        return ne_strdup(path);
-    } else {
-        size_t len = p - base->path + 1;
-        char *ret = ne_malloc(strlen(path) + len + 1);
-
-        memcpy(ret, base->path, len);
-        memcpy(ret + len, path, strlen(path) + 1);
-        return ret;
-    }
-}
-
-/* This function directly implements the "Remove Dot Segments"
- * algorithm described in RFC 3986 section 5.2.4. */
-static char *remove_dot_segments(const char *path)
-{
-    char *in, *inc, *out;
-
-    inc = in = ne_strdup(path);
-    out = ne_malloc(strlen(path) + 1);
-    out[0] = '\0';
-
-    while (in[0]) {
-        /* case 2.A: */
-        if (strncmp(in, "./", 2) == 0) {
-            in += 2;
-        } 
-        else if (strncmp(in, "../", 3) == 0) {
-            in += 3;
-        }
-
-        /* case 2.B: */
-        else if (strncmp(in, "/./", 3) == 0) {
-            in += 2;
-        }
-        else if (strcmp(in, "/.") == 0) {
-            in[1] = '\0';
-        }
-
-        /* case 2.C: */
-        else if (strncmp(in, "/../", 4) == 0 || strcmp(in, "/..") == 0) {
-            char *p;
-
-            /* Make the next character in the input buffer a "/": */
-            if (in[3] == '\0') {
-                /* terminating "/.." case */
-                in += 2;
-                in[0] = '/';
-            } else {
-                /* "/../" prefix case */
-                in += 3;
-            }
-
-            /* Trim the last component from the output buffer, or
-             * empty it. */
-            p = strrchr(out, '/');
-            if (p) {
-                *p = '\0';
-            } else {
-                out[0] = '\0';
-            }
-        }
-
-        /* case 2.D: */
-        else if (strcmp(in, ".") == 0 || strcmp(in, "..") == 0) {
-            in[0] = '\0';
-        }
-
-        /* case 2.E */
-        else {
-            char *p;
-
-            /* Search for the *second* "/" if the leading character is
-             * already "/": */
-            p = strchr(in + (in[0] == '/'), '/');
-            /* Otherwise, copy the whole string */
-            if (p == NULL) p = strchr(in, '\0');
-
-            strncat(out, in, p - in);
-            in = p;
-        }
-    }
-
-    ne_free(inc);
-
-    return out;
-}
-
-/* Copy authority components from 'src' to 'dest' if defined. */
-static void copy_authority(ne_uri *dest, const ne_uri *src)
-{
-    if (src->host) dest->host = ne_strdup(src->host);
-    dest->port = src->port;
-    if (src->userinfo) dest->userinfo = ne_strdup(src->userinfo);
-}
-
-/* This function directly implements the "Transform References"
- * algorithm described in RFC 3986 section 5.2.2. */
-ne_uri *ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
-                       ne_uri *target)
-{
-    memset(target, 0, sizeof *target);
-
-    if (relative->scheme) {
-        target->scheme = ne_strdup(relative->scheme);
-        copy_authority(target, relative);
-        target->path = remove_dot_segments(relative->path);
-        if (relative->query) target->query = ne_strdup(relative->query);
-    } else {
-        if (relative->host) {
-            copy_authority(target, relative);
-            target->path = remove_dot_segments(relative->path);
-            if (relative->query) target->query = ne_strdup(relative->query);
-        } else {
-            if (relative->path[0] == '\0') {
-                target->path = ne_strdup(base->path);
-                if (relative->query) {
-                    target->query = ne_strdup(relative->query);
-                } else if (base->query) {
-                    target->query = ne_strdup(base->query);
-                }
-            } else {
-                if (relative->path[0] == '/') {
-                    target->path = remove_dot_segments(relative->path);
-                } else {
-                    char *merged = merge_paths(base, relative->path);
-                    target->path = remove_dot_segments(merged);
-                    ne_free(merged);
-                }
-                if (relative->query) target->query = ne_strdup(relative->query);
-            }
-            copy_authority(target, base);
-        }
-        if (base->scheme) target->scheme = ne_strdup(base->scheme);
-    }
-    
-    if (relative->fragment) target->fragment = ne_strdup(relative->fragment);
-
-    return target;
-}
-
-ne_uri *ne_uri_copy(ne_uri *dest, const ne_uri *src)
-{
-    memset(dest, 0, sizeof *dest);
-
-    if (src->scheme) dest->scheme = ne_strdup(src->scheme);
-    copy_authority(dest, src);
-    if (src->path) dest->path = ne_strdup(src->path);
-    if (src->query) dest->query = ne_strdup(src->query);
-    if (src->fragment) dest->fragment = ne_strdup(src->fragment);
-
-    return dest;
 }
 
 void ne_uri_free(ne_uri *u)
@@ -427,9 +152,7 @@ void ne_uri_free(ne_uri *u)
     if (u->host) ne_free(u->host);
     if (u->path) ne_free(u->path);
     if (u->scheme) ne_free(u->scheme);
-    if (u->userinfo) ne_free(u->userinfo);
-    if (u->fragment) ne_free(u->fragment);
-    if (u->query) ne_free(u->query);
+    if (u->authinfo) ne_free(u->authinfo);
     memset(u, 0, sizeof *u);
 }
 
@@ -456,9 +179,41 @@ char *ne_path_unescape(const char *uri)
     return ret;
 }
 
+/* ABNF definitions derived from RFC3986, except with "/" removed from
+ * gen-delims since it's special: */
+
+#define GD (1) /* gen-delims    = ":" / "?" / "#" / "[" / "]" / "@" */
+#define SD (1) /* sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
+                               / "*" / "+" / "," / ";" / "=" */
+
+#define SL (0) /* forward-slash = "/" */
+#define UN (0) /* unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~" */
+
+#define OT (1) /* others */
+
+/* Lookup table for percent-encoding logic: value is non-zero if
+ * character should be percent-encoded. */
+static const unsigned char uri_chars[128] = {
+/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
+/*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+/*   2x */ OT, SD, OT, GD, SD, OT, SD, SD, SD, SD, SD, SD, SD, UN, UN, SL,
+/*   3x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, SD, OT, SD, OT, GD,
+/*   4x */ GD, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
+/*   5x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, GD, OT, GD, OT, OT,
+/*   6x */ OT, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN,
+/*   7x */ UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, UN, OT, OT, OT, UN, OT 
+};
+
+#undef SD
+#undef GD
+#undef SL
+#undef UN
+#undef OT
+
 /* CH must be an unsigned char; evaluates to 1 if CH should be
  * percent-encoded. */
-#define path_escape_ch(ch) (uri_lookup(ch) & URI_ESCAPE)
+#define path_escape_ch(ch) ((ch) > 127 || uri_chars[(ch)])
 
 char *ne_path_escape(const char *path) 
 {
@@ -490,38 +245,34 @@ char *ne_path_escape(const char *path)
 
 #undef path_escape_ch
 
-#define CMPWITH(field, func)                    \
-    do {                                        \
-        if (u1->field) {                        \
-            if (!u2->field) return -1;          \
-            n = func(u1->field, u2->field);     \
-            if (n) return n;                    \
-        } else if (u2->field) {                 \
-            return 1;                           \
-        }                                       \
-    } while (0)
+#define CASECMP(field) do { \
+n = strcasecmp(u1->field, u2->field); if (n) return n; } while(0)
 
-#define CMP(field) CMPWITH(field, strcmp)
-#define CASECMP(field) CMPWITH(field, ne_strcasecmp)
+#define CMP(field) do { \
+n = strcmp(u1->field, u2->field); if (n) return n; } while(0)
 
 /* As specified by RFC 2616, section 3.2.3. */
 int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2)
 {
     int n;
     
+    if (u1->path[0] == '\0' && strcmp(u2->path, "/") == 0)
+	return 0;
+    if (u2->path[0] == '\0' && strcmp(u1->path, "/") == 0)
+	return 0;
+
     CMP(path);
     CASECMP(host);
     CASECMP(scheme);
-    CMP(query);
-    CMP(fragment);
-    CMP(userinfo);
-
-    return u2->port - u1->port;
+    if (u1->port > u2->port)
+	return 1;
+    else if (u1->port < u2->port)
+	return -1;
+    return 0;
 }
 
 #undef CMP
 #undef CASECMP
-#undef CMPWITH
 
 #ifndef WIN32
 #undef min
@@ -531,7 +282,7 @@ int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2)
 /* TODO: implement properly */
 int ne_path_compare(const char *a, const char *b) 
 {
-    int ret = ne_strcasecmp(a, b);
+    int ret = strcasecmp(a, b);
     if (ret) {
 	/* This logic says: "If the lengths of the two URIs differ by
 	 * exactly one, and the LONGER of the two URIs has a trailing
@@ -554,35 +305,15 @@ char *ne_uri_unparse(const ne_uri *uri)
 {
     ne_buffer *buf = ne_buffer_create();
 
-    if (uri->scheme) {
-        ne_buffer_concat(buf, uri->scheme, ":", NULL);
-    }
+    ne_buffer_concat(buf, uri->scheme, "://", uri->host, NULL);
 
-    if (uri->host) {
-        ne_buffer_czappend(buf, "//");
-        if (uri->userinfo) {
-            ne_buffer_concat(buf, uri->userinfo, "@", NULL);
-        }
-        ne_buffer_zappend(buf, uri->host);
-        
-        if (uri->port > 0
-            && (!uri->scheme 
-                || ne_uri_defaultport(uri->scheme) != uri->port)) {
-            char str[20];
-            ne_snprintf(str, 20, ":%d", uri->port);
-            ne_buffer_zappend(buf, str);
-        }
+    if (uri->port > 0 && ne_uri_defaultport(uri->scheme) != uri->port) {
+	char str[20];
+	ne_snprintf(str, 20, ":%d", uri->port);
+	ne_buffer_zappend(buf, str);
     }
 
     ne_buffer_zappend(buf, uri->path);
-
-    if (uri->query) {
-        ne_buffer_concat(buf, "?", uri->query, NULL);
-    }
-    
-    if (uri->fragment) {
-        ne_buffer_concat(buf, "#", uri->fragment, NULL);
-    }
 
     return ne_buffer_finish(buf);
 }

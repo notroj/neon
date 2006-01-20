@@ -26,7 +26,7 @@
 
 #include "ne_defs.h"
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 /* The neon XML interface filters a streamed XML tree through a stack
  * of SAX "handlers".  A handler is made up of three callbacks
@@ -146,6 +146,6 @@ int ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
 /* media type, appropriate for adding to a Content-Type header */
 #define NE_XML_MEDIA_TYPE "application/xml"
 
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_XML_H */

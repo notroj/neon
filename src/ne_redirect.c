@@ -1,6 +1,6 @@
 /* 
    HTTP-redirect support
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -33,7 +33,7 @@
 #include "ne_alloc.h"
 #include "ne_uri.h"
 #include "ne_redirect.h"
-#include "ne_internal.h"
+#include "ne_i18n.h"
 #include "ne_string.h"
 
 #define REDIRECT_ID "http://www.webdav.org/neon/hooks/http-redirect"
@@ -49,7 +49,7 @@ static void
 create(ne_request *req, void *session, const char *method, const char *uri)
 {
     struct redirect *red = session;
-    if (red->requri) ne_free(red->requri);
+    NE_FREE(red->requri);
     red->requri = ne_strdup(uri);
 }
 

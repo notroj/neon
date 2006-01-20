@@ -27,7 +27,7 @@
 #include "ne_defs.h"
 #include "ne_ssl.h" /* for ne_ssl_context */
 
-NE_BEGIN_DECLS
+BEGIN_NEON_DECLS
 
 #define NE_SOCK_ERROR (-1)
 /* Read/Write timed out */
@@ -187,13 +187,6 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
                         void *userdata);
 
-/* Retrieve the session ID of the current SSL session.  If 'buf' is
- * non-NULL, on success, copies at most *buflen bytes to 'buf' and
- * sets *buflen to the exact number of bytes copied.  If 'buf' is
- * NULL, on success, sets *buflen to the length of the session ID.
- * Returns zero on success, non-zero on error. */
-int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
-
-NE_END_DECLS
+END_NEON_DECLS
 
 #endif /* NE_SOCKET_H */
