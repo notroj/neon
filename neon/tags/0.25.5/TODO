@@ -1,0 +1,90 @@
+
+To Do List for neon                                      -*- text -*-
+===================
+
+Please submit feature requests to <mailto:neon@webdav.org>
+
+For one-point-oh
+----------------
+
+40. XML body acceptance callback should check Content-Type. Should
+    also pass encoding to expat if one is given (how about libxml?).
+    Recent mod_dav's return XML bodies in 424 responses which need
+    parsing properly.
+
+44. Finer-grained connection status feedback, i.e., "Sent Request",
+    "Got response status-line"... "Reading response body"
+
+58. 2616 is quite strict about when to retry non-idempotent requests
+    and when not to.  neon may not be compliant here.
+
+62. Select which auth mechanisms are allowed, e.g. JUST SAY NO to
+    basic might very well be useful to some apps.
+
+64. Add options to only enable SSLv2 support, etc.
+
+Longer term
+-----------
+
+2. Add proper domain support to authentication code. (requires full
+   URI parsing support). Need to tell the auth layer the server
+   details.
+
+6. PUT with ranges... ne_put_range
+
+9. DeltaV support (http://www.webdav.org/deltav/). See also the
+   subversion project (http://subversion.tigris.org/) who might build
+   a versioning system over DAV.
+
+10. ACL support (http://www.webdav.org/acl/)
+
+11. DASL support (http://www.webdav.org/dasl/). Xythos have server
+    support for this (www.sharemation.com). The UI is probably the
+    hardest problem here.
+      => Jim Whitehead's UCI postgrad team is working on this and
+    has written a DASL implementation.
+
+14. Improved request-header manipulation... some kind of indexed table
+    (a la Apache, libghttp, so we're sure we don't add the same header
+    to the request twice.  Better control over adding Cache-Control
+    headers would be good too.
+
+17. Should we really be i18n'izing the low-level error messages in
+    ne_request.c, ne_207.c ? It seems nice and clever to, so the user
+    REALLY know what is going wrong with the server (probably), but it
+    is maybe a bit frightening.
+
+21. Storing multiple authentication "sessions" within an actual
+    auth_session, so I can log into e.g. /foo/ and /bar/ (which are
+    not in the same authentication domain) and switch between them
+    without having to re-enter passwords all the time.
+
+35. Allow i18n'ization if building a shared library, iff gettext
+    support is on the system (and hence add -lintl or whatever to
+    NEON_LIBS). If system has no gettext support, then it's probably
+    impossible to support i18n in the library (although *applications*
+    can support it by bundling gettext themselves). Take a look at how
+    other libraries handle this.
+
+46. Asynchronous request-dispatching? Makes integration into GUI loop
+    easy... any other reasons?  Must leave existing request_dispatch
+    interface intact.
+
+50. opendir/readdir/closedir-esque interface for PROPFIND depth 1, 
+    a la EZDAV. (cadaver has it already)
+
+53. "ne_session" concept is hazy.  Abstract out a "connection" concept
+    too, and allow >1 connection per-session in multi-threaded use,
+    somehow.
+
+57. Add function to map of status-code values to i18n-ized reason
+    phrase.
+
+65. Add ne_uri_copy function and use it in ne_lock_copy.  (patch
+    sent to neon@webdav.org)
+
+66. Useful for subversion/ra_dav:
+
+    - a hook which runs *after* the response headers are read,
+      but *before* the response body is read
+
