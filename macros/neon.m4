@@ -842,9 +842,9 @@ yes|openssl)
     [AC_MSG_NOTICE(using SSL library configuration from pkg-config)
      CPPFLAGS="$CPPFLAGS ${NE_SSL_CFLAGS}"
      NEON_LIBS="$NEON_LIBS ${NE_SSL_LIBS}"],
-    [# libcrypto may require -ldl if using the OpenSSL ENGINE branch
+    [# Either OpenSSL library may require -ldl if built with dynamic engine support
      NE_SEARCH_LIBS(RSA_new, crypto, -ldl)
-     NE_SEARCH_LIBS(SSL_library_init, ssl)])
+     NE_SEARCH_LIBS(SSL_library_init, ssl, -ldl)])
 
    AC_CHECK_HEADERS(openssl/ssl.h openssl/opensslv.h,,
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
