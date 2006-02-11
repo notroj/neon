@@ -38,7 +38,7 @@
 	<para>To indicate that a given certificate is trusted by the
 user, the certificate object can be passed to
 <function>ne_ssl_trust_cert</function>.  The certificate object is
-duplicated internally and can subequently be destroyed.</para>
+duplicated internally and can subsequently be destroyed.</para>
 
 	<para>The SSL library in use by &neon; may include a default
 set of CA certificates; calling the
