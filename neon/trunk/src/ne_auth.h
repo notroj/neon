@@ -1,6 +1,6 @@
 /* 
    HTTP authentication routines
-   Copyright (C) 1999-2002, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -39,13 +39,14 @@ NE_BEGIN_DECLS
  * The callback must return zero to indicate that authentication
  * should be attempted with the username/password, or non-zero to
  * cancel the request. (if non-zero, username and password are
- * ignored.)  */
+ * ignored.)
+ *
+ * Hint: if you just wish to attempt authentication just once (even if
+ * the user gets the username/password wrong), have the callback
+ * function use 'attempt' value as the function return value.
+ */
 typedef int (*ne_auth_creds)(void *userdata, const char *realm, int attempt,
 			     char *username, char *password);
-
-/* TOP TIP: if you just wish to try authenticating once (even if the
- * user gets the username/password wrong), have your implementation of
- * the callback return the 'attempt' value.  */
 
 /* Set callbacks to provide credentials for server and proxy
  * authentication.  userdata is passed as the first argument to the
