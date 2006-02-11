@@ -18,9 +18,6 @@ For one-point-oh
 58. 2616 is quite strict about when to retry non-idempotent requests
     and when not to.  neon may not be compliant here.
 
-62. Select which auth mechanisms are allowed, e.g. JUST SAY NO to
-    basic might very well be useful to some apps.
-
 64. Add options to only enable SSLv2 support, etc.
 
 Longer term
