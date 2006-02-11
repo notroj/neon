@@ -1245,6 +1245,7 @@ static void ah_destroy(ne_request *req, void *session)
 static void free_auth(void *cookie)
 {
     auth_session *sess = cookie;
+    struct auth_handler *hdl, *next;
 
 #ifdef HAVE_GSSAPI
     if (sess->gssname != GSS_C_NO_NAME) {
@@ -1252,6 +1253,11 @@ static void free_auth(void *cookie)
         gss_release_name(&major, &sess->gssname);
     }
 #endif
+
+    for (hdl = sess->handlers; hdl; hdl = next) {
+        next = hdl->next;
+        ne_free(hdl);
+    }
 
     clean_session(sess);
     ne_free(sess);
