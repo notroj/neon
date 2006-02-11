@@ -95,9 +95,21 @@ typedef enum {
 
 struct auth_protocol;
 
+/* A callback/userdata pair registered by the application for
+ * a particular set of protocols. */
+struct auth_handler {
+    unsigned protomask; 
+
+    ne_auth_creds creds;
+    void *userdata;
+    
+    struct auth_handler *next;
+};
+
 /* A challenge */
 struct auth_challenge {
     const struct auth_protocol *protocol;
+    struct auth_handler *handler;
     const char *realm;
     const char *nonce;
     const char *opaque;
@@ -139,9 +151,7 @@ typedef struct {
     /* The protocol used for this authentication session */
     const struct auth_protocol *protocol;
 
-    /* The callback used to request new username+password */
-    ne_auth_creds creds;
-    void *userdata;
+    struct auth_handler *handlers;
 
     /*** Session details ***/
 
@@ -208,7 +218,7 @@ struct auth_request {
 #define AUTH_FLAG_VERIFY_NON40x (0x0002)
 
 struct auth_protocol {
-    int id; /* public NE_AUTH_* id. */
+    unsigned id; /* public NE_AUTH_* id. */
 
     int strength; /* protocol strength for sort order. */
 
@@ -313,10 +323,12 @@ static char *get_cnonce(void)
     return ne_strdup(ret);
 }
 
-static int get_credentials(auth_session *sess, char *pwbuf) 
+static int get_credentials(auth_session *sess, struct auth_challenge *chall, 
+                           char *pwbuf) 
 {
-    return sess->creds(sess->userdata, sess->realm, sess->attempt++,
-		       sess->username, pwbuf);
+    return chall->handler->creds(chall->handler->userdata, sess->realm, 
+                                 sess->attempt++,
+                                 sess->username, pwbuf);
 }
 
 /* Examine a Basic auth challenge.
@@ -337,7 +349,7 @@ static int basic_challenge(auth_session *sess, struct auth_challenge *parms)
     
     sess->realm = ne_strdup(parms->realm);
 
-    if (get_credentials(sess, password)) {
+    if (get_credentials(sess, parms, password)) {
 	/* Failed to get credentials */
 	return -1;
     }
@@ -596,7 +608,7 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
 	sess->realm = ne_strdup(parms->realm);
 
 	/* Not a stale response: really need user authentication */
-	if (get_credentials(sess, password)) {
+	if (get_credentials(sess, parms, password)) {
 	    /* Failed to get credentials */
 	    return -1;
 	}
@@ -1005,13 +1017,18 @@ static int auth_challenge(auth_session *sess, const char *value)
 
 	if (val == NULL) {
             const struct auth_protocol *proto = NULL;
+            struct auth_handler *hdl;
             size_t n;
 
-            for (n = 0; protocols[n].id; n++) {
-                if (ne_strcasecmp(key, protocols[n].name) == 0) {
-                    proto = &protocols[n];
-                    break;
+            for (hdl = sess->handlers; hdl; hdl = hdl->next) {
+                for (n = 0; protocols[n].id; n++) {
+                    if (protocols[n].id & hdl->protomask
+                        && ne_strcasecmp(key, protocols[n].name) == 0) {
+                        proto = &protocols[n];
+                        break;
+                    }
                 }
+                if (proto) break;
             }
 
             if (proto == NULL) {
@@ -1022,6 +1039,7 @@ static int auth_challenge(auth_session *sess, const char *value)
             
             NE_DEBUG(NE_DBG_HTTPAUTH, "New '%s' challenge.\n", proto->name);
             chall = insert_challenge(&challenges, proto);
+            chall->handler = hdl;
 
             if (proto->flags & AUTH_FLAG_OPAQUE_PARAM && sep == ' ') {
                 /* Cope with the fact that the unquoted base64
@@ -1239,44 +1257,67 @@ static void free_auth(void *cookie)
     ne_free(sess);
 }
 
-static void auth_register(ne_session *sess, int isproxy,
+static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 			  const struct auth_class *ahc, const char *id, 
 			  ne_auth_creds creds, void *userdata) 
 {
-    auth_session *ahs = ne_calloc(sizeof *ahs);
+    auth_session *ahs;
+    struct auth_handler **hdl;
 
-    ahs->creds = creds;
-    ahs->userdata = userdata;
-    ahs->sess = sess;
-    ahs->spec = ahc;
-
-    if (strcmp(ne_get_scheme(sess), "https") == 0) {
-        ahs->context = isproxy ? AUTH_CONNECT : AUTH_NOTCONNECT;
-#ifdef HAVE_GSSAPI
-        {
-            get_gss_name(&ahs->gssname, (isproxy ? sess->proxy.hostname 
-                                         : sess->server.hostname));
-            ahs->gssctx = GSS_C_NO_CONTEXT;
-            ahs->gssmech = GSS_C_NO_OID;
+    ahs = ne_get_session_private(sess, id);
+    if (ahs == NULL) {
+        ahs = ne_calloc(sizeof *ahs);
+        
+        ahs->sess = sess;
+        ahs->spec = ahc;
+        
+        if (strcmp(ne_get_scheme(sess), "https") == 0) {
+            ahs->context = isproxy ? AUTH_CONNECT : AUTH_NOTCONNECT;
+        } else {
+            ahs->context = AUTH_ANY;
         }
-#endif
-    } else {
-        ahs->context = AUTH_ANY;
+        
+        /* Register hooks */
+        ne_hook_create_request(sess, ah_create, ahs);
+        ne_hook_pre_send(sess, ah_pre_send, ahs);
+        ne_hook_post_send(sess, ah_post_send, ahs);
+        ne_hook_destroy_request(sess, ah_destroy, ahs);
+        ne_hook_destroy_session(sess, free_auth, ahs);
+        
+        ne_set_session_private(sess, id, ahs);
     }
-    
-    /* Register hooks */
-    ne_hook_create_request(sess, ah_create, ahs);
-    ne_hook_pre_send(sess, ah_pre_send, ahs);
-    ne_hook_post_send(sess, ah_post_send, ahs);
-    ne_hook_destroy_request(sess, ah_destroy, ahs);
-    ne_hook_destroy_session(sess, free_auth, ahs);
 
-    ne_set_session_private(sess, id, ahs);
+#ifdef HAVE_GSSAPI
+    if (protomask & NE_AUTH_NEGOTIATE && ahs->gssname == GSS_C_NO_NAME) {
+        get_gss_name(&ahs->gssname, (isproxy ? sess->proxy.hostname 
+                                     : sess->server.hostname));
+    }
+#endif
+
+    /* Find the end of the handler list, and add a new one. */
+    hdl = &ahs->handlers;
+    while (*hdl && (*hdl)->next)
+        hdl = &(*hdl)->next;
+        
+    *hdl = ne_malloc(sizeof **hdl);
+    (*hdl)->protomask = protomask;
+    (*hdl)->creds = creds;
+    (*hdl)->userdata = userdata;
+    (*hdl)->next = NULL;
 }
 
-#define NE_AUTH_BASIC (1)
-#define NE_AUTH_DIGEST (2)
-#define NE_AUTH_NEGOTIATE (3)
+static void auth_register_default(ne_session *sess, int isproxy,
+                                  const struct auth_class *ahc, const char *id,
+                                  ne_auth_creds creds, void *userdata) 
+{
+    unsigned protomask = NE_AUTH_BASIC|NE_AUTH_DIGEST;
+    
+    if (strcmp(ne_get_scheme(sess), "https") == 0 || isproxy) {
+        protomask |= NE_AUTH_NEGOTIATE;
+    }
+
+    auth_register(sess, isproxy, protomask, ahc, id, creds, userdata);
+}
 
 static const struct auth_protocol protocols[] = {
     { NE_AUTH_BASIC, 10, "Basic",
@@ -1303,12 +1344,28 @@ static const struct auth_protocol protocols[] = {
 
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 0, &ah_server_class, HOOK_SERVER_ID, creds, userdata);
+    auth_register_default(sess, 0, &ah_server_class, HOOK_SERVER_ID,
+                          creds, userdata);
 }
 
 void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 1, &ah_proxy_class, HOOK_PROXY_ID, creds, userdata);
+    auth_register_default(sess, 1, &ah_proxy_class, HOOK_PROXY_ID,
+                          creds, userdata);
+}
+
+void ne_add_server_auth(ne_session *sess, unsigned protocol, 
+                        ne_auth_creds creds, void *userdata)
+{
+    auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
+                  creds, userdata);
+}
+
+void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
+                       ne_auth_creds creds, void *userdata)
+{
+    auth_register(sess, 1, protocol, &ah_proxy_class, HOOK_PROXY_ID,
+                  creds, userdata);
 }
 
 void ne_forget_auth(ne_session *sess)
