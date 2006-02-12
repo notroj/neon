@@ -40,8 +40,6 @@ int ne_sspi_destroy_context(void *context);
 
 int ne_sspi_clear_context(void *context);
 
-int ne_sspi_get_mechanism(void *context, char const **mechanism);
-
 int ne_sspi_authenticate(void *context, const char *base64Token,
                          char **responseToken);
 
