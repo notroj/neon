@@ -326,27 +326,6 @@ static int freeBuffer(SecBufferDesc * secBufferDesc)
 }
 
 /*
- * Returns mechanism string for the specified context.
- */
-int ne_sspi_get_mechanism(void *context, char const **mechanism)
-{
-    int status;
-    SSPIContext *sspiContext;
-
-    if (initialized <= 0) {
-        return -1;
-    }
-
-    status = getContext(context, &sspiContext);
-    if (status) {
-        return status;
-    }
-
-    *mechanism = sspiContext->mechanism;
-    return 0;
-}
-
-/*
  * Create a context to authenticate to specified server, using either
  * ntlm or negotiate.
  */

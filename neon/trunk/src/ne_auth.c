@@ -542,13 +542,7 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
 #ifdef HAVE_SSPI
 static char *request_sspi(auth_session *sess) 
 {
-    const char *mechanism;
-    
-    if (ne_sspi_get_mechanism(sess->sspi_context, &mechanism)) {
-        return NULL;
-    }
-
-    return ne_concat(mechanism, " ", sess->sspi_token, "\r\n", NULL);
+    return ne_concat(sess->protocol->name, " ", sess->sspi_token, "\r\n", NULL);
 }
 
 static int sspi_challenge(auth_session *sess, struct auth_challenge *parms) 
