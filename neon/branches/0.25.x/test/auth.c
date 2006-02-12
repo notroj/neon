@@ -1,6 +1,6 @@
 /* 
    Authentication tests
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,10 +32,15 @@
 #include "ne_request.h"
 #include "ne_auth.h"
 #include "ne_basic.h"
+#include "ne_md5.h"
 
 #include "tests.h"
 #include "child.h"
 #include "utils.h"
+
+/* Compat for 0.25.x, to keep the digest auth tests mergable with the
+ * trunk code. */
+#define ne_strcasecmp strcasecmp
 
 static const char username[] = "Aladdin", password[] = "open sesame";
 static int auth_failed;
@@ -358,15 +363,257 @@ static int negotiate_regress(void)
     return OK;
 }
 
+static char *digest_hdr = NULL;
 
-/* test digest auth 2068-style. */
+static void dup_header(char *header)
+{
+    if (digest_hdr) ne_free(digest_hdr);
+    digest_hdr = ne_strdup(header);
+}
 
-/* test digest auth 2617-style. */
+struct digest_parms {
+    const char *realm, *nonce;
+    int rfc2617;
+};
+
+struct digest_state {
+    const char *realm, *nonce, *uri, *username, *password, *algorithm, *qop,
+        *method;
+    char *cnonce, *digest, *ncval;
+    long nc;
+};
+
+/* Check that the response-digest matches. */
+static int check_digest(struct digest_state *state, struct digest_parms *parms)
+{
+    struct ne_md5_ctx ctx;
+    md5_uint32 result[4];
+    char h_a1[33], h_a2[33], dig[33];
+
+    /* H(A1) */
+    ne_md5_init_ctx(&ctx);
+    ne_md5_process_bytes(state->username, strlen(state->username), &ctx);
+    ne_md5_process_bytes(":", 1, &ctx);
+    ne_md5_process_bytes(state->realm, strlen(state->realm), &ctx);
+    ne_md5_process_bytes(":", 1, &ctx);
+    ne_md5_process_bytes(state->password, strlen(state->password), &ctx);
+    ne_md5_finish_ctx(&ctx, result);
+    
+    ne_md5_to_ascii((void *)result, h_a1);
+
+    /* H(A2) */
+    ne_md5_init_ctx(&ctx);
+    ne_md5_process_bytes(state->method, strlen(state->method), &ctx);
+    ne_md5_process_bytes(":", 1, &ctx);
+    ne_md5_process_bytes(state->uri, strlen(state->uri), &ctx);
+    ne_md5_finish_ctx(&ctx, result);
+
+    ne_md5_to_ascii((void *)result, h_a2);
+
+    /* request-digest */
+    ne_md5_init_ctx(&ctx);
+    ne_md5_process_bytes(h_a1, strlen(h_a1), &ctx);
+    ne_md5_process_bytes(":", 1, &ctx);
+    ne_md5_process_bytes(state->nonce, strlen(state->nonce), &ctx);
+    ne_md5_process_bytes(":", 1, &ctx);
+
+    if (parms->rfc2617) {
+        ne_md5_process_bytes(state->ncval, strlen(state->ncval), &ctx);
+        ne_md5_process_bytes(":", 1, &ctx);
+        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), &ctx);
+        ne_md5_process_bytes(":", 1, &ctx);
+        ne_md5_process_bytes(state->qop, strlen(state->qop), &ctx);
+        ne_md5_process_bytes(":", 1, &ctx);
+    }
+
+    ne_md5_process_bytes(h_a2, strlen(h_a2), &ctx);
+    ne_md5_finish_ctx(&ctx, result);
+    
+    ne_md5_to_ascii((void *)result, dig);
+
+    NE_DEBUG(NE_DBG_HTTP, "Got digest: %s, expected: %s\n", 
+             state->digest, dig);
+
+    ONCMP(dig, state->digest, "Digest response", "request-digest");
+
+    return OK;
+}
+
+
+#define DIGCMP(field, name, value)                                      \
+    do {                                                                \
+        if (ne_strcasecmp(name, #field) == 0) {                         \
+            ONCMP(state->field, value, "Digest response header", #field); \
+        }                                                               \
+    } while (0)
+
+/* Verify that Digest auth request header, 'header', meets expected
+ * state and parameters. */
+static int verify_digest_header(struct digest_state *state, 
+                                struct digest_parms *parms,
+                                char *header)
+{
+    char *ptr;
+
+    ptr = ne_token(&header, ' ');
+
+    ONCMP("Digest", ptr, "Digest response", "scheme name");
+
+    while (header) {
+        char *name, *val;
+
+        ptr = ne_qtoken(&header, ',', "\"\'");
+        ONN("quoting broken", ptr == NULL);
+
+        name = ne_shave(ptr, " ");
+
+        val = strchr(name, '=');
+        ONV(val == NULL, ("bad name/value pair: %s", val));
+        
+        *val++ = '\0';
+
+        val = ne_shave(val, "\"\' ");
+
+        NE_DEBUG(NE_DBG_HTTP, "got field: [%s] = [%s]\n", name, val);
+
+        DIGCMP(uri, name, val);
+        DIGCMP(realm, name, val);
+        DIGCMP(username, name, val);
+        DIGCMP(method, name, val);
+        DIGCMP(nonce, name, val);
+        DIGCMP(algorithm, name, val);
+        DIGCMP(qop, name, val);
+        
+        if (ne_strcasecmp(name, "cnonce") == 0) {
+            state->cnonce = ne_strdup(val);
+        }
+        else if (ne_strcasecmp(name, "nc") == 0) {
+            long nc = strtol(val, NULL, 16);
+            
+            ONV(nc != state->nc, 
+                ("got bad nonce count: %ld (%s) not %ld", 
+                 nc, val, state->nc));
+
+            state->ncval = ne_strdup(val);
+        }
+        else if (ne_strcasecmp(name, "response") == 0) {
+            state->digest = ne_strdup(val);
+        }
+    }
+
+    ONN("cnonce param missing for 2617-style auth",
+        parms->rfc2617 && !state->cnonce);
+
+    ONN("no digest param given", !state->digest);
+
+    CALL(check_digest(state, parms));
+    
+    return OK;
+}
+
+/* Server process for Digest auth handling. */
+static int serve_digest(ne_socket *sock, void *userdata)
+{
+    struct digest_parms *parms = userdata;
+    struct digest_state state;
+    char resp[NE_BUFSIZ];
+
+    want_header = "Authorization";
+    digest_hdr = NULL;
+    got_header = dup_header;
+
+    CALL(discard_request(sock));
+
+    ONV(digest_hdr != NULL,
+        ("got unwarranted WWW-Auth header: %s", digest_hdr));
+
+    if (!parms->rfc2617) {
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 401 Auth Denied\r\n"
+                    "WWW-Authenticate: Digest realm=\"%s\","
+                    "  nonce=\"%s\"\r\n"
+                    "Content-Length: 0\r\n" "\r\n",
+                    parms->realm, parms->nonce);
+    } else {
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 401 Auth Denied\r\n"
+                    "WWW-Authenticate: Digest realm=\"%s\", "
+                    "  qop=\"auth\", algorithm=\"MD5\", "
+                    "  nonce=\"%s\"\r\n"
+                    "Content-Length: 0\r\n" "\r\n",
+                    parms->realm, parms->nonce);
+    }
+
+    SEND_STRING(sock, resp);
+
+    CALL(discard_request(sock));
+
+    ONN("no Authorization header sent", digest_hdr == NULL);
+    
+    state.uri = "/fish";
+    state.method = "GET";
+    state.realm = parms->realm;
+    state.nonce = parms->nonce;
+    state.username = username;
+    state.password = password;
+    state.nc = 1;
+    state.algorithm = "MD5";
+    state.qop = "auth";
+
+    state.cnonce = state.digest = state.ncval = NULL;
+
+    CALL(verify_digest_header(&state, parms, digest_hdr));
+
+    SEND_STRING(sock, "HTTP/1.1 200 You did good\r\n"
+                "Content-Length: 0\r\n" "\r\n");
+
+    return OK;
+}
+
+/* Test for RFC2617-style Digest auth. */
+static int digest_rfc2617(void)
+{
+    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    struct digest_parms parms;
+
+    parms.realm = "WallyWorld";
+    parms.nonce = "random-invented-string";
+    parms.rfc2617 = 1;
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+    CALL(spawn_server(7777, serve_digest, &parms));
+
+    CALL(any_2xx_request(sess, "/fish"));
+    
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    return OK;
+}
+
+/* Test for RFC2069-style Digest auth. */
+static int digest_rfc2069(void)
+{
+    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    struct digest_parms parms;
+
+    parms.realm = "WallyWorld";
+    parms.nonce = "random-invented-string";
+    parms.rfc2617 = 0;
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+    CALL(spawn_server(7777, serve_digest, &parms));
+
+    CALL(any_2xx_request(sess, "/fish"));
+    
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    return OK;
+}
 
 /* test that digest has precedence over Basic for multi-scheme
  * challenges */
-
-/* test auth-int, auth-int FAILURE. chunk trailers/non-trailer */
 
 /* test logout */
 
@@ -379,5 +626,7 @@ ne_test tests[] = {
     T(forget_regress),
     T(tunnel_regress),
     T(negotiate_regress),
+    T(digest_rfc2617),
+    T(digest_rfc2069),
     T(NULL)
 };
