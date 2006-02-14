@@ -342,9 +342,6 @@ static int basic_challenge(auth_session *sess, struct auth_challenge *parms)
 	return -1;
     }
 
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Got Basic challenge with realm [%s]\n", 
-	     parms->realm);
-
     clean_session(sess);
     
     sess->realm = ne_strdup(parms->realm);
@@ -586,17 +583,12 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
     if (parms->alg == auth_alg_unknown 
         || (parms->alg == auth_alg_md5_sess && !parms->qop_auth)
         || parms->realm == NULL || parms->nonce == NULL) {
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Invalid challenge.");
+	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Digest challenge missing parms.\n");
 	return -1;
     }
 
-    if (parms->stale) {
-	/* Just a stale response, don't need to get a new username/password */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Stale digest challenge.\n");
-    } else {
+    if (!parms->stale) {
 	/* Forget the old session details */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "In digest challenge.\n");
-
 	clean_session(sess);
 
 	sess->realm = ne_strdup(parms->realm);
@@ -617,7 +609,7 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
     
     if (parms->got_qop) {
 	/* What type of qop are we to apply to the message? */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Got qop directive.\n");
+	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got qop, using 2617-style.\n");
 	sess->nonce_count = 0;
         sess->qop = auth_qop_auth;
     } else {
@@ -629,7 +621,6 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
 	/* Calculate H(A1).
 	 * tmp = H(unq(username-value) ":" unq(realm-value) ":" passwd)
 	 */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Calculating H(A1).\n");
 	ne_md5_init_ctx(&tmp);
 	ne_md5_process_bytes(sess->username, strlen(sess->username), &tmp);
 	ne_md5_process_bytes(":", 1, &tmp);
@@ -654,15 +645,15 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
 	    ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), &a1);
 	    ne_md5_finish_ctx(&a1, a1_md5);
 	    ne_md5_to_ascii(a1_md5, sess->h_a1);
-	    NE_DEBUG(NE_DBG_HTTPAUTH, "Session H(A1) is [%s]\n", sess->h_a1);
+	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
 	} else {
 	    ne_md5_to_ascii(tmp_md5, sess->h_a1);
-	    NE_DEBUG(NE_DBG_HTTPAUTH, "H(A1) is [%s]\n", sess->h_a1);
+	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A1) is [%s]\n", sess->h_a1);
 	}
 	
     }
     
-    NE_DEBUG(NE_DBG_HTTPAUTH, "I like this Digest challenge.\n");
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Accepting digest challenge.\n");
 
     return 0;
 }
@@ -682,8 +673,6 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     if (sess->qop != auth_qop_none) {
 	sess->nonce_count++;
 	ne_snprintf(nc_value, 9, "%08x", sess->nonce_count);
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Nonce count is %u, nc is [%s]\n", 
-		 sess->nonce_count, nc_value);
     }
 
     /* Calculate H(A2). */
@@ -693,9 +682,8 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
     ne_md5_finish_ctx(&a2, a2_md5);
     ne_md5_to_ascii(a2_md5, a2_md5_ascii);
-    NE_DEBUG(NE_DBG_HTTPAUTH, "H(A2): %s\n", a2_md5_ascii);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", a2_md5_ascii);
 
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Calculating Request-Digest.\n");
     /* Now, calculation of the Request-Digest.
      * The first section is the regardless of qop value
      *     H(A1) ":" unq(nonce-value) ":" */
@@ -711,8 +699,6 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 	/* Add on:
 	 *    nc-value ":" unq(cnonce-value) ":" unq(qop-value) ":"
 	 */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Have qop directive, digesting: [%s:%s:%s]\n",
-		 nc_value, sess->cnonce, qop_value);
 	ne_md5_process_bytes(nc_value, 8, &rdig);
 	ne_md5_process_bytes(":", 1, &rdig);
 	ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), &rdig);
@@ -755,8 +741,6 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     }
 
     ne_buffer_zappend(ret, "\r\n");
-    
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Digest request header is %s\n", ret->data);
 
     return ne_buffer_finish(ret);
 }
@@ -852,11 +836,11 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 
     pnt = hdr = ne_strdup(value);
     
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Auth-Info header: %s\n", value);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got Auth-Info header: %s\n", value);
 
     while (tokenize(&pnt, &key, &val, NULL, 0) == 0) {
 	val = ne_shave(val, "\"");
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Pair: [%s] = [%s]\n", key, val);
+
 	if (ne_strcasecmp(key, "qop") == 0) {
             qop_value = val;
             if (ne_strcasecmp(val, "auth") == 0) {
@@ -940,13 +924,13 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 	    }
 	}
     } else {
-	NE_DEBUG(NE_DBG_HTTPAUTH, "No qop directive, auth okay.\n");
+	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: No qop directive, auth okay.\n");
 	okay = 0;
     }
 
     /* Check for a nextnonce */
     if (nextnonce != NULL) {
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Found nextnonce of [%s].\n", nextnonce);
+	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Found nextnonce of [%s].\n", nextnonce);
 	if (sess->nonce != NULL)
 	    ne_free(sess->nonce);
 	sess->nonce = ne_strdup(nextnonce);
@@ -957,7 +941,8 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     if (okay) {
         return NE_OK;
     } else {
-        ne_set_error(sess->sess, _("Digest authentication response digest verification failed"));
+        ne_set_error(sess->sess, _("Digest authentication response "
+                                   "digest verification failed"));
         return NE_ERROR;
     }                                  
 }
@@ -1001,8 +986,6 @@ static int auth_challenge(auth_session *sess, const char *value)
 
     pnt = hdr = ne_strdup(value); 
 
-    NE_DEBUG(NE_DBG_HTTPAUTH, "Got new auth challenge: %s\n", value);
-
     /* The header value may be made up of one or more challenges.  We
      * split it down into attribute-value pairs, then search for
      * schemes in the pair keys. */
@@ -1026,16 +1009,16 @@ static int auth_challenge(auth_session *sess, const char *value)
             }
 
             if (proto == NULL) {
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Ignoring challenge '%s'.\n", key);
+		NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignoring '%s' challenge.\n", key);
                 chall = NULL;
                 continue;
 	    }
             
-            NE_DEBUG(NE_DBG_HTTPAUTH, "New '%s' challenge.\n", proto->name);
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got '%s' challenge.\n", proto->name);
             chall = insert_challenge(&challenges, proto);
             chall->handler = hdl;
 
-            if (proto->flags & AUTH_FLAG_OPAQUE_PARAM && sep == ' ') {
+            if ((proto->flags & AUTH_FLAG_OPAQUE_PARAM) && sep == ' ') {
                 /* Cope with the fact that the unquoted base64
                  * paramater token doesn't match the 2617 auth-param
                  * grammar: */
@@ -1047,14 +1030,12 @@ static int auth_challenge(auth_session *sess, const char *value)
 	    continue;
 	} else if (chall == NULL) {
 	    /* Ignore pairs for an unknown challenge. */
-            NE_DEBUG(NE_DBG_HTTPAUTH, "Ignored pair: %s = %s\n", key, val);
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignored parameter: %s = %s\n", key, val);
 	    continue;
 	}
 
 	/* Strip quotes off value. */
 	val = ne_shave(val, "\"'");
-
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Got pair: [%s] = [%s]\n", key, val);
 
 	if (ne_strcasecmp(key, "realm") == 0) {
 	    chall->realm = val;
@@ -1209,7 +1190,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 	       auth_hdr) {
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
-	NE_DEBUG(NE_DBG_HTTPAUTH, "Got challenge (code %d).\n", status->code);
+	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got challenge (code %d).\n", status->code);
 	if (!auth_challenge(sess, auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
