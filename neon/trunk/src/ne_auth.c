@@ -192,8 +192,6 @@ typedef struct {
     const char *host;
     const char *uri_scheme;
     unsigned int port;
-
-    int attempt;
 } auth_session;
 
 struct auth_request {
@@ -203,6 +201,9 @@ struct auth_request {
     /* The method and URI we are using for the current request */
     const char *uri;
     const char *method;
+    
+    int attempt;
+
     /* Whether we WILL supply authentication for this request or not */
     unsigned int will_handle:1;
 
@@ -225,8 +226,10 @@ struct auth_protocol {
     const char *name; /* protocol name. */
     
     /* Parse the authentication challenge; returns zero on success, or
-     * non-zero if this challenge be handled. */
-    int (*challenge)(auth_session *sess, struct auth_challenge *chall);
+     * non-zero if this challenge be handled.  'attempt' is the number
+     * of times the request has been resent due to auth challenges. */
+    int (*challenge)(auth_session *sess, int attempt,
+                     struct auth_challenge *chall);
 
     /* Return the string to send in the -Authenticate request header:
      * (ne_malloc-allocated, NUL-terminated string) */
@@ -323,17 +326,17 @@ static char *get_cnonce(void)
     return ne_strdup(ret);
 }
 
-static int get_credentials(auth_session *sess, struct auth_challenge *chall, 
-                           char *pwbuf) 
+static int get_credentials(auth_session *sess, int attempt,
+                           struct auth_challenge *chall, char *pwbuf) 
 {
     return chall->handler->creds(chall->handler->userdata, sess->realm, 
-                                 sess->attempt++,
-                                 sess->username, pwbuf);
+                                 attempt, sess->username, pwbuf);
 }
 
 /* Examine a Basic auth challenge.
  * Returns 0 if an valid challenge, else non-zero. */
-static int basic_challenge(auth_session *sess, struct auth_challenge *parms) 
+static int basic_challenge(auth_session *sess, int attempt,
+                           struct auth_challenge *parms) 
 {
     char *tmp, password[NE_ABUFSIZ];
 
@@ -346,7 +349,7 @@ static int basic_challenge(auth_session *sess, struct auth_challenge *parms)
     
     sess->realm = ne_strdup(parms->realm);
 
-    if (get_credentials(sess, parms, password)) {
+    if (get_credentials(sess, attempt, parms, password)) {
 	/* Failed to get credentials */
 	return -1;
     }
@@ -494,9 +497,21 @@ static int continue_negotiate(auth_session *sess, const char *token)
 
 /* Process a Negotiate challange CHALL in session SESS; returns zero
  * if challenge is accepted. */
-static int gssapi_challenge(auth_session *sess, struct auth_challenge *chall) 
+static int gssapi_challenge(auth_session *sess, int attempt,
+                            struct auth_challenge *chall) 
 {
-    return continue_negotiate(sess, chall->opaque);
+    const char *token = chall->opaque;
+
+    /* Respect an initial challenge - which must have no input token,
+     * or a continuation - which must have an input token. */
+    if (attempt == 0 || token) {
+        return continue_negotiate(sess, token);
+    }
+    else {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Ignoring empty Negotiate "
+                 "challenge (attempt=%d).\n", attempt);
+        return -1;
+    }
 }
 
 /* Verify the header HDR in a Negotiate response. */
@@ -542,7 +557,8 @@ static char *request_sspi(auth_session *sess)
     return ne_concat(sess->protocol->name, " ", sess->sspi_token, "\r\n", NULL);
 }
 
-static int sspi_challenge(auth_session *sess, struct auth_challenge *parms) 
+static int sspi_challenge(auth_session *sess, int attempt,
+                          struct auth_challenge *parms) 
 {
     int ntlm = ne_strcasecmp(parms->protocol->name, "NTLM") == 0;
     int status;
@@ -573,7 +589,8 @@ static int sspi_challenge(auth_session *sess, struct auth_challenge *parms)
 
 /* Examine a digest challenge: return 0 if it is a valid Digest challenge,
  * else non-zero. */
-static int digest_challenge(auth_session *sess, struct auth_challenge *parms) 
+static int digest_challenge(auth_session *sess, int attempt,
+                            struct auth_challenge *parms) 
 {
     struct ne_md5_ctx tmp;
     unsigned char tmp_md5[16];
@@ -594,7 +611,7 @@ static int digest_challenge(auth_session *sess, struct auth_challenge *parms)
 	sess->realm = ne_strdup(parms->realm);
 
 	/* Not a stale response: really need user authentication */
-	if (get_credentials(sess, parms, password)) {
+	if (get_credentials(sess, attempt, parms, password)) {
 	    /* Failed to get credentials */
 	    return -1;
 	}
@@ -979,7 +996,8 @@ static struct auth_challenge *insert_challenge(struct auth_challenge **list,
 /* Passed the value of a "(Proxy,WWW)-Authenticate: " header field.
  * Returns 0 if valid challenge was accepted; non-zero if no valid
  * challenge was found. */
-static int auth_challenge(auth_session *sess, const char *value) 
+static int auth_challenge(auth_session *sess, int attempt,
+                          const char *value) 
 {
     char *pnt, *key, *val, *hdr, sep;
     struct auth_challenge *chall = NULL, *challenges = NULL;
@@ -1075,7 +1093,7 @@ static int auth_challenge(auth_session *sess, const char *value)
     for (chall = challenges; chall != NULL; chall = chall->next) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Trying %s challenge...\n",
                  chall->protocol->name);
-        if (chall->protocol->challenge(sess, chall) == 0) {
+        if (chall->protocol->challenge(sess, attempt, chall) == 0) {
             sess->protocol = chall->protocol;
             break;
         }
@@ -1112,8 +1130,6 @@ static void ah_create(ne_request *req, void *session, const char *method,
         areq->method = method;
         areq->uri = uri;
         areq->request = req;
-        
-        sess->attempt = 0;
         
         ne_set_request_private(req, sess->spec->id, areq);
     }
@@ -1171,7 +1187,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 
     NE_DEBUG(NE_DBG_HTTPAUTH, 
 	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
-	     sess->attempt, status->code, sess->spec->status_code, 
+	     areq->attempt, status->code, sess->spec->status_code, 
 	     sess->spec->resp_hdr, auth_hdr ? auth_hdr : "(none)");
     if (auth_info_hdr && sess->protocol && sess->protocol->verify 
         && (sess->protocol->flags & AUTH_FLAG_VERIFY_NON40x) == 0) {
@@ -1191,7 +1207,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got challenge (code %d).\n", status->code);
-	if (!auth_challenge(sess, auth_hdr)) {
+	if (!auth_challenge(sess, areq->attempt++, auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
 	    clean_session(sess);
