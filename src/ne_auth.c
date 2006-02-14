@@ -202,13 +202,8 @@ struct auth_request {
     const char *uri;
     const char *method;
     
-    int attempt;
-
-    /* Whether we WILL supply authentication for this request or not */
-    unsigned int will_handle:1;
-
-    /* Used for calculation of H(entity-body) of the response */
-    struct ne_md5_ctx response_body;
+    int attempt; /* number of times this request has been retries due
+                  * to auth challenges. */
 };
 
 /* Used if this protocol takes an unquoted non-name/value-pair
@@ -845,11 +840,6 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 	*qop_value = NULL;
     unsigned int nonce_count;
     int okay;
-    
-    if (!req->will_handle) {
-	/* Ignore it */
-	return NE_OK;
-    }
 
     pnt = hdr = ne_strdup(value);
     
@@ -1144,8 +1134,8 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
     if (sess->protocol && req) {
 	char *value;
 
-	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Handling request.\n");
-	req->will_handle = 1;
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Sending '%s' response.\n",
+                 sess->protocol->name);
 
         value = sess->protocol->response(sess, req);
 
