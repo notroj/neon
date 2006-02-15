@@ -589,11 +589,20 @@ static int digest_challenge(auth_session *sess, int attempt,
     unsigned char tmp_md5[16];
     char password[NE_ABUFSIZ];
 
-    /* Verify they've given us the right bits. */
-    if (parms->alg == auth_alg_unknown 
-        || (parms->alg == auth_alg_md5_sess && !parms->qop_auth)
-        || parms->realm == NULL || parms->nonce == NULL) {
+    if (parms->alg == auth_alg_unknown) {
+        ne_set_error(sess->sess, _("Unknown algorithm in Digest "
+                                   "authentication challenge"));
+        return -1;
+    }
+    else if (parms->alg == auth_alg_md5_sess && !parms->qop_auth) {
+        ne_set_error(sess->sess, _("Incompatible algorithm in Digest "
+                                   "authentication challenge"));
+        return -1;
+    }
+    else if (parms->realm == NULL || parms->nonce == NULL) {
 	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Digest challenge missing parms.\n");
+        ne_set_error(sess->sess, _("Missing nonce or realm in Digest "
+                                   "authentication challenge"));
 	return -1;
     }
 
