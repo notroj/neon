@@ -370,6 +370,16 @@ static void dup_header(char *header)
 struct digest_parms {
     const char *realm, *nonce;
     int rfc2617;
+    int send_ainfo;
+    enum digest_failure {
+        fail_not,
+        fail_ai_bad_nc,
+        fail_ai_bad_digest,
+        fail_ai_bad_cnonce,
+        fail_ai_omit_cnonce,
+        fail_ai_omit_digest,
+        fail_ai_omit_nc
+    } failure;
 };
 
 struct digest_state {
@@ -379,12 +389,15 @@ struct digest_state {
     long nc;
 };
 
-/* Check that the response-digest matches. */
-static int check_digest(struct digest_state *state, struct digest_parms *parms)
+/* Write the request-digest into 'digest' (or response-digest if
+ * auth_info is non-zero) for given digest auth state and
+ * parameters.  */
+static void make_digest(struct digest_state *state, struct digest_parms *parms,
+                        int auth_info, char digest[33])
 {
     struct ne_md5_ctx ctx;
     md5_uint32 result[4];
-    char h_a1[33], h_a2[33], dig[33];
+    char h_a1[33], h_a2[33];
 
     /* H(A1) */
     ne_md5_init_ctx(&ctx);
@@ -399,7 +412,8 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
 
     /* H(A2) */
     ne_md5_init_ctx(&ctx);
-    ne_md5_process_bytes(state->method, strlen(state->method), &ctx);
+    if (!auth_info)
+        ne_md5_process_bytes(state->method, strlen(state->method), &ctx);
     ne_md5_process_bytes(":", 1, &ctx);
     ne_md5_process_bytes(state->uri, strlen(state->uri), &ctx);
     ne_md5_finish_ctx(&ctx, result);
@@ -425,16 +439,23 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
     ne_md5_process_bytes(h_a2, strlen(h_a2), &ctx);
     ne_md5_finish_ctx(&ctx, result);
     
-    ne_md5_to_ascii((void *)result, dig);
+    ne_md5_to_ascii((void *)result, digest);
+}
+
+/* Verify that the response-digest matches expected state. */
+static int check_digest(struct digest_state *state, struct digest_parms *parms)
+{
+    char digest[33];
+
+    make_digest(state, parms, 0, digest);
 
     NE_DEBUG(NE_DBG_HTTP, "Got digest: %s, expected: %s\n", 
-             state->digest, dig);
+             state->digest, digest);
 
-    ONCMP(dig, state->digest, "Digest response", "request-digest");
+    ONCMP(digest, state->digest, "Digest response", "request-digest");
 
     return OK;
 }
-
 
 #define DIGCMP(field, name, value)                                      \
     do {                                                                \
@@ -507,6 +528,44 @@ static int verify_digest_header(struct digest_state *state,
     return OK;
 }
 
+static char *make_authinfo_header(struct digest_state *state,
+                                  struct digest_parms *parms)
+{
+    ne_buffer *buf = ne_buffer_create();
+    char digest[33], *ncval, *cnonce;
+
+    if (parms->failure == fail_ai_bad_digest) {
+        strcpy(digest, "fish");
+    } else {
+        make_digest(state, parms, 1, digest);
+    }
+
+    if (parms->failure == fail_ai_bad_nc) {
+        ncval = "999";
+    } else {
+        ncval = state->ncval;
+    }
+
+    if (parms->failure == fail_ai_bad_cnonce) {
+        cnonce = "another-fish";
+    } else {
+        cnonce = state->cnonce;
+    }
+
+    if (parms->failure != fail_ai_omit_nc) {
+        ne_buffer_concat(buf, "nc=", ncval, ", ", NULL);
+    }
+    if (parms->failure != fail_ai_omit_cnonce) {
+        ne_buffer_concat(buf, "cnonce=\"", cnonce, "\", ", NULL);
+    } 
+    if (parms->failure != fail_ai_omit_digest) {
+        ne_buffer_concat(buf, "rspauth=\"", digest, "\", ", NULL);
+    }
+    ne_buffer_czappend(buf, "qop=\"auth\"");
+    
+    return ne_buffer_finish(buf);
+}
+
 /* Server process for Digest auth handling. */
 static int serve_digest(ne_socket *sock, void *userdata)
 {
@@ -560,50 +619,124 @@ static int serve_digest(ne_socket *sock, void *userdata)
 
     CALL(verify_digest_header(&state, parms, digest_hdr));
 
-    SEND_STRING(sock, "HTTP/1.1 200 You did good\r\n"
-                "Content-Length: 0\r\n" "\r\n");
+    if (parms->send_ainfo) {
+        char *ai = make_authinfo_header(&state, parms);
+
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 200 Well, if you insist\r\n"
+                    "Content-Length: 0\r\n"
+                    "Authentication-Info: %s\r\n"
+                    "\r\n", ai);
+        
+        ne_free(ai);
+
+                    
+    } else {
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 200 You did good\r\n"
+                    "Content-Length: 0\r\n" "\r\n");
+    }
+
+    SEND_STRING(sock, resp);
 
     return OK;
+}
+
+static int test_digest(struct digest_parms *parms)
+{
+    ne_session *sess = ne_session_create("http", "localhost", 7777);
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+    CALL(spawn_server(7777, serve_digest, parms));
+
+    CALL(any_2xx_request(sess, "/fish"));
+    
+    ne_session_destroy(sess);
+    return await_server();
 }
 
 /* Test for RFC2617-style Digest auth. */
 static int digest_rfc2617(void)
 {
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
     struct digest_parms parms;
 
     parms.realm = "WallyWorld";
     parms.nonce = "random-invented-string";
     parms.rfc2617 = 1;
+    parms.send_ainfo = 0;
 
-    ne_set_server_auth(sess, auth_cb, NULL);
-    CALL(spawn_server(7777, serve_digest, &parms));
-
-    CALL(any_2xx_request(sess, "/fish"));
-    
-    ne_session_destroy(sess);
-    CALL(await_server());
-
-    return OK;
+    return test_digest(&parms);
 }
 
 /* Test for RFC2069-style Digest auth. */
 static int digest_rfc2069(void)
 {
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
     struct digest_parms parms;
 
     parms.realm = "WallyWorld";
     parms.nonce = "random-invented-string";
     parms.rfc2617 = 0;
+    parms.send_ainfo = 0;
 
-    ne_set_server_auth(sess, auth_cb, NULL);
-    CALL(spawn_server(7777, serve_digest, &parms));
+    return test_digest(&parms);
+}
 
-    CALL(any_2xx_request(sess, "/fish"));
-    
-    ne_session_destroy(sess);
-    CALL(await_server());
+/* Test for Authentication-Info handling. */
+static int digest_auth_info(void)
+{
+    struct digest_parms parms;
+
+    parms.realm = "WallyWorld";
+    parms.nonce = "random-invented-string";
+    parms.rfc2617 = 1;
+    parms.send_ainfo = 1;
+
+    return test_digest(&parms);
+}
+
+static int digest_failures(void)
+{
+    struct digest_parms parms;
+    static const struct {
+        enum digest_failure mode;
+        const char *message;
+    } fails[] = {
+        { fail_ai_bad_nc, "nonce count mismatch" },
+        { fail_ai_bad_digest, "digest mismatch" },
+        { fail_ai_bad_cnonce, "client nonce mismatch" },
+        { fail_ai_omit_nc, "missing parameters" },
+        { fail_ai_omit_digest, "missing parameters" },
+        { fail_ai_omit_cnonce, "missing parameters" },
+        { fail_not, NULL }
+    };
+    size_t n;
+
+    parms.realm = "WallyWorld";
+    parms.nonce = "random-invented-string";
+    parms.rfc2617 = 1;
+    parms.send_ainfo = 1;
+
+    for (n = 0; fails[n].message; n++) {
+        ne_session *sess = ne_session_create("http", "localhost", 7777);
+        int ret;
+
+        parms.failure = fails[n].mode;
+
+        ne_set_server_auth(sess, auth_cb, NULL);
+        CALL(spawn_server(7777, serve_digest, &parms));
+        
+        ret = any_2xx_request(sess, "/fish");
+        ONV(ret == NE_OK,
+            ("request success; expecting error '%s'",
+             fails[n].message));
+
+        ONV(strstr(ne_get_error(sess), fails[n].message) == NULL,
+            ("request fails with error '%s'; expecting '%s'",
+             ne_get_error(sess), fails[n].message));
+
+        ne_session_destroy(sess);
+        CALL(await_server());
+    }
 
     return OK;
 }
@@ -622,7 +755,9 @@ ne_test tests[] = {
     T(forget_regress),
     T(tunnel_regress),
     T(negotiate_regress),
-    T(digest_rfc2617),
     T(digest_rfc2069),
+    T(digest_rfc2617),
+    T(digest_auth_info),
+    T(digest_failures),
     T(NULL)
 };

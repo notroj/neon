@@ -93,8 +93,6 @@ typedef enum {
     auth_qop_auth
 } auth_qop;
 
-struct auth_protocol;
-
 /* A callback/userdata pair registered by the application for
  * a particular set of protocols. */
 struct auth_handler {
@@ -833,13 +831,11 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 {
     char *hdr, *pnt, *key, *val;
     auth_qop qop = auth_qop_none;
-    char *nextnonce = NULL, /* for the nextnonce= value */
-	*rspauth = NULL, /* for the rspauth= value */
-	*cnonce = NULL, /* for the cnonce= value */
-	*nc = NULL, /* for the nc= value */
-	*qop_value = NULL;
+    char *nextnonce, *rspauth, *cnonce, *nc, *qop_value;
     unsigned int nonce_count;
-    int okay;
+    int ret = NE_OK;
+
+    nextnonce = rspauth = cnonce = nc = qop_value = NULL;
 
     pnt = hdr = ne_strdup(value);
     
@@ -871,68 +867,66 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 	}
     }
 
-    /* Presume the worst */
-    okay = -1;
+    if (qop == auth_qop_none) {
+        /* The 2069-style A-I header only has the entity and nextnonce
+         * parameters. */
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: 2069-style A-I header.\n");
+    }
+    else if (!rspauth || !cnonce || !nc) {
+        ret = NE_ERROR;
+        ne_set_error(sess->sess, _("Digest mutual authentication failure: "
+                                   "missing parameters"));
+    }
+    else if (strcmp(cnonce, sess->cnonce) != 0) {
+        ret = NE_ERROR;
+        ne_set_error(sess->sess, _("Digest mutual authentication failure: "
+                                   "client nonce mismatch"));
+    }
+    else if (nonce_count != sess->nonce_count) {
+        ret = NE_ERROR;
+        ne_set_error(sess->sess, _("Digest mutual authentication failure: "
+                                   "nonce count mismatch (%u not %u)"),
+                     nonce_count, sess->nonce_count);
+    }
+    else {
+        /* Verify the response-digest field */
+        struct ne_md5_ctx a2;
+        unsigned char a2_md5[16], rdig_md5[16];
+        char a2_md5_ascii[33], rdig_md5_ascii[33];
 
-    if ((qop != auth_qop_none) && (qop_value != NULL)) {
-	if ((rspauth == NULL) || (cnonce == NULL) || (nc == NULL)) {
-	    NE_DEBUG(NE_DBG_HTTPAUTH, "Missing rspauth, cnonce or nc with qop.\n");
-	} else { /* Have got rspauth, cnonce and nc */
-	    if (strcmp(cnonce, sess->cnonce) != 0) {
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Response cnonce doesn't match.\n");
-	    } else if (nonce_count != sess->nonce_count) { 
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Response nonce count doesn't match.\n");
-	    } else {
-		/* Calculate and check the response-digest value.
-		 * joe: IMO the spec is slightly ambiguous as to whether
-		 * we use the qop which WE sent, or the qop which THEY
-		 * sent...  */
-		struct ne_md5_ctx a2;
-		unsigned char a2_md5[16], rdig_md5[16];
-		char a2_md5_ascii[33], rdig_md5_ascii[33];
+        /* Modified H(A2): */
+        ne_md5_init_ctx(&a2);
+        ne_md5_process_bytes(":", 1, &a2);
+        ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
+        ne_md5_finish_ctx(&a2, a2_md5);
+        ne_md5_to_ascii(a2_md5, a2_md5_ascii);
+	
+        /* sess->stored_rdig contains digest-so-far of:
+         *   H(A1) ":" unq(nonce-value) 
+         */
+        
+        /* Add in qop-value */
+        ne_md5_process_bytes(qop_value, strlen(qop_value), 
+                             &sess->stored_rdig);
+        ne_md5_process_bytes(":", 1, &sess->stored_rdig);
 
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Calculating response-digest.\n");
+        /* Digest ":" H(A2) */
+        ne_md5_process_bytes(a2_md5_ascii, 32, &sess->stored_rdig);
+        /* All done */
+        ne_md5_finish_ctx(&sess->stored_rdig, rdig_md5);
+        ne_md5_to_ascii(rdig_md5, rdig_md5_ascii);
+        
+        /* And... do they match? */
+        ret = ne_strcasecmp(rdig_md5_ascii, rspauth) == 0 ? NE_OK : NE_ERROR;
+        
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: response-digest match: %s "
+                 "(expected [%s] vs actual [%s])\n", 
+                 ret == NE_OK ? "yes" : "no", rdig_md5_ascii, rspauth);
 
-		/* First off, H(A2) again. */
-		ne_md5_init_ctx(&a2);
-		ne_md5_process_bytes(":", 1, &a2);
-		ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-		ne_md5_finish_ctx(&a2, a2_md5);
-		ne_md5_to_ascii(a2_md5, a2_md5_ascii);
-		
-		/* We have the stored digest-so-far of 
-		 *   H(A1) ":" unq(nonce-value) 
-		 *        [ ":" nc-value ":" unq(cnonce-value) ] for qop
-		 * in sess->stored_rdig, to save digesting them again.
-		 *
-		 */
-		if (qop != auth_qop_none) {
-		    /* Add in qop-value */
-		    NE_DEBUG(NE_DBG_HTTPAUTH, "Digesting qop-value [%s:].\n", 
-			     qop_value);
-		    ne_md5_process_bytes(qop_value, strlen(qop_value), 
-					 &sess->stored_rdig);
-		    ne_md5_process_bytes(":", 1, &sess->stored_rdig);
-		}
-		/* Digest ":" H(A2) */
-		ne_md5_process_bytes(a2_md5_ascii, 32, &sess->stored_rdig);
-		/* All done */
-		ne_md5_finish_ctx(&sess->stored_rdig, rdig_md5);
-		ne_md5_to_ascii(rdig_md5, rdig_md5_ascii);
-
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Calculated response-digest of: "
-			 "[%s]\n", rdig_md5_ascii);
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Given response-digest of:      "
-			 "[%s]\n", rspauth);
-
-		/* And... do they match? */
-		okay = (ne_strcasecmp(rdig_md5_ascii, rspauth) == 0)?0:-1;
-		NE_DEBUG(NE_DBG_HTTPAUTH, "Matched: %s\n", okay?"nope":"YES!");
-	    }
-	}
-    } else {
-	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: No qop directive, auth okay.\n");
-	okay = 0;
+        if (ret) {
+            ne_set_error(sess->sess, _("Digest mutual authentication failure: "
+                                       "request-digest mismatch"));
+        }
     }
 
     /* Check for a nextnonce */
@@ -945,13 +939,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 
     ne_free(hdr);
 
-    if (okay) {
-        return NE_OK;
-    } else {
-        ne_set_error(sess->sess, _("Digest authentication response "
-                                   "digest verification failed"));
-        return NE_ERROR;
-    }                                  
+    return ret;
 }
 
 /* Insert a new auth challenge for protocol 'proto' in list of
