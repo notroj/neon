@@ -558,12 +558,12 @@ static int fail_lockauth(void)
     ne_lock_destroy(lock);
 
     lock = make_lock("/bar", "fish", ne_lockscope_exclusive, NE_DEPTH_ZERO);
+    lock->token = ne_strdup("opaquelocktoken:gah");
     ret  = ne_unlock(sess, lock);
     ONV(ret != NE_AUTH,
         ("attempt to unlock did not fail with NE_AUTH: %d (%s)",
          ret, ne_get_error(sess)));
     ne_lock_destroy(lock);
-
 
     CALL(await_server());
     ne_session_destroy(sess);
