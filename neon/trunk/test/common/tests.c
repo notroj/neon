@@ -102,7 +102,8 @@ void t_warning(const char *str, ...)
 
 #define TEST_DEBUG \
 (NE_DBG_HTTP | NE_DBG_SOCKET | NE_DBG_HTTPBODY | NE_DBG_HTTPAUTH | \
- NE_DBG_LOCKS | NE_DBG_XMLPARSE | NE_DBG_XML | NE_DBG_SSL)
+ NE_DBG_LOCKS | NE_DBG_XMLPARSE | NE_DBG_XML | NE_DBG_SSL | \
+ NE_DBG_HTTPPLAIN)
 
 #define W(m) do { if (write(0, m, strlen(m)) < 0) exit(99); } while(0)
 
