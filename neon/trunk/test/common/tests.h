@@ -114,9 +114,9 @@ void t_warning(const char *str, ...)
  * actual string for some field 'name'.  Succeeds if strcmp(exp,act)
  * == 0 or both are NULL. */
 #define ONCMP(exp, act, ctx, name) do { \
-ONV(exp && !act, ("%s: " name " was NULL, expected non-NULL", ctx)); \
-ONV(!exp && act, ("%s: " name " was non-NULL, expected NULL", ctx)); \
-ONV(exp && strcmp(exp, act), ("%s: " name " was '%s' not '%s'", ctx, act, exp)); \
+        ONV(exp && !act, ("%s: " name " was NULL, expected '%s'", ctx, exp)); \
+        ONV(!exp && act, ("%s: " name " was '%s', expected NULL", ctx, act)); \
+        ONV(exp && strcmp(exp, act), ("%s: " name " was '%s' not '%s'", ctx, act, exp)); \
 } while (0)
 
 /* return immediately with result of test 'x' if it fails. */
