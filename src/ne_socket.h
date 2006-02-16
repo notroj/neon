@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -49,12 +49,13 @@ typedef struct ne_sock_addr_s ne_sock_addr;
 typedef struct ne_inet_addr_s ne_inet_addr;
 #endif
 
-/* While neon itself doesn't require per-process global
- * initialization, some platforms do, and so does the OpenSSL
- * library. */
+/* Perform process-global initialization of any libraries in use.
+ * Returns non-zero on error. */
 int ne_sock_init(void);
 
-/* Shutdown any underlying libraries. */
+/* Perform process-global shutdown of any libraries in use.  This
+ * function only has effect when it has been called an equal number of
+ * times to ne_sock_init() for the process. */
 void ne_sock_exit(void);
 
 /* Resolve the given hostname.  'flags' must be zero.  Hex

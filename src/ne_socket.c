@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2005, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2006, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -297,7 +297,10 @@ static void init_ipv6(void)
 #define ipv6_disabled (0)
 #endif
 
-static int init_result = 0;
+/* If init_state is N where > 0, ne_sock_init has been called N times;
+ * if == 0, library is not initialized; if < 0, library initialization
+ * has failed. */
+static int init_state = 0;
 
 int ne_sock_init(void)
 {
@@ -307,27 +310,26 @@ int ne_sock_init(void)
     int err;
 #endif
 
-    if (init_result > 0) 
+    if (init_state > 0) {
+        init_state++;
 	return 0;
-    else if (init_result < 0)
+    } 
+    else if (init_state < 0) {
 	return -1;
+    }
 
 #ifdef WIN32    
     wVersionRequested = MAKEWORD(2, 2);
     
     err = WSAStartup(wVersionRequested, &wsaData);
     if (err != 0) {
-	init_result = -1;
-	return -1;
+	return init_state = -1;
     }
-
-#endif
-
 #ifdef HAVE_SSPI
     if (ne_sspi_init() < 0) {
-        init_result = -1;
-        return init_result;
+        return init_state = -1;
     }
+#endif
 #endif
 
 #ifdef NE_HAVE_SOCKS
@@ -346,24 +348,24 @@ int ne_sock_init(void)
     init_ssl();
 #endif
 
-    init_result = 1;
+    init_state = 1;
     return 0;
 }
 
 void ne_sock_exit(void)
 {
+    if (init_state > 0 && --init_state == 0) {
 #ifdef WIN32
-    WSACleanup();
+        WSACleanup();
 #endif
 #ifdef HAVE_GNUTLS
-    gnutls_global_deinit();
+        gnutls_global_deinit();
 #endif
-
+        
 #ifdef HAVE_SSPI
-    ne_sspi_deinit();
+        ne_sspi_deinit();
 #endif
-
-    init_result = 0;
+    }
 }
 
 int ne_sock_block(ne_socket *sock, int n)
