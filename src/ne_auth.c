@@ -1076,7 +1076,7 @@ static int auth_challenge(auth_session *sess, int attempt,
     sess->protocol = NULL;
 
     /* Iterate through the challenge list (which is sorted from
-     * strongest to weaked) attempting to accept each one. */
+     * strongest to weakest) attempting to accept each one. */
     for (chall = challenges; chall != NULL; chall = chall->next) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Trying %s challenge...\n",
                  chall->protocol->name);
