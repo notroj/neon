@@ -944,3 +944,19 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     *--p = '\0';
     return 0;
 }
+
+int ne__ssl_init(void)
+{
+    return gnutls_global_init();
+}
+
+void ne__ssl_exit(void)
+{
+#if 0
+    /* It's safe to call gnutls_global_deinit() here only with
+     * gnutls >= 1.3, since older versions don't refcount and
+     * doing so would prevent any other use of gnutls within
+     * the process. */
+    gnutls_global_deinit();
+#endif
+}

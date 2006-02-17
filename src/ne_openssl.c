@@ -941,3 +941,17 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     p[-1] = '\0';
     return 0;
 }
+
+int ne__ssl_init(void)
+{
+    SSL_load_error_strings();
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    return 0;
+}
+
+void ne__ssl_exit(void)
+{
+    /* Cannot call ERR_free_strings() etc here in case any other code
+     * in the process using OpenSSL. */
+}

@@ -75,4 +75,11 @@ typedef gnutls_session ne_ssl_socket;
 
 ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
 
+/* Process-global initialization of the SSL library; returns non-zero
+ * on error. */
+int ne__ssl_init(void);
+
+/* Process-global de-initialization of the SSL library. */
+void ne__ssl_exit(void);
+
 #endif /* NE_PRIVSSL_H */
