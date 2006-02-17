@@ -234,20 +234,6 @@ static void print_error(int errnum, char *buffer, size_t buflen)
 #define set_strerror(s, e) ne_strerror((e), (s)->error, sizeof (s)->error)
 #endif
 
-#if defined(HAVE_OPENSSL)
-static void init_ssl(void)
-{
-    SSL_load_error_strings();
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-}
-#elif defined(HAVE_GNUTLS)
-static void init_ssl(void)
-{
-    gnutls_global_init();
-}
-#endif /* HAVE_OPENSSL */
-
 #ifdef HAVE_OPENSSL
 /* Seed the SSL PRNG, if necessary; returns non-zero on failure. */
 static int seed_ssl_prng(void)
@@ -345,7 +331,9 @@ int ne_sock_init(void)
 #endif
 
 #ifdef NE_HAVE_SSL
-    init_ssl();
+    if (ne__ssl_init()) {
+        return init_state = -1;
+    }
 #endif
 
     init_state = 1;
@@ -358,8 +346,8 @@ void ne_sock_exit(void)
 #ifdef WIN32
         WSACleanup();
 #endif
-#ifdef HAVE_GNUTLS
-        gnutls_global_deinit();
+#ifdef NE_HAVE_SSL
+        ne__ssl_exit();
 #endif
         
 #ifdef HAVE_SSPI
