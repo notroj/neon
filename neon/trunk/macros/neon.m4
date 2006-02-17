@@ -921,7 +921,8 @@ esac
 AC_SUBST(NEON_SUPPORTS_SSL)
 
 AC_ARG_WITH(ca-bundle, 
-  AS_HELP_STRING(--with-ca-bundle, specify filename of an SSL CA root bundle))
+  AS_HELP_STRING(--with-ca-bundle, specify filename of an SSL CA root bundle),,
+  with_ca_bundle=no)
 
 case ${NE_FLAG_SSL}-${with_ca_bundle} in
 *-no) ;;
@@ -931,6 +932,26 @@ yes-*)
    AC_MSG_NOTICE([Using ${with_ca_bundle} as default SSL CA bundle])
    ;;
 esac
+
+AC_ARG_ENABLE(threadsafe-ssl,
+AS_HELP_STRING(--enable-threadsafe-ssl=posix, 
+[enable SSL library thread-safety using POSIX threads: suitable
+CC/CFLAGS/LIBS must be used to make the POSIX library interfaces
+available]),,
+enable_threadsafe_ssl=no)
+
+case $enable_threadsafe_ssl in
+posix|yes)
+  ne_pthr_ok=yes
+  AC_CHECK_FUNCS([pthread_mutex_init pthread_mutex_lock],,[ne_pthr_ok=no])
+  if test "${ne_pthr_ok}" = "no"; then
+     AC_MSG_ERROR([could not find POSIX mutex interfaces; (try CC="${CC} -pthread"?)])    
+  fi
+  AC_DEFINE([HAVE_PTHREADS], 1, [Define if POSIX threads are supported])
+  AC_MSG_NOTICE([Using POSIX threads for SSL library thread-safety])
+  ;;
+esac
+
 ])
 
 dnl Check for Kerberos installation

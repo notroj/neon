@@ -37,6 +37,11 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs12.h>
 
+#ifdef HAVE_PTHREADS
+#include <gcrypt.h>
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
+
 #include "ne_ssl.h"
 #include "ne_string.h"
 #include "ne_session.h"
@@ -947,11 +952,15 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 
 int ne__ssl_init(void)
 {
+#ifdef HAVE_PTHREADS
+    gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+#endi
     return gnutls_global_init();
 }
 
 void ne__ssl_exit(void)
 {
+    /* No way to unregister the thread callbacks.  Doomed. */
 #if 0
     /* It's safe to call gnutls_global_deinit() here only with
      * gnutls >= 1.3, since older versions don't refcount and

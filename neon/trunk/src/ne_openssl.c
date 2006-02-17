@@ -37,6 +37,10 @@
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
 
+#ifdef HAVE_PTHREADS
+#include <pthread.h>
+#endif
+
 #include "ne_ssl.h"
 #include "ne_string.h"
 #include "ne_session.h"
@@ -942,11 +946,79 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
+#ifdef HAVE_PTHREADS
+/* Implementation of locking callbacks to make OpenSSL thread-safe.
+ * If the OpenSSL API was better designed, this wouldn't be necessary.
+ * It's not possible to implement the callbacks correctly using POSIX
+ * mutexes in any case, since the callback API is itself broken
+ * (surprise!). */
+
+static pthread_mutex_t *locks;
+static size_t num_locks;
+
+/* Named to be obvious when it shows up in a backtrace. */
+static unsigned long thread_id_neon(void)
+{
+    /* The cast breaks POSIX since pthread_t could be a structure, but
+     * there's not much choice. */
+    return (unsigned long)pthread_self();
+}
+
+/* Another great API design win for OpenSSL: no return value!  So if
+ * the lock/unlock fails, all that can be done is to abort. */
+static void thread_lock_neon(int mode, int n, const char *file, int line)
+{
+    if (mode & CRYPTO_LOCK) {
+        if (pthread_mutex_lock(&locks[n])) {
+            abort();
+        }
+    }
+    else {
+        if (pthread_mutex_unlock(&locks[n])) {
+            abort();
+        }
+    }
+}
+
+#endif
+
 int ne__ssl_init(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
     OpenSSL_add_all_algorithms();
+
+#ifdef HAVE_PTHREADS
+    /* If some other library has already come along and set up the
+     * thread-safety callbacks, then it must be presumed that the
+     * other library will have a longer lifetime in the process than
+     * neon.  If the library which has installed the callbacks is
+     * unloaded, then all bets are off. */
+    if (CRYPTO_get_id_callback() != NULL
+        || CRYPTO_get_locking_callback() != NULL) {
+        NE_DEBUG(NE_DBG_SOCKET, "ssl: OpenSSL thread-safety callbacks already installed.\n");
+        NE_DEBUG(NE_DBG_SOCKET, "ssl: neon will not replace existing callbacks.\n");
+    } else {
+        size_t n;
+
+        num_locks = CRYPTO_num_locks();
+
+        CRYPTO_set_id_callback(thread_id_neon);
+        CRYPTO_set_locking_callback(thread_lock_neon);
+
+        locks = malloc(num_locks * sizeof *locks);
+        for (n = 0; n < num_locks; n++) {
+            if (pthread_mutex_init(&locks[n], NULL)) {
+                NE_DEBUG(NE_DBG_SOCKET, "ssl: Failed to initialize pthread mutex.\n");
+                return -1;
+            }
+        }
+        
+        NE_DEBUG(NE_DBG_SOCKET, "ssl: Initialized OpenSSL thread-safety callbacks "
+                 "for %" NE_FMT_SIZE_T " locks.\n", num_locks);
+    }
+#endif
+
     return 0;
 }
 
@@ -954,4 +1026,26 @@ void ne__ssl_exit(void)
 {
     /* Cannot call ERR_free_strings() etc here in case any other code
      * in the process using OpenSSL. */
+
+#ifdef HAVE_PTHREADS
+    /* Only unregister the callbacks if some *other* library has not
+     * come along in the mean-time and trampled over the callbacks
+     * installed by neon. */
+    if (CRYPTO_get_locking_callback() != thread_lock_neon
+        || CRYPTO_get_id_callback() != thread_id_neon) {
+        NE_DEBUG(NE_DBG_SOCKET, "ssl: Not removing non-neon OpenSSL thread-safety callbacks.\n");
+    } else {
+        size_t n;
+
+        CRYPTO_set_id_callback(NULL);
+        CRYPTO_set_locking_callback(NULL);
+
+        for (n = 0; n < num_locks; n++) {
+            pthread_mutex_destroy(&locks[n]);
+        }
+
+        free(locks);
+        NE_DEBUG(NE_DBG_SOCKET, "ssl: Removed OpenSSL thread-safety callbacks.\n");
+    }
+#endif
 }
