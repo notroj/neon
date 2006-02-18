@@ -38,6 +38,8 @@
 #include <gnutls/pkcs12.h>
 
 #ifdef HAVE_PTHREADS
+#include <errno.h>
+#include <pthread.h>
 #include <gcrypt.h>
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
@@ -954,7 +956,7 @@ int ne__ssl_init(void)
 {
 #ifdef HAVE_PTHREADS
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-#endi
+#endif
     return gnutls_global_init();
 }
 
