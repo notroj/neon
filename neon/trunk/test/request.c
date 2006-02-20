@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1782,6 +1782,94 @@ static int send_bad_offset(void)
     return OK;
 }
 
+static void thook_create_req(ne_request *req, void *userdata,
+                             const char *method, const char *requri)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_concat(buf, "(create,", method, ",", requri, ")\n", NULL);
+}
+
+static void hook_pre_send(ne_request *req, void *userdata, 
+                          ne_buffer *header)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_czappend(buf, "(pre-send)\n");
+}
+
+static int hook_post_send(ne_request *req, void *userdata,
+                          const ne_status *status)
+{
+    ne_buffer *buf = userdata;
+    char sbuf[128];
+
+    ne_snprintf(sbuf, sizeof sbuf, "HTTP/%d.%d,%d,%s", 
+                status->major_version, status->minor_version,
+                status->code, status->reason_phrase);
+
+    ne_buffer_concat(buf, "(post-send,", sbuf, ")\n", NULL);
+    
+    return NE_OK;
+}
+
+static void hook_destroy_req(ne_request *req, void *userdata)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_czappend(buf, "(destroy-req)\n");
+}
+
+static void hook_destroy_sess(void *userdata)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_czappend(buf, "(destroy-sess)\n");
+}
+
+static int hooks(void)
+{
+    ne_buffer *buf = ne_buffer_create();
+    ne_session *sess;
+
+    CALL(make_session(&sess, single_serve_string, 
+                      RESP200 "Content-Length: 0\r\n" "\r\n"
+                      RESP200 "Content-Length: 0\r\n" "\r\n"));
+
+    ne_hook_create_request(sess, thook_create_req, buf);
+    ne_hook_pre_send(sess, hook_pre_send, buf);
+    ne_hook_post_send(sess, hook_post_send, buf);
+    ne_hook_destroy_request(sess, hook_destroy_req, buf);
+    ne_hook_destroy_session(sess, hook_destroy_sess, buf);
+
+    CALL(any_2xx_request(sess, "/first"));
+
+    ONCMP("(create,GET,/first)\n"
+          "(pre-send)\n"
+          "(post-send,HTTP/1.1,200,OK)\n"
+          "(destroy-req)\n", buf->data, "hook ordering", "first result");
+
+    ne_buffer_clear(buf);
+
+    ne_unhook_pre_send(sess, hook_pre_send, buf);
+    ne_unhook_destroy_request(sess, hook_destroy_req, buf);
+
+    CALL(any_2xx_request(sess, "/second"));
+
+    ONCMP("(create,GET,/second)\n"
+          "(post-send,HTTP/1.1,200,OK)\n", 
+          buf->data, "hook ordering", "second result");
+
+    ne_buffer_clear(buf);
+
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    ONCMP("(destroy-sess)\n", buf->data, "hook ordering", "final result");
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -1862,5 +1950,6 @@ ne_test tests[] = {
     T(hook_create_req),
     T(abort_reader),
     T(send_bad_offset),
+    T(hooks),
     T(NULL)
 };
