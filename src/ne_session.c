@@ -329,7 +329,9 @@ static void remove_hook(struct hook **hooks, void_fn fn, void *ud)
 
     while (*p) {
         if ((*p)->fn == fn && (*p)->userdata == ud) {
-            (*p) = (*p)->next;
+            struct hook *next = (*p)->next;
+            ne_free(*p);
+            (*p) = next;
             break;
         }
         p = &(*p)->next;
