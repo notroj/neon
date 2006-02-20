@@ -1834,6 +1834,7 @@ static int hooks(void)
 
     CALL(make_session(&sess, single_serve_string, 
                       RESP200 "Content-Length: 0\r\n" "\r\n"
+                      RESP200 "Content-Length: 0\r\n" "\r\n"
                       RESP200 "Content-Length: 0\r\n" "\r\n"));
 
     ne_hook_create_request(sess, thook_create_req, buf);
@@ -1851,6 +1852,11 @@ static int hooks(void)
 
     ne_buffer_clear(buf);
 
+    /* Unhook for mismatched fn/ud pointers: */
+    ne_unhook_create_request(sess, hk_createreq, buf);
+    ne_unhook_create_request(sess, thook_create_req, sess);
+
+    /* Unhook real functions. */
     ne_unhook_pre_send(sess, hook_pre_send, buf);
     ne_unhook_destroy_request(sess, hook_destroy_req, buf);
 
@@ -1862,10 +1868,35 @@ static int hooks(void)
 
     ne_buffer_clear(buf);
 
+    /* Double hook create, double hook then double unhook post. */
+    ne_hook_create_request(sess, thook_create_req, buf);
+    ne_hook_post_send(sess, hook_post_send, buf);
+    ne_unhook_post_send(sess, hook_post_send, buf);
+    ne_unhook_post_send(sess, hook_post_send, buf);
+
+    CALL(any_2xx_request(sess, "/third"));
+
+    ONCMP("(create,GET,/third)\n"
+          "(create,GET,/third)\n", 
+          buf->data, "hook ordering", "third result");
+
+    ne_buffer_clear(buf);
+
     ne_session_destroy(sess);
     CALL(await_server());
 
-    ONCMP("(destroy-sess)\n", buf->data, "hook ordering", "final result");
+    ONCMP("(destroy-sess)\n", buf->data, "hook ordering", "first destroyed session");
+
+    ne_buffer_clear(buf);
+
+    sess = ne_session_create("http", "www.example.com", 80);
+    ne_hook_destroy_session(sess, hook_destroy_sess, buf);
+    ne_unhook_destroy_session(sess, hook_destroy_sess, buf);
+    ne_session_destroy(sess);
+
+    ONCMP("", buf->data, "hook ordering", "second destroyed session");
+
+    ne_buffer_destroy(buf);
 
     return OK;
 }
