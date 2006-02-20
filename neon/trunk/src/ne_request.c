@@ -285,64 +285,22 @@ void *ne_get_session_private(ne_session *sess, const char *id)
     return get_private(sess->private, id);
 }
 
-typedef void (*void_fn)(void);
-
-#define ADD_HOOK(hooks, fn, ud) add_hook(&(hooks), NULL, (void_fn)(fn), (ud))
-
-static void add_hook(struct hook **hooks, const char *id, void_fn fn, void *ud)
+void ne_set_request_private(ne_request *req, const char *id, void *userdata)
 {
     struct hook *hk = ne_malloc(sizeof (struct hook)), *pos;
 
-    if (*hooks != NULL) {
-	for (pos = *hooks; pos->next != NULL; pos = pos->next)
+    if (req->private != NULL) {
+	for (pos = req->private; pos->next != NULL; pos = pos->next)
 	    /* nullop */;
 	pos->next = hk;
     } else {
-	*hooks = hk;
+	req->private = hk;
     }
 
     hk->id = id;
-    hk->fn = fn;
-    hk->userdata = ud;
+    hk->fn = NULL;
+    hk->userdata = userdata;
     hk->next = NULL;
-}
-
-void ne_hook_create_request(ne_session *sess, 
-			    ne_create_request_fn fn, void *userdata)
-{
-    ADD_HOOK(sess->create_req_hooks, fn, userdata);
-}
-
-void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata)
-{
-    ADD_HOOK(sess->pre_send_hooks, fn, userdata);
-}
-
-void ne_hook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata)
-{
-    ADD_HOOK(sess->post_send_hooks, fn, userdata);
-}
-
-void ne_hook_destroy_request(ne_session *sess,
-			     ne_destroy_req_fn fn, void *userdata)
-{
-    ADD_HOOK(sess->destroy_req_hooks, fn, userdata);    
-}
-
-void ne_hook_destroy_session(ne_session *sess,
-			     ne_destroy_sess_fn fn, void *userdata)
-{
-    ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
-}
-
-void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
-{
-    add_hook(&sess->private, id, NULL, userdata);
-}
-
-void ne_set_request_private(ne_request *req, const char *id, void *userdata)
-{
-    add_hook(&req->private, id, NULL, userdata);
 }
 
 static ssize_t body_string_send(void *userdata, char *buffer, size_t count)

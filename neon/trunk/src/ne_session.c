@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -266,4 +266,59 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 #ifdef NE_HAVE_SSL
     ne_ssl_context_trustcert(sess->ssl_context, cert);
 #endif
+}
+
+typedef void (*void_fn)(void);
+
+#define ADD_HOOK(hooks, fn, ud) add_hook(&(hooks), NULL, (void_fn)(fn), (ud))
+
+static void add_hook(struct hook **hooks, const char *id, void_fn fn, void *ud)
+{
+    struct hook *hk = ne_malloc(sizeof (struct hook)), *pos;
+
+    if (*hooks != NULL) {
+	for (pos = *hooks; pos->next != NULL; pos = pos->next)
+	    /* nullop */;
+	pos->next = hk;
+    } else {
+	*hooks = hk;
+    }
+
+    hk->id = id;
+    hk->fn = fn;
+    hk->userdata = ud;
+    hk->next = NULL;
+}
+
+void ne_hook_create_request(ne_session *sess, 
+			    ne_create_request_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->create_req_hooks, fn, userdata);
+}
+
+void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->pre_send_hooks, fn, userdata);
+}
+
+void ne_hook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->post_send_hooks, fn, userdata);
+}
+
+void ne_hook_destroy_request(ne_session *sess,
+			     ne_destroy_req_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->destroy_req_hooks, fn, userdata);    
+}
+
+void ne_hook_destroy_session(ne_session *sess,
+			     ne_destroy_sess_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
+}
+
+void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
+{
+    add_hook(&sess->private, id, NULL, userdata);
 }
