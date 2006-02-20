@@ -1031,10 +1031,8 @@ void ne__ssl_exit(void)
     /* Only unregister the callbacks if some *other* library has not
      * come along in the mean-time and trampled over the callbacks
      * installed by neon. */
-    if (CRYPTO_get_locking_callback() != thread_lock_neon
-        || CRYPTO_get_id_callback() != thread_id_neon) {
-        NE_DEBUG(NE_DBG_SOCKET, "ssl: Not removing non-neon OpenSSL thread-safety callbacks.\n");
-    } else {
+    if (CRYPTO_get_locking_callback() == thread_lock_neon
+        && CRYPTO_get_id_callback() == thread_id_neon) {
         size_t n;
 
         CRYPTO_set_id_callback(NULL);
@@ -1045,7 +1043,6 @@ void ne__ssl_exit(void)
         }
 
         free(locks);
-        NE_DEBUG(NE_DBG_SOCKET, "ssl: Removed OpenSSL thread-safety callbacks.\n");
     }
 #endif
 }
