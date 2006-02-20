@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -63,11 +63,14 @@ static int multi_init(void)
                        res1, res2));
     
     ne_sock_exit();
+    ne_sock_exit();
+    ne_sock_exit();
+
     res1 = ne_sock_init();
-    
     ONV(res1 != res2, ("re-init after exit gave %d not %d",
                        res1, res2));
-    
+    ne_sock_exit();
+
     res2 = ne_sock_init();
     
     ONV(res1 != res2, ("second time, cached init result changed from %d to %d",
