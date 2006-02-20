@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -271,6 +271,19 @@ typedef void (*ne_destroy_sess_fn)(void *userdata);
 /* Hook called when the session is destroyed. */
 void ne_hook_destroy_session(ne_session *sess,
 			     ne_destroy_sess_fn fn, void *userdata);
+
+/* The ne_unhook_* functions remove a hook registered with the given
+ * session.  If a hook is found which was registered with a given
+ * function 'fn', and userdata pointer 'userdata', then it will be
+ * removed from the hooks list. */
+void ne_unhook_create_request(ne_session *sess, 
+                              ne_create_request_fn fn, void *userdata);
+void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
+void ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
+void ne_unhook_destroy_request(ne_session *sess,
+                               ne_destroy_req_fn fn, void *userdata);
+void ne_unhook_destroy_session(ne_session *sess,
+                               ne_destroy_sess_fn fn, void *userdata);
 
 /* Store an opaque context for the request, 'priv' is returned by a
  * call to ne_request_get_private with the same ID. */

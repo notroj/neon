@@ -322,3 +322,46 @@ void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
 {
     add_hook(&sess->private, id, NULL, userdata);
 }
+
+static void remove_hook(struct hook **hooks, void_fn fn, void *ud)
+{
+    struct hook **p = hooks;
+
+    while (*p) {
+        if ((*p)->fn == fn && (*p)->userdata == ud) {
+            (*p) = (*p)->next;
+            break;
+        }
+        p = &(*p)->next;
+    }
+}
+
+#define REMOVE_HOOK(hooks, fn, ud) remove_hook(&hooks, (void_fn)fn, ud)
+
+void ne_unhook_create_request(ne_session *sess, 
+                              ne_create_request_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->create_req_hooks, fn, userdata);
+}
+
+void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->pre_send_hooks, fn, userdata);
+}
+
+void ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->post_send_hooks, fn, userdata);
+}
+
+void ne_unhook_destroy_request(ne_session *sess,
+                               ne_destroy_req_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->destroy_req_hooks, fn, userdata);    
+}
+
+void ne_unhook_destroy_session(ne_session *sess,
+                               ne_destroy_sess_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->destroy_sess_hooks, fn, userdata);
+}
