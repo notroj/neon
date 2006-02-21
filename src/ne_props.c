@@ -38,8 +38,6 @@
 /* don't store flat props with a value > 10K */
 #define MAX_FLATPROP_LEN (102400)
 
-#define EOL "\r\n"
-
 struct ne_propfind_handler_s {
     ne_session *sess;
     ne_request *request;
@@ -159,13 +157,13 @@ static void set_body(ne_propfind_handler *hdl, const ne_propname *names)
     int n;
     
     if (!hdl->has_props) {
-	ne_buffer_zappend(body, "<prop>" EOL);
+	ne_buffer_czappend(body, "<prop>\n");
 	hdl->has_props = 1;
     }
 
     for (n = 0; names[n].name != NULL; n++) {
 	ne_buffer_concat(body, "<", names[n].name, " xmlns=\"", 
-			 NSPACE(names[n].nspace), "\"/>" EOL, NULL);
+			 NSPACE(names[n].nspace), "\"/>\n", NULL);
     }
 
 }
@@ -173,7 +171,7 @@ static void set_body(ne_propfind_handler *hdl, const ne_propname *names)
 int ne_propfind_allprop(ne_propfind_handler *handler, 
 			 ne_props_result results, void *userdata)
 {
-    ne_buffer_zappend(handler->body, "<allprop/></propfind>" EOL);
+    ne_buffer_czappend(handler->body, "<allprop/></propfind>\n");
     return propfind(handler, results, userdata);
 }
 
@@ -181,7 +179,7 @@ int ne_propfind_named(ne_propfind_handler *handler, const ne_propname *props,
 		       ne_props_result results, void *userdata)
 {
     set_body(handler, props);
-    ne_buffer_zappend(handler->body, "</prop></propfind>" EOL);
+    ne_buffer_czappend(handler->body, "</prop></propfind>\n");
     return propfind(handler, results, userdata);
 }
 
@@ -195,8 +193,8 @@ int ne_proppatch(ne_session *sess, const char *uri,
     int n, ret;
     
     /* Create the request body */
-    ne_buffer_zappend(body, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" EOL
-		     "<D:propertyupdate xmlns:D=\"DAV:\">");
+    ne_buffer_czappend(body, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
+                       "<D:propertyupdate xmlns:D=\"DAV:\">");
 
     for (n = 0; items[n].name != NULL; n++) {
 	const char *elm = (items[n].type == ne_propset) ? "set" : "remove";
@@ -215,11 +213,11 @@ int ne_proppatch(ne_session *sess, const char *uri,
 	    ne_buffer_append(body, ">", 1);
 	}
 
-	ne_buffer_concat(body, "</", items[n].name->name, "></D:prop></D:", elm, ">"
-			 EOL, NULL);
+	ne_buffer_concat(body, "</", items[n].name->name, "></D:prop></D:", elm, 
+                         ">\n", NULL);
     }	
 
-    ne_buffer_zappend(body, "</D:propertyupdate>" EOL);
+    ne_buffer_czappend(body, "</D:propertyupdate>\n");
 
     ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
     ne_add_request_header(req, "Content-Type", NE_XML_MEDIA_TYPE);
@@ -579,7 +577,7 @@ ne_propfind_create(ne_session *sess, const char *uri, int depth)
 
     /* The start of the request body is fixed: */
     ne_buffer_concat(ret->body, 
-		    "<?xml version=\"1.0\" encoding=\"utf-8\"?>" EOL 
+		    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" 
 		    "<propfind xmlns=\"DAV:\">", NULL);
 
     ne_uri_free(&base);
@@ -627,7 +625,7 @@ int ne_propnames(ne_session *sess, const char *href, int depth,
 
     hdl = ne_propfind_create(sess, href, depth);
 
-    ne_buffer_zappend(hdl->body, "<propname/></propfind>");
+    ne_buffer_czappend(hdl->body, "<propname/></propfind>");
 
     ret = propfind(hdl, results, userdata);
 

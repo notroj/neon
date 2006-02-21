@@ -49,8 +49,6 @@
 
 #define HOOK_ID "http://webdav.org/neon/hooks/webdav-locking"
 
-#define EOL "\r\n"
-
 /* A list of lock objects. */
 struct lock_list {
     struct ne_lock *lock;
@@ -135,14 +133,14 @@ static void lk_pre_send(ne_request *r, void *userdata, ne_buffer *req)
 	struct lock_list *item;
 
 	/* Add in the If header */
-	ne_buffer_zappend(req, "If:");
+	ne_buffer_czappend(req, "If:");
 	for (item = lrc->submit; item != NULL; item = item->next) {
 	    char *uri = ne_uri_unparse(&item->lock->uri);
 	    ne_buffer_concat(req, " <", uri, "> (<",
 			     item->lock->token, ">)", NULL);
 	    ne_free(uri);
 	}
-	ne_buffer_zappend(req, EOL);
+	ne_buffer_czappend(req, "\n");
     }
 }
 
@@ -693,17 +691,17 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
     ne_xml_push_handler(parser, lk_startelm, lk_cdata, lk_endelm, &ctx);
     
     /* Create the body */
-    ne_buffer_concat(body, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" EOL
-		    "<lockinfo xmlns='DAV:'>" EOL " <lockscope>",
+    ne_buffer_concat(body, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+		    "<lockinfo xmlns='DAV:'>\n" " <lockscope>",
 		    lock->scope==ne_lockscope_exclusive?
 		    "<exclusive/>":"<shared/>",
-		    "</lockscope>" EOL
+		    "</lockscope>\n"
 		    "<locktype><write/></locktype>", NULL);
 
     if (lock->owner) {
-	ne_buffer_concat(body, "<owner>", lock->owner, "</owner>" EOL, NULL);
+	ne_buffer_concat(body, "<owner>", lock->owner, "</owner>\n", NULL);
     }
-    ne_buffer_zappend(body, "</lockinfo>" EOL);
+    ne_buffer_czappend(body, "</lockinfo>\n");
 
     ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
     ne_add_request_header(req, "Content-Type", NE_XML_MEDIA_TYPE);
