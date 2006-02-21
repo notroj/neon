@@ -234,10 +234,10 @@ void ne_set_request_expect100(ne_request *req, int flag);
 
 typedef void (*ne_free_hooks)(void *cookie);
 
-/* Hook called when a create is created; passed the request method,
- * and the string used as the Request-URI (which may be an abs_path,
- * or an absoluteURI, depending on whether an HTTP proxy is in
- * use).  */
+/* Hook called when a request is created; passed the request method,
+ * and the string used as the Request-URI (note that this may be a
+ * absolute URI if a proxy is in use, an absolute path, a "*",
+ * etc). */
 typedef void (*ne_create_request_fn)(ne_request *req, void *userdata,
 				     const char *method, const char *requri);
 void ne_hook_create_request(ne_session *sess, 
