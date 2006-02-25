@@ -1922,6 +1922,23 @@ static int hook_self_destroy(void)
     return OK;
 }
 
+static int icy_protocol(void)
+{
+    ne_session *sess;
+    
+    CALL(make_session(&sess, single_serve_string,
+                      "ICY 200 OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+
+    ne_set_session_flag(sess, NE_SESSFLAG_ICYPROTO, 1);
+    
+    ONREQ(any_request(sess, "/foo"));
+
+    ne_session_destroy(sess);
+
+    return await_server();
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -2004,5 +2021,6 @@ ne_test tests[] = {
     T(send_bad_offset),
     T(hooks),
     T(hook_self_destroy),
+    T(icy_protocol),
     T(NULL)
 };
