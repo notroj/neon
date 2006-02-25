@@ -1,6 +1,6 @@
 /* 
    SSL/TLS abstraction layer for neon
-   Copyright (C) 2003-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -158,6 +158,10 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx,
  * a set of PEM certs from which CA names are sent in the ccert request. */
 int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
                               const char *ca_names, const char *verify_cas);
+
+#define NE_SSL_CTX_SSLv2 (0)
+/* Set a flag for the SSL context. */
+void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value);
 
 /* Destroy an SSL context. */
 void ne_ssl_context_destroy(ne_ssl_context *ctx);

@@ -142,6 +142,7 @@ ne_session *ne_session_create(const char *scheme,
 #ifdef NE_HAVE_SSL
     if (sess->use_ssl) {
         sess->ssl_context = ne_ssl_context_create(0);
+        sess->flags[NE_SESSFLAG_SSLv2] = 1
     }
 #endif
 
@@ -180,6 +181,11 @@ void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value)
 {
     if (flag < NE_SESSFLAG_LAST) {
         sess->flags[flag] = value;
+#ifdef NE_HAVE_SSL
+        if (flag == NE_SESSFLAG_SSLv2 && sess->ssl_context) {
+            ne_ssl_context_set_flag(sess->ssl_context, NE_SSL_CTX_SSLv2, value);
+        }
+#endif
     }
 }
 

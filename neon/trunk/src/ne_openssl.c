@@ -532,6 +532,25 @@ ne_ssl_context *ne_ssl_context_create(int mode)
     return ctx;
 }
 
+void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value)
+{
+    long opts = SSL_CTX_get_options(ctx->ctx);
+
+    switch (flag) {
+    case NE_SSL_CTX_SSLv2:
+        if (flag) { 
+            /* Enable SSLv2 support; clear the "no SSLv2" flag. */
+            opts &= ~SSL_OP_NO_SSLv2;
+        } else {
+            /* Disable it: set the flag. */
+            opts |= SSL_OP_NO_SSLv2;
+        }
+        break;
+    }
+
+    SSL_CTX_set_options(ctx->ctx, opts);
+}
+
 int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
                            const char *key)
 {

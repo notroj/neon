@@ -452,6 +452,10 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
     return 0;
 }
 
+void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value)
+{
+    /* SSLv2 not supported. */
+}
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
