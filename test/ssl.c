@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -372,6 +372,7 @@ static int simple_sslv2(void)
     ne_session *sess = ne_session_create("https", "localhost", 7777);
     struct ssl_server_args args = {SERVER_CERT, 0};
     args.use_ssl2 = 1;
+    ne_set_session_flag(sess, NE_SESSFLAG_SSLv2, 1);
     CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     return OK;
