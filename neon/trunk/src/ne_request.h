@@ -223,12 +223,24 @@ int ne_discard_response(ne_request *req);
  * given file descriptor.  Returns NE_ERROR on error. */
 int ne_read_response_to_fd(ne_request *req, int fd);
 
-/* If 'flag' is non-zer, enable the HTTP/1.1 "Expect: 100-continue"
- * feature for the request, which allows the server to send an error
- * response before the request body is sent.  This should only be used
- * if the server is known to support the feature (not all HTTP/1.1
- * servers do); the request will time out and fail otherwise. */
-void ne_set_request_expect100(ne_request *req, int flag);
+/* Defined request flags: */
+typedef enum ne_request_flag_e {
+    NE_REQFLAG_EXPECT100 = 0, /* enable this flag to enable use of the
+                               * "Expect: 100-continue" for the
+                               * request. */
+
+    NE_REQFLAG_IDEMPOTENT, /* disable this flag if the request uses a
+                            * non-idempotent method such as POST. */
+
+    NE_REQFLAG_LAST /* enum sentinel value */
+} ne_request_flag;
+
+/* Set a new value for a particular request flag. */
+void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value);
+
+/* Return 0 if the given flag is not set, >0 it is set, or -1 if the
+ * flag is not supported. */
+int ne_get_request_flag(ne_request *req, ne_request_flag flag);
 
 /**** Request hooks handling *****/
 

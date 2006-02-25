@@ -975,7 +975,9 @@ static int expect_100_once(void)
     CALL(make_session(&sess, serve_100_once, NULL));
 
     req = ne_request_create(sess, "GET", "/foo");
-    ne_set_request_expect100(req, 1);
+    ne_set_request_flag(req, NE_REQFLAG_EXPECT100, 1);
+    ONN("expect100 flag ignored",
+        ne_get_request_flag(req, NE_REQFLAG_EXPECT100) != 1);
     memset(body, 'A', sizeof(body));
     ne_set_request_body_buffer(req, body, sizeof(body));
     ONREQ(ne_request_dispatch(req));
@@ -994,7 +996,7 @@ static int expect_100_nobody(void)
     CALL(make_session(&sess, serve_100_once, NULL));
     
     req = ne_request_create(sess, "GET", "/foo");
-    ne_set_request_expect100(req, 1);
+    ne_set_request_flag(req, NE_REQFLAG_EXPECT100, 1);
     ONREQ(ne_request_dispatch(req));
     ne_request_destroy(req);
     ne_session_destroy(sess);
