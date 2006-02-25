@@ -135,7 +135,7 @@ size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
     ne_attribute((format(printf, 3, 0)));
 
 /* Implementations of strcasecmp and strncasecmp which behave as
- * defined by the POSIX strcasecmp() and strncasecmp() when in the
+ * defined by the ANSI C strcasecmp() and strncasecmp() when in the
  * POSIX locale; i.e. ignoring the process locale. */
 
 /* Compares 's1' and 's2', ignoring differences in case. */
@@ -143,6 +143,13 @@ int ne_strcasecmp(const char *s1, const char *s2);
 /* Compares up to 'n' characters of 's1' and 's2', ignoring
  * differences in case. */
 int ne_strncasecmp(const char *s1, const char *s2, size_t n);
+
+/* Return lowercase 'c' as in POSIX locale; note difference from ANSI
+ * C semantics as both the argument and return value are unsigned
+ * char. */
+#define ne_tolower(c) (ne_tolower_array()[(unsigned char)c])
+
+const unsigned char *ne_tolower_array(void);
 
 NE_END_DECLS
 
