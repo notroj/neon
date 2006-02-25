@@ -372,14 +372,22 @@ static int gz_reader(void *ud, const char *buf, size_t len)
     return 0;
 }
 
-void ne_decompress_destroy(ne_decompress *ctx)
+/* Prepare for a compressed response; may be called many times per
+ * request, for auth retries etc. */
+static void gz_pre_send(ne_request *r, void *ud, ne_buffer *req)
 {
-    if (ctx->zstrinit)
-	/* inflateEnd only fails if it's passed NULL etc; ignore
-	 * return value. */
-	inflateEnd(&ctx->zstr);
+    ne_decompress *ctx = ud;
 
-    ne_free(ctx);
+    if (ctx->request == r) {
+        NE_DEBUG(NE_DBG_HTTP, "compress: Initialization.\n");
+        
+        /* (Re-)Initialize the context */
+        ctx->state = NE_Z_BEFORE_DATA;
+        if (ctx->zstrinit) inflateEnd(&ctx->zstr);
+        ctx->zstrinit = 0;
+        ctx->hdrcount = ctx->footcount = 0;
+        ctx->checksum = crc32(0L, Z_NULL, 0);
+    }
 }
 
 /* Wrapper for user-passed acceptor function. */
@@ -389,6 +397,10 @@ static int gz_acceptor(void *userdata, ne_request *req, const ne_status *st)
     return ctx->acceptor(ctx->userdata, req, st);
 }
 
+/* A slightly ugly hack: the pre_send hook is scoped per-session, so
+ * must check that the invoking request is this one, before doing
+ * anything, and must be unregistered when the context is
+ * destroyed. */
 ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 				    ne_block_reader rdr, void *userdata)
 {
@@ -398,16 +410,24 @@ ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response acpt,
 
     ne_add_response_body_reader(req, gz_acceptor, gz_reader, ctx);
 
-    ctx->state = NE_Z_BEFORE_DATA;
     ctx->reader = rdr;
     ctx->userdata = userdata;
     ctx->session = ne_get_session(req);
     ctx->request = req;
-    /* initialize the checksum. */
-    ctx->checksum = crc32(0L, Z_NULL, 0);
     ctx->acceptor = acpt;
 
+    ne_hook_pre_send(ne_get_session(req), gz_pre_send, ctx);
+
     return ctx;    
+}
+
+void ne_decompress_destroy(ne_decompress *ctx)
+{
+    if (ctx->zstrinit) inflateEnd(&ctx->zstr);
+
+    ne_unhook_pre_send(ctx->session, gz_pre_send, ctx);
+
+    ne_free(ctx);
 }
 
 #else /* !NE_HAVE_ZLIB */
