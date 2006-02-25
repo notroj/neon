@@ -116,13 +116,13 @@ corrupt1.gz: file1.gz
 	dd of=$@ if=file1.gz bs=1 count=500
 	cat $(NEWS) >> $@
 
-corrupt2.gz: 
+corrupt2.gz: $(NEWS)
 	cat $(NEWS) > $@
 
 empty.gz:
 	touch $@
 
-random.txt:
+random.txt: $(NEWS)
 	cat $(NEWS) > $@
 
 # Dummy target to create the CA keys etc.  makekeys stderr is redirected
