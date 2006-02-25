@@ -216,6 +216,8 @@ int ne_post(ne_session *sess, const char *uri, int fd, const char *buffer)
     ne_request *req = ne_request_create(sess, "POST", uri);
     int ret;
 
+    ne_set_request_flag(req, NE_REQFLAG_IDEMPOTENT, 0);
+
     ne_set_request_body_buffer(req, buffer, strlen(buffer));
 
     ret = dispatch_to_fd(req, fd, NULL);

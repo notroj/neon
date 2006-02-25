@@ -688,6 +688,9 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
     ctx.cdata = ne_buffer_create();    
     ctx.req = req;
 
+    /* LOCK is not idempotent. */
+    ne_set_request_flag(req, NE_REQFLAG_IDEMPOTENT, 0);
+
     ne_xml_push_handler(parser, lk_startelm, lk_cdata, lk_endelm, &ctx);
     
     /* Create the body */
