@@ -1901,6 +1901,27 @@ static int hooks(void)
     return OK;
 }
 
+static void hook_self_destroy_req(ne_request *req, void *userdata)
+{
+    ne_unhook_destroy_request(ne_get_session(req), 
+                              hook_self_destroy_req, userdata);
+}
+
+/* Test that it's safe to call ne_unhook_destroy_request from a
+ * destroy_request hook. */
+static int hook_self_destroy(void)
+{
+    ne_session *sess = ne_session_create("http", "localhost", 1234);
+    
+    ne_hook_destroy_request(sess, hook_self_destroy_req, NULL);
+
+    ne_request_destroy(ne_request_create(sess, "GET", "/"));
+
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -1982,5 +2003,6 @@ ne_test tests[] = {
     T(abort_reader),
     T(send_bad_offset),
     T(hooks),
+    T(hook_self_destroy),
     T(NULL)
 };
