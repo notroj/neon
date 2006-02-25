@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -73,9 +73,10 @@ struct ne_session_s {
 
     /* Settings */
     unsigned int use_proxy:1; /* do we have a proxy server? */
-    unsigned int no_persist:1; /* set to disable persistent connections */
     unsigned int use_ssl:1; /* whether a secure connection is required */
     unsigned int in_connect:1; /* doing a proxy CONNECT */
+
+    int flags[NE_SESSFLAG_LAST];
 
     ne_progress progress_cb;
     void *progress_ud;

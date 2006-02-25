@@ -436,7 +436,7 @@ static void add_fixed_headers(ne_request *req)
      * close; otherwise, send Connection: Keep-Alive to pre-1.1 origin
      * servers to try harder to get a persistent connection, except if
      * using a proxy as per 2068§19.7.1.  Always add TE: trailers. */
-    if (req->session->no_persist) {
+    if (!req->session->flags[NE_SESSFLAG_PERSIST]) {
        ne_buffer_czappend(req->headers,
                           "Connection: TE, close" EOL
                           "TE: trailers" EOL);
@@ -1192,7 +1192,7 @@ int ne_begin_request(ne_request *req)
     DEBUG_DUMP_REQUEST(data->data);
     ret = send_request(req, data);
     /* Retry this once after a persistent connection timeout. */
-    if (ret == NE_RETRY && !req->session->no_persist) {
+    if (ret == NE_RETRY) {
 	NE_DEBUG(NE_DBG_HTTP, "Persistent connection timed out, retrying.\n");
 	ret = send_request(req, data);
     }
@@ -1308,7 +1308,7 @@ int ne_end_request(ne_request *req)
     
     /* Close the connection if persistent connections are disabled or
      * not supported by the server. */
-    if (req->session->no_persist || !req->can_persist)
+    if (!req->session->flags[NE_SESSFLAG_PERSIST] || !req->can_persist)
 	ne_close_connection(req->session);
     else
 	req->session->persisted = 1;
