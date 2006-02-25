@@ -538,7 +538,7 @@ void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value)
 
     switch (flag) {
     case NE_SSL_CTX_SSLv2:
-        if (flag) { 
+        if (value) { 
             /* Enable SSLv2 support; clear the "no SSLv2" flag. */
             opts &= ~SSL_OP_NO_SSLv2;
         } else {
