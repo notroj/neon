@@ -122,7 +122,7 @@ strncpy(dest, src, n-1); dest[n-1] = '\0'; } while (0)
  * arguments, up to a terminating NULL. */
 char *ne_concat(const char *str, ...);
 
-#define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : (tolower((x)) + 10 - 'a'))
+#define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : (ne_tolower((x)) + 10 - 'a'))
 #define NE_HEX2ASC(x) ((char) ((x) > 9 ? ((x) - 10 + 'a') : ((x) + '0')))
 
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
