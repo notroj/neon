@@ -921,8 +921,21 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     if (status->reason_phrase) ne_free(status->reason_phrase);
     memset(status, 0, sizeof *status);
 
-    if (ne_parse_statusline(buffer, status))
+    if (req->session->flags[NE_SESSFLAG_ICYPROTO]
+        && strncmp(buffer, "ICY ", 4) == 0 && strlen(buffer) > 8
+        && buffer[7] == ' ') {
+        /* Hack for ShoutCast support; will be conditional in future
+         * releases. */
+        status->code = atoi(buffer + 4);
+        status->major_version = 1;
+        status->minor_version = 0;
+        status->reason_phrase = ne_strclean(ne_strdup(buffer + 8));
+        status->klass = buffer[4] - '0';
+        NE_DEBUG(NE_DBG_HTTP, "[status-line] ICY protocol; code %d\n", 
+                 status->code);
+    } else if (ne_parse_statusline(buffer, status)) {
 	return aborted(req, _("Could not parse response status line."), 0);
+    }
 
     return 0;
 }

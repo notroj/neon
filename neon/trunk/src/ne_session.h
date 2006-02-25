@@ -55,6 +55,9 @@ typedef enum ne_session_flag_e {
     NE_SESSFLAG_PERSIST = 0, /* disable this flag to prevent use oaf
                               * persistent connections. */
 
+    NE_SESSFLAG_ICYPROTO, /* enable this flag to enable support for
+                           * non-HTTP ShoutCast-style "ICY" responses. */
+
     NE_SESSFLAG_SSLv2, /* disable this flag to disable support for
                         * SSLv2, if supported by the SSL library. */
 
