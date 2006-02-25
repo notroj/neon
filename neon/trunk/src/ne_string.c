@@ -423,6 +423,11 @@ static const unsigned char ascii_tolower[256] = {
 
 #define TOLOWER(ch) ascii_tolower[ch]
 
+const unsigned char *ne_tolower_array(void)
+{
+    return ascii_tolower;
+}
+
 int ne_strcasecmp(const char *s1, const char *s2)
 {
     const unsigned char *p1 = (const unsigned char *) s1;
