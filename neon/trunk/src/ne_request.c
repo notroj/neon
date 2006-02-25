@@ -966,7 +966,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     sret = ne_sock_fullwrite(req->session->socket, request->data, 
                              ne_buffer_size(request));
     if (sret < 0) {
-	int aret = aborted(req, _("Could not send request"), ret);
+	int aret = aborted(req, _("Could not send request"), sret);
 	return RETRY_RET(retry, sret, aret);
     }
     
