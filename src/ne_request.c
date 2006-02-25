@@ -697,8 +697,9 @@ void ne_request_destroy(ne_request *req)
     ne_buffer_destroy(req->headers);
 
     NE_DEBUG(NE_DBG_HTTP, "Running destroy hooks.\n");
-    for (hk = req->session->destroy_req_hooks; hk; hk = hk->next) {
+    for (hk = req->session->destroy_req_hooks; hk; hk = next_hk) {
 	ne_destroy_req_fn fn = (ne_destroy_req_fn)hk->fn;
+        next_hk = hk->next;
 	fn(req, hk->userdata);
     }
 
