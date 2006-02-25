@@ -1,6 +1,6 @@
 /* 
    Tests for session handling
-   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -147,12 +147,30 @@ static int get_scheme(void)
     return OK;
 }
 
+static int flags(void)
+{
+    ne_session *sess = ne_session_create("https", "localhost", 443);
+
+    ne_set_session_flag(sess, NE_SESSFLAG_PERSIST, 1);
+    ONN("persist flag was not set",
+        ne_get_session_flag(sess, NE_SESSFLAG_PERSIST) != 1);
+
+    ne_set_session_flag(sess, NE_SESSFLAG_LAST, 1);
+    ONN("unsupported flag was recognized",
+        ne_get_session_flag(sess, NE_SESSFLAG_LAST) != -1);
+
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(fill_uri),
     T(hostports),
     T(errors),
     T(privates),
     T(get_scheme),
+    T(flags),
     T(NULL)
 };
 

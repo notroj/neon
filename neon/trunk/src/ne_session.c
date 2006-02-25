@@ -147,6 +147,9 @@ ne_session *ne_session_create(const char *scheme,
 
     sess->scheme = ne_strdup(scheme);
 
+    /* Set flags which default to on: */
+    sess->flags[NE_SESSFLAG_PERSIST] = 1;
+
     return sess;
 }
 
@@ -173,6 +176,20 @@ void ne_set_error(ne_session *sess, const char *format, ...)
     va_end(params);
 }
 
+void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value)
+{
+    if (flag < NE_SESSFLAG_LAST) {
+        sess->flags[flag] = value;
+    }
+}
+
+int ne_get_session_flag(ne_session *sess, ne_session_flag flag)
+{
+    if (flag < NE_SESSFLAG_LAST) {
+        return sess->flags[flag];
+    }
+    return -1;
+}
 
 void ne_set_progress(ne_session *sess, 
 		     ne_progress progress, void *userdata)
@@ -186,11 +203,6 @@ void ne_set_status(ne_session *sess,
 {
     sess->notify_cb = status;
     sess->notify_ud = userdata;
-}
-
-void ne_set_persist(ne_session *sess, int persist)
-{
-    sess->no_persist = !persist;
 }
 
 void ne_set_read_timeout(ne_session *sess, int timeout)
