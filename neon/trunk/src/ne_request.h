@@ -277,10 +277,8 @@ void ne_hook_destroy_session(ne_session *sess,
  * function 'fn', and userdata pointer 'userdata', then it will be
  * removed from the hooks list.
  *
- * It is unsafe to call any of these functions from a corresponding
- * hook function (i.e. calling ne_unhook_create_request from a hook
- * registered with ne_hook_create_request), except for
- * ne_unhook_destroy_request. */
+ * It is unsafe to use any of these functions from a hook function to
+ * unregister itself, except for ne_unhook_destroy_request. */
 void ne_unhook_create_request(ne_session *sess, 
                               ne_create_request_fn fn, void *userdata);
 void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
