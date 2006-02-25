@@ -33,7 +33,6 @@
 #ifdef HAVE_LIMITS_H
 #include <limits.h> /* for UINT_MAX etc */
 #endif
-#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #ifdef HAVE_STRING_H
@@ -213,7 +212,7 @@ static inline unsigned int hash_and_lower(char *name)
     unsigned int hash = 0;
 
     for (pnt = name; *pnt != '\0'; pnt++) {
-	*pnt = tolower(*pnt);
+	*pnt = ne_tolower(*pnt);
 	hash = HH_ITERATE(hash,*pnt);
     }
 
@@ -1117,7 +1116,7 @@ static int read_response_headers(ne_request *req)
 	/* Convert the header name to lower case and hash it. */
 	for (pnt = hdr; (*pnt != '\0' && *pnt != ':' && 
 			 *pnt != ' ' && *pnt != '\t'); pnt++) {
-	    *pnt = tolower(*pnt);
+	    *pnt = ne_tolower(*pnt);
 	    hash = HH_ITERATE(hash,*pnt);
 	}
 

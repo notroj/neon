@@ -36,8 +36,6 @@
 # endif
 #endif
 
-#include <ctype.h> /* for tolower */
-
 #include "ne_md5.h"
 #include "ne_string.h" /* for NE_ASC2HEX */
 
