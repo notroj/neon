@@ -195,8 +195,9 @@ struct ne_request_s {
 
     /*** Miscellaneous ***/
     unsigned int method_is_head:1;
-    unsigned int use_expect100:1;
     unsigned int can_persist:1;
+
+    int flags[NE_REQFLAG_LAST];
 
     ne_session *session;
     ne_status status;
@@ -469,6 +470,9 @@ ne_request *ne_request_create(ne_session *sess,
 
     req->session = sess;
     req->headers = ne_buffer_create();
+    
+    /* Presume the method is idempotent by default. */
+    req->flags[NE_REQFLAG_IDEMPOTENT] = 1;
 
     /* Add in the fixed headers */
     add_fixed_headers(req);
@@ -554,9 +558,19 @@ void ne_set_request_body_provider64(ne_request *req, off64_t bodysize,
 }
 #endif
 
-void ne_set_request_expect100(ne_request *req, int flag)
+void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value)
 {
-    req->use_expect100 = flag;
+    if (flag < NE_SESSFLAG_LAST) {
+        req->flags[flag] = value;
+    }
+}
+
+int ne_get_request_flag(ne_request *req, ne_request_flag flag)
+{
+    if (flag < NE_REQFLAG_LAST) {
+        return req->flags[flag];
+    }
+    return -1;
 }
 
 void ne_add_request_header(ne_request *req, const char *name, 
@@ -852,7 +866,7 @@ static ne_buffer *build_request(ne_request *req)
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
 
 #define E100 "Expect: 100-continue" EOL
-    if (req->use_expect100)
+    if (req->flags[NE_REQFLAG_EXPECT100])
 	ne_buffer_append(buf, E100, strlen(E100));
 
     NE_DEBUG(NE_DBG_HTTP, "Running pre_send hooks\n");
@@ -984,7 +998,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	return RETRY_RET(retry, sret, aret);
     }
     
-    if (!req->use_expect100 && req->body_length > 0) {
+    if (!req->flags[NE_REQFLAG_EXPECT100] && req->body_length > 0) {
 	/* Send request body, if not using 100-continue. */
 	ret = send_request_body(req, retry);
 	if (ret) {
@@ -1003,7 +1017,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	/* Discard headers with the interim response. */
 	if ((ret = discard_headers(req)) != NE_OK) break;
 
-	if (req->use_expect100 && (status->code == 100)
+	if (req->flags[NE_REQFLAG_EXPECT100] && (status->code == 100)
             && req->body_length > 0 && !sentbody) {
 	    /* Send the body after receiving the first 100 Continue */
 	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
@@ -1192,6 +1206,16 @@ int ne_begin_request(ne_request *req)
     const ne_status *const st = &req->status;
     const char *value;
     int ret;
+
+    /* If a non-idempotent request is sent on a persisted connection,
+     * then it is impossible to distinguish between a server failure
+     * and a connection timeout if an EOF/RST is received.  So don't
+     * do that. */
+    if (!req->flags[NE_REQFLAG_IDEMPOTENT] && req->session->persisted) {
+        NE_DEBUG(NE_DBG_HTTP, "req: Closing connection for non-idempotent "
+                 "request.\n");
+        ne_close_connection(req->session);
+    }
 
     /* Resolve hostname if necessary. */
     host = req->session->use_proxy?&req->session->proxy:&req->session->server;
