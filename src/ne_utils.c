@@ -1,6 +1,6 @@
 /* 
    HTTP utility functions
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -136,7 +136,8 @@ int ne_has_support(int feature)
 {
     switch (feature) {
 #if defined(NE_HAVE_SSL) || defined(NE_HAVE_ZLIB) || defined(NE_HAVE_IPV6) \
-    || defined(NE_HAVE_SOCKS) || defined(NE_HAVE_LFS)
+    || defined(NE_HAVE_SOCKS) || defined(NE_HAVE_LFS) \
+    || defined(NE_HAVE_TS_SSL)
 #ifdef NE_HAVE_SSL
     case NE_FEATURE_SSL:
 #endif
@@ -151,6 +152,9 @@ int ne_has_support(int feature)
 #endif
 #ifdef NE_HAVE_LFS
     case NE_FEATURE_LFS:
+#endif
+#ifdef NE_HAVE_TS_SSL
+    case NE_FEATURE_TS_SSL:
 #endif
         return 1;
 #endif /* NE_HAVE_* */

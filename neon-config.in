@@ -1,14 +1,11 @@
 #! /bin/sh
 # Originally from libxml, Copyright (C) Daniel Veillard
-# Modifications for neon Copyright (C) 2000-2005 Joe Orton.
+# Modifications for neon Copyright (C) 2000-2006 Joe Orton.
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 includedir=@includedir@
 libdir=@libdir@
-
-features="dav [@NE_FLAG_DAV@], ssl [@NE_FLAG_SSL@], zlib [@NE_FLAG_ZLIB@], \
-ipv6 [@NE_FLAG_IPV6@], lfs [@NE_FLAG_LFS@], i18n [@NE_FLAG_I18N@]"
 
 usage()
 {
@@ -24,7 +21,10 @@ Known values for OPTION are:
   --help		display this help and exit
   --version		output version information
   --support FEATURE     exit with success if feature is supported
- Known features: $features
+
+ Known features: 
+    dav [@NE_FLAG_DAV@], ssl [@NE_FLAG_SSL@], zlib [@NE_FLAG_ZLIB@], ipv6 [@NE_FLAG_IPV6@], lfs [@NE_FLAG_LFS@],
+    i18n [@NE_FLAG_I18N@], ts_ssl [@NE_FLAG_TS_SSL@]
 
 EOF
 
@@ -95,6 +95,7 @@ while test $# -gt 0; do
 	dav|DAV) support @NE_FLAG_DAV@ ;;
 	lfs|LFS) support @NE_FLAG_LFS@ ;;
 	i18n|I18N) support @NE_FLAG_I18N@ ;;
+	ts_ssl|TS_SSL) support @NE_FLAG_TS_SSL@ ;;
 	*) support no ;;
 	esac
 	;;
