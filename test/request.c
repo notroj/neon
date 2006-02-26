@@ -1833,11 +1833,12 @@ static int hooks(void)
 {
     ne_buffer *buf = ne_buffer_create();
     ne_session *sess;
+    struct many_serve_args args;
 
-    CALL(make_session(&sess, single_serve_string, 
-                      RESP200 "Content-Length: 0\r\n" "\r\n"
-                      RESP200 "Content-Length: 0\r\n" "\r\n"
-                      RESP200 "Content-Length: 0\r\n" "\r\n"));
+    args.str = RESP200 "Content-Length: 0\r\n" "\r\n";
+    args.count = 3;
+
+    CALL(make_session(&sess, many_serve_string, &args));
 
     ne_hook_create_request(sess, thook_create_req, buf);
     ne_hook_pre_send(sess, hook_pre_send, buf);
