@@ -1,6 +1,6 @@
 /* 
    HTTP utility functions
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -52,6 +52,7 @@ int ne_version_match(int major, int minor);
 #define NE_FEATURE_IPV6 (3) /* IPv6 is supported in resolver */
 #define NE_FEATURE_LFS (4) /* large file support */
 #define NE_FEATURE_SOCKS (5) /* SOCKSv5 support */
+#define NE_FEATURE_TS_SSL (6) /* Thread-safe SSL/TLS support */
 
 /* Returns non-zero if neon has support for given feature code
  * NE_FEATURE_*. */

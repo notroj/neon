@@ -948,7 +948,10 @@ posix|yes)
      AC_MSG_ERROR([could not find POSIX mutex interfaces; (try CC="${CC} -pthread"?)])    
   fi
   AC_DEFINE([HAVE_PTHREADS], 1, [Define if POSIX threads are supported])
-  AC_MSG_NOTICE([Using POSIX threads for SSL library thread-safety])
+  NE_ENABLE_SUPPORT(TS_SSL, [Thread-safe SSL supported using POSIX threads])
+  ;;
+*)
+  NE_DISABLE_SUPPORT(TS_SSL, [Thread-safe SSL not supported])
   ;;
 esac
 
