@@ -7,6 +7,7 @@
 
   <refnamediv>
     <refname id="ne_sock_init">ne_sock_init</refname>
+    <refname id="ne_sock_exit">ne_sock_exit</refname>
     <refpurpose>perform library initialization</refpurpose>
   </refnamediv>
   
@@ -21,6 +22,11 @@
 	<void/>
       </funcprototype>
 
+      <funcprototype>
+        <funcdef>void <function>ne_sock_exit</function></funcdef>
+	<void/>
+      </funcprototype>
+
     </funcsynopsis>
 
   </refsynopsisdiv>
@@ -31,8 +37,69 @@
     <para>In some platforms and configurations, &neon; may be using
     some socket or SSL libraries which require global initialization
     before use.  To perform this initialization, the
-    <function>ne_sock_init</function> function must be called once
-    before any other library functions are used.</para>
+    <function>ne_sock_init</function> function must be called before
+    any other library functions are used.</para>
+
+    <para>Once all use of &neon; is complete,
+    <function>ne_sock_exit</function> can be called to perform
+    de-initialization of socket or SSL libraries, if necessary.  Uses
+    of <function>ne_sock_init</function> and
+    <function>ne_sock_exit</function> are "reference counted"; if N
+    calls to <function>ne_sock_init</function> are made, only the Nth
+    call to <function>ne_sock_exit</function> will have effect.</para>
+
+    <para>Both the SSL libraries supported by &neon; &mdash; OpenSSL
+    and GnuTLS &mdash; require callbacks to be registered to allow
+    thread-safe use of SSL.  These callbacks are stored as global
+    variables and so their state persists for as long as the library
+    in question is loaded into the process.  If multiple users of the
+    SSL library exist within the process, this can be problematic,
+    particularly if one is dynamically loaded (and may subsequently be
+    unloaded).  If &neon; is configured using the
+    <literal>--enable-threadsafe-ssl</literal> flag, thread-safe SSL
+    support will be enabled automatically, as covered in the following
+    section.</para>
+    
+    <refsect2>
+      <title>Thread-safe SSL with OpenSSL</title>
+
+      <para>&neon; follows two simple rules when dealing with the
+      OpenSSL locking callbacks:
+
+      <itemizedlist>
+        
+        <listitem><simpara><function>ne_sock_init</function> will set
+        thread-safety locking callbacks if and only if no locking
+        callbacks are already registered.</simpara></listitem>
+        
+        <listitem><simpara><function>ne_sock_exit</function> will
+        unset the thread-safety locking callbacks if and only if the
+        locking callbacks registered are those registered by
+        <function>ne_sock_init</function>.</simpara></listitem>
+
+      </itemizedlist>
+
+      Applications and libraries should be able to co-operate to
+      ensure that SSL use is always thread-safe if similar rules are
+      always followed.</para>
+
+    </refsect2>
+
+    <refsect2>
+      <title>Thread-safe SSL with GnuTLS</title>
+
+      <para>The cryptography library used by GnuTLS, libgcrypt, only
+      supports an initialization operation to register thread-safety
+      callbacks.  <function>ne_sock_init</function> will register the
+      thread-safe locking callbacks on first use;
+      <function>ne_sock_exit</function> cannot unregister them.  If
+      multiple users of GnuTLS are present within the process, it is
+      unsafe to dynamically unload &neon; from the process if &neon;
+      is configured with thread-safe SSL support enabled (since the
+      callbacks would be left pointing at unmapped memory once &neon;
+      is unloaded).</para>
+
+    </refsect2>
 
   </refsect1>
 
@@ -52,4 +119,3 @@
   </refsect1>
 
 </refentry>
-

@@ -42,11 +42,13 @@
     <function>gethostbyname</function> using thread-local
     storage.</para>
 
-    <para>To allow thread-safe use of the OpenSSL library, the
-    application must register some locking callbacks in accordance
-    with the <ulink
-    url="http://www.openssl.org/docs/crypto/threads.html">OpenSSL
-    documentation</ulink>.</para>
+    <para>To allow thread-safe use of SSL in the OpenSSL and GnuTLS
+    libraries &neon; must be configured using the
+    <literal>--enable-threadsafe-ssl</literal>; if this is done,
+    locking callbacks will be registered by <xref
+    linkend="ne_sock_init"/>; note that care must be exercised if
+    &neon; is used in conjunction with another library which uses
+    OpenSSL or GnuTLS.</para>
 
     <para>Some platforms and libraries used by &neon; require global
     initialization before use; notably:
