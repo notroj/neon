@@ -947,7 +947,6 @@ posix|yes)
   if test "${ne_pthr_ok}" = "no"; then
      AC_MSG_ERROR([could not find POSIX mutex interfaces; (try CC="${CC} -pthread"?)])    
   fi
-  AC_DEFINE([HAVE_PTHREADS], 1, [Define if POSIX threads are supported])
   NE_ENABLE_SUPPORT(TS_SSL, [Thread-safe SSL supported using POSIX threads])
   ;;
 *)
