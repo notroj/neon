@@ -951,9 +951,17 @@ static size_t num_locks;
 /* Named to be obvious when it shows up in a backtrace. */
 static unsigned long thread_id_neon(void)
 {
-    /* The cast breaks POSIX since pthread_t could be a structure, but
-     * there's not much choice. */
-    return (unsigned long)pthread_self();
+    /* POSIX does not expose an "unsigned long" thread identifier as
+     * required by OpenSSL; get as close as possible using this hack:
+     * can't use a direct cast since pthread_t can be a structure. */
+    union id {
+        pthread_t p;
+        unsigned long l;
+    } id;
+
+    id.p = pthread_self();
+
+    return id.l;
 }
 
 /* Another great API design win for OpenSSL: no return value!  So if
