@@ -1,4 +1,4 @@
-<refentry id="refXXXX">
+<refentry id="reffeat">
 
   <refmeta>
     <refentrytitle>ne_has_support</refentrytitle>
@@ -28,8 +28,8 @@
   <refsect1>
     <title>Description</title>
 
-    <para>The <function>ne_has_support</function> can be used to
-    determine whether a particular optional feature, given by the
+    <para>The <function>ne_has_support</function> function can be used
+    to determine whether a particular optional feature, given by the
     feature code <parameter>feature</parameter>, is supported.  The
     following feature codes are available:
 
@@ -68,7 +68,7 @@
         <term><constant>NE_FEATURE_TS_SSL</constant></term>
         <listitem>
           <simpara>Indicates support for thread-safe SSL
-          initialization</simpara>
+          initialization &mdash; see <xref linkend="ne_sock_init"/></simpara>
         </listitem>
       </varlistentry>
     </variablelist>
@@ -83,6 +83,12 @@
     <para><function>ne_has_support</function> returns non-zero if 
     the given feature is supported, or zero otherwise.</para>
 
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para><xref linkend="refvers"/>, <xref linkend="refsockinit"/></para>
   </refsect1>
 
 </refentry>
