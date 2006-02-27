@@ -942,8 +942,7 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
  * If the OpenSSL API was better designed, this wouldn't be necessary.
  * It's not possible to implement the callbacks correctly using POSIX
- * mutexes in any case, since the callback API is itself broken
- * (surprise!). */
+ * mutexes in any case, since the callback API is itself broken. */
 
 static pthread_mutex_t *locks;
 static size_t num_locks;
@@ -952,16 +951,18 @@ static size_t num_locks;
 static unsigned long thread_id_neon(void)
 {
     /* POSIX does not expose an "unsigned long" thread identifier as
-     * required by OpenSSL; get as close as possible using this hack:
-     * can't use a direct cast since pthread_t can be a structure. */
-    union id {
-        pthread_t p;
-        unsigned long l;
-    } id;
+     * required by OpenSSL.  So OpenSSL thread-safety cannot be
+     * implemented correctly using *the* Unix threading interface.
+     *
+     * This code will work where pthread_self() happens to return
+     * something which, when cast to unsigned long, can be treated as
+     * a unique identifier for the thread.  There's absolutely no
+     * guarantee of this in POSIX.  pthread_t could even be a
+     * structure - in which case this function will fail to compile.
+     * That's probably a good thing, since there's no way to make a
+     * unique ID out of said structure. */
 
-    id.p = pthread_self();
-
-    return id.l;
+    return (unsigned long) pthread_self();
 }
 
 /* Another great API design win for OpenSSL: no return value!  So if
