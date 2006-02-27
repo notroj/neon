@@ -170,33 +170,6 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
     ne_free(cc);
 }
 
-/* Map a server cert verification into a string. */
-static void verify_err(ne_session *sess, int failures)
-{
-    struct {
-	int bit;
-	const char *str;
-    } reasons[] = {
-	{ NE_SSL_NOTYETVALID, N_("certificate is not yet valid") },
-	{ NE_SSL_EXPIRED, N_("certificate has expired") },
-	{ NE_SSL_IDMISMATCH, N_("certificate issued for a different hostname") },
-	{ NE_SSL_UNTRUSTED, N_("issuer is not trusted") },
-	{ 0, NULL }
-    };
-    int n, flag = 0;
-
-    strcpy(sess->error, _("Server certificate verification failed: "));
-
-    for (n = 0; reasons[n].bit; n++) {
-	if (failures & reasons[n].bit) {
-	    if (flag) strncat(sess->error, ", ", sizeof sess->error);
-	    strncat(sess->error, _(reasons[n].str), sizeof sess->error);
-	    flag = 1;
-	}
-    }
-
-}
-
 /* Format an ASN1 time to a string. 'buf' must be at least of size
  * 'NE_SSL_VDATELEN'. */
 static void asn1time_to_string(ASN1_TIME *tm, char *buf)
@@ -436,7 +409,7 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
         ret = NE_OK;
     } else {
         /* Set up the error string. */
-	verify_err(sess, failures);
+        ne__ssl_set_verify_err(sess, failures);
         ret = NE_ERROR;
         /* Allow manual override */
         if (sess->ssl_verify_fn && 

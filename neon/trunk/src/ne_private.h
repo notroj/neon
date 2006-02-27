@@ -115,4 +115,7 @@ typedef int (*ne_push_fn)(void *userdata, const char *buf, size_t count);
 /* Do the SSL negotiation. */
 int ne__negotiate_ssl(ne_session *sess);
 
+/* Set the session error appropriate for SSL verification failures. */
+void ne__ssl_set_verify_err(ne_session *sess, int failures);
+
 #endif /* HTTP_PRIVATE_H */
