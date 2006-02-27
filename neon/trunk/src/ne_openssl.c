@@ -37,7 +37,8 @@
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
 
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
+#include <stdlib.h> /* for abort() */
 #include <pthread.h>
 #endif
 
@@ -938,7 +939,7 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
  * If the OpenSSL API was better designed, this wouldn't be necessary.
  * It's not possible to implement the callbacks correctly using POSIX
@@ -989,7 +990,7 @@ int ne__ssl_init(void)
     SSL_library_init();
     OpenSSL_add_all_algorithms();
 
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
     /* If some other library has already come along and set up the
      * thread-safety callbacks, then it must be presumed that the
      * other library will have a longer lifetime in the process than
@@ -1028,7 +1029,7 @@ void ne__ssl_exit(void)
     /* Cannot call ERR_free_strings() etc here in case any other code
      * in the process using OpenSSL. */
 
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
     /* Only unregister the callbacks if some *other* library has not
      * come along in the mean-time and trampled over the callbacks
      * installed by neon. */

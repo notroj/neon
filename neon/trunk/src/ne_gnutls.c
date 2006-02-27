@@ -37,7 +37,7 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs12.h>
 
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
 #include <errno.h>
 #include <pthread.h>
 #include <gcrypt.h>
@@ -958,7 +958,7 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 
 int ne__ssl_init(void)
 {
-#ifdef HAVE_PTHREADS
+#ifdef NE_HAVE_TS_SSL
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 #endif
     return gnutls_global_init();
