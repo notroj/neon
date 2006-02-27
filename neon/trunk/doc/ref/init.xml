@@ -48,6 +48,12 @@
     calls to <function>ne_sock_init</function> are made, only the Nth
     call to <function>ne_sock_exit</function> will have effect.</para>
 
+    <para><function>ne_sock_init</function> will set the disposition
+    of the <literal>SIGPIPE</literal> signal to
+    <emphasis>ignored</emphasis>.  No change is made to the
+    <literal>SIGPIPE</literal> disposition by
+    <function>ne_sock_exit</function>.</para>
+
     <para>Both the SSL libraries supported by &neon; &mdash; OpenSSL
     and GnuTLS &mdash; require callbacks to be registered to allow
     thread-safe use of SSL.  These callbacks are stored as global
@@ -55,10 +61,15 @@
     in question is loaded into the process.  If multiple users of the
     SSL library exist within the process, this can be problematic,
     particularly if one is dynamically loaded (and may subsequently be
-    unloaded).  If &neon; is configured using the
+    unloaded).</para>
+
+    <para>If &neon; is configured using the
     <literal>--enable-threadsafe-ssl</literal> flag, thread-safe SSL
     support will be enabled automatically, as covered in the following
-    section.</para>
+    section.  Otherwise, it is not safe to use &neon; with SSL in a
+    multi-threaded process.  The <xref linkend="ne_has_support"/>
+    function can be used to determine whether &neon; is built to
+    enable thread-safety support in the SSL library.</para>
     
     <refsect2>
       <title>Thread-safe SSL with OpenSSL</title>
@@ -115,7 +126,7 @@
   <refsect1>
     <title>See also</title>
 
-    <para><xref linkend="refneon"/></para>
+    <para><xref linkend="refneon"/>, <xref linkend="reffeat"/></para>
   </refsect1>
 
 </refentry>

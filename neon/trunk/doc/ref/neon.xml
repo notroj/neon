@@ -54,6 +54,10 @@
     initialization before use; notably:
 
     <itemizedlist>
+      <listitem><simpara>The <literal>SIGPIPE</literal> signal
+      disposition must be set to
+      <emphasis>ignored</emphasis>.</simpara></listitem>
+
       <listitem><simpara>OpenSSL requires global initialization to
       load shared lookup tables.</simpara></listitem>
 
@@ -67,6 +71,10 @@
     The <xref linkend="ne_sock_init"/> function should be called
     before any other use of &neon; to perform any necessary
     initialization needed for the particular platform.</para>
+
+    <para>For some applications it may be necessary to call <xref
+    linkend="ne_i18n_init"/> to initialize the internationalization
+    support &neon;.</para>
 
   </refsect2>
 
