@@ -68,6 +68,7 @@
 <!ENTITY refshave SYSTEM "ref/shave.xml">
 <!ENTITY refvers SYSTEM "ref/vers.xml">
 <!ENTITY refinit SYSTEM "ref/init.xml">
+<!ENTITY refi18n SYSTEM "ref/i18n.xml">
 <!ENTITY reffeat SYSTEM "ref/feat.xml">
 <!ENTITY refresolve SYSTEM "ref/resolve.xml">
 <!ENTITY refiaddr SYSTEM "ref/iaddr.xml">
@@ -155,6 +156,7 @@ ignoring the WebDAV support if desired.</para>
     &referr; <!-- ne_get_error -->
     &refgetst; <!-- ne_get_status -->
     &reffeat; <!-- ne_has_support -->
+    &refi18n; <!-- ne_i18n_init -->
     &refiaddr; <!-- ne_iaddr_make -->
     &refalloc; <!-- ne_malloc -->
     &refsess; <!-- ne_session_create -->
