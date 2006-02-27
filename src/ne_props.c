@@ -49,9 +49,10 @@ struct ne_propfind_handler_s {
     ne_207_parser *parser207;
     ne_xml_parser *parser;
 
-    /* Callback to create the private structure. */
-    ne_props_create_complex private_creator;
-    void *private_userdata;
+    /* Creator/destructor callbacks. */
+    ne_props_create_complex creator;
+    ne_props_destroy_complex destructor;
+    void *cd_userdata;
     
     /* Current propset, or NULL if none being processed. */
     ne_prop_result_set *current;
@@ -350,8 +351,8 @@ static void *start_response(void *userdata, const ne_uri *uri)
 
     ne_uri_copy(&set->uri, uri);
 
-    if (hdl->private_creator != NULL) {
-	set->private = hdl->private_creator(hdl->private_userdata, &set->uri);
+    if (hdl->creator) {
+	set->private = hdl->creator(hdl->cd_userdata, &set->uri);
     }
 
     hdl->current = set;
@@ -506,10 +507,15 @@ static void end_propstat(void *userdata, void *pstat_v,
 }
 
 /* Frees up a results set */
-static void free_propset(ne_prop_result_set *set)
+static void free_propset(ne_propfind_handler *handler,
+                         ne_prop_result_set *set)
 {
     int n;
     
+    if (handler->destructor && set->private) {
+        handler->destructor(handler->cd_userdata, set->private);
+    }
+
     for (n = 0; n < set->numpstats; n++) {
 	int m;
 	struct propstat *p = &set->pstats[n];
@@ -547,7 +553,7 @@ static void end_response(void *userdata, void *resource,
 	handler->callback(handler->userdata, &set->uri, set);
 
     /* Clean up the propset tree we've just built. */
-    free_propset(set);
+    free_propset(handler, set);
     handler->current = NULL;
 }
 
@@ -590,7 +596,7 @@ void ne_propfind_destroy(ne_propfind_handler *handler)
 {
     ne_buffer_destroy(handler->value);
     if (handler->current)
-        free_propset(handler->current);
+        free_propset(handler, handler->current);
     ne_207_destroy(handler->parser207);
     ne_xml_destroy(handler->parser);
     ne_buffer_destroy(handler->body);
@@ -635,9 +641,11 @@ int ne_propnames(ne_session *sess, const char *href, int depth,
 }
 
 void ne_propfind_set_private(ne_propfind_handler *hdl,
-			      ne_props_create_complex creator,
-			      void *userdata)
+                             ne_props_create_complex creator,
+                             ne_props_destroy_complex destructor,
+                             void *userdata)
 {
-    hdl->private_creator = creator;
-    hdl->private_userdata = userdata;
+    hdl->creator = creator;
+    hdl->destructor = destructor;
+    hdl->cd_userdata = userdata;
 }

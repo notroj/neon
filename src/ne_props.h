@@ -206,7 +206,9 @@ ne_request *ne_propfind_get_request(ne_propfind_handler *handler);
  * allocated in each propset (i.e. one per resource). When parsing the
  * property value elements, for each new resource encountered in the
  * response, the 'creator' callback is called to retrieve a 'private'
- * structure for this resource.
+ * structure for this resource.  When the private structure is no longer
+ * needed, the 'destructor' callback is called to deallocate any 
+ * memory, if necessary.
  *
  * Whilst in XML element callbacks you will have registered to handle
  * complex properties, you can use the 'ne_propfind_current_private'
@@ -215,11 +217,12 @@ ne_request *ne_propfind_get_request(ne_propfind_handler *handler);
  * To retrieve this 'private' structure from the propset in the
  * results callback, simply call 'ne_propset_private'.
  * */
-typedef void *(*ne_props_create_complex)(void *userdata,
-					 const ne_uri *uri);
+typedef void *(*ne_props_create_complex)(void *userdata, const ne_uri *uri);
+typedef void (*ne_props_destroy_complex)(void *userdata, void *complex);
 
 void ne_propfind_set_private(ne_propfind_handler *handler,
 			     ne_props_create_complex creator,
+			     ne_props_destroy_complex destructor,
 			     void *userdata);
 
 /* Fetch all properties.

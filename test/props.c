@@ -437,16 +437,23 @@ static void simple_results(void *buf, const ne_uri *uri,
     ne_buffer_czappend(buf, ")//");
 }
 
+/* Test function to compare two long strings and print a digestible
+ * failure message. */
 static int diffcmp(const char *expected, const char *actual)
 {
     size_t n;
     
     if (!strcmp(expected, actual)) return OK;
 
+    NE_DEBUG(NE_DBG_HTTP, 
+             "diffcmp: Expect: [%s]\n"
+             "diffcmp: Actual: [%s]\n",
+             expected, actual);
+
     for (n = 0; expected[n] && actual[n]; n++) {
         if (expected[n] != actual[n]) {
             t_context("difference at byte %" NE_FMT_SIZE_T ": "
-                      "`%.6s...' not `%.6s...'",
+                      "`%.10s...' not `%.10s...'",
                       n, actual+n, expected+n);
             break;
         }
@@ -454,25 +461,76 @@ static int diffcmp(const char *expected, const char *actual)
 
     return FAIL;
 }
-       
 
-static int run_simple_propfind(const ne_propname *props, char *resp, 
-                               int depth, const char *expected)
+/* PROPFIND creator callback. */
+static void *pf_creator(void *userdata, const ne_uri *uri)
 {
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    ne_buffer *buf = userdata;
+
+    NE_DEBUG(NE_DBG_HTTP, "pf: Creator at %s\n", uri->path);
+
+    ne_buffer_concat(buf, "creator[", uri->path, "]//", NULL);
+
+    return ne_strdup(uri->path);
+}
+
+/* PROPFIND destructor callback. */
+static void pf_destructor(void *userdata, void *private)
+{
+    ne_buffer *buf = userdata;
+    char *cookie = private;
+
+    NE_DEBUG(NE_DBG_HTTP, "pf: Destructor at %s\n", cookie);
+
+    ne_buffer_concat(buf, "destructor[", cookie, "]//", NULL);
+    
+    ne_free(cookie);
+}
+
+  
+/* PROPFIND test type. */     
+enum pftype { 
+    PF_SIMPLE, /* using ne_simple_propfind */
+    PF_NAMED,  /* using ne_propfind_named */
+    PF_ALLPROP /* using ne_propfind_allprop */
+};
+
+static int run_propfind(const ne_propname *props, char *resp, 
+                        int depth, const char *expected, enum pftype type)
+{
+    ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
 
-    CALL(spawn_server(7777, single_serve_string, resp));
+    CALL(make_session(&sess, single_serve_string, resp));
 
-    ONREQ(ne_simple_propfind(sess, "/propfind", depth, props,
-                             simple_results, buf));
+    if (type == PF_SIMPLE) {
+        ONREQ(ne_simple_propfind(sess, "/propfind", depth, props,
+                                 simple_results, buf));
+    }
+    else {
+        ne_propfind_handler *hdl;
+        
+        hdl = ne_propfind_create(sess, "/propfind", depth);
 
+        ne_propfind_set_private(hdl, pf_creator, pf_destructor,
+                                buf);
+        
+        if (type == PF_NAMED) {
+            ONREQ(ne_propfind_named(hdl, props, simple_results, buf));
+        }
+        else {
+            ONREQ(ne_propfind_allprop(hdl, simple_results, buf));
+        }
+
+        ne_propfind_destroy(hdl);
+    }
+
+    ne_session_destroy(sess);
     CALL(await_server());
 
     CALL(diffcmp(expected, buf->data));
 
     ne_buffer_destroy(buf);
-    ne_session_destroy(sess);
     return OK;
 }
 
@@ -482,17 +540,18 @@ static int run_simple_propfind(const ne_propname *props, char *resp,
 	PSTAT_207(PROPS_207(APROP_207("fishbone", value)) \
 	STAT_207(status))))
 
-static int pfind_simple(void)
+static int propfind(void)
 {
     static const struct {
         char *resp;
         const char *expected;
-        int depth, pset;
+        int depth;
+        enum pftype type;
     } ts[] = {
         /* simple single property. */
         { FISHBONE_RESP("hello, world", "212 Well OK"),
           "results(/foop,prop:[{DAV:,fishbone}='hello, world':{212 Well OK}];)//",
-          0, 0 },
+          0, PF_SIMPLE },
         /* property with some nested elements. */
         { FISHBONE_RESP("this is <foo/> a property <bar><lemon>fish</lemon></bar> value", 
                         "299 Just About OK"),
@@ -500,14 +559,14 @@ static int pfind_simple(void)
           "'this is <foo></foo> a property "
           "<bar><lemon>fish</lemon></bar> value':"
           "{299 Just About OK}];)//",
-          0, 0 },
+          0, PF_SIMPLE },
 
         /* failed to fetch a property. */
         { FISHBONE_RESP("property value is ignored", 
                         "404 Il n'ya pas de property"),
           "results(/foop,prop:[{DAV:,fishbone}=#novalue#:"
           "{404 Il n'ya pas de property}];)//",
-          0, 0 },
+          0, PF_SIMPLE },
 
 #if 0
         /* propstat missing status should be ignored; if a response contains no
@@ -515,7 +574,8 @@ static int pfind_simple(void)
         { MULTI_207(RESP_207("/alpha", PSTAT_207(APROP_207("fishbone", "unseen")))
                     RESP_207("/beta", PSTAT_207(APROP_207("fishbone", "hello, world")
                                                 STAT_207("200 OK")))),
-          "results(/beta,prop:[{DAV:,fishbone}='hello, world':{200 OK}];)//", 0, 0},
+          "results(/beta,prop:[{DAV:,fishbone}='hello, world':{200 OK}];)//", 0, 
+          PF_SIMPLE },
 #endif
 
         /* props on several resources */
@@ -527,14 +587,23 @@ static int pfind_simple(void)
                                        STAT_207("256 Second is OK")))),
           "results(/alpha,prop:[{DAV:,fishbone}='strike one':{234 First is OK}];)//"
           "results(/beta,prop:[{DAV:,fishbone}='strike two':{256 Second is OK}];)//",
-          0, 0},
+          0, PF_SIMPLE},
 
         /* whitespace handling. */
         { MULTI_207(RESP_207("\r\nhttp://localhost:7777/alpha ",
                              PSTAT_207(PROPS_207(APROP_207("alpha", "beta"))
                                        "<D:status>\r\nHTTP/1.1 200 OK </D:status>"))),
           "results(/alpha,prop:[{DAV:,alpha}='beta':{200 OK}];)//",
-          0, 0}
+          0, PF_SIMPLE},
+        
+        /* "complex" propfinds. */
+
+        { FISHBONE_RESP("hello, world", "212 Well OK"),
+          "creator[/foop]//"
+          "results(/foop,prop:[{DAV:,fishbone}='hello, world':{212 Well OK}];)//"
+          "destructor[/foop]//",
+          0, PF_NAMED }
+
     };
     const ne_propname pset1[] = {
         { "DAV:", "fishbone", },
@@ -545,8 +614,8 @@ static int pfind_simple(void)
     for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
         const ne_propname *pset = pset1;
 
-        CALL(run_simple_propfind(pset, ts[n].resp, ts[n].depth,
-                                 ts[n].expected));
+        CALL(run_propfind(pset, ts[n].resp, ts[n].depth,
+                          ts[n].expected, ts[n].type));
     }
 
 
@@ -593,7 +662,7 @@ static int unbounded_props(void)
 ne_test tests[] = {
     T(two_oh_seven),
     T(patch_simple),
-    T(pfind_simple),
+    T(propfind),
     T(regress),
     T(patch_regress),
     T(unbounded_props),
