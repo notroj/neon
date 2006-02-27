@@ -289,7 +289,7 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 #ifdef NE_HAVE_SSL
 void ne__ssl_set_verify_err(ne_session *sess, int failures)
 {
-    struct {
+    static const struct {
 	int bit;
 	const char *str;
     } reasons[] = {
