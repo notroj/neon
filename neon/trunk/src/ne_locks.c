@@ -455,8 +455,6 @@ static void discover_results(void *userdata, const ne_uri *uri,
 	ctx->results(ctx->userdata, NULL, uri, status);
     }
 
-    ne_lock_destroy(lock);
-
     NE_DEBUG(NE_DBG_LOCKS, "End of response for %s\n", uri->path);
 }
 
@@ -630,6 +628,7 @@ static int lk_endelm(void *userdata, int state,
     return 0;
 }
 
+/* Creator callback for private structure. */
 static void *ld_create(void *userdata, const ne_uri *uri)
 {
     struct ne_lock *lk = ne_lock_create();
@@ -637,6 +636,14 @@ static void *ld_create(void *userdata, const ne_uri *uri)
     ne_uri_copy(&lk->uri, uri);
 
     return lk;
+}
+
+/* Destructor callback for private structure. */
+static void ld_destroy(void *userdata, void *private)
+{
+    struct ne_lock *lk = private;
+
+    ne_lock_destroy(lk);
 }
 
 /* Discover all locks on URI */
@@ -652,7 +659,7 @@ int ne_lock_discover(ne_session *sess, const char *uri,
     ctx.cdata = ne_buffer_create();
     ctx.phandler = handler = ne_propfind_create(sess, uri, NE_DEPTH_ZERO);
 
-    ne_propfind_set_private(handler, ld_create, &ctx);
+    ne_propfind_set_private(handler, ld_create, ld_destroy, &ctx);
     
     ne_xml_push_handler(ne_propfind_get_parser(handler), 
                         ld_startelm, ld_cdata, end_element_ldisc, &ctx);

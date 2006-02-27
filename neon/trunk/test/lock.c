@@ -502,7 +502,7 @@ static void dummy_discover(void *userdata, const struct ne_lock *lock,
 {
 }
 
-/* This failed with neon 0.23.x and earlier when memory leak detection
+/* This failed with neon 0.25.x and earlier when memory leak detection
  * is enabled. */
 static int fail_discover(void)
 {
@@ -583,7 +583,7 @@ ne_test tests[] = {
     T(lock_timeout),
     T(lock_shared),
     T(discover),
-    T_XLEAKY(fail_discover),
+    T(fail_discover),
     T(fail_lockauth),
     T(NULL)
 };
