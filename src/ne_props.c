@@ -582,9 +582,9 @@ ne_propfind_create(ne_session *sess, const char *uri, int depth)
 				  end_propstat);
 
     /* The start of the request body is fixed: */
-    ne_buffer_concat(ret->body, 
-		    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" 
-		    "<propfind xmlns=\"DAV:\">", NULL);
+    ne_buffer_czappend(ret->body, 
+                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" 
+                       "<propfind xmlns=\"DAV:\">");
 
     ne_uri_free(&base);
 
