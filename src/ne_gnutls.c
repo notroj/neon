@@ -537,7 +537,7 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
     if (failures == 0) {
         ret = NE_OK;
     } else {
-#warning TODO: set up error string
+        ne__ssl_set_verify_err(sess, failures);
         ret = NE_ERROR;
         if (sess->ssl_verify_fn
             && sess->ssl_verify_fn(sess->ssl_verify_ud, failures, chain) == 0)
