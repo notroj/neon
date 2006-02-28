@@ -1198,10 +1198,12 @@ static int check_validity(const char *fname,
 static int cert_validity(void)
 {
     char *cert = ne_concat(srcdir, "/expired.pem", NULL);
-    CALL(check_validity(cert, "Jan 21 20:39:04 2002 GMT", "Jan 31 20:39:04 2002 GMT"));
+    CALL(check_validity(cert, 
+                        "Mon, 21 Jan 2002 20:39:04 GMT", "Thu, 31 Jan 2002 20:39:04 GMT"));
     ne_free(cert);
     cert = ne_concat(srcdir, "/notvalid.pem", NULL);
-    CALL(check_validity(cert, "Dec 27 20:40:29 2023 GMT", "Dec 28 20:40:29 2023 GMT"));
+    CALL(check_validity(cert, 
+                        "Wed, 27 Dec 2023 20:40:29 GMT", "Thu, 28 Dec 2023 20:40:29 GMT"));
     ne_free(cert);
     return OK;
 }

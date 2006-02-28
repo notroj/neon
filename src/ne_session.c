@@ -38,6 +38,7 @@
 #include "ne_utils.h"
 #include "ne_internal.h"
 #include "ne_string.h"
+#include "ne_dates.h"
 
 #include "ne_private.h"
 
@@ -283,6 +284,28 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 {
 #ifdef NE_HAVE_SSL
     ne_ssl_context_trustcert(sess->ssl_context, cert);
+#endif
+}
+
+void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *until)
+{
+#ifdef NE_HAVE_SSL
+    time_t tf, tu;
+    char *date;
+
+    ne_ssl_cert_validity_time(cert, &tf, &tu);
+    
+    if (from) {
+        date = ne_rfc1123_date(tf);
+        ne_strnzcpy(from, date, NE_SSL_VDATELEN);
+        ne_free(date);
+    }
+
+    if (until) {
+        date = ne_rfc1123_date(tu);
+        ne_strnzcpy(until, date, NE_SSL_VDATELEN);
+        ne_free(date);
+    }
 #endif
 }
 

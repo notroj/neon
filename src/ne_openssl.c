@@ -173,28 +173,43 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
 
 /* Format an ASN1 time to a string. 'buf' must be at least of size
  * 'NE_SSL_VDATELEN'. */
-static void asn1time_to_string(ASN1_TIME *tm, char *buf)
+static time_t asn1time_to_timet(const ASN1_TIME *atm)
 {
-    BIO *bio;
+    struct tm tm = {0};
+    int i = atm->length;
     
-    strncpy(buf, _("[invalid date]"), NE_SSL_VDATELEN-1);
-    
-    bio = BIO_new(BIO_s_mem());
-    if (bio) {
-	if (ASN1_TIME_print(bio, tm))
-	    BIO_read(bio, buf, NE_SSL_VDATELEN-1);
-	BIO_free(bio);
-    }
+    if (i < 10)
+        return (time_t )-1;
+
+    tm.tm_year = (atm->data[0]-'0') * 10 + (atm->data[1]-'0');
+
+    /* Deal with Year 2000 */
+    if (tm.tm_year < 70)
+        tm.tm_year += 100;
+
+    tm.tm_mon = (atm->data[2]-'0') * 10 + (atm->data[3]-'0') - 1;
+    tm.tm_mday = (atm->data[4]-'0') * 10 + (atm->data[5]-'0');
+    tm.tm_hour = (atm->data[6]-'0') * 10 + (atm->data[7]-'0');
+    tm.tm_min = (atm->data[8]-'0') * 10 + (atm->data[9]-'0');
+    tm.tm_sec = (atm->data[10]-'0') * 10 + (atm->data[11]-'0');
+
+#ifdef HAVE_TIMEZONE
+    /* ANSI C time handling is... interesting. */
+    return mktime(&tm) - timezone;
+#else
+    return mktime(&tm);
+#endif
 }
 
-void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
-                          char *from, char *until)
+void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
+                               time_t *from, time_t *until)
 {
-    ASN1_TIME *notBefore = X509_get_notBefore(cert->subject);
-    ASN1_TIME *notAfter = X509_get_notAfter(cert->subject);
-    
-    if (from) asn1time_to_string(notBefore, from);
-    if (until) asn1time_to_string(notAfter, until);
+    if (from) {
+        *from = asn1time_to_timet(X509_get_notBefore(cert->subject));
+    }
+    if (until) {
+        *until = asn1time_to_timet(X509_get_notAfter(cert->subject));
+    }
 }
 
 /* Return non-zero if hostname from certificate (cn) matches hostname

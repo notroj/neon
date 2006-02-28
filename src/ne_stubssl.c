@@ -107,8 +107,8 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char digest[60])
     return -1;
 }
 
-void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *until)
-{}
+void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
+                               time_t *from, time_t *until) {}
 
 const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert)
 {
