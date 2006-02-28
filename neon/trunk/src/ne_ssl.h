@@ -25,6 +25,8 @@
 #ifndef NE_SSL_H
 #define NE_SSL_H 1
 
+#include <sys/types.h>
+
 #include "ne_defs.h"
 
 NE_BEGIN_DECLS
@@ -88,11 +90,18 @@ const ne_ssl_dname *ne_ssl_cert_subject(const ne_ssl_certificate *cert);
  * NE_SSL_DIGESTLEN bytes in length. */
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest);
 
-#define NE_SSL_VDATELEN (30)
+/* Copy the validity times for the certificate 'cert' into 'from' and
+ * 'until' (either may be NULL).  If the time cannot be represented by
+ * a time_t value, then (time_t)-1 will be written. */
+void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
+                               time_t *from, time_t *until);
 
-/* Copy the validity dates into buffers 'from' and 'until' as
- * NUL-terminated human-readable strings.  The buffers must be at
- * least NE_SSL_VDATELEN bytes in length. */
+#define NE_SSL_VDATELEN (30)
+/* Copy the validity times into buffers 'from' and 'until' as
+ * NUL-terminated human-readable strings, using RFC 1123-style date
+ * formatting (and not localized, so always using English month/week
+ * names).  The buffers must be at least NE_SSL_VDATELEN bytes in
+ * length, and either may be NULL. */
 void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
                           char *from, char *until);
 

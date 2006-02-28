@@ -182,17 +182,14 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
     ne_free(cc);
 }
 
-void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
-                          char *from, char *until)
+void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
+                               time_t *from, time_t *until)
 {
-#warning FIXME strftime not portable
     if (from) {
-        time_t t = gnutls_x509_crt_get_activation_time(cert->subject);
-        strftime(from, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
+        *from = gnutls_x509_crt_get_activation_time(cert->subject);
     }
     if (until) {
-        time_t t = gnutls_x509_crt_get_expiration_time(cert->subject);
-        strftime(until, NE_SSL_VDATELEN, "%b %d %H:%M:%S %Y %Z", localtime(&t));
+        *until = gnutls_x509_crt_get_expiration_time(cert->subject);
     }
 }
 

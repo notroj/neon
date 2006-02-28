@@ -570,6 +570,16 @@ AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h libintl.h \
 
 AC_REQUIRE([NE_SNPRINTF])
 
+AC_CACHE_CHECK([for timezone global], ne_cv_cc_timezone, [
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+#include <time.h>]],
+[[time_t t = 0 + timezone;]])],
+ne_cv_cc_timezone=yes, ne_cv_cc_timezone=no)])
+
+if test "$ne_cv_cc_timezone" = "yes"; then
+   AC_DEFINE([HAVE_TIMEZONE], 1, [Define if the timezone global is available])
+fi
+
 dnl Check for large file support
 NE_LARGEFILE
 
