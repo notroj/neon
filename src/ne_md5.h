@@ -137,6 +137,12 @@ extern void *ne_md5_read_ctx __P ((const struct ne_md5_ctx *ctx, void *resbuf));
    beginning at RESBLOCK.  */
 extern int ne_md5_stream __P ((FILE *stream, void *resblock));
 
+/* Process the remaining bytes in the buffer and put ASCII
+   representation of the resulting message digest from CTX in the
+   first 33 bytes of BUFFER, including a trailing NUL terminator
+   byte.  Returns pointer to buffer. */
+char *ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
+
 /* MD5 ascii->binary conversion */
 void ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);
 void ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16]);

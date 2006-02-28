@@ -428,3 +428,14 @@ void ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16])
 	    NE_ASC2HEX(buffer[count*2+1]);
     }
 }
+
+char *ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33])
+{
+    md5_uint32 result[4];
+
+    ne_md5_finish_ctx(ctx, (void *)result);
+    ne_md5_to_ascii((void *)result, buffer);
+
+    return buffer;
+}
+
