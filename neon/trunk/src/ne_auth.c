@@ -271,7 +271,7 @@ static void clean_session(auth_session *sess)
 static char *get_cnonce(void) 
 {
     char ret[33];
-    unsigned char data[256], tmp[16];
+    unsigned char data[256];
     struct ne_md5_ctx hash;
 
     ne_md5_init_ctx(&hash);
@@ -313,10 +313,7 @@ static char *get_cnonce(void)
     }
 #endif
     
-    ne_md5_finish_ctx(&hash, tmp);
-    ne_md5_to_ascii(tmp, ret);
-
-    return ne_strdup(ret);
+    return ne_strdup(ne_md5_finish_ascii(&hash, ret));
 }
 
 static int get_credentials(auth_session *sess, int attempt,
@@ -586,7 +583,6 @@ static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms) 
 {
     struct ne_md5_ctx tmp;
-    unsigned char tmp_md5[16];
     char password[NE_ABUFSIZ];
 
     if (parms->alg == auth_alg_unknown) {
@@ -647,26 +643,24 @@ static int digest_challenge(auth_session *sess, int attempt,
 	ne_md5_process_bytes(":", 1, &tmp);
 	ne_md5_process_bytes(password, strlen(password), &tmp);
 	memset(password, 0, sizeof password); /* done with that. */
-	ne_md5_finish_ctx(&tmp, tmp_md5);
 	if (sess->alg == auth_alg_md5_sess) {
-	    unsigned char a1_md5[16];
 	    struct ne_md5_ctx a1;
 	    char tmp_md5_ascii[33];
+
 	    /* Now we calculate the SESSION H(A1)
 	     *    A1 = H(...above...) ":" unq(nonce-value) ":" unq(cnonce-value) 
 	     */
-	    ne_md5_to_ascii(tmp_md5, tmp_md5_ascii);
+	    ne_md5_finish_ascii(&tmp, tmp_md5_ascii);
 	    ne_md5_init_ctx(&a1);
 	    ne_md5_process_bytes(tmp_md5_ascii, 32, &a1);
 	    ne_md5_process_bytes(":", 1, &a1);
 	    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), &a1);
 	    ne_md5_process_bytes(":", 1, &a1);
 	    ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), &a1);
-	    ne_md5_finish_ctx(&a1, a1_md5);
-	    ne_md5_to_ascii(a1_md5, sess->h_a1);
+	    ne_md5_finish_ascii(&a1, sess->h_a1);
 	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
 	} else {
-	    ne_md5_to_ascii(tmp_md5, sess->h_a1);
+	    ne_md5_finish_ascii(&tmp, sess->h_a1);
 	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A1) is [%s]\n", sess->h_a1);
 	}
 	
@@ -682,7 +676,6 @@ static int digest_challenge(auth_session *sess, int attempt,
 static char *request_digest(auth_session *sess, struct auth_request *req) 
 {
     struct ne_md5_ctx a2, rdig;
-    unsigned char a2_md5[16], rdig_md5[16];
     char a2_md5_ascii[33], rdig_md5_ascii[33];
     char nc_value[9] = {0};
     const char *qop_value = "auth"; /* qop-value */
@@ -699,8 +692,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     ne_md5_process_bytes(req->method, strlen(req->method), &a2);
     ne_md5_process_bytes(":", 1, &a2);
     ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-    ne_md5_finish_ctx(&a2, a2_md5);
-    ne_md5_to_ascii(a2_md5, a2_md5_ascii);
+    ne_md5_finish_ascii(&a2, a2_md5_ascii);
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", a2_md5_ascii);
 
     /* Now, calculation of the Request-Digest.
@@ -734,8 +726,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     }
     /* And finally, H(A2) */
     ne_md5_process_bytes(a2_md5_ascii, 32, &rdig);
-    ne_md5_finish_ctx(&rdig, rdig_md5);
-    ne_md5_to_ascii(rdig_md5, rdig_md5_ascii);
+    ne_md5_finish_ascii(&rdig, rdig_md5_ascii);
     
     ret = ne_buffer_create();
 
@@ -900,15 +891,13 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     else {
         /* Verify the response-digest field */
         struct ne_md5_ctx a2;
-        unsigned char a2_md5[16], rdig_md5[16];
         char a2_md5_ascii[33], rdig_md5_ascii[33];
 
         /* Modified H(A2): */
         ne_md5_init_ctx(&a2);
         ne_md5_process_bytes(":", 1, &a2);
         ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-        ne_md5_finish_ctx(&a2, a2_md5);
-        ne_md5_to_ascii(a2_md5, a2_md5_ascii);
+        ne_md5_finish_ascii(&a2, a2_md5_ascii);
 	
         /* sess->stored_rdig contains digest-so-far of:
          *   H(A1) ":" unq(nonce-value) 
@@ -922,8 +911,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
         /* Digest ":" H(A2) */
         ne_md5_process_bytes(a2_md5_ascii, 32, &sess->stored_rdig);
         /* All done */
-        ne_md5_finish_ctx(&sess->stored_rdig, rdig_md5);
-        ne_md5_to_ascii(rdig_md5, rdig_md5_ascii);
+        ne_md5_finish_ascii(&sess->stored_rdig, rdig_md5_ascii);
         
         /* And... do they match? */
         ret = ne_strcasecmp(rdig_md5_ascii, rspauth) == 0 ? NE_OK : NE_ERROR;
