@@ -183,7 +183,7 @@ typedef struct {
 
     /* Temporary store for half of the Request-Digest
      * (an optimisation - used in the response-digest calculation) */
-    struct ne_md5_ctx stored_rdig;
+    struct ne_md5_ctx *stored_rdig;
 
     /* Details of server... needed to reconstruct absoluteURI's when
      * necessary */
@@ -248,6 +248,10 @@ static void clean_session(auth_session *sess)
     if (sess->realm) ne_free(sess->realm);
     sess->realm = sess->basic = sess->cnonce = sess->nonce =
         sess->opaque = NULL;
+    if (sess->stored_rdig) {
+        ne_md5_destroy_ctx(sess->stored_rdig);
+        sess->stored_rdig = NULL;
+    }
 #ifdef HAVE_GSSAPI
     {
         unsigned int major;
@@ -272,13 +276,13 @@ static char *get_cnonce(void)
 {
     char ret[33];
     unsigned char data[256];
-    struct ne_md5_ctx hash;
+    struct ne_md5_ctx *hash;
 
-    ne_md5_init_ctx(&hash);
+    hash = ne_md5_create_ctx();
 
 #ifdef HAVE_OPENSSL
     if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
-	ne_md5_process_bytes(data, sizeof data, &hash);
+	ne_md5_process_bytes(data, sizeof data, hash);
     else {
 #endif
     /* Fallback sources of random data: all bad, but no good sources
@@ -286,18 +290,18 @@ static char *get_cnonce(void)
 
     /* Uninitialized stack data; yes, happy valgrinders, this is
      * supposed to be here. */
-    ne_md5_process_bytes(data, sizeof data, &hash);
+    ne_md5_process_bytes(data, sizeof data, hash);
     
 #ifdef HAVE_GETTIMEOFDAY
     {
 	struct timeval tv;
 	if (gettimeofday(&tv, NULL) == 0)
-	    ne_md5_process_bytes(&tv, sizeof tv, &hash);
+	    ne_md5_process_bytes(&tv, sizeof tv, hash);
     }
 #else /* HAVE_GETTIMEOFDAY */
     {
 	time_t t = time(NULL);
-	ne_md5_process_bytes(&t, sizeof t, &hash);
+	ne_md5_process_bytes(&t, sizeof t, hash);
     }
 #endif
     {
@@ -306,14 +310,17 @@ static char *get_cnonce(void)
 #else
 	pid_t pid = getpid();
 #endif
-	ne_md5_process_bytes(&pid, sizeof pid, &hash);
+	ne_md5_process_bytes(&pid, sizeof pid, hash);
     }
 
 #ifdef HAVE_OPENSSL
     }
 #endif
-    
-    return ne_strdup(ne_md5_finish_ascii(&hash, ret));
+
+    ne_md5_finish_ascii(hash, ret);
+    ne_md5_destroy_ctx(hash);
+
+    return ne_strdup(ret);
 }
 
 static int get_credentials(auth_session *sess, int attempt,
@@ -582,7 +589,6 @@ static int sspi_challenge(auth_session *sess, int attempt,
 static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms) 
 {
-    struct ne_md5_ctx tmp;
     char password[NE_ABUFSIZ];
 
     if (parms->alg == auth_alg_unknown) {
@@ -633,36 +639,40 @@ static int digest_challenge(auth_session *sess, int attempt,
     }
     
     if (!parms->stale) {
+        struct ne_md5_ctx *tmp;
+
 	/* Calculate H(A1).
 	 * tmp = H(unq(username-value) ":" unq(realm-value) ":" passwd)
 	 */
-	ne_md5_init_ctx(&tmp);
-	ne_md5_process_bytes(sess->username, strlen(sess->username), &tmp);
-	ne_md5_process_bytes(":", 1, &tmp);
-	ne_md5_process_bytes(sess->realm, strlen(sess->realm), &tmp);
-	ne_md5_process_bytes(":", 1, &tmp);
-	ne_md5_process_bytes(password, strlen(password), &tmp);
+	tmp = ne_md5_create_ctx();
+	ne_md5_process_bytes(sess->username, strlen(sess->username), tmp);
+	ne_md5_process_bytes(":", 1, tmp);
+	ne_md5_process_bytes(sess->realm, strlen(sess->realm), tmp);
+	ne_md5_process_bytes(":", 1, tmp);
+	ne_md5_process_bytes(password, strlen(password), tmp);
 	memset(password, 0, sizeof password); /* done with that. */
 	if (sess->alg == auth_alg_md5_sess) {
-	    struct ne_md5_ctx a1;
+	    struct ne_md5_ctx *a1;
 	    char tmp_md5_ascii[33];
 
 	    /* Now we calculate the SESSION H(A1)
 	     *    A1 = H(...above...) ":" unq(nonce-value) ":" unq(cnonce-value) 
 	     */
-	    ne_md5_finish_ascii(&tmp, tmp_md5_ascii);
-	    ne_md5_init_ctx(&a1);
-	    ne_md5_process_bytes(tmp_md5_ascii, 32, &a1);
-	    ne_md5_process_bytes(":", 1, &a1);
-	    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), &a1);
-	    ne_md5_process_bytes(":", 1, &a1);
-	    ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), &a1);
-	    ne_md5_finish_ascii(&a1, sess->h_a1);
+	    ne_md5_finish_ascii(tmp, tmp_md5_ascii);
+	    a1 = ne_md5_create_ctx();
+	    ne_md5_process_bytes(tmp_md5_ascii, 32, a1);
+	    ne_md5_process_bytes(":", 1, a1);
+	    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), a1);
+	    ne_md5_process_bytes(":", 1, a1);
+	    ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), a1);
+	    ne_md5_finish_ascii(a1, sess->h_a1);
+            ne_md5_destroy_ctx(a1);
 	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
 	} else {
-	    ne_md5_finish_ascii(&tmp, sess->h_a1);
+	    ne_md5_finish_ascii(tmp, sess->h_a1);
 	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A1) is [%s]\n", sess->h_a1);
 	}
+        ne_md5_destroy_ctx(tmp);
 	
     }
     
@@ -675,7 +685,7 @@ static int digest_challenge(auth_session *sess, int attempt,
  * session. */
 static char *request_digest(auth_session *sess, struct auth_request *req) 
 {
-    struct ne_md5_ctx a2, rdig;
+    struct ne_md5_ctx *a2, *rdig;
     char a2_md5_ascii[33], rdig_md5_ascii[33];
     char nc_value[9] = {0};
     const char *qop_value = "auth"; /* qop-value */
@@ -688,46 +698,45 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     }
 
     /* Calculate H(A2). */
-    ne_md5_init_ctx(&a2);
-    ne_md5_process_bytes(req->method, strlen(req->method), &a2);
-    ne_md5_process_bytes(":", 1, &a2);
-    ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-    ne_md5_finish_ascii(&a2, a2_md5_ascii);
+    a2 = ne_md5_create_ctx();
+    ne_md5_process_bytes(req->method, strlen(req->method), a2);
+    ne_md5_process_bytes(":", 1, a2);
+    ne_md5_process_bytes(req->uri, strlen(req->uri), a2);
+    ne_md5_finish_ascii(a2, a2_md5_ascii);
+    ne_md5_destroy_ctx(a2);
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", a2_md5_ascii);
 
     /* Now, calculation of the Request-Digest.
      * The first section is the regardless of qop value
      *     H(A1) ":" unq(nonce-value) ":" */
-    ne_md5_init_ctx(&rdig);
+    rdig = ne_md5_create_ctx();
 
     /* Use the calculated H(A1) */
-    ne_md5_process_bytes(sess->h_a1, 32, &rdig);
+    ne_md5_process_bytes(sess->h_a1, 32, rdig);
 
-    ne_md5_process_bytes(":", 1, &rdig);
-    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), &rdig);
-    ne_md5_process_bytes(":", 1, &rdig);
+    ne_md5_process_bytes(":", 1, rdig);
+    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), rdig);
+    ne_md5_process_bytes(":", 1, rdig);
     if (sess->qop != auth_qop_none) {
 	/* Add on:
 	 *    nc-value ":" unq(cnonce-value) ":" unq(qop-value) ":"
 	 */
-	ne_md5_process_bytes(nc_value, 8, &rdig);
-	ne_md5_process_bytes(":", 1, &rdig);
-	ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), &rdig);
-	ne_md5_process_bytes(":", 1, &rdig);
+	ne_md5_process_bytes(nc_value, 8, rdig);
+	ne_md5_process_bytes(":", 1, rdig);
+	ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), rdig);
+	ne_md5_process_bytes(":", 1, rdig);
 	/* Store a copy of this structure (see note below) */
-	sess->stored_rdig = rdig;
-	ne_md5_process_bytes(qop_value, strlen(qop_value), &rdig);
-	ne_md5_process_bytes(":", 1, &rdig);
-    } else {
-	/* Store a copy of this structure... we do this because the
-	 * calculation of the rspauth= field in the Auth-Info header 
-	 * is the same as this digest, up to this point. */
-	sess->stored_rdig = rdig;
+        if (sess->stored_rdig) ne_md5_destroy_ctx(sess->stored_rdig);
+	sess->stored_rdig = ne_md5_dup_ctx(rdig);
+	ne_md5_process_bytes(qop_value, strlen(qop_value), rdig);
+	ne_md5_process_bytes(":", 1, rdig);
     }
+
     /* And finally, H(A2) */
-    ne_md5_process_bytes(a2_md5_ascii, 32, &rdig);
-    ne_md5_finish_ascii(&rdig, rdig_md5_ascii);
-    
+    ne_md5_process_bytes(a2_md5_ascii, 32, rdig);
+    ne_md5_finish_ascii(rdig, rdig_md5_ascii);
+    ne_md5_destroy_ctx(rdig);
+
     ret = ne_buffer_create();
 
     ne_buffer_concat(ret, 
@@ -890,29 +899,32 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     }
     else {
         /* Verify the response-digest field */
-        struct ne_md5_ctx a2;
+        struct ne_md5_ctx *a2;
         char a2_md5_ascii[33], rdig_md5_ascii[33];
 
         /* Modified H(A2): */
-        ne_md5_init_ctx(&a2);
-        ne_md5_process_bytes(":", 1, &a2);
-        ne_md5_process_bytes(req->uri, strlen(req->uri), &a2);
-        ne_md5_finish_ascii(&a2, a2_md5_ascii);
-	
+        a2 = ne_md5_create_ctx();
+        ne_md5_process_bytes(":", 1, a2);
+        ne_md5_process_bytes(req->uri, strlen(req->uri), a2);
+        ne_md5_finish_ascii(a2, a2_md5_ascii);
+        ne_md5_destroy_ctx(a2);
+
         /* sess->stored_rdig contains digest-so-far of:
          *   H(A1) ":" unq(nonce-value) 
          */
         
         /* Add in qop-value */
         ne_md5_process_bytes(qop_value, strlen(qop_value), 
-                             &sess->stored_rdig);
-        ne_md5_process_bytes(":", 1, &sess->stored_rdig);
+                             sess->stored_rdig);
+        ne_md5_process_bytes(":", 1, sess->stored_rdig);
 
         /* Digest ":" H(A2) */
-        ne_md5_process_bytes(a2_md5_ascii, 32, &sess->stored_rdig);
+        ne_md5_process_bytes(a2_md5_ascii, 32, sess->stored_rdig);
         /* All done */
-        ne_md5_finish_ascii(&sess->stored_rdig, rdig_md5_ascii);
-        
+        ne_md5_finish_ascii(sess->stored_rdig, rdig_md5_ascii);
+        ne_md5_destroy_ctx(sess->stored_rdig);
+        sess->stored_rdig = NULL;
+
         /* And... do they match? */
         ret = ne_strcasecmp(rdig_md5_ascii, rspauth) == 0 ? NE_OK : NE_ERROR;
         

@@ -24,29 +24,15 @@
 
 #include <sys/types.h>
 
-#if STDC_HEADERS || defined _LIBC
-# include <stdlib.h>
-# include <string.h>
-#else
-#ifdef HAVE_STRING_H
+#include <stdlib.h>
 #include <string.h>
-#endif
-# ifndef HAVE_MEMCPY
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-# endif
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
 #endif
 
 #include "ne_md5.h"
 #include "ne_string.h" /* for NE_ASC2HEX */
 
-#ifdef _LIBC
-# include <endian.h>
-# if __BYTE_ORDER == __BIG_ENDIAN
-#  define WORDS_BIGENDIAN 1
-# endif
-#endif
-
-#define md5_init_ctx ne_md5_init_ctx
 #define md5_process_block ne_md5_process_block
 #define md5_process_bytes ne_md5_process_bytes
 #define md5_finish_ctx ne_md5_finish_ctx
@@ -61,6 +47,26 @@
 # define SWAP(n) (n)
 #endif
 
+#if SIZEOF_INT == 4
+typedef unsigned int md5_uint32;
+#elif SIZEOF_LONG == 4
+typedef unsigned long md5_uint32;
+#else
+# error "Cannot determine unsigned 32-bit data type."
+#endif
+
+/* Structure to save state of computation between the single steps.  */
+struct md5_ctx
+{
+  md5_uint32 A;
+  md5_uint32 B;
+  md5_uint32 C;
+  md5_uint32 D;
+
+  md5_uint32 total[2];
+  md5_uint32 buflen;
+  char buffer[128];
+};
 
 /* This array contains the bytes used to pad the buffer to the next
    64-byte boundary.  (RFC 1321, 3.1: Step 1)  */
@@ -69,9 +75,8 @@ static const unsigned char fillbuf[64] = { 0x80, 0 /* , 0, 0, ...  */ };
 
 /* Initialize structure containing state of computation.
    (RFC 1321, 3.3: Step 3)  */
-void
-md5_init_ctx (ctx)
-     struct md5_ctx *ctx;
+static void 
+md5_init_ctx (struct md5_ctx *ctx)
 {
   ctx->A = 0x67452301;
   ctx->B = 0xefcdab89;
@@ -80,6 +85,32 @@ md5_init_ctx (ctx)
 
   ctx->total[0] = ctx->total[1] = 0;
   ctx->buflen = 0;
+}
+
+struct ne_md5_ctx *
+ne_md5_create_ctx(void)
+{
+  struct md5_ctx *ctx = ne_malloc(sizeof *ctx);
+  md5_init_ctx(ctx);
+  return ctx;
+}
+
+extern void 
+ne_md5_reset_ctx(struct ne_md5_ctx *ctx)
+{
+  md5_init_ctx(ctx);
+}
+
+struct ne_md5_ctx *
+ne_md5_dup_ctx(struct ne_md5_ctx *ctx)
+{
+  return memcpy(ne_malloc(sizeof *ctx), ctx, sizeof *ctx);
+}
+
+void
+ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
+{
+  ne_free(ctx);
 }
 
 /* Put result from CTX in first 16 bytes following RESBUF.  The result

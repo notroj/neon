@@ -401,63 +401,55 @@ struct digest_state {
 static void make_digest(struct digest_state *state, struct digest_parms *parms,
                         int auth_info, char digest[33])
 {
-    struct ne_md5_ctx ctx;
-    md5_uint32 result[4];
+    struct ne_md5_ctx *ctx;
     char h_a1[33], h_a2[33];
 
     /* H(A1) */
-    ne_md5_init_ctx(&ctx);
-    ne_md5_process_bytes(state->username, strlen(state->username), &ctx);
-    ne_md5_process_bytes(":", 1, &ctx);
-    ne_md5_process_bytes(state->realm, strlen(state->realm), &ctx);
-    ne_md5_process_bytes(":", 1, &ctx);
-    ne_md5_process_bytes(state->password, strlen(state->password), &ctx);
-    ne_md5_finish_ctx(&ctx, result);
-    
-    ne_md5_to_ascii((void *)result, h_a1);
+    ctx = ne_md5_create_ctx();
+    ne_md5_process_bytes(state->username, strlen(state->username), ctx);
+    ne_md5_process_bytes(":", 1, ctx);
+    ne_md5_process_bytes(state->realm, strlen(state->realm), ctx);
+    ne_md5_process_bytes(":", 1, ctx);
+    ne_md5_process_bytes(state->password, strlen(state->password), ctx);
+    ne_md5_finish_ascii(ctx, h_a1);
 
     if (parms->md5_sess) {
-        ne_md5_init_ctx(&ctx);
-        ne_md5_process_bytes(h_a1, 32, &ctx);
-        ne_md5_process_bytes(":", 1, &ctx);
-        ne_md5_process_bytes(state->nonce, strlen(state->nonce), &ctx);
-        ne_md5_process_bytes(":", 1, &ctx);
-        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), &ctx);
-        ne_md5_finish_ctx(&ctx, result);
-
-        ne_md5_to_ascii((void *)result, h_a1);
+        ne_md5_reset_ctx(ctx);
+        ne_md5_process_bytes(h_a1, 32, ctx);
+        ne_md5_process_bytes(":", 1, ctx);
+        ne_md5_process_bytes(state->nonce, strlen(state->nonce), ctx);
+        ne_md5_process_bytes(":", 1, ctx);
+        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), ctx);
+        ne_md5_finish_ascii(ctx, h_a1);
     }
 
     /* H(A2) */
-    ne_md5_init_ctx(&ctx);
+    ne_md5_reset_ctx(ctx);
     if (!auth_info)
-        ne_md5_process_bytes(state->method, strlen(state->method), &ctx);
-    ne_md5_process_bytes(":", 1, &ctx);
-    ne_md5_process_bytes(state->uri, strlen(state->uri), &ctx);
-    ne_md5_finish_ctx(&ctx, result);
-
-    ne_md5_to_ascii((void *)result, h_a2);
+        ne_md5_process_bytes(state->method, strlen(state->method), ctx);
+    ne_md5_process_bytes(":", 1, ctx);
+    ne_md5_process_bytes(state->uri, strlen(state->uri), ctx);
+    ne_md5_finish_ascii(ctx, h_a2);
 
     /* request-digest */
-    ne_md5_init_ctx(&ctx);
-    ne_md5_process_bytes(h_a1, strlen(h_a1), &ctx);
-    ne_md5_process_bytes(":", 1, &ctx);
-    ne_md5_process_bytes(state->nonce, strlen(state->nonce), &ctx);
-    ne_md5_process_bytes(":", 1, &ctx);
+    ne_md5_reset_ctx(ctx);
+    ne_md5_process_bytes(h_a1, strlen(h_a1), ctx);
+    ne_md5_process_bytes(":", 1, ctx);
+    ne_md5_process_bytes(state->nonce, strlen(state->nonce), ctx);
+    ne_md5_process_bytes(":", 1, ctx);
 
     if (parms->rfc2617) {
-        ne_md5_process_bytes(state->ncval, strlen(state->ncval), &ctx);
-        ne_md5_process_bytes(":", 1, &ctx);
-        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), &ctx);
-        ne_md5_process_bytes(":", 1, &ctx);
-        ne_md5_process_bytes(state->qop, strlen(state->qop), &ctx);
-        ne_md5_process_bytes(":", 1, &ctx);
+        ne_md5_process_bytes(state->ncval, strlen(state->ncval), ctx);
+        ne_md5_process_bytes(":", 1, ctx);
+        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), ctx);
+        ne_md5_process_bytes(":", 1, ctx);
+        ne_md5_process_bytes(state->qop, strlen(state->qop), ctx);
+        ne_md5_process_bytes(":", 1, ctx);
     }
 
-    ne_md5_process_bytes(h_a2, strlen(h_a2), &ctx);
-    ne_md5_finish_ctx(&ctx, result);
-    
-    ne_md5_to_ascii((void *)result, digest);
+    ne_md5_process_bytes(h_a2, strlen(h_a2), ctx);
+    ne_md5_finish_ascii(ctx, digest);
+    ne_md5_destroy_ctx(ctx);
 }
 
 /* Verify that the response-digest matches expected state. */

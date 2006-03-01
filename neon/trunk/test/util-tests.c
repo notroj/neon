@@ -103,19 +103,20 @@ static int status_lines(void)
 /* Write MD5 of 'len' bytes of 'str' to 'digest' */
 static unsigned char *digest_md5(const char *data, size_t len, unsigned char digest[16])
 {
-    struct ne_md5_ctx ctx;
+    struct ne_md5_ctx *ctx;
 
 #define CHUNK 100
-    ne_md5_init_ctx(&ctx);
+    ctx = ne_md5_create_ctx();
     /* exercise the buffering interface */
     while (len > CHUNK) {
-        ne_md5_process_bytes(data, CHUNK, &ctx);
+        ne_md5_process_bytes(data, CHUNK, ctx);
         len -= CHUNK;
         data += CHUNK;
     }
-    ne_md5_process_bytes(data, len, &ctx);
-    ne_md5_finish_ctx(&ctx, digest);
-    
+    ne_md5_process_bytes(data, len, ctx);
+    ne_md5_finish_ctx(ctx, digest);
+    ne_md5_destroy_ctx(ctx);
+
     return digest;
 }
 
@@ -146,13 +147,14 @@ static int md5(void)
 static int md5_alignment(void)
 {
     char *bb = ne_malloc(66);
-    struct ne_md5_ctx ctx;
+    struct ne_md5_ctx *ctx;
 
     /* regression test for a bug in md5.c in <0.15.0 on SPARC, where
      * the process_bytes function would SIGBUS if the buffer argument
      * isn't 32-bit aligned. Won't trigger on x86 though. */
-    ne_md5_init_ctx(&ctx);
-    ne_md5_process_bytes(bb + 1, 65, &ctx);
+    ctx = ne_md5_create_ctx();
+    ne_md5_process_bytes(bb + 1, 65, ctx);
+    ne_md5_destroy_ctx(ctx);
     ne_free(bb);
 
     return OK;
