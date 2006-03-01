@@ -115,6 +115,7 @@ static int dispatch_to_fd(ne_request *req, int fd, const char *range)
     ne_session *const sess = ne_get_session(req);
     const ne_status *const st = ne_get_status(req);
     int ret;
+    size_t rlen = strlen(range + 6); /* length of bytespec after "bytes=" */
 
     do {
         const char *value;
@@ -128,7 +129,8 @@ static int dispatch_to_fd(ne_request *req, int fd, const char *range)
          * given which matches the Range request header. */
         if (range && st->code == 206 
             && (value == NULL || strncmp(value, "bytes ", 6) != 0
-                || strcmp(range + 6, value + 6))) {
+                || strncmp(range + 6, value + 6, rlen)
+                || value[6 + rlen] != '/')) {
             ne_set_error(sess, _("Response did not include requested range"));
             return NE_ERROR;
         }

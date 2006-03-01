@@ -1,6 +1,6 @@
 /* 
    Tests for high-level HTTP interface (ne_basic.h)
-   Copyright (C) 2002-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -163,7 +163,7 @@ static int get_range(void)
 {
     return do_range(1, 10, NULL,
 		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-10\r\n"
+		    "Content-Range: bytes 1-10/10\r\n"
 		    "Content-Length: 10\r\n\r\nabcdefghij");
 }
 
@@ -171,7 +171,7 @@ static int fail_range_length(void)
 {
     return do_range(1, 10, "range response length mismatch should fail",
 		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-2\r\n"
+		    "Content-Range: bytes 1-2/2\r\n"
 		    "Content-Length: 2\r\n\r\nab");
 }
 
@@ -179,7 +179,7 @@ static int fail_range_units(void)
 {
     return do_range(1, 2, "range response units check should fail",
 		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: fish 1-2\r\n"
+		    "Content-Range: fish 1-2/2\r\n"
 		    "Content-Length: 2\r\n\r\nab");
 }
 
@@ -187,7 +187,7 @@ static int fail_range_notrange(void)
 {
     return do_range(1, 2, "non-ranged response should fail",
 		    "HTTP/1.1 200 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-2\r\n"
+		    "Content-Range: bytes 1-2/2\r\n"
 		    "Content-Length: 2\r\n\r\nab");
 }
 
