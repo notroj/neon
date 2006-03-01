@@ -1,3 +1,77 @@
+Changes in release 0.26.0:
+* Added internationalization support:
+ - ne_i18n.h exposes ne_i18n_init(), a process-global initializer
+   which may be required for some applications
+ - (partial) message catalogs for cs, de, fr, ja, nn, ru and tr
+* Added support for GnuTLS (thanks to Aleix Conchillo Flaque)
+ - pass --with-ssl=gnutls to configure; GnuTLS >= 1.0.22 required
+ - some issues with handling PKCS#12 certs in older GnuTLS releases
+ - use --with-ca-bundle to specify a default SSL CA root bundle
+* Changes and additions to URI support:
+ - ne_uri structure: add query, fragment fields; authinfo renamed
+   to userinfo
+ - ne_uri_parse() now takes a URI-reference as input rather than 
+   the previous pseudo-URI syntax; the query and fragment components
+   are now parsed out.  Many malformed URIs are now rejected
+ - ne_uri_unparse() changed to respect the new fields field
+ - ne_uri_resolve(): new function; resolves relative URI references
+ - ne_uri_copy(): new function, copies a URI structure
+* Changed results callbacks for ne_lock_discover, PROPFIND interfaces:
+ - take URI as parsed ne_uri * structure rather than char *
+* Added functions which give control over authentication protocol use:
+ - ne_add_server_auth(), ne_add_proxy_auth()
+* Added ne_unhook_* functions to remove hooks
+* Added ne_set_session_flags()/ne_get_session_flags() functions:
+ - flags to disable persistent connection support, enable "ICY"
+   protocol support, and to disable SSLv2 protocol support.
+ - replaces ne_set_persist()
+* Added ne_set_request_flags()/ne_get_request_flags() functions:
+ - flags to enable 100-continue support, mark requests as non-idempotent
+ - replaces ne_set_request_expect100()
+* Change ne_md5.h interface to make struct ne_md5_ctx opaque:
+ - added ne_md5_create_ctx(), ne_md5_destroy_ctx(), ne_md5_reset_ctx(),
+   ne_md5_finish_ascii(); removed ne_md5_init_ctx()
+* Removed NE_FREE() macro from ne_alloc.h
+* Added ne_strcasecmp(), ne_strncasecmp(), ne_tolower() functions
+  to ne_string.h - locale-independent string comparison
+* Changed ne_sock_init()/ne_sock_exit() such that ne_sock_exit() 
+  only has effect once called an equal number of times to _init().
+* Added "--enable-threadsafe-ssl=posix" configure flag, to enable
+  thread-safe SSL support using POSIX threads in OpenSSL/GnuTLS
+ - NE_FEATURE_TS_SSL feature code added to indicate support
+
+Changes in release 0.25.5:
+* ne_ssl_clicert_decrypt(): catch and fail to load a client cert
+  with mismatched key/cert pair.
+* Fix build issue on AIX 5.1.
+* Fix warnings if built against OpenSSL >= 0.9.8.
+* Win32: fix issues in SSPI implementation (Stefan Küng).
+
+Changes in release 0.25.4:
+* GSSAPI fixes for non-MIT implementations (Mikhail Teterin).
+* Fix ne_print_request_header() et al to use 8K buffer size on all
+ platforms (fixes issue with long Destination: URLs on Win32).
+* Win32 build fix for !USE_GETADDRINFO configuration.
+* Documentation updates.
+
+Changes in release 0.25.3:
+* ne_lock() and ne_unlock(): fix cases where NE_ERROR would be returned 
+  instead of e.g. NE_AUTH on auth failure.
+* Prevent use of poll() on Darwin.
+* Fix gethostbyname-based resolver on LP64 platforms (Matthew Sanderson).
+
+Changes in release 0.25.2:
+* Really fix the Win32 build.
+
+Changes in release 0.25.1:
+* ne_get_content_type(): fix cases where the charset field was not set
+  to NULL after successful return (Johannes Schneider)
+* Compressed response handling fixes:
+ - fix double invocation of reader callback with len=0
+ - fix cases where the reader callback return value was ignored
+* Cache the new SSL session if the old one was expired (Robert Eiglmaier)
+* Win32: fix build issues.
+
 Changes in release 0.25.0:
 * New interfaces:
  - ne_get_response_header() replaces ne_add_response_header_handler
