@@ -296,15 +296,25 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *unti
     ne_ssl_cert_validity_time(cert, &tf, &tu);
     
     if (from) {
-        date = ne_rfc1123_date(tf);
-        ne_strnzcpy(from, date, NE_SSL_VDATELEN);
-        ne_free(date);
+        if (tf != (time_t) -1) {
+            date = ne_rfc1123_date(tf);
+            ne_strnzcpy(from, date, NE_SSL_VDATELEN);
+            ne_free(date);
+        }
+        else {
+            ne_strnzcpy(from, _("[invalid date]"), NE_SSL_VDATELEN);
+        }
     }
-
+        
     if (until) {
-        date = ne_rfc1123_date(tu);
-        ne_strnzcpy(until, date, NE_SSL_VDATELEN);
-        ne_free(date);
+        if (tu != (time_t) -1) {
+            date = ne_rfc1123_date(tu);
+            ne_strnzcpy(until, date, NE_SSL_VDATELEN);
+            ne_free(date);
+        }
+        else {
+            ne_strnzcpy(until, _("[invalid date]"), NE_SSL_VDATELEN);
+        }
     }
 #endif
 }
