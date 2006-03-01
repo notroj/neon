@@ -242,6 +242,27 @@ static int dav_capabilities(void)
     return OK;	
 }
 
+static int get(void)
+{
+    ne_session *sess;
+    int fd;
+    
+    CALL(make_session(&sess, single_serve_string, 
+                      "HTTP/1.0 200 OK\r\n"
+                      "Content-Length: 5\r\n"
+                      "\r\n"
+                      "abcde"));
+    
+    fd = open("/dev/null", O_WRONLY);
+    ONREQ(ne_get(sess, "/getit", fd));
+    close(fd);
+
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(content_type),
@@ -251,6 +272,7 @@ ne_test tests[] = {
     T(fail_range_notrange),
     T(fail_range_unsatify),
     T(dav_capabilities),
+    T(get),
     T(NULL) 
 };
 
