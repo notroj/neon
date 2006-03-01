@@ -64,25 +64,37 @@ static int no_path(void)
     return OK;
 }
 
-#define STR "/a¹²³¼½/"
 static int escapes(void)
 {
-    char *un, *esc;
-    esc = ne_path_escape(STR);
-    ON(esc == NULL);
-    un = ne_path_unescape(esc);
-    ON(un == NULL);
-    ON(strcmp(un, STR));
-    ne_free(un);
-    ne_free(esc);
+    const struct {
+        const char *plain, *escaped;
+    } paths[] = {
+        { "/foo%", "/foo%25" },
+        { "/foo bar", "/foo%20bar" },
+        { "/foo_bar", "/foo_bar" },
+        { "/foobar", "/foobar" },
+        { "/a\xb9\xb2\xb3\xbc\xbd/", "/a%b9%b2%b3%bc%bd/" },
+        { NULL, NULL}
+    };
+    size_t n;
+
+    for (n = 0; paths[n].plain; n++) {
+        char *esc = ne_path_escape(paths[n].plain), *un;
+
+        ONCMP(paths[n].escaped, esc, paths[n].plain, "escape");
+        
+        un = ne_path_unescape(esc);
+
+        ONCMP(paths[n].plain, un, paths[n].plain, "unescape");
+        ne_free(un);
+        ne_free(esc);   
+    }
+
     ONN("unescape accepted invalid URI", 
         ne_path_unescape("/foo%zzbar") != NULL);
     ONN("unescape accepted invalid URI", 
         ne_path_unescape("/foo%1zbar") != NULL);
-    /* no-escape path */
-    esc = ne_path_escape("/foobar");
-    ON(strcmp(esc, "/foobar"));
-    ne_free(esc);       
+
     return OK;
 }    
 
