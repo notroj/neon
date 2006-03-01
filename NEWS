@@ -5,8 +5,9 @@ Changes in release 0.26.0:
  - (partial) message catalogs for cs, de, fr, ja, nn, ru and tr
 * Added support for GnuTLS (thanks to Aleix Conchillo Flaque)
  - pass --with-ssl=gnutls to configure; GnuTLS >= 1.0.22 required
- - some issues with handling PKCS#12 certs in older GnuTLS releases
  - use --with-ca-bundle to specify a default SSL CA root bundle
+ - some remaining issues with PKCS#12 certs in current GnuTLS releases,
+   distinguished name handling is sub-standard relative to OpenSSL
 * Changes and additions to URI support:
  - ne_uri structure: add query, fragment fields; authinfo renamed
    to userinfo
