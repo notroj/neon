@@ -260,6 +260,7 @@ NEON_CHECK_VERSION([
     NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
     NEON_CHECK_SUPPORT([lfs], [LFS], [LFS])
     NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
+    NEON_CHECK_SUPPORT([ts_ssl], [TS_SSL], [thread-safe SSL])
     neon_got_library=yes
 ], [neon_got_library=no])
 ])
@@ -925,6 +926,7 @@ gnutls)
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
    NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])
+   NE_DISABLE_SUPPORT(TS_SSL, [Thread-safe SSL support is not enabled])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_stubssl"
    ;;
 esac
