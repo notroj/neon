@@ -287,6 +287,13 @@ static int support(void)
     ONN("Thread-safe SSL support advertised", 
         ne_has_support(NE_FEATURE_TS_SSL));
 #endif
+#ifdef NE_HAVE_I18N
+    ONN("i18n support not advertised", 
+        !ne_has_support(NE_FEATURE_I18N));
+#else
+    ONN("i18n SSL support advertised", 
+        ne_has_support(NE_FEATURE_I18N));
+#endif
     return OK;
 }
 
