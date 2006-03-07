@@ -111,9 +111,9 @@ struct auth_challenge {
     const char *realm;
     const char *nonce;
     const char *opaque;
-    unsigned int stale:1; /* if stale=true */
-    unsigned int got_qop:1; /* we were given a qop directive */
-    unsigned int qop_auth:1; /* "auth" token in qop attrib */
+    unsigned int stale; /* if stale=true */
+    unsigned int got_qop; /* we were given a qop directive */
+    unsigned int qop_auth; /* "auth" token in qop attrib */
     auth_algorithm alg;
     struct auth_challenge *next;
 };
