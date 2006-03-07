@@ -67,7 +67,7 @@ if (sret < 0) return aborted(req, msg, sret); } while (0)
 struct body_reader {
     ne_block_reader handler;
     ne_accept_response accept_response;
-    unsigned int use:1;
+    unsigned int use;
     void *userdata;
     struct body_reader *next;
 };
@@ -194,8 +194,8 @@ struct ne_request_s {
     struct body_reader *body_readers;
 
     /*** Miscellaneous ***/
-    unsigned int method_is_head:1;
-    unsigned int can_persist:1;
+    unsigned int method_is_head;
+    unsigned int can_persist;
 
     int flags[NE_REQFLAG_LAST];
 

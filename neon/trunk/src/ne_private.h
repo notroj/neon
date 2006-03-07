@@ -72,9 +72,9 @@ struct ne_session_s {
     size_t numaddrs, curaddr;
 
     /* Settings */
-    unsigned int use_proxy:1; /* do we have a proxy server? */
-    unsigned int use_ssl:1; /* whether a secure connection is required */
-    unsigned int in_connect:1; /* doing a proxy CONNECT */
+    int use_proxy; /* do we have a proxy server? */
+    int use_ssl; /* whether a secure connection is required */
+    int in_connect; /* doing a proxy CONNECT */
 
     int flags[NE_SESSFLAG_LAST];
 
