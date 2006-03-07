@@ -72,14 +72,22 @@ int ne_getmodtime(ne_session *sess, const char *uri, time_t *modtime)
     return ret;
 }
 
+#ifdef NE_LFS
+#define ne_fstat fstat64
+typedef struct stat64 struct_stat;
+#else
+#define ne_fstat fstat
+typedef struct stat struct_stat;
+#endif
+
 /* PUT's from fd to URI */
 int ne_put(ne_session *sess, const char *uri, int fd) 
 {
     ne_request *req;
-    struct stat st;
+    struct_stat st;
     int ret;
 
-    if (fstat(fd, &st)) {
+    if (ne_fstat(fd, &st)) {
         int errnum = errno;
         char buf[200];
 
@@ -95,7 +103,11 @@ int ne_put(ne_session *sess, const char *uri, int fd)
     ne_lock_using_parent(req, uri);
 #endif
 
+#ifdef NE_LFS
+    ne_set_request_body_fd64(req, fd, 0, st.st_size);
+#else
     ne_set_request_body_fd(req, fd, 0, st.st_size);
+#endif
 	
     ret = ne_request_dispatch(req);
     
