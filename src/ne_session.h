@@ -52,7 +52,7 @@ void ne_session_proxy(ne_session *sess,
 
 /* Defined session flags: */
 typedef enum ne_session_flag_e {
-    NE_SESSFLAG_PERSIST = 0, /* disable this flag to prevent use oaf
+    NE_SESSFLAG_PERSIST = 0, /* disable this flag to prevent use of
                               * persistent connections. */
 
     NE_SESSFLAG_ICYPROTO, /* enable this flag to enable support for
