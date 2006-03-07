@@ -1,6 +1,6 @@
 /* 
    HTTP/1.1 methods
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -119,6 +119,18 @@ typedef struct {
  *      ne_get_range(sess, path, &range, myfile); */
 int ne_get_range(ne_session *sess, const char *path, 
 		 ne_content_range *range, int fd);
+
+#ifdef NE_LFS
+typedef struct {
+    off64_t start, end, total;
+} ne_content_range64;
+
+/* Alternative version of ne_get_range for LFS systems; takes 64-bit
+ * range offsets in *range but is otherwise identical to
+ * ne_get_range. */
+int ne_get_range64(ne_session *sess, const char *path, 
+                   ne_content_range64 *range, int fd);
+#endif
 
 /* Post using buffer as request-body: stream response into f */
 int ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
