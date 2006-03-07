@@ -150,23 +150,13 @@ static int dispatch_to_fd(ne_request *req, int fd, const char *range)
     return ret;
 }
 
-int ne_get_range(ne_session *sess, const char *uri, 
-		 ne_content_range *range, int fd)
+static int get_range_common(ne_session *sess, const char *uri, 
+                            const char *brange, int fd)
+
 {
     ne_request *req = ne_request_create(sess, "GET", uri);
     const ne_status *status;
     int ret;
-    char brange[64];
-
-    if (range->end == -1) {
-        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF_T "-", 
-                    range->start);
-    }
-    else {
-	ne_snprintf(brange, sizeof brange,
-                    "bytes=%" NE_FMT_OFF_T "-%" NE_FMT_OFF_T,
-                    range->start, range->end);
-    }
 
     ne_add_request_header(req, "Range", brange);
     ne_add_request_header(req, "Accept-Ranges", "bytes");
@@ -196,6 +186,43 @@ int ne_get_range(ne_session *sess, const char *uri,
     return ret;
 }
 
+int ne_get_range(ne_session *sess, const char *uri, 
+		 ne_content_range *range, int fd)
+{
+    char brange[64];
+
+    if (range->end == -1) {
+        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF_T "-", 
+                    range->start);
+    }
+    else {
+	ne_snprintf(brange, sizeof brange,
+                    "bytes=%" NE_FMT_OFF_T "-%" NE_FMT_OFF_T,
+                    range->start, range->end);
+    }
+
+    return get_range_common(sess, uri, brange, fd);
+}
+
+#ifdef NE_LFS
+int ne_get_range64(ne_session *sess, const char *uri, 
+                   ne_content_range64 *range, int fd)
+{
+    char brange[64];
+
+    if (range->end == -1) {
+        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF64_T "-", 
+                    range->start);
+    }
+    else {
+	ne_snprintf(brange, sizeof brange,
+                    "bytes=%" NE_FMT_OFF64_T "-%" NE_FMT_OFF64_T,
+                    range->start, range->end);
+    }
+
+    return get_range_common(sess, uri, brange, fd);
+}
+#endif
 
 /* Get to given fd */
 int ne_get(ne_session *sess, const char *uri, int fd)
