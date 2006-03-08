@@ -369,7 +369,7 @@ static char *request_basic(auth_session *sess, struct auth_request *req)
 
 #ifdef HAVE_GSSAPI
 /* Add GSSAPI authentication credentials to a request */
-static char *request_gssapi(auth_session *sess, struct auth_request *req)
+static char *request_negotiate(auth_session *sess, struct auth_request *req)
 {
     if (sess->gssapi_token) 
         return ne_concat("Negotiate ", sess->gssapi_token, "\r\n", NULL);
@@ -494,8 +494,8 @@ static int continue_negotiate(auth_session *sess, const char *token)
 
 /* Process a Negotiate challange CHALL in session SESS; returns zero
  * if challenge is accepted. */
-static int gssapi_challenge(auth_session *sess, int attempt,
-                            struct auth_challenge *chall) 
+static int negotiate_challenge(auth_session *sess, int attempt,
+                               struct auth_challenge *chall) 
 {
     const char *token = chall->opaque;
 
@@ -1312,7 +1312,7 @@ static const struct auth_protocol protocols[] = {
       0 },
 #ifdef HAVE_GSSAPI
     { NE_AUTH_NEGOTIATE, 30, "Negotiate",
-      gssapi_challenge, request_gssapi, verify_negotiate_response,
+      negotiate_challenge, request_negotiate, verify_negotiate_response,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
 #endif
 #ifdef HAVE_SSPI
