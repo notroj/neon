@@ -1184,9 +1184,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
              && sess->protocol->flags && AUTH_FLAG_VERIFY_NON40x
              && (status->klass == 2 || status->klass == 3)
              && auth_hdr) {
-        char *hdr = ne_strdup(auth_hdr);
-        ret = sess->protocol->verify(areq, sess, hdr);
-        ne_free(hdr);
+        ret = sess->protocol->verify(areq, sess, auth_hdr);
     }
     else if ((status->code == sess->spec->status_code ||
               (status->code == 401 && sess->context == AUTH_CONNECT)) &&
