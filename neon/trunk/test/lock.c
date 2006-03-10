@@ -537,16 +537,15 @@ static int fail_lockauth(void)
     ne_session *sess;
     struct ne_lock *lock;
     int ret;
+    struct many_serve_args args;
 
-    CALL(make_session(&sess, single_serve_string,
-                      "HTTP/1.1 401 Auth Denied\r\n"
-                      "WWW-Authenticate: Basic realm=\"realm@host\"\r\n"
-                      "Content-Length: 0\r\n"
-                      "\r\n"
-                      "HTTP/1.1 401 Auth Denied\r\n"
-                      "WWW-Authenticate: Basic realm=\"realm@host\"\r\n"
-                      "Connection: close\r\n"
-                      "\r\n"));
+    args.str = "HTTP/1.1 401 Auth Denied\r\n"
+        "WWW-Authenticate: Basic realm=\"realm@host\"\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n";
+    args.count = 2;
+
+    CALL(make_session(&sess, many_serve_string, &args));
 
     ne_set_server_auth(sess, no_creds, NULL);
 
