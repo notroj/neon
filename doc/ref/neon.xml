@@ -74,7 +74,7 @@
 
     <para>For some applications it may be necessary to call <xref
     linkend="ne_i18n_init"/> to initialize the internationalization
-    support &neon;.</para>
+    support in &neon;.</para>
 
   </refsect2>
 
