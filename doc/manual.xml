@@ -1,4 +1,4 @@
-<?xml version='1.0'?> <!-- -*- text -*- -->
+<?xml version='1.0'?> <!-- -*- nxml -*- -->
 
 <!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
   "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
@@ -10,8 +10,6 @@
 
 %isoent;
 %isopub;
-
-<!ENTITY fdl SYSTEM "fdl.sgml">
 
 <!-- date/version stamp files created as release tarball is rolled -->
 <!ENTITY date SYSTEM "date.xml">
@@ -86,16 +84,29 @@
 	<address><email>neon@webdav.org</email></address>
       </affiliation>
     </author>
-    <copyright><year>2001-2003</year><holder>Joe Orton</holder></copyright>
+    <copyright><year>2001-2006</year><holder>Joe Orton</holder></copyright>
 
     <legalnotice>
-      <para>Permission is granted to copy, distribute and/or modify this document
-      under the terms of the GNU Free Documentation License, Version 1.1
-      or any later version published by the Free Software Foundation;
-      with no Invariant Sections, with no Front-Cover Texts, 
-      and with no Back-Cover Texts.
-      A copy of the license is included in the section entitled "GNU
-      Free Documentation License".</para>
+
+      <para>This document is free documentation; you can redistribute
+      it and/or modify it under the terms of the <ulink
+      url="http://www.gnu.org/copyleft/gpl.html">GNU General Public
+      License</ulink> as published by the Free Software Foundation;
+      either version 2 of the License, or (at your option) any later
+      version.</para>
+    
+      <para>This document is distributed in the hope that it will be
+      useful, but <emphasis>without any warranty</emphasis>; without
+      even the implied warranty of
+      <emphasis>merchantability</emphasis> or <emphasis>fitness for a
+      particular purpose</emphasis>.  See the GNU General Public
+      License for more details.</para>
+
+      <para>You should have received a copy of the GNU General Public
+      License along with this program; if not, write to the Free
+      Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
+      USA.</para>
+
     </legalnotice>
 
   </bookinfo>
@@ -188,6 +199,4 @@ ignoring the WebDAV support if desired.</para>
 
 &biblio;
 
-&fdl;
-  
 </book>
