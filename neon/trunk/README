@@ -1,9 +1,7 @@
 
 neon is an HTTP and WebDAV client library, with a C language API.
-Bindings for other languages may also be available, see the web site
-for more details.
 
-Mailing list: neon@webdav.org     ||    Web site: http://www.webdav.org/neon/
+Mailing list: neon@webdav.org    ||   Web site: http://www.webdav.org/neon/
 
 PLEASE NOTE: The neon API is subject to backwards-incompatible change
 over minor releases (0.23.x -> 0.24.x) until the 1.0.0 release, but
@@ -34,16 +32,17 @@ Provides lower-level interfaces to directly implement new HTTP
 methods, and higher-level interfaces so that you don't have to worry
 about the lower-level stuff.
 
-neon is licensed under the GNU Library GPL; see src/COPYING.LIB for
-full details.  The manual is licensed under the terms of the GNU FDL;
-see doc/fdl.sgml or the generated documentation.  The autoconf macros
-in the "macros" directory are under a less restrictive license, see
-each file for details.  The test suite is licensed under the GNU GPL;
-see test/COPYING for full details.
+The neon library source code is licensed under the GNU Library GPL;
+see src/COPYING.LIB for full details.  The manual and test suite are
+licensed under the terms of the GNU GPL; see test/COPYING for terms.
+The autoconf macros in the "macros" directory are under a less
+restrictive license, see each file for details.
 
-neon is Copyright (C) 1999-2004 Joe Orton
+neon is Copyright (C) 1999-2006 Joe Orton <joe@manyfish.co.uk>
 Portions are:
 Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
-Copyright (C) 1999-2000, Peter Boos <pedib@colorfullife.com>
+Copyright (C) 1999-2000 Peter Boos <pedib@colorfullife.com>
 Copyright (C) 1991, 1995, 1996, 1997 Free Software Foundation, Inc.
 Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
+Copyright (C) 2004 Jiang Lei <tristone@deluxe.ocn.ne.jp>
+Copyright (C) 2004-2005 Vladimir Berezniker @ http://public.xdi.org/=vmpn
