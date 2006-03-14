@@ -574,7 +574,7 @@ AC_REQUIRE([NE_SNPRINTF])
 AC_CACHE_CHECK([for timezone global], ne_cv_cc_timezone, [
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 #include <time.h>]],
-[[time_t t = 0 + timezone;]])],
+[[time_t t = 0 - timezone;]])],
 ne_cv_cc_timezone=yes, ne_cv_cc_timezone=no)])
 
 if test "$ne_cv_cc_timezone" = "yes"; then
