@@ -3,7 +3,6 @@
 rm -f debug.log child.log
 
 ulimit -c unlimited
-ulimit -v 10240
 
 unset LANG
 unset LC_MESSAGES
