@@ -236,9 +236,6 @@ struct auth_protocol {
     int flags; /* AUTH_FLAG_* flags */
 };
 
-/* Forward-declaration of protocols array. */
-static const struct auth_protocol protocols[];
-
 static void clean_session(auth_session *sess) 
 {
     if (sess->basic) ne_free(sess->basic);
@@ -549,7 +546,7 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
 #endif
 
 #ifdef HAVE_SSPI
-static char *request_sspi(auth_session *sess) 
+static char *request_sspi(auth_session *sess, struct auth_request *request) 
 {
     return ne_concat(sess->protocol->name, " ", sess->sspi_token, "\r\n", NULL);
 }
@@ -951,6 +948,29 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     return ret;
 }
 
+static const struct auth_protocol protocols[] = {
+    { NE_AUTH_BASIC, 10, "Basic",
+      basic_challenge, request_basic, NULL,
+      0 },
+    { NE_AUTH_DIGEST, 20, "Digest",
+      digest_challenge, request_digest, verify_digest_response,
+      0 },
+#ifdef HAVE_GSSAPI
+    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
+      negotiate_challenge, request_negotiate, verify_negotiate_response,
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+#endif
+#ifdef HAVE_SSPI
+    { NE_AUTH_NEGOTIATE, 30, "NTLM",
+      sspi_challenge, request_sspi, NULL,
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
+      sspi_challenge, request_sspi, NULL,
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+#endif
+    { 0 }
+};
+
 /* Insert a new auth challenge for protocol 'proto' in list of
  * challenges 'list'.  The challenge list is kept in sorted order of
  * strength, with highest strength first. */
@@ -1300,29 +1320,6 @@ static void auth_register_default(ne_session *sess, int isproxy,
 
     auth_register(sess, isproxy, protomask, ahc, id, creds, userdata);
 }
-
-static const struct auth_protocol protocols[] = {
-    { NE_AUTH_BASIC, 10, "Basic",
-      basic_challenge, request_basic, NULL,
-      0 },
-    { NE_AUTH_DIGEST, 20, "Digest",
-      digest_challenge, request_digest, verify_digest_response,
-      0 },
-#ifdef HAVE_GSSAPI
-    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
-      negotiate_challenge, request_negotiate, verify_negotiate_response,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
-#endif
-#ifdef HAVE_SSPI
-    { NE_AUTH_NEGOTIATE, 30, "NTLM",
-      sspi_challenge, request_sspi, NULL,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
-    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
-      sspi_challenge, request_sspi, NULL,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
-#endif
-    { 0 }
-};
 
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
