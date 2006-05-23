@@ -1,3 +1,7 @@
+Changes in release 0.26.1:
+* Build fixes for Win32 (D.J. Heap) and OS X.
+* Add Simplified Chinese translation (Dongsheng Song).
+
 Changes in release 0.26.0:
 * Added internationalization support:
  - ne_i18n.h exposes ne_i18n_init(), a process-global initializer
