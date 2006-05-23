@@ -1,6 +1,6 @@
 /* 
    Wrapper interface to XML parser
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -170,7 +170,7 @@ static xmlSAXHandler sax_handler = {
 };
 
 /* empty attributes array to mimic expat behaviour */
-static const char *empty_atts[] = {NULL, NULL};
+static const char *const empty_atts[] = {NULL, NULL};
 
 /* macro for determining the attributes array to pass */
 #define PASS_ATTS(atts) (atts ? (const char **)(atts) : empty_atts)
