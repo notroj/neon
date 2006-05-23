@@ -134,7 +134,7 @@ fi
 AC_SUBST(TEST_LDFLAGS)
 
 # Bundled language catalogs
-ALL_LINGUAS="cs de fr ja nn ru tr"
+ALL_LINGUAS="cs de fr ja nn ru tr zh"
 AC_SUBST(ALL_LINGUAS)
 
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
