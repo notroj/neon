@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.4\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2006-03-11 18:51+0000\n"
+"POT-Creation-Date: 2006-05-23 21:31+0100\n"
 "PO-Revision-Date: 2002-04-09 11:12+0100\n"
 "Last-Translator: Petr Prazak <prazak@grisoft.cz>\n"
 "Language-Team: cz\n"
@@ -23,42 +23,42 @@ msgstr ""
 "Neplatná øádka HTTP stavu ve stavovém prvku na øádku %d odpovìdi:\n"
 "Stavová øádka byla: %s"
 
-#: src/ne_auth.c:462
+#: src/ne_auth.c:459
 #, fuzzy, c-format
 msgid "GSSAPI authentication error (%s)"
 msgstr "Je vy¾adována autentizace na %s `%s':\n"
 
-#: src/ne_auth.c:595
+#: src/ne_auth.c:592
 #, c-format
 msgid "Unknown algorithm in Digest authentication challenge"
 msgstr ""
 
-#: src/ne_auth.c:600
+#: src/ne_auth.c:597
 #, c-format
 msgid "Incompatible algorithm in Digest authentication challenge"
 msgstr ""
 
-#: src/ne_auth.c:606
+#: src/ne_auth.c:603
 #, c-format
 msgid "Missing nonce or realm in Digest authentication challenge"
 msgstr ""
 
-#: src/ne_auth.c:886
+#: src/ne_auth.c:883
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:891
+#: src/ne_auth.c:888
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:896
+#: src/ne_auth.c:893
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:936
+#: src/ne_auth.c:933
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
