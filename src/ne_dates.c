@@ -1,6 +1,6 @@
 /* 
    Date manipulation routines
-   Copyright (C) 1999-2005, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004 Jiang Lei <tristone@deluxe.ocn.ne.jp>
 
    This library is free software; you can redistribute it and/or
@@ -56,10 +56,10 @@
 /* asctime: Wed Jun 30 21:49:08 1993 */
 #define ASCTIME_FORMAT "%3s %3s %2d %2d:%2d:%2d %4d"
 
-static const char *const rfc1123_weekdays[7] = { 
+static const char rfc1123_weekdays[7][4] = { 
     "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" 
 };
-static const char *const short_months[12] = { 
+static const char short_months[12][4] = { 
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
