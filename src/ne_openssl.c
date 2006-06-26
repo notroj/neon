@@ -1001,6 +1001,7 @@ static void thread_lock_neon(int mode, int n, const char *file, int line)
 
 int ne__ssl_init(void)
 {
+    CRYPTO_malloc_init();
     SSL_load_error_strings();
     SSL_library_init();
     OpenSSL_add_all_algorithms();
