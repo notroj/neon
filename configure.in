@@ -133,6 +133,17 @@ fi
 
 AC_SUBST(TEST_LDFLAGS)
 
+AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+if test "$PKG_CONFIG" != "no"; then
+   # pkg-config >= 0.18 will use "Libs.private" iff necessary,
+   # older versions which don't recognize that field may always
+   # need all libraries in Libs.
+   if $PKG_CONFIG --atleast-pkgconfig-version=0.18; then :; else
+      NEON_PC_LIBS=${NEON_LIBS}
+   fi
+fi
+AC_SUBST(NEON_PC_LIBS)
+
 # Bundled language catalogs
 ALL_LINGUAS="cs de fr ja nn ru tr zh"
 AC_SUBST(ALL_LINGUAS)
