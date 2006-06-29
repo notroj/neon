@@ -184,12 +184,6 @@ typedef struct {
     /* Temporary store for half of the Request-Digest
      * (an optimisation - used in the response-digest calculation) */
     struct ne_md5_ctx *stored_rdig;
-
-    /* Details of server... needed to reconstruct absoluteURI's when
-     * necessary */
-    const char *host;
-    const char *uri_scheme;
-    unsigned int port;
 } auth_session;
 
 struct auth_request {
