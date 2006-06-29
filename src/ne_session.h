@@ -189,9 +189,17 @@ const char *ne_get_server_hostport(ne_session *sess);
  * the trailing ':'; e.g. "http" or "https". */
 const char *ne_get_scheme(ne_session *sess);
 
-/* Sets the host, scheme, and port fields (and no others) of the given
- * URI structure; host and scheme are malloc-allocated. */
+/* Sets the host, scheme, and port fields of the given URI structure
+ * to that of the configured server and scheme for the session; host
+ * and scheme are malloc-allocated.  No other fields in the URI
+ * structure are changed. */
 void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
+
+/* If a proxy is configured, sets the host and port fields in the
+ * given URI structure to that of the proxy.  The hostname is
+ * malloc-allocated.  No other fields in the URI structure are
+ * changed; if a proxy is not configured, no fields are changed. */
+void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
 
 /* Set the error string for the session; takes printf-like format
  * string. */

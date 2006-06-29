@@ -249,6 +249,14 @@ void ne_fill_server_uri(ne_session *sess, ne_uri *uri)
     uri->scheme = ne_strdup(sess->scheme);
 }
 
+void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri)
+{
+    if (sess->use_proxy) {
+        uri->host = ne_strdup(sess->proxy.hostname);
+        uri->port = sess->proxy.port;
+    }
+}
+
 const char *ne_get_error(ne_session *sess)
 {
     return ne_strclean(sess->error);
