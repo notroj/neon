@@ -424,6 +424,7 @@ int ne_sspi_clear_context(void *context)
         return status;
     }
     sspiContext->authfinished = 0;
+    return 0;
 }
 /*
  * Processes received authentication tokens as well as supplies the
