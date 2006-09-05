@@ -39,6 +39,9 @@
 
 #define HAVE_SSPI
 
+/* Define to enable debugging */
+#define NE_DEBUGGING 1
+
 #define NE_FMT_SIZE_T "u"
 #define NE_FMT_SSIZE_T "d"
 #define NE_FMT_OFF_T "ld"
@@ -50,8 +53,13 @@
 /* Win32 uses a underscore, so we use a macro to eliminate that. */
 #define snprintf			_snprintf
 #define vsnprintf			_vsnprintf
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define strcasecmp			_strcmpi
+#define strncasecmp			_strnicmp
+#else
 #define strcasecmp			strcmpi
 #define strncasecmp			strnicmp
+#endif
 #define ssize_t				int
 #define inline                          __inline
 #define off_t                           _off_t
