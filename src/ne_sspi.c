@@ -362,7 +362,11 @@ int ne_sspi_create_context(void **context, char *serverName, int ntlm)
 static void resetContext(SSPIContext * sspiContext)
 {
     pSFT->DeleteSecurityContext(&(sspiContext->context));
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+    pSFT->FreeCredentialHandle(&(sspiContext->credentials));
+#else
     pSFT->FreeCredentialsHandle(&(sspiContext->credentials));
+#endif
     sspiContext->continueNeeded = 0;
 }
 
@@ -424,6 +428,7 @@ int ne_sspi_clear_context(void *context)
         return status;
     }
     sspiContext->authfinished = 0;
+    return 0;
 }
 /*
  * Processes received authentication tokens as well as supplies the
