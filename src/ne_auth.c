@@ -74,10 +74,6 @@
 #include "ne_sspi.h"
 #endif
 
-#if defined(HAVE_GSSAPI) || defined(HAVE_SSPI)
-#include "ne_private.h" /* only need to extract proxy hostname */
-#endif
-
 #define HOOK_SERVER_ID "http://webdav.org/neon/hooks/server-auth"
 #define HOOK_PROXY_ID "http://webdav.org/neon/hooks/proxy-auth"
 
@@ -555,8 +551,14 @@ static int sspi_challenge(auth_session *sess, int attempt,
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge.\n");
     
     if (!sess->sspi_context) {
-        status = ne_sspi_create_context(&sess->sspi_context,
-                                        sess->sess->server.hostname, ntlm);
+        ne_uri uri = {0};
+
+        ne_fill_server_uri(sess->sess, &uri);
+
+        status = ne_sspi_create_context(&sess->sspi_context, uri.host, ntlm);
+
+        ne_uri_free(&uri);
+
         if (status) {
             return status;
         }
@@ -1285,8 +1287,16 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 
 #ifdef HAVE_GSSAPI
     if (protomask & NE_AUTH_NEGOTIATE && ahs->gssname == GSS_C_NO_NAME) {
-        get_gss_name(&ahs->gssname, (isproxy ? sess->proxy.hostname 
-                                     : sess->server.hostname));
+        ne_uri uri = {0};
+        
+        if (isproxy)
+            ne_fill_proxy_uri(sess, &uri);
+        else
+            ne_fill_server_uri(sess, &uri);
+
+        get_gss_name(&ahs->gssname, uri.host);
+
+        ne_uri_free(&uri);
     }
 #endif
 
