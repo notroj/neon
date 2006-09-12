@@ -115,8 +115,8 @@ char *ne_strerror(int errnum, char *buffer, size_t buflen);
 
 /* ne_strnzcpy copies at most 'n'-1 bytes of 'src' to 'dest', and
  * ensures that 'dest' is subsequently NUL-terminated. */
-#define ne_strnzcpy(dest, src, n) do { \
-strncpy(dest, src, n-1); dest[n-1] = '\0'; } while (0)
+#define ne_strnzcpy(dest, src, n) do { size_t ne__nm1 = (n) - 1;      \
+strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL. */
