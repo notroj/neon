@@ -338,6 +338,16 @@ AC_SUBST(NEON_BUILD_BUNDLED)
 
 ])
 
+dnl Check for MinGW
+AC_DEFUN([NE_OS_MINGW], [
+# Check for Darwin, which needs extra cpp and linker flags.
+AC_CACHE_CHECK([for MinGW], ne_cv_os_mingw, [
+case `uname -s 2>/dev/null` in
+MINGW*) ne_cv_os_mingw=yes ;;
+*) ne_cv_os_mingw=no ;;
+esac
+])])
+
 dnl AC_SEARCH_LIBS done differently. Usage:
 dnl   NE_SEARCH_LIBS(function, libnames, [extralibs], [actions-if-not-found],
 dnl                            [actions-if-found])
@@ -350,6 +360,8 @@ dnl If link never succeeds, run `actions-if-not-found', if given, else
 dnl give an error and fail configure.
 AC_DEFUN([NE_SEARCH_LIBS], [
 
+AC_REQUIRE([NE_OS_MINGW])
+
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([], [[$1();]])], 
@@ -357,12 +369,19 @@ AC_LINK_IFELSE(
 ne_sl_save_LIBS=$LIBS
 ne_cv_libsfor_$1="not found"
 for lib in $2; do
+    # The w32api libraries link using the stdcall calling convention.
+    if test ${ne_cv_os_mingw}X${lib} = yesXws2_32; then
+        ne__code="__stdcall $1();"
+    else
+        ne__code="$1();"
+    fi
+
     LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[$1();]])],
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [$ne__code])],
                    [ne_cv_libsfor_$1="-l$lib"; break])
     m4_if($3, [], [], dnl If $3 is specified, then...
               [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
-               AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[$1();]])], 
+               AC_LINK_IFELSE([AC_LANG_PROGRAM([], [$ne__code])], 
                               [ne_cv_libsfor_$1="-l$lib $3"; break])])
 done
 LIBS=$ne_sl_save_LIBS])])
@@ -636,7 +655,7 @@ else
    # Checks for non-getaddrinfo() based resolver interfaces.
    # QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
    # CygWin/Winsock2 has it in -lws2_32, allegedly.
-   NE_SEARCH_LIBS(gethostbyname, socket nsl bind)
+   NE_SEARCH_LIBS(gethostbyname, socket nsl bind ws2_32)
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
