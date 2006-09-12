@@ -957,29 +957,24 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 #ifdef NE_HAVE_TS_SSL
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
  * If the OpenSSL API was better designed, this wouldn't be necessary.
- * It's not possible to implement the callbacks correctly using POSIX
- * mutexes in any case, since the callback API is itself broken. */
+ * In OpenSSL releases without CRYPTO_set_idptr_callback, it's not
+ * possible to implement the locking in a POSIX-compliant way, since
+ * it's necessary to cast from a pthread_t to an unsigned long at some
+ * point.  */
 
 static pthread_mutex_t *locks;
 static size_t num_locks;
 
+#ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
 /* Named to be obvious when it shows up in a backtrace. */
 static unsigned long thread_id_neon(void)
 {
-    /* POSIX does not expose an "unsigned long" thread identifier as
-     * required by OpenSSL.  So OpenSSL thread-safety cannot be
-     * implemented correctly using *the* Unix threading interface.
-     *
-     * This code will work where pthread_self() happens to return
-     * something which, when cast to unsigned long, can be treated as
-     * a unique identifier for the thread.  There's absolutely no
-     * guarantee of this in POSIX.  pthread_t could even be a
-     * structure - in which case this function will fail to compile.
-     * That's probably a good thing, since there's no way to make a
-     * unique ID out of said structure. */
-
+    /* This will break if pthread_t is a structure; upgrading OpenSSL
+     * >= 0.9.9 (which does not require this callback) is the only
+     * solution.  */
     return (unsigned long) pthread_self();
 }
+#endif
 
 /* Another great API design win for OpenSSL: no return value!  So if
  * the lock/unlock fails, all that can be done is to abort. */
@@ -999,6 +994,17 @@ static void thread_lock_neon(int mode, int n, const char *file, int line)
 
 #endif
 
+/* ID_CALLBACK_IS_{NEON,OTHER} evaluate as true if the currently
+ * registered OpenSSL ID callback is the neon function (_NEON), or has
+ * been overwritten by some other app (_OTHER). */
+#ifdef HAVE_CRYPTO_SET_IDPTR_CALLBACK
+#define ID_CALLBACK_IS_OTHER (0)
+#define ID_CALLBACK_IS_NEON (1)
+#else
+#define ID_CALLBACK_IS_OTHER (CRYPTO_get_id_callback() != NULL)
+#define ID_CALLBACK_IS_NEON (CRYPTO_get_id_callback() == thread_id_neon)
+#endif
+
 int ne__ssl_init(void)
 {
     CRYPTO_malloc_init();
@@ -1012,8 +1018,7 @@ int ne__ssl_init(void)
      * other library will have a longer lifetime in the process than
      * neon.  If the library which has installed the callbacks is
      * unloaded, then all bets are off. */
-    if (CRYPTO_get_id_callback() != NULL
-        || CRYPTO_get_locking_callback() != NULL) {
+    if (ID_CALLBACK_IS_OTHER || CRYPTO_get_locking_callback() != NULL) {
         NE_DEBUG(NE_DBG_SOCKET, "ssl: OpenSSL thread-safety callbacks already installed.\n");
         NE_DEBUG(NE_DBG_SOCKET, "ssl: neon will not replace existing callbacks.\n");
     } else {
@@ -1021,7 +1026,11 @@ int ne__ssl_init(void)
 
         num_locks = CRYPTO_num_locks();
 
+        /* For releases where CRYPTO_set_idptr_callback is present,
+         * the default ID callback should be sufficient. */
+#ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
         CRYPTO_set_id_callback(thread_id_neon);
+#endif
         CRYPTO_set_locking_callback(thread_lock_neon);
 
         locks = malloc(num_locks * sizeof *locks);
@@ -1050,10 +1059,12 @@ void ne__ssl_exit(void)
      * come along in the mean-time and trampled over the callbacks
      * installed by neon. */
     if (CRYPTO_get_locking_callback() == thread_lock_neon
-        && CRYPTO_get_id_callback() == thread_id_neon) {
+        && ID_CALLBACK_IS_NEON) {
         size_t n;
 
+#ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
         CRYPTO_set_id_callback(NULL);
+#endif
         CRYPTO_set_locking_callback(NULL);
 
         for (n = 0; n < num_locks; n++) {
