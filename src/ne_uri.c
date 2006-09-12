@@ -523,11 +523,6 @@ int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2)
 #undef CASECMP
 #undef CMPWITH
 
-#ifndef WIN32
-#undef min
-#define min(a,b) ((a)<(b)?(a):(b))
-#endif
-
 /* TODO: implement properly */
 int ne_path_compare(const char *a, const char *b) 
 {
@@ -543,7 +538,7 @@ int ne_path_compare(const char *a, const char *b)
 	    ((traila && lena > lenb) || (trailb && lenb > lena))) {
 	    /* Compare them, ignoring the trailing slash on the longer
 	     * URI */
-	    if (strncasecmp(a, b, min(lena, lenb)) == 0)
+	    if (strncasecmp(a, b, lena < lenb ? lena : lenb) == 0)
 		ret = 0;
 	}
     }
