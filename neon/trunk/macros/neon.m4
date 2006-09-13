@@ -340,7 +340,6 @@ AC_SUBST(NEON_BUILD_BUNDLED)
 
 dnl Check for MinGW
 AC_DEFUN([NE_OS_MINGW], [
-# Check for Darwin, which needs extra cpp and linker flags.
 AC_CACHE_CHECK([for MinGW], ne_cv_os_mingw, [
 case `uname -s 2>/dev/null` in
 MINGW*) ne_cv_os_mingw=yes ;;
