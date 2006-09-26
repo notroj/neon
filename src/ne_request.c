@@ -1314,8 +1314,7 @@ int ne_begin_request(ne_request *req)
     }
     
     NE_DEBUG(NE_DBG_HTTP, "Running post_headers hooks\n");
-    for (hk = req->session->post_headers_hooks; 
-         ret == NE_OK && hk != NULL; hk = hk->next) {
+    for (hk = req->session->post_headers_hooks; hk != NULL; hk = hk->next) {
         ne_post_headers_fn fn = (ne_post_headers_fn)hk->fn;
         fn(req, hk->userdata, &req->status);
     }
