@@ -1204,6 +1204,7 @@ int ne_begin_request(ne_request *req)
     ne_buffer *data;
     const ne_status *const st = &req->status;
     const char *value;
+    struct hook *hk;
     int ret;
 
     /* If a non-idempotent request is sent on a persisted connection,
@@ -1310,6 +1311,13 @@ int ne_begin_request(ne_request *req)
         }            
     } else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
+    }
+    
+    NE_DEBUG(NE_DBG_HTTP, "Running post_headers hooks\n");
+    for (hk = req->session->post_headers_hooks; 
+         ret == NE_OK && hk != NULL; hk = hk->next) {
+        ne_post_headers_fn fn = (ne_post_headers_fn)hk->fn;
+        fn(req, hk->userdata, &req->status);
     }
     
     /* Prepare for reading the response entity-body.  Call each of the

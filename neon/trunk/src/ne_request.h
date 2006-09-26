@@ -248,18 +248,30 @@ typedef void (*ne_free_hooks)(void *cookie);
 
 /* Hook called when a request is created; passed the request method,
  * and the string used as the Request-URI (note that this may be a
- * absolute URI if a proxy is in use, an absolute path, a "*",
- * etc). */
+ * absolute URI if a proxy is in use, an absolute path, a "*", etc).
+ * A create_request hook is called exactly once per request. */
 typedef void (*ne_create_request_fn)(ne_request *req, void *userdata,
 				     const char *method, const char *requri);
 void ne_hook_create_request(ne_session *sess, 
 			    ne_create_request_fn fn, void *userdata);
 
 /* Hook called before the request is sent.  'header' is the raw HTTP
- * header before the trailing CRLF is added: add in more here. */
+ * header before the trailing CRLF is added; more headers can be added
+ * here.  A pre_send hook may be called >1 time per request if the
+ * request is retried due to a post_send hook returning NE_RETRY. */
 typedef void (*ne_pre_send_fn)(ne_request *req, void *userdata, 
 			       ne_buffer *header);
 void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
+
+/* Hook called directly after the response headers have been read, but
+ * before the resposnse body has been read.  'status' is the response
+ * status-code.  A post_header hook may be called >1 time per request
+ * if the request is retried due to a post_send hook returning
+ * NE_RETRY. */
+typedef void (*ne_post_headers_fn)(ne_request *req, void *userdata,
+                                   const ne_status *status);
+void ne_hook_post_headers(ne_session *sess, 
+                          ne_post_headers_fn fn, void *userdata);
 
 /* Hook called after the request is dispatched (request sent, and
  * the entire response read).  If an error occurred reading the response,
@@ -294,6 +306,7 @@ void ne_hook_destroy_session(ne_session *sess,
 void ne_unhook_create_request(ne_session *sess, 
                               ne_create_request_fn fn, void *userdata);
 void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
+void ne_unhook_post_headers(ne_session *sess, ne_post_headers_fn fn, void *userdata);
 void ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
 void ne_unhook_destroy_request(ne_session *sess,
                                ne_destroy_req_fn fn, void *userdata);

@@ -1800,18 +1800,37 @@ static void hook_pre_send(ne_request *req, void *userdata,
     ne_buffer_czappend(buf, "(pre-send)\n");
 }
 
-static int hook_post_send(ne_request *req, void *userdata,
-                          const ne_status *status)
+/* Returns a static string giving a comma-separated representation of
+ * the status structure passed in. */ 
+static char *status_to_string(const ne_status *status)
 {
-    ne_buffer *buf = userdata;
-    char sbuf[128];
+    static char sbuf[128];
 
     ne_snprintf(sbuf, sizeof sbuf, "HTTP/%d.%d,%d,%s", 
                 status->major_version, status->minor_version,
                 status->code, status->reason_phrase);
 
-    ne_buffer_concat(buf, "(post-send,", sbuf, ")\n", NULL);
-    
+    return sbuf;
+}
+
+static void hook_post_headers(ne_request *req, void *userdata,
+			      const ne_status *status)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_concat(buf, "(post-headers,", status_to_string(status), ")\n",
+		     NULL);
+}
+
+
+static int hook_post_send(ne_request *req, void *userdata,
+                          const ne_status *status)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_concat(buf, "(post-send,", status_to_string(status), ")\n", 
+		     NULL);
+
     return NE_OK;
 }
 
@@ -1842,6 +1861,7 @@ static int hooks(void)
 
     ne_hook_create_request(sess, thook_create_req, buf);
     ne_hook_pre_send(sess, hook_pre_send, buf);
+    ne_hook_post_headers(sess, hook_post_headers, buf);
     ne_hook_post_send(sess, hook_post_send, buf);
     ne_hook_destroy_request(sess, hook_destroy_req, buf);
     ne_hook_destroy_session(sess, hook_destroy_sess, buf);
@@ -1850,6 +1870,7 @@ static int hooks(void)
 
     ONCMP("(create,GET,/first)\n"
           "(pre-send)\n"
+          "(post-headers,HTTP/1.1,200,OK)\n"
           "(post-send,HTTP/1.1,200,OK)\n"
           "(destroy-req)\n", buf->data, "hook ordering", "first result");
 
@@ -1862,6 +1883,7 @@ static int hooks(void)
     /* Unhook real functions. */
     ne_unhook_pre_send(sess, hook_pre_send, buf);
     ne_unhook_destroy_request(sess, hook_destroy_req, buf);
+    ne_unhook_post_headers(sess, hook_post_headers, buf);
 
     CALL(any_2xx_request(sess, "/second"));
 
