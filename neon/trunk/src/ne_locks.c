@@ -77,6 +77,7 @@ struct discover_ctx {
 struct lock_ctx {
     struct ne_lock active; /* activelock */
     ne_request *req; /* the request in question */
+    ne_xml_parser *parser;
     char *token; /* the token we're after. */
     int found;
     ne_buffer *cdata;
@@ -579,8 +580,8 @@ static int lk_startelm(void *userdata, int parent,
         /* at the root element; retrieve the Lock-Token header,
          * and bail if it wasn't given. */
         if (token == NULL) {
-            ne_set_error(ne_get_session(ctx->req), "%s",
-                         _("LOCK response missing Lock-Token header"));
+            ne_xml_set_error(ctx->parser, 
+                             _("LOCK response missing Lock-Token header"));
             return NE_XML_ABORT;
         }
 
@@ -688,12 +689,13 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
     ne_request *req = ne_request_create(sess, "LOCK", lock->uri.path);
     ne_buffer *body = ne_buffer_create();
     ne_xml_parser *parser = ne_xml_create();
-    int ret, parse_failed;
+    int ret;
     struct lock_ctx ctx;
 
     memset(&ctx, 0, sizeof ctx);
     ctx.cdata = ne_buffer_create();    
     ctx.req = req;
+    ctx.parser = parser;
 
     /* LOCK is not idempotent. */
     ne_set_request_flag(req, NE_REQFLAG_IDEMPOTENT, 0);
@@ -731,22 +733,12 @@ int ne_lock(ne_session *sess, struct ne_lock *lock)
 
     ne_buffer_destroy(body);
     ne_buffer_destroy(ctx.cdata);
-    parse_failed = ne_xml_failed(parser);
     
     if (ret == NE_OK && ne_get_status(req)->klass == 2) {
-	if (ctx.token == NULL) {
-	    ret = NE_ERROR;
-	    ne_set_error(sess, _("No Lock-Token header given"));
-	}
-	else if (parse_failed) {
-	    ret = NE_ERROR;
-	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
-	}
-	else if (ne_get_status(req)->code == 207) {
-	    ret = NE_ERROR;
-	    /* TODO: set the error string appropriately */
-	}
-	else if (ctx.found) {
+        if (ne_get_status(req)->code == 207) {
+            ret = NE_ERROR;
+            /* TODO: set the error string appropriately */
+        } else if (ctx.found) {
 	    /* it worked: copy over real lock details if given. */
             if (lock->token) ne_free(lock->token);
 	    lock->token = ctx.token;
@@ -790,6 +782,7 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
     ctx.cdata = ne_buffer_create();
     ctx.req = req;
     ctx.token = lock->token;
+    ctx.parser = parser;
 
     /* Handle the response and update *lock appropriately. */
     ne_xml_push_handler(parser, lk_startelm, lk_cdata, lk_endelm, &ctx);
@@ -804,9 +797,6 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
     if (ret == NE_OK) {
         if (ne_get_status(req)->klass != 2) {
             ret = NE_ERROR; /* and use default session error */
-        } else if (ne_xml_failed(parser)) {
-	    ret = NE_ERROR;
-	    ne_set_error(sess, "%s", ne_xml_get_error(parser));
 	} else if (!ctx.found) {
             ne_set_error(sess, _("No activelock for <%s> returned in "
                                  "LOCK refresh response"), lock->token);
