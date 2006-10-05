@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.4\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2006-05-23 21:31+0100\n"
+"POT-Creation-Date: 2006-10-05 19:34+0100\n"
 "PO-Revision-Date: 2002-11-07 18:11+0100\n"
 "Last-Translator: Karl Ove Hufthammer <karl@huftis.org>\n"
 "Language-Team: Norwegian Nynorsk <i18n-nn@lister.ping.uio.no>\n"
@@ -118,21 +118,16 @@ msgstr "Klarte ikkje skriva til fil: %s"
 msgid "Server did not send certificate chain"
 msgstr ""
 
-#: src/ne_locks.c:583
+#: src/ne_locks.c:584
 msgid "LOCK response missing Lock-Token header"
 msgstr ""
 
-#: src/ne_locks.c:739
-#, c-format
-msgid "No Lock-Token header given"
-msgstr ""
-
-#: src/ne_locks.c:767
+#: src/ne_locks.c:759
 #, c-format
 msgid "Response missing activelock for %s"
 msgstr ""
 
-#: src/ne_locks.c:811
+#: src/ne_locks.c:801
 #, c-format
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
@@ -302,63 +297,63 @@ msgstr ""
 msgid "Server certificate verification failed: "
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_socket.c:480 src/ne_socket.c:528 src/ne_socket.c:631
+#: src/ne_socket.c:475 src/ne_socket.c:523 src/ne_socket.c:626
 #, fuzzy
 msgid "Connection closed"
 msgstr "Tilkoplinga vart lukka av tenaren"
 
-#: src/ne_socket.c:538 src/ne_socket.c:643
+#: src/ne_socket.c:533 src/ne_socket.c:638
 #, fuzzy
 msgid "Secure connection truncated"
 msgstr "Sambandet vart tidsavbrote."
 
-#: src/ne_socket.c:550 src/ne_socket.c:655
+#: src/ne_socket.c:545 src/ne_socket.c:650
 #, fuzzy, c-format
 msgid "SSL error: %s"
 msgstr "%s: Feil: %s\n"
 
-#: src/ne_socket.c:553
+#: src/ne_socket.c:548
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:636
+#: src/ne_socket.c:631
 #, fuzzy, c-format
 msgid "SSL alert received: %s"
 msgstr "%s: Feil: %s\n"
 
-#: src/ne_socket.c:651
+#: src/ne_socket.c:646
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:750
+#: src/ne_socket.c:745
 msgid "Line too long"
 msgstr "For lang linje"
 
-#: src/ne_socket.c:890 src/ne_socket.c:896
+#: src/ne_socket.c:885 src/ne_socket.c:891
 msgid "Host not found"
 msgstr "Fann ikkje vert"
 
-#: src/ne_socket.c:1006
+#: src/ne_socket.c:1001
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1218
+#: src/ne_socket.c:1213
 #, fuzzy
 msgid "Client certificate verification failed"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_socket.c:1234
+#: src/ne_socket.c:1229
 #, fuzzy
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1241
+#: src/ne_socket.c:1236
 #, fuzzy
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1247
+#: src/ne_socket.c:1242
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "Klarte ikkje forhandla SSL-økt"
