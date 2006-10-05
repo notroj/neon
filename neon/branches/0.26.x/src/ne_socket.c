@@ -27,11 +27,6 @@
 
 #include "config.h"
 
-#ifdef __hpux
-/* pick up hstrerror */
-#define _XOPEN_SOURCE_EXTENDED 1
-#endif
-
 #include <sys/types.h>
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
