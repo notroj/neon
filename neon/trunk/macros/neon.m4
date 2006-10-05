@@ -338,15 +338,6 @@ AC_SUBST(NEON_BUILD_BUNDLED)
 
 ])
 
-dnl Check for MinGW
-AC_DEFUN([NE_OS_MINGW], [
-AC_CACHE_CHECK([for MinGW], ne_cv_os_mingw, [
-case `uname -s 2>/dev/null` in
-MINGW*) ne_cv_os_mingw=yes ;;
-*) ne_cv_os_mingw=no ;;
-esac
-])])
-
 dnl AC_SEARCH_LIBS done differently. Usage:
 dnl   NE_SEARCH_LIBS(function, libnames, [extralibs], [actions-if-not-found],
 dnl                            [actions-if-found])
@@ -359,7 +350,7 @@ dnl If link never succeeds, run `actions-if-not-found', if given, else
 dnl give an error and fail configure.
 AC_DEFUN([NE_SEARCH_LIBS], [
 
-AC_REQUIRE([NE_OS_MINGW])
+AC_REQUIRE([NE_CHECK_OS])
 
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
 AC_LINK_IFELSE(
@@ -369,11 +360,10 @@ ne_sl_save_LIBS=$LIBS
 ne_cv_libsfor_$1="not found"
 for lib in $2; do
     # The w32api libraries link using the stdcall calling convention.
-    if test ${ne_cv_os_mingw}X${lib} = yesXws2_32; then
-        ne__code="__stdcall $1();"
-    else
-        ne__code="$1();"
-    fi
+    case ${lib}-${ne_cv_os_uname} in
+    ws2_32-MINGW*) ne__code="__stdcall $1();" ;;
+    *) ne__code="$1();" ;;
+    esac
 
     LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM([], [$ne__code])],
@@ -412,14 +402,13 @@ else
 fi
 ])
 
-AC_DEFUN([NE_MACOSX], [
+AC_DEFUN([NE_CHECK_OS], [
 # Check for Darwin, which needs extra cpp and linker flags.
-AC_CACHE_CHECK([for Darwin], ne_cv_os_macosx, [
-case `uname -s 2>/dev/null` in
-Darwin) ne_cv_os_macosx=yes ;;
-*) ne_cv_os_macosx=no ;;
-esac])
-if test $ne_cv_os_macosx = yes; then
+AC_CACHE_CHECK([for uname], ne_cv_os_uname, [
+ ne_cv_os_uname=`uname -s 2>/dev/null`
+])
+
+if test "$ne_cv_os_uname" = "Darwin"; then
   CPPFLAGS="$CPPFLAGS -no-cpp-precomp"
   LDFLAGS="$LDFLAGS -flat_namespace" 
   # poll has various issues in various Darwin releases
@@ -427,6 +416,13 @@ if test $ne_cv_os_macosx = yes; then
     ac_cv_func_poll=no
   fi
 fi
+
+# Use _XOPEN_SOURCE_EXTENDED=1 if similar not already set, on HP-UX
+case "${ne_cv_os_uname}--${CPPFLAGS}" in
+HP-UX*--*_XOPEN_SOURCE*) ;;
+HP-UX*) CPPFLAGS="$CPPFLAGS -D_XOPEN_SOURCE_EXTENDED=1" ;;
+esac
+
 ])
 
 AC_DEFUN([NEON_COMMON_CHECKS], [
@@ -441,7 +437,7 @@ AC_REQUIRE([AC_C_CONST])
 AC_REQUIRE([AC_TYPE_SIZE_T])
 AC_REQUIRE([AC_TYPE_OFF_T])
 
-AC_REQUIRE([NE_MACOSX])
+AC_REQUIRE([NE_CHECK_OS])
 
 AC_REQUIRE([AC_PROG_MAKE_SET])
 
@@ -658,11 +654,10 @@ else
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
-   AC_CHECK_DECLS(h_errno,,,[#define _XOPEN_SOURCE_EXTENDED 1
-#include <netdb.h>])
+   AC_CHECK_DECLS(h_errno,,,[#include <netdb.h>])
    AC_CHECK_TYPE(in_addr_t,,[
      AC_DEFINE([in_addr_t], [unsigned int], 
-                            [Define if in_addr_t is not availale])], [
+                            [Define if in_addr_t is not available])], [
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
