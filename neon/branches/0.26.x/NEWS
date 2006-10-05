@@ -1,3 +1,10 @@
+Changes in release 0.26.2:
+* Fix error reported for LOCK responses lacking a Lock-Token header.
+* Use Libs.private in neon.pc for newer versions of pkg-config.
+* Build fix for platforms without libintl.h.
+* Build fixes for MinGW (Matthew Miller).
+* Win32: enable debugging; build fixes with some SDKs (Kiyo Kelvin Lee).
+
 Changes in release 0.26.1:
 * Build fixes for Win32 (D.J. Heap) and OS X.
 * Add Simplified Chinese translation (Dongsheng Song).
