@@ -112,18 +112,8 @@ ${MKCERT} -key ${srcdir}/server.key -out ca4.pem
 
 cat ca[1234].pem > calist.pem
 
-# The hostname munging only works if `hostname` always reports the
-# FQDN; continue if anything fails since appropriate tests will be
-# skipped if this fails.
-
-hostname=`hostname | sed 's,\..*,,'` || true
-domain=`hostname | sed 's,[^.]*\.,,'` || true
-fqdn=`hostname` || true
-if [ "x${hostname}.${domain}" = "x${fqdn}" ]; then
-  csr_fields "Wildcard Cert Dept" "*.${domain}" | \
-  ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
-  ${CA} -days 900 -in wildcard.csr -out wildcard.cert
-fi
+csr_fields "Wildcard Cert Dept" "*.example.com" | \
+${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
 
 csr_fields "Neon Client Cert" ignored.example.com | \
 ${REQ} -new -key client.key -out client.csr
@@ -150,7 +140,7 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 
 ### don't put ${REQ} invocations after here
 
-for f in server client twocn caseless cnfirst missingcn justmail twoou; do
+for f in server client twocn caseless cnfirst missingcn justmail twoou wildcard; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
