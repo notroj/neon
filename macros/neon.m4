@@ -1089,11 +1089,12 @@ esac])])
 
 AC_DEFUN([NEON_I18N], [
 
+dnl Check for NLS iff libintl.h was detected.
 AC_ARG_ENABLE(nls, 
   AS_HELP_STRING(--disable-nls, [disable internationalization support]),,
-  [enable_nls=yes])
+  [enable_nls=${ac_cv_header_libintl_h}])
 
-if test "x${enable_nls}${ac_cv_header_libintl_h}" = "xyesyes"; then
+if test x${enable_nls} = xyes; then
   # presume that dgettext() is available if bindtextdomain() is...
   # checking for dgettext() itself is awkward because gcc has a 
   # builtin of that function, which confuses AC_CHECK_FUNCS et al.

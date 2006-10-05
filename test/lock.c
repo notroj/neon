@@ -530,7 +530,6 @@ static int no_creds(void *ud, const char *realm, int attempt,
 {
     return -1;
 }
-                    
 
 static int fail_lockauth(void)
 {
@@ -570,6 +569,40 @@ static int fail_lockauth(void)
     return OK;
 }
 
+/* Regression test for neon 0.25.0 regression in ne_lock() error
+ * handling. */
+static int fail_noheader(void)
+{
+    ne_session *sess;
+    char *resp, *rbody = lock_response(ne_lockscope_exclusive, 0, "me",
+                                       6500, "opaquelocktoken:foo");
+    struct ne_lock *lock = ne_lock_create();
+    int ret;
+
+    resp = ne_concat("HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                     "Content-type: application/xml" EOL
+                     "Connection: close\r\n\r\n", rbody, NULL);
+
+    CALL(make_session(&sess, single_serve_string, resp));
+    ne_free(resp);
+
+    ne_fill_server_uri(sess, &lock->uri);
+    lock->uri.path = ne_strdup("/foo");
+    lock->timeout = NE_TIMEOUT_INFINITE;
+
+    ret = ne_lock(sess, lock);
+    ONN("LOCK request did not fail", ret != NE_ERROR);
+    
+    ONV(strstr(ne_get_error(sess), 
+               "LOCK response missing Lock-Token header") == NULL,
+        ("unexpected error: %s", ne_get_error(sess)));
+
+    ne_session_destroy(sess);
+    ne_lock_destroy(lock);
+
+    return await_server();
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(store_single),
@@ -584,6 +617,7 @@ ne_test tests[] = {
     T(discover),
     T(fail_discover),
     T(fail_lockauth),
+    T(fail_noheader),
     T(NULL)
 };
 
