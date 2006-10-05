@@ -440,32 +440,27 @@ static int fail_not_ssl(void)
     return OK;
 }
 
-static int wildcard_ok = 0;    
-
-static int wildcard_init(void)
+/* Server callback which handles a CONNECT request. */
+static int tunnel_server(ne_socket *sock, void *ud)
 {
-    struct stat stbuf;
+    struct ssl_server_args *args = ud;
+
+    CALL(discard_request(sock));
+
+    SEND_STRING(sock, "HTTP/1.1 200 OK\r\nServer: serve_tunnel\r\n\r\n");
     
-    t_context("wildcard.cert not found:\n"
-	      "Could not determine hostname/FQDN from makekeys.sh");
-    PRECOND(stat("wildcard.cert", &stbuf) == 0);
-
-    PRECOND(lookup_hostname() == OK);
-
-    wildcard_ok = 1;
-    return OK;
+    return ssl_server(sock, args);
 }
 
 static int wildcard_match(void)
 {
     ne_session *sess;
     struct ssl_server_args args = {"wildcard.cert", 0};
-
-    PRECOND(wildcard_ok);
     
-    sess = ne_session_create("https", local_hostname, 7777);
+    sess = ne_session_create("https", "anything.example.com", 443);
+    ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
+    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     
     return OK;
@@ -1506,7 +1501,6 @@ ne_test tests[] = {
 
     T(no_verify),
     T(cache_verify),
-    T_LEAKY(wildcard_init),
     T(wildcard_match),
     T(caseless_match),
 
