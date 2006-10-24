@@ -104,6 +104,8 @@ struct ne_session_s {
     ne_ssl_provide_fn ssl_provide_fn;
     void *ssl_provide_ud;
 
+    ne_session_status_info status;
+
     /* Error string */
     char error[512];
 };

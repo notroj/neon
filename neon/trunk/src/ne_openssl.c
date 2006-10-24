@@ -658,11 +658,6 @@ int ne__negotiate_ssl(ne_session *sess)
 	ctx->sess = SSL_get1_session(ssl);
     }
 
-    if (sess->notify_cb) {
-	sess->notify_cb(sess->notify_ud, ne_conn_secure,
-                        SSL_get_version(ssl));
-    }
-
     return NE_OK;
 }
 

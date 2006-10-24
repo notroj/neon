@@ -77,33 +77,56 @@ int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
 /* Progress callback. */
-typedef void (*ne_progress)(void *userdata, off_t progress, off_t total);
+typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
 
 /* Set a progress callback for the session. */
-void ne_set_progress(ne_session *sess, 
-		     ne_progress progress, void *userdata);
+void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
 
 /* Store an opaque context for the session, 'priv' is returned by a
  * call to ne_session_get_private with the same ID. */
 void ne_set_session_private(ne_session *sess, const char *id, void *priv);
 void *ne_get_session_private(ne_session *sess, const char *id);
 
+/* Status event type. */
 typedef enum {
-    ne_conn_namelookup, /* lookup up hostname (info = hostname) */
-    ne_conn_connecting, /* connecting to host (info = hostname) */
-    ne_conn_connected, /* connected to host (info = hostname) */
-    ne_conn_secure /* connection now secure (info = crypto level) */
-} ne_conn_status;
+    ne_status_lookup = 0, /* looking up hostname */
+    ne_status_connecting, /* connecting to host */
+    ne_status_connected, /* connected to host */
+    ne_status_sending, /* sending a request */
+    ne_status_recving, /* receiving a response */
+} ne_session_status;
 
-typedef void (*ne_notify_status)(void *userdata, 
-				 ne_conn_status status,
-				 const char *info);
+/* Status event information union; the relevant structure within
+ * corresponds to the event type.  The size of this structure is not
+ * limited by ABI constraint; i.e. the "info" union or any existing
+ * struct inside that union may be expanded in later releases. */
+typedef union ne_session_status_info_u {
+    struct /* ne_status_lookup */ {
+        const char *hostname;
+    } lu;
+    struct /* ne_status_connecting */ {
+        const char *hostname;
+        const ne_inet_addr *address;
+    } ci;
+    struct /* ne_status_connected */ {
+        const char *hostname;
+    } cd;
+    struct /* ne_status_sending and ne_status_recving */ {
+        /* If total == 0, total is unknown; otherwise, 0 <= point
+         * <= total.  */
+        ne_off_t progress, total;
+    } sr;
+} ne_session_status_info;
 
+/* Callback invoked to notify a new session status event, given by the
+ * 'status' argument.  On invocation, exactly one of the structures in
+ * the info->info union will be valid, as indicated above. */
+typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
+                                 const ne_session_status_info *info);
 
 /* Set a status notification callback for the session, to report
- * connection status. */
-void ne_set_status(ne_session *sess,
-		   ne_notify_status status, void *userdata);
+ * connection status events. */
+void ne_set_status(ne_session *sess, ne_notify_status status, void *userdata);
 
 /* Certificate verification failures.
  * The certificate is not yet valid: */
