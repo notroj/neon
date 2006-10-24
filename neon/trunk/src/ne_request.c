@@ -27,12 +27,6 @@
 
 #include <sys/types.h>
 
-#ifdef HAVE_SYS_LIMITS_H
-#include <sys/limits.h>
-#endif
-#ifdef HAVE_LIMITS_H
-#include <limits.h> /* for UINT_MAX etc */
-#endif
 #include <errno.h>
 #include <fcntl.h>
 #ifdef HAVE_STRING_H
@@ -71,44 +65,6 @@ struct body_reader {
     void *userdata;
     struct body_reader *next;
 };
-
-#if !defined(LONG_LONG_MAX) && defined(LLONG_MAX)
-#define LONG_LONG_MAX LLONG_MAX
-#elif !defined(LONG_LONG_MAX) && defined(LONGLONG_MAX)
-#define LONG_LONG_MAX LONGLONG_MAX
-#endif
-
-#ifdef NE_LFS
-#define ne_lseek lseek64
-typedef off64_t ne_off_t;
-#define FMT_NE_OFF_T NE_FMT_OFF64_T
-#define NE_OFFT_MAX LONG_LONG_MAX
-#ifdef HAVE_STRTOLL
-#define ne_strtoff strtoll
-#else
-#define ne_strtoff strtoq
-#endif
-#else /* !NE_LFS */
-
-typedef off_t ne_off_t;
-#define ne_lseek lseek
-#define FMT_NE_OFF_T NE_FMT_OFF_T
-
-#if defined(SIZEOF_LONG_LONG) && defined(LONG_LONG_MAX) \
-    && SIZEOF_OFF_T == SIZEOF_LONG_LONG
-#define NE_OFFT_MAX LONG_LONG_MAX
-#else
-#define NE_OFFT_MAX LONG_MAX
-#endif
-
-#if SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOLL)
-#define ne_strtoff strtoll
-#elif SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOQ)
-#define ne_strtoff strtoq
-#else
-#define ne_strtoff strtol
-#endif
-#endif /* NE_LFS */
 
 struct field {
     char *name, *value;
@@ -518,7 +474,7 @@ void ne_set_request_body_buffer(ne_request *req, const char *buffer,
     set_body_length(req, size);
 }
 
-void ne_set_request_body_provider(ne_request *req, off_t bodysize,
+void ne_set_request_body_provider(ne_request *req, ne_off_t bodysize,
 				  ne_provide_body provider, void *ud)
 {
     req->body_cb = provider;
@@ -527,7 +483,7 @@ void ne_set_request_body_provider(ne_request *req, off_t bodysize,
 }
 
 void ne_set_request_body_fd(ne_request *req, int fd,
-                            off_t offset, off_t length)
+                            ne_off_t offset, ne_off_t length)
 {
     req->body.file.fd = fd;
     req->body.file.offset = offset;
@@ -536,27 +492,6 @@ void ne_set_request_body_fd(ne_request *req, int fd,
     req->body_ud = req;
     set_body_length(req, length);
 }
-
-#ifdef NE_LFS
-void ne_set_request_body_fd64(ne_request *req, int fd,
-                              off64_t offset, off64_t length)
-{
-    req->body.file.fd = fd;
-    req->body.file.offset = offset;
-    req->body.file.length = length;
-    req->body_cb = body_fd_send;
-    req->body_ud = req;
-    set_body_length(req, length);
-}
-
-void ne_set_request_body_provider64(ne_request *req, off64_t bodysize,
-                                    ne_provide_body provider, void *ud)
-{
-    req->body_cb = provider;
-    req->body_ud = ud;
-    set_body_length(req, bodysize);
-}
-#endif
 
 void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value)
 {
