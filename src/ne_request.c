@@ -215,11 +215,15 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
     return ret;
 }
 
-static void notify_status(ne_session *sess, ne_conn_status status,
-			  const char *info)
+static void notify_status(ne_session *sess, ne_session_status status)
 {
     if (sess->notify_cb) {
-	sess->notify_cb(sess->notify_ud, status, info);
+	sess->notify_cb(sess->notify_ud, status, &sess->status);
+        if (sess->progress_cb
+            && (status == ne_status_sending || status == ne_status_recving)) {
+            sess->progress_cb(sess->progress_ud, 
+                              sess->status.sr.progress, sess->status.sr.total);
+        }
     }
 }
 
@@ -339,11 +343,14 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
 static int send_request_body(ne_request *req, int retry)
 {
     ne_session *const sess = req->session;
-    ne_off_t progress = 0;
     char buffer[NE_BUFSIZ];
     ssize_t bytes;
 
     NE_DEBUG(NE_DBG_HTTP, "Sending request body:\n");
+
+    req->session->status.sr.progress = 0;
+    req->session->status.sr.total = req->body_length;
+    notify_status(sess, ne_status_sending);
     
     /* tell the source to start again from the beginning. */
     if (req->body_cb(req->body_ud, NULL, 0) != 0) {
@@ -363,12 +370,8 @@ static int send_request_body(ne_request *req, int retry)
 		 bytes, (int)bytes, buffer);
 
         /* invoke progress callback */
-        if (sess->progress_cb) {
-            progress += bytes;
-            /* TODO: progress_cb offset type mismatch ick */
-            req->session->progress_cb(sess->progress_ud, progress,
-                                      req->body_length);
-        }
+        req->session->status.sr.progress += bytes;
+        notify_status(sess, ne_status_sending);
     }
 
     if (bytes == 0) {
@@ -772,9 +775,10 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
     if (read_response_block(req, resp, buffer, &readlen))
 	return -1;
 
-    if (req->session->progress_cb) {
-	req->session->progress_cb(req->session->progress_ud, resp->progress, 
-				  resp->mode==R_CLENGTH ? resp->body.clen.total:-1);
+    if (readlen) {
+        req->session->status.sr.progress = 
+            resp->mode == R_CLENGTH ? resp->body.clen.total : 0;
+        notify_status(req->session, ne_status_recving);
     }
 
     for (rdr = req->body_readers; rdr!=NULL; rdr=rdr->next) {
@@ -1116,8 +1120,8 @@ static int lookup_host(ne_session *sess, struct host_info *info)
     if (sess->addrlist) return NE_OK;
 
     NE_DEBUG(NE_DBG_HTTP, "Doing DNS lookup on %s...\n", info->hostname);
-    if (sess->notify_cb)
-	sess->notify_cb(sess->notify_ud, ne_conn_namelookup, info->hostname);
+    sess->status.lu.hostname = info->hostname;
+    notify_status(sess, ne_status_lookup);
     info->address = ne_addr_resolve(info->hostname, 0);
     if (ne_addr_result(info->address)) {
 	char buf[256];
@@ -1260,6 +1264,11 @@ int ne_begin_request(ne_request *req)
     for (rdr = req->body_readers; rdr != NULL; rdr=rdr->next) {
 	rdr->use = rdr->accept_response(rdr->userdata, req, st);
     }
+
+    req->session->status.sr.progress = 0;
+    req->session->status.sr.total = 
+        req->resp.mode == R_CLENGTH ? req->resp.body.clen.total : -1;
+    notify_status(req->session, ne_status_recving);
     
     return NE_OK;
 }
@@ -1435,8 +1444,11 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
     if (host->current == NULL)
 	host->current = resolve_first(sess, host);
 
+    sess->status.ci.hostname = host->hostname;
+
     do {
-	notify_status(sess, ne_conn_connecting, host->hostport);
+        sess->status.ci.address = host->current;
+	notify_status(sess, ne_status_connecting);
 #ifdef NE_DEBUGGING
 	if (ne_debug_mask & NE_DBG_HTTP) {
 	    char buf[150];
@@ -1454,7 +1466,7 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 	return NE_CONNECT;
     }
 
-    notify_status(sess, ne_conn_connected, host->hostport);
+    notify_status(sess, ne_status_connected);
     
     if (sess->rdtimeout)
 	ne_sock_read_timeout(sess->socket, sess->rdtimeout);

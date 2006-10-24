@@ -1964,6 +1964,66 @@ static int icy_protocol(void)
     return await_server();
 }
 
+static void status_cb(void *userdata, ne_session_status status,
+                      const ne_session_status_info *info)
+{
+    ne_buffer *buf = userdata;
+    char scratch[512];
+
+    switch (status) {
+    case ne_status_lookup:
+        ne_buffer_concat(buf, "lookup(", info->lu.hostname, ")-", NULL);
+        break;
+    case ne_status_connecting:
+        ne_iaddr_print(info->ci.address, scratch, sizeof scratch);
+        ne_buffer_concat(buf, "connecting(", info->lu.hostname,
+                         ",", scratch, ")-", NULL);
+        break;
+    case ne_status_connected:
+        ne_buffer_concat(buf, "connected(", info->cd.hostname, 
+                         ")-", NULL);
+        break;
+    case ne_status_sending:
+    case ne_status_recving:
+        ne_snprintf(scratch, sizeof scratch, 
+                    "%" NE_FMT_NE_OFF_T ",%" NE_FMT_NE_OFF_T, 
+                    info->sr.progress, info->sr.total);
+        ne_buffer_concat(buf, 
+                         status == ne_status_sending ? "send" : "recv",
+                         "(", scratch, ")-", NULL);
+        break;
+    default:
+        ne_buffer_czappend(buf, "bork!");
+        break;
+    }
+}
+
+static int status(void)
+{
+    ne_session *sess;
+    ne_buffer *buf = ne_buffer_create();
+
+    CALL(make_session(&sess, single_serve_string, RESP200
+                      "Content-Length: 5\r\n\r\n" "abcde"));
+
+    ne_set_status(sess, status_cb, buf);
+
+    CALL(any_2xx_request_body(sess, "/status"));
+
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    ONCMP("lookup(localhost)-"
+          "connecting(localhost,127.0.0.1)-"
+          "connected(localhost)-"
+          "send(0,5000)-"
+          "send(5000,5000)-"
+          "recv(0,5)-"
+          "recv(5,5)-", buf->data, "status events", "result");
+        
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -2047,5 +2107,6 @@ ne_test tests[] = {
     T(hooks),
     T(hook_self_destroy),
     T(icy_protocol),
+    T(status),
     T(NULL)
 };

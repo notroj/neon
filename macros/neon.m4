@@ -501,7 +501,14 @@ else
          [LFS support omitted: 64-bit support functions not found])
      fi], [NE_DISABLE_SUPPORT(LFS, [LFS support omitted: off64_t type not found])])
    CPPFLAGS=$ne_save_CPPFLAGS
-fi])
+fi
+if test "$NE_FLAG_LFS" = "yes"; then
+   AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
+                      [Define to be printf format string for ne_off_t])
+else
+   AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
+fi
+])
 
 dnl NEON_FORMAT(TYPE[, HEADERS[, [SPECIFIER]])
 dnl
