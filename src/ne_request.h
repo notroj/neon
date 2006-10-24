@@ -57,14 +57,7 @@ void ne_set_request_body_buffer(ne_request *req, const char *buffer,
 /* The request body will be taken from 'length' bytes read from the
  * file descriptor 'fd', starting from file offset 'offset'. */
 void ne_set_request_body_fd(ne_request *req, int fd,
-                            off_t offset, off_t length);
-
-#ifdef NE_LFS
-/* Alternate version of ne_set_request_body_fd taking off64_t 
- * offset type for systems supporting _LARGEFILE64_SOURCE. */
-void ne_set_request_body_fd64(ne_request *req, int fd,
-                              off64_t offset, off64_t length);
-#endif
+                            ne_off_t offset, ne_off_t length);
 
 /* "Pull"-based request body provider: a callback which is invoked to
  * provide blocks of request body on demand.
@@ -86,15 +79,8 @@ typedef ssize_t (*ne_provide_body)(void *userdata,
  * request body, a block at a time.  The total size of the request
  * body is 'length'; the callback must ensure that it returns no more
  * than 'length' bytes in total. */
-void ne_set_request_body_provider(ne_request *req, off_t length,
+void ne_set_request_body_provider(ne_request *req, ne_off_t length,
 				  ne_provide_body provider, void *userdata);
-
-#ifdef NE_LFS
-/* Duplicate version of ne_set_request_body_provider, taking an off64_t
- * offset. */
-void ne_set_request_body_provider64(ne_request *req, off64_t length,
-                                    ne_provide_body provider, void *userdata);
-#endif
 
 /* Handling response bodies; two callbacks must be provided:
  *

@@ -103,11 +103,7 @@ int ne_put(ne_session *sess, const char *uri, int fd)
     ne_lock_using_parent(req, uri);
 #endif
 
-#ifdef NE_LFS
-    ne_set_request_body_fd64(req, fd, 0, st.st_size);
-#else
     ne_set_request_body_fd(req, fd, 0, st.st_size);
-#endif
 	
     ret = ne_request_dispatch(req);
     
@@ -204,37 +200,17 @@ int ne_get_range(ne_session *sess, const char *uri,
     char brange[64];
 
     if (range->end == -1) {
-        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF_T "-", 
+        ne_snprintf(brange, sizeof brange, "bytes=%" FMT_NE_OFF_T "-", 
                     range->start);
     }
     else {
 	ne_snprintf(brange, sizeof brange,
-                    "bytes=%" NE_FMT_OFF_T "-%" NE_FMT_OFF_T,
+                    "bytes=%" FMT_NE_OFF_T "-%" FMT_NE_OFF_T,
                     range->start, range->end);
     }
 
     return get_range_common(sess, uri, brange, fd);
 }
-
-#ifdef NE_LFS
-int ne_get_range64(ne_session *sess, const char *uri, 
-                   ne_content_range64 *range, int fd)
-{
-    char brange[64];
-
-    if (range->end == -1) {
-        ne_snprintf(brange, sizeof brange, "bytes=%" NE_FMT_OFF64_T "-", 
-                    range->start);
-    }
-    else {
-	ne_snprintf(brange, sizeof brange,
-                    "bytes=%" NE_FMT_OFF64_T "-%" NE_FMT_OFF64_T,
-                    range->start, range->end);
-    }
-
-    return get_range_common(sess, uri, brange, fd);
-}
-#endif
 
 /* Get to given fd */
 int ne_get(ne_session *sess, const char *uri, int fd)
