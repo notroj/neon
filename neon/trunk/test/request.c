@@ -1274,12 +1274,12 @@ static enum {
     prog_done /* finished. */
 } prog_state = prog_transfer;
 
-static off_t prog_last = -1, prog_total;
+static ne_off_t prog_last = -1, prog_total;
 
-#define FOFF "%" NE_FMT_OFF_T
+#define FOFF "%" NE_FMT_NE_OFF_T
 
 /* callback for send_progress. */
-static void s_progress(void *userdata, off_t prog, off_t total)
+static void s_progress(void *userdata, ne_off_t prog, ne_off_t total)
 {
     NE_DEBUG(NE_DBG_HTTP, 
 	     "progress callback: " FOFF "/" FOFF ".\n",
