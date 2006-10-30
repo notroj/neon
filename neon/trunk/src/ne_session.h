@@ -93,7 +93,7 @@ typedef enum {
     ne_status_connecting, /* connecting to host */
     ne_status_connected, /* connected to host */
     ne_status_sending, /* sending a request */
-    ne_status_recving, /* receiving a response */
+    ne_status_recving /* receiving a response */
 } ne_session_status;
 
 /* Status event information union; the relevant structure within
