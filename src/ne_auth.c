@@ -74,6 +74,10 @@
 #include "ne_sspi.h"
 #endif
 
+#if defined(HAVE_GSSAPI) || defined(HAVE_SSPI)
+#include "ne_private.h" /* only need to extract proxy hostname */
+#endif
+
 #define HOOK_SERVER_ID "http://webdav.org/neon/hooks/server-auth"
 #define HOOK_PROXY_ID "http://webdav.org/neon/hooks/proxy-auth"
 
@@ -180,6 +184,12 @@ typedef struct {
     /* Temporary store for half of the Request-Digest
      * (an optimisation - used in the response-digest calculation) */
     struct ne_md5_ctx *stored_rdig;
+
+    /* Details of server... needed to reconstruct absoluteURI's when
+     * necessary */
+    const char *host;
+    const char *uri_scheme;
+    unsigned int port;
 } auth_session;
 
 struct auth_request {
@@ -551,14 +561,8 @@ static int sspi_challenge(auth_session *sess, int attempt,
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge.\n");
     
     if (!sess->sspi_context) {
-        ne_uri uri = {0};
-
-        ne_fill_server_uri(sess->sess, &uri);
-
-        status = ne_sspi_create_context(&sess->sspi_context, uri.host, ntlm);
-
-        ne_uri_free(&uri);
-
+        status = ne_sspi_create_context(&sess->sspi_context,
+                                        sess->sess->server.hostname, ntlm);
         if (status) {
             return status;
         }
@@ -1197,7 +1201,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
         ret = sess->protocol->verify(areq, sess, auth_info_hdr);
     }
     else if (sess->protocol
-             && (sess->protocol->flags & AUTH_FLAG_VERIFY_NON40x) 
+             && sess->protocol->flags && AUTH_FLAG_VERIFY_NON40x
              && (status->klass == 2 || status->klass == 3)
              && auth_hdr) {
         ret = sess->protocol->verify(areq, sess, auth_hdr);
@@ -1287,16 +1291,8 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 
 #ifdef HAVE_GSSAPI
     if (protomask & NE_AUTH_NEGOTIATE && ahs->gssname == GSS_C_NO_NAME) {
-        ne_uri uri = {0};
-        
-        if (isproxy)
-            ne_fill_proxy_uri(sess, &uri);
-        else
-            ne_fill_server_uri(sess, &uri);
-
-        get_gss_name(&ahs->gssname, uri.host);
-
-        ne_uri_free(&uri);
+        get_gss_name(&ahs->gssname, (isproxy ? sess->proxy.hostname 
+                                     : sess->server.hostname));
     }
 #endif
 

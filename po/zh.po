@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.26.0\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2006-05-11 10:38+0100\n"
+"POT-Creation-Date: 2006-10-05 19:34+0100\n"
 "PO-Revision-Date: 2006-05-11 10:50+0800\n"
 "Last-Translator: <dongsheng.song@gmail.com>\n"
 "Language-Team: zh\n"
@@ -115,21 +115,16 @@ msgstr "SSL 协商失败：%s"
 msgid "Server did not send certificate chain"
 msgstr "服务器不能发送证书链"
 
-#: src/ne_locks.c:583
+#: src/ne_locks.c:584
 msgid "LOCK response missing Lock-Token header"
 msgstr "LOCK的响应遗漏了Lock-Token行"
 
-#: src/ne_locks.c:739
-#, c-format
-msgid "No Lock-Token header given"
-msgstr "没有Lock-Token行"
-
-#: src/ne_locks.c:767
+#: src/ne_locks.c:759
 #, c-format
 msgid "Response missing activelock for %s"
 msgstr "锁定 %s 的响应遗漏了主动锁"
 
-#: src/ne_locks.c:811
+#: src/ne_locks.c:801
 #, c-format
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr "刷新锁定 %s 的响应没有返回主动锁"
@@ -291,58 +286,58 @@ msgstr "证书发行者不被信任"
 msgid "Server certificate verification failed: "
 msgstr "服务器证书校验失败"
 
-#: src/ne_socket.c:480 src/ne_socket.c:528 src/ne_socket.c:631
+#: src/ne_socket.c:475 src/ne_socket.c:523 src/ne_socket.c:626
 msgid "Connection closed"
 msgstr "连接关闭"
 
-#: src/ne_socket.c:538 src/ne_socket.c:643
+#: src/ne_socket.c:533 src/ne_socket.c:638
 msgid "Secure connection truncated"
 msgstr "安全连接切断"
 
-#: src/ne_socket.c:550 src/ne_socket.c:655
+#: src/ne_socket.c:545 src/ne_socket.c:650
 #, c-format
 msgid "SSL error: %s"
 msgstr "SSL 错误：%s"
 
-#: src/ne_socket.c:553
+#: src/ne_socket.c:548
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr "SSL 错误代码 %d/%d/%lu"
 
-#: src/ne_socket.c:636
+#: src/ne_socket.c:631
 #, c-format
 msgid "SSL alert received: %s"
 msgstr "收到SSL警报： %s"
 
-#: src/ne_socket.c:651
+#: src/ne_socket.c:646
 msgid "SSL socket read failed"
 msgstr "SSL 套接字读取失败"
 
-#: src/ne_socket.c:750
+#: src/ne_socket.c:745
 msgid "Line too long"
 msgstr "太长的行"
 
-#: src/ne_socket.c:890 src/ne_socket.c:896
+#: src/ne_socket.c:885 src/ne_socket.c:891
 msgid "Host not found"
 msgstr "没有发现主机"
 
-#: src/ne_socket.c:1006
+#: src/ne_socket.c:1001
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "套接字数量超过FD_SETSIZE"
 
-#: src/ne_socket.c:1218
+#: src/ne_socket.c:1213
 msgid "Client certificate verification failed"
 msgstr "客户证书校验失败"
 
-#: src/ne_socket.c:1234
+#: src/ne_socket.c:1229
 msgid "SSL disabled due to lack of entropy"
 msgstr "由于缺少熵，SSL已经禁用"
 
-#: src/ne_socket.c:1241
+#: src/ne_socket.c:1236
 msgid "SSL disabled due to library version mismatch"
 msgstr "由于库版本不匹配，SSL已经禁用"
 
-#: src/ne_socket.c:1247
+#: src/ne_socket.c:1242
 msgid "Could not create SSL structure"
 msgstr "不能创建SSL结构"
 
@@ -368,3 +363,6 @@ msgstr "在%d行解析XML错误：%s。"
 #, c-format
 msgid "Could not parse response: %s"
 msgstr "不能解析响应：%s"
+
+#~ msgid "No Lock-Token header given"
+#~ msgstr "没有Lock-Token行"
