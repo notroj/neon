@@ -119,13 +119,16 @@ typedef union ne_session_status_info_u {
 } ne_session_status_info;
 
 /* Callback invoked to notify a new session status event, given by the
- * 'status' argument.  On invocation, exactly one of the structures in
- * the info->info union will be valid, as indicated above. */
+ * 'status' argument.  On invocation, the contents of exactly one of
+ * the structures in the info union will be valid, as indicated
+ * above. */
 typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
                                  const ne_session_status_info *info);
 
 /* Set a status notification callback for the session, to report
- * connection status events. */
+ * connection status events.  Only one notification callback per
+ * session can be registered; only the most recent of successive calls
+ * to this function takes effect. */
 void ne_set_status(ne_session *sess, ne_notify_status status, void *userdata);
 
 /* Certificate verification failures.
