@@ -416,13 +416,6 @@ if test "$ne_cv_os_uname" = "Darwin"; then
     ac_cv_func_poll=no
   fi
 fi
-
-# Use _XOPEN_SOURCE_EXTENDED=1 if similar not already set, on HP-UX
-case "${ne_cv_os_uname}--${CPPFLAGS}" in
-HP-UX*--*_XOPEN_SOURCE*) ;;
-HP-UX*) CPPFLAGS="$CPPFLAGS -D_XOPEN_SOURCE_EXTENDED=1" ;;
-esac
-
 ])
 
 AC_DEFUN([NEON_COMMON_CHECKS], [

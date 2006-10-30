@@ -772,7 +772,7 @@ ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t buflen)
 #define INADDR_NONE ((in_addr_t) -1)
 #endif
 
-#if !defined(USE_GETADDRINFO) && !defined(HAVE_DECL_H_ERRNO) && !defined(WIN32)
+#if !defined(USE_GETADDRINFO) && !defined(WIN32) && !HAVE_DECL_H_ERRNO
 /* Ancient versions of netdb.h don't export h_errno. */
 extern int h_errno;
 #endif
