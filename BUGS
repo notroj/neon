@@ -2,6 +2,10 @@
 Known problems/bugs in neon                                      -*- text -*-
 ---------------------------
 
+* several reports of issues with long-lived sessions causing problems
+ with GSSAPI auth using mod_auth_kerb.  May be a server problem, but
+ needs further investigation to be sure. 
+
 * 2818 requires that a on rejection of the SSL server cert, a "bad certificate"
  message should be sent - this is not being done currently (and can probably
  only be done with OpenSSL by actually doing cert verification in the verify
