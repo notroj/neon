@@ -1409,7 +1409,7 @@ static int fail_lookup(void)
  * requests on the session would crash. */
 static int fail_double_lookup(void)
 {
-     ne_session *sess = ne_session_create("http", "nohost.example.com", 80);
+     ne_session *sess = ne_session_create("http", "nonesuch.invalid", 80);
      ONN("request did not give lookup failure",
 	 any_request(sess, "/foo") != NE_LOOKUP);
      ONN("second request did not give lookup failure",
@@ -1427,7 +1427,7 @@ static int fail_connect(void)
  * request. */
 static int proxy_no_resolve(void)
 {
-     ne_session *sess = ne_session_create("http", "no.such.domain", 80);
+     ne_session *sess = ne_session_create("http", "nonesuch2.invalid", 80);
      int ret;
      
      ne_session_proxy(sess, "localhost", 7777);
