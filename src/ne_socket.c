@@ -351,6 +351,46 @@ void ne_sock_exit(void)
     }
 }
 
+/* Await readability (rdwr = 0) or writability (rdwr != 0) for socket
+ * fd for secs seconds.  Returns <0 on error, zero on timeout, >0 if
+ * data is available. */
+static int raw_poll(int fdno, int rdwr, int secs)
+{
+    int ret;
+#ifdef NE_USE_POLL
+    struct pollfd fds;
+    int timeout = secs > 0 ? secs * 1000 : -1;
+
+    fds.fd = fdno;
+    fds.events = rdwr == 0 ? POLLIN : POLLOUT;
+    fds.revents = 0;
+
+    do {
+        ret = poll(&fds, 1, timeout);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+#else
+    fd_set rdfds, wrfds;
+    struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
+
+    /* Init the fd set */
+    FD_ZERO(&rdfds);
+    FD_ZERO(&wrfds);
+    if (rdwr == 0)
+        FD_SET(fdno, &rdfds);
+    else
+        FD_SET(fdno, &wrfds);
+
+    if (tvp) {
+        tvp->tv_sec = secs;
+        tvp->tv_usec = 0;
+    }
+    do {
+	ret = select(fdno + 1, &rdfds, &wrfds, NULL, tvp);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+#endif
+    return ret;
+}
+
 int ne_sock_block(ne_socket *sock, int n)
 {
     if (sock->bufavail)
@@ -424,34 +464,7 @@ ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t buflen)
 /* Await data on raw fd in socket. */
 static int readable_raw(ne_socket *sock, int secs)
 {
-    int ret;
-#ifdef NE_USE_POLL
-    struct pollfd fds;
-    int timeout = secs > 0 ? secs * 1000 : -1;
-
-    fds.fd = sock->fd;
-    fds.events = POLLIN;
-    fds.revents = 0;
-
-    do {
-        ret = poll(&fds, 1, timeout);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
-#else
-    int fdno = sock->fd;
-    fd_set rdfds;
-    struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
-
-    /* Init the fd set */
-    FD_ZERO(&rdfds);
-    do {
-	FD_SET(fdno, &rdfds);
-	if (tvp) {
-	    tvp->tv_sec = secs;
-	    tvp->tv_usec = 0;
-	}
-	ret = select(fdno + 1, &rdfds, NULL, NULL, tvp);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
-#endif
+    int ret = raw_poll(sock->fd, 0, secs);
 
     if (ret < 0) {
 	set_strerror(sock, ne_errno);
