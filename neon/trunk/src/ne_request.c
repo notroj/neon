@@ -1441,6 +1441,9 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
         return NE_ERROR;
     }
 
+    if (sess->cotimeout)
+	ne_sock_connect_timeout(sess->socket, sess->cotimeout);
+
     if (host->current == NULL)
 	host->current = resolve_first(sess, host);
 

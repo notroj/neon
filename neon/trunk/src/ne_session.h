@@ -194,6 +194,10 @@ void ne_ssl_provide_clicert(ne_session *sess,
  * timeout value must be greater than zero. */
 void ne_set_read_timeout(ne_session *sess, int timeout);
 
+/* Set the timeout (in seconds) used when making a connection.  The
+ * timeout value must be greater than zero. */
+void ne_set_connect_timeout(ne_session *sess, int timeout);
+
 /* Sets the user-agent string. neon/VERSION will be appended, to make
  * the full header "User-Agent: product neon/VERSION".
  * If this function is not called, the User-Agent header is not sent.

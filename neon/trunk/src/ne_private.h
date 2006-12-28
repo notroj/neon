@@ -84,7 +84,7 @@ struct ne_session_s {
     ne_notify_status notify_cb;
     void *notify_ud;
 
-    int rdtimeout; /* read timeout. */
+    int rdtimeout, cotimeout; /* read, connect timeouts. */
 
     struct hook *create_req_hooks, *pre_send_hooks, *post_send_hooks,
         *post_headers_hooks, *destroy_req_hooks, *destroy_sess_hooks, *private;

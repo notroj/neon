@@ -218,6 +218,11 @@ void ne_set_read_timeout(ne_session *sess, int timeout)
     sess->rdtimeout = timeout;
 }
 
+void ne_set_connect_timeout(ne_session *sess, int timeout)
+{
+    sess->cotimeout = timeout;
+}
+
 #define UAHDR "User-Agent: "
 #define AGENT " neon/" NEON_VERSION "\r\n"
 
