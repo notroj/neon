@@ -576,7 +576,7 @@ AC_REQUIRE([AC_FUNC_STRERROR_R])
 
 AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h libintl.h \
 	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h \
-	sys/limits.h],,,
+	sys/limits.h fcntl.h],,,
 [AC_INCLUDES_DEFAULT
 /* netinet/tcp.h requires netinet/in.h on some platforms. */
 #ifdef HAVE_NETINET_IN_H
@@ -600,7 +600,7 @@ NE_LARGEFILE
 
 AC_REPLACE_FUNCS(strcasecmp)
 
-AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy poll)
+AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy poll fcntl getsockopt)
 
 if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
   AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
@@ -666,6 +666,15 @@ else
 #endif
 ])
 fi
+
+AC_CHECK_TYPES(socklen_t,,,[
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+])
 
 AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
   [#include <time.h>])

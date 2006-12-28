@@ -704,9 +704,39 @@ static int to_end(ne_socket *sock)
 	 
 #define TO_BEGIN ne_socket *sock; CALL(to_begin(&sock))
 #define TO_OP(x) do { int to_ret = (x); \
-ONV(to_ret != NE_SOCK_TIMEOUT, ("operation did not timeout: %d", to_ret)); \
+        ONV(to_ret != NE_SOCK_TIMEOUT, ("operation did not timeout: got %d (%s)", to_ret, ne_sock_error(sock))); \
 } while (0)
 #define TO_FINISH return to_end(sock)
+
+#define TEST_CONNECT_TIMEOUT 0
+#if TEST_CONNECT_TIMEOUT
+
+/* No obvious way to reliably test a connect() timeout.  But
+ * www.example.com seems to drop packets on ports other than 80 so
+ * that actually works pretty well.  Disabled by default. */
+static int connect_timeout(void)
+{
+    static const unsigned char example_dot_com[] = "\xC0\x00\x22\xA6";
+    ne_socket *sock = ne_sock_create(), *spare;
+    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, example_dot_com);
+
+    ne_sock_connect_timeout(sock, 1);
+
+    /* Without refactoring the common/child.c a lot the easiest way to
+     * get a server which doesn't accept() is to create one and use up
+     * its only child. */
+    CALL(begin(&spare, sleepy_server, NULL));
+
+    TO_OP(ne_sock_connect(sock, ia, 8080));
+
+    ne_iaddr_free(ia);
+    ne_sock_close(sock);
+    ne_sock_close(spare);
+    reap_server();
+
+    return OK;
+}
+#endif
 
 static int peek_timeout(void)
 {
@@ -1046,6 +1076,9 @@ ne_test tests[] = {
 #else
     T(write_reset),
     T(read_reset),
+#endif
+#if TEST_CONNECT_TIMEOUT
+    T(connect_timeout),
 #endif
     T(read_timeout),
     T(peek_timeout),
