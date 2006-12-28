@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2005 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 2001-2006 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 #
 # This file is free software; you may copy and/or distribute it with
 # or without modifications, as long as this notice is preserved.
@@ -17,9 +17,17 @@
 
 # Tests needed for the neon-test common test code.
 
+AC_DEFUN([NE_FORMAT_TIMET], [
+NEON_FORMAT(time_t, [
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif])
+])
+
 AC_DEFUN([NEON_TEST], [
 
 AC_REQUIRE([NEON_COMMON_CHECKS])
+AC_REQUIRE([NE_FORMAT_TIMET])
 
 AC_REQUIRE([AC_TYPE_PID_T])
 AC_REQUIRE([AC_HEADER_TIME])
@@ -34,10 +42,5 @@ AC_CHECK_HEADERS(sys/time.h stdint.h locale.h)
 AC_CHECK_FUNCS(pipe isatty usleep shutdown setlocale)
 
 AC_REQUIRE([NE_FIND_AR])
-
-NEON_FORMAT(time_t, [
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif])
 
 ])
