@@ -165,11 +165,13 @@ typedef int (*ne_ssl_verify_fn)(void *userdata, int failures,
 void ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
 
 /* Use the given client certificate for the session.  The client cert
- * MUST be in the decrypted state, otherwise behaviour is undefined. */
+ * MUST be in the decrypted state, otherwise behaviour is undefined.
+ * The 'clicert' object is duplicated internally so can be destroyed
+ * by the caller.  */
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
 
-/* Indicate that the certificate 'cert' is trusted; 'cert' is
- * duplicated internally and may be destroyed at will. */
+/* Indicate that the certificate 'cert' is trusted; the 'cert' object
+ * is duplicated internally so can be destroyed by the caller. */
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
 
 /* If the SSL library provided a default set of CA certificates, trust
