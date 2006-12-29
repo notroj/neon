@@ -717,22 +717,15 @@ static int to_end(ne_socket *sock)
 static int connect_timeout(void)
 {
     static const unsigned char example_dot_com[] = "\xC0\x00\x22\xA6";
-    ne_socket *sock = ne_sock_create(), *spare;
+    ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, example_dot_com);
 
     ne_sock_connect_timeout(sock, 1);
-
-    /* Without refactoring the common/child.c a lot the easiest way to
-     * get a server which doesn't accept() is to create one and use up
-     * its only child. */
-    CALL(begin(&spare, sleepy_server, NULL));
 
     TO_OP(ne_sock_connect(sock, ia, 8080));
 
     ne_iaddr_free(ia);
     ne_sock_close(sock);
-    ne_sock_close(spare);
-    reap_server();
 
     return OK;
 }
