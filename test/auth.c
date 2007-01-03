@@ -774,7 +774,7 @@ static int digest_failures(void)
         { fail_ai_omit_nc, "missing parameters" },
         { fail_ai_omit_digest, "missing parameters" },
         { fail_ai_omit_cnonce, "missing parameters" },
-        { fail_bogus_alg, "Unknown algorithm" },
+        { fail_bogus_alg, "unknown algorithm" },
         { fail_not, NULL }
     };
     size_t n;
@@ -817,6 +817,98 @@ static int digest_failures(void)
     return OK;
 }
 
+static int fail_cb(void *userdata, const char *realm, int tries, 
+		   char *un, char *pw)
+{
+    ne_buffer *buf = userdata;
+    char str[64];
+
+    ne_snprintf(str, sizeof str, "<%s, %d>", realm, tries);
+    ne_buffer_zappend(buf, str);
+
+    return -1;
+}
+
+static int fail_challenge(void)
+{
+    static const struct {
+        const char *resp, *error, *challs;
+    } ts[] = {
+        /* only possible Basic parse failure. */
+        { "Basic", "missing realm in Basic challenge" },
+
+        /* Digest parameter invalid/omitted failure cases: */
+        { "Digest algorithm=MD5, qop=auth, nonce=\"foo\"",
+          "missing parameter in Digest challenge" },
+        { "Digest algorithm=MD5, qop=auth, realm=\"foo\"",
+          "missing parameter in Digest challenge" },
+        { "Digest algorithm=ZEBEDEE-GOES-BOING, qop=auth, realm=\"foo\"",
+          "unknown algorithm in Digest challenge" },
+        { "Digest algorithm=MD5-sess, realm=\"foo\"",
+          "incompatible algorithm in Digest challenge" },
+
+        /* Multiple challenge failure cases: */
+        { "Basic, Digest",
+          "missing parameter in Digest challenge, missing realm in Basic challenge" },
+        
+        { "Digest realm=\"foo\", algorithm=MD5, qop=auth, nonce=\"foo\","
+          " Basic realm=\"foo\"",
+          "rejected Digest challenge, rejected Basic challenge" },
+
+        { "WhizzBangAuth realm=\"foo\", " 
+          "Basic realm='foo'",
+          "ignored WhizzBangAuth challenge, rejected Basic challenge" },
+        { "", "could not parse challenge" }
+
+#if 0
+        /* neon 0.26.x regression in "attempt" handling. */
+        { "Basic realm=\"foo\", " 
+          "Digest realm=\"bar\", algorithm=MD5, qop=auth, nonce=\"foo\"",
+          "rejected Digest challenge, rejected Basic challenge"
+          , "<bar, 0><foo, 1>"  /* Digest challenge first, Basic second. */
+        }
+#endif
+    };
+    unsigned n;
+    
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
+        char resp[512];
+        ne_session *sess;
+        int ret;
+        ne_buffer *buf = ne_buffer_create();
+
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 401 Auth Denied\r\n"
+                    "WWW-Authenticate: %s\r\n"
+                    "Content-Length: 0\r\n" "\r\n",
+                    ts[n].resp);
+        
+        CALL(make_session(&sess, single_serve_string, resp));
+
+        ne_set_server_auth(sess, fail_cb, buf);
+        
+        ret = any_2xx_request(sess, "/fish");
+        ONV(ret == NE_OK,
+            ("request success; expecting error '%s'",
+             ts[n].error));
+
+        ONV(strstr(ne_get_error(sess), ts[n].error) == NULL,
+            ("request fails with error '%s'; expecting '%s'",
+             ne_get_error(sess), ts[n].error));
+        
+        if (ts[n].challs) {
+            ONCMP(ts[n].challs, buf->data, "challenge callback", 
+                  "invocation order");
+        }
+
+        ne_session_destroy(sess);
+        ne_buffer_destroy(buf);
+        CALL(await_server());
+    }
+
+    return OK;
+}
+
 /* test that digest has precedence over Basic for multi-scheme
  * challenges */
 
@@ -833,5 +925,6 @@ ne_test tests[] = {
     T(negotiate_regress),
     T(digest),
     T(digest_failures),
+    T(fail_challenge),
     T(NULL)
 };
