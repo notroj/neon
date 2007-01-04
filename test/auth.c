@@ -1,6 +1,6 @@
 /* 
    Authentication tests
-   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -380,6 +380,7 @@ struct digest_parms {
         fail_omit_realm,
         fail_omit_nonce,
         fail_ai_bad_nc,
+        fail_ai_bad_nc_syntax,
         fail_ai_bad_digest,
         fail_ai_bad_cnonce,
         fail_ai_omit_cnonce,
@@ -573,7 +574,9 @@ static char *make_authinfo_header(struct digest_state *state,
         make_digest(state, parms, 1, digest);
     }
 
-    if (parms->failure == fail_ai_bad_nc) {
+    if (parms->failure == fail_ai_bad_nc_syntax) {
+        ncval = "zztop";
+    } else if (parms->failure == fail_ai_bad_nc) {
         ncval = "999";
     } else {
         ncval = state->ncval;
@@ -769,6 +772,7 @@ static int digest_failures(void)
         const char *message;
     } fails[] = {
         { fail_ai_bad_nc, "nonce count mismatch" },
+        { fail_ai_bad_nc_syntax, "could not parse nonce count" },
         { fail_ai_bad_digest, "digest mismatch" },
         { fail_ai_bad_cnonce, "client nonce mismatch" },
         { fail_ai_omit_nc, "missing parameters" },
@@ -908,9 +912,6 @@ static int fail_challenge(void)
 
     return OK;
 }
-
-/* test that digest has precedence over Basic for multi-scheme
- * challenges */
 
 /* test logout */
 
