@@ -373,6 +373,8 @@ struct digest_parms {
     int send_ainfo;
     int md5_sess;
     int proxy;
+    int send_nextnonce;
+    int num_requests;
     enum digest_failure {
         fail_not,
         fail_bogus_alg,
@@ -557,6 +559,8 @@ static int verify_digest_header(struct digest_state *state,
     ONN("no digest param given", !state->digest);
 
     CALL(check_digest(state, parms));
+
+    state->nc++;
     
     return OK;
 }
@@ -602,6 +606,11 @@ static char *make_authinfo_header(struct digest_state *state,
         } 
         if (parms->failure != fail_ai_omit_digest) {
             ne_buffer_concat(buf, "rspauth=\"", digest, "\", ", NULL);
+        }
+        if (parms->send_nextnonce) {
+            state->nonce = ne_concat("next-", state->nonce, NULL);
+            ne_buffer_concat(buf, "nextnonce=\"", state->nonce, "\", ", NULL);
+            state->nc = 1;
         }
         ne_buffer_czappend(buf, "qop=\"auth\"");
     }
@@ -676,31 +685,34 @@ static int serve_digest(ne_socket *sock, void *userdata)
 
     SEND_STRING(sock, resp);
 
-    CALL(discard_request(sock));
+    do {
+        CALL(discard_request(sock));
 
-    ONN("no Authorization header sent", digest_hdr == NULL);
-
-    CALL(verify_digest_header(&state, parms, digest_hdr));
-
-    if (parms->send_ainfo) {
-        char *ai = make_authinfo_header(&state, parms);
-
-        ne_snprintf(resp, sizeof resp,
-                    "HTTP/1.1 200 Well, if you insist\r\n"
-                    "Content-Length: 0\r\n"
-                    "%s\r\n"
-                    "\r\n", ai);
+        ONN("no Authorization header sent", digest_hdr == NULL);
         
-        ne_free(ai);
+        CALL(verify_digest_header(&state, parms, digest_hdr));
+        
+        if (parms->send_ainfo) {
+            char *ai = make_authinfo_header(&state, parms);
+            
+            ne_snprintf(resp, sizeof resp,
+                        "HTTP/1.1 200 Well, if you insist\r\n"
+                        "Content-Length: 0\r\n"
+                        "%s\r\n"
+                        "\r\n", ai);
+            
+            ne_free(ai);
+        } else {
+            ne_snprintf(resp, sizeof resp,
+                        "HTTP/1.1 200 You did good\r\n"
+                        "Content-Length: 0\r\n" "\r\n");
+        }
 
-                    
-    } else {
-        ne_snprintf(resp, sizeof resp,
-                    "HTTP/1.1 200 You did good\r\n"
-                    "Content-Length: 0\r\n" "\r\n");
-    }
+        SEND_STRING(sock, resp);
 
-    SEND_STRING(sock, resp);
+        NE_DEBUG(NE_DBG_HTTP, "Handled request; %d requests remain.\n",
+                 parms->num_requests);
+    } while (--parms->num_requests);
 
     return OK;
 }
@@ -721,7 +733,9 @@ static int test_digest(struct digest_parms *parms)
 
     CALL(spawn_server(7777, serve_digest, parms));
 
-    CALL(any_2xx_request(sess, "/fish"));
+    do {
+        CALL(any_2xx_request(sess, "/fish"));
+    } while (--parms->num_requests);
     
     ne_session_destroy(sess);
     return await_server();
@@ -732,22 +746,24 @@ static int digest(void)
 {
     struct digest_parms parms[] = {
         /* RFC 2617-style */
-        { "WallyWorld", "this-is-a-nonce", NULL, 1, 0, 0, 0, fail_not },
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 0, 0, 0, fail_not },
+        { "WallyWorld", "this-is-a-nonce", NULL, 1, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 0, 0, 0, 0, 1, fail_not },
         /* ... with A-I */
-        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 0, 0, fail_not },
+        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, fail_not },
         /* ... with md5-sess. */
-        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 1, 0, fail_not },
+        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 1, 0, 0, 1, fail_not },
+        /* many requests, with changing nonces; tests for next-nonce handling bug. */
+        { "WallyWorld", "this-is-a-nonce", "opaque-thingy", 1, 1, 0, 0, 1, 20, fail_not },
 
         /* RFC 2069-style */ 
-        { "WallyWorld", "lah-di-da-di-dah", NULL, 0, 0, 0, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 0, 0, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 1, 0, 0, fail_not },
+        { "WallyWorld", "lah-di-da-di-dah", NULL, 0, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 1, 0, 0, 0, 1, fail_not },
 
         /* Proxy auth */
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 0, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, fail_not },
         /* Proxy + A-I */
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 1, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 1, 0, 1, fail_not },
 
         { NULL }
     };
@@ -786,6 +802,8 @@ static int digest_failures(void)
     parms.send_ainfo = 1;
     parms.md5_sess = 0;
     parms.proxy = 0;
+    parms.send_nextnonce = 0;
+    parms.num_requests = 1;
 
     for (n = 0; fails[n].message; n++) {
         ne_session *sess = ne_session_create("http", "localhost", 7777);
