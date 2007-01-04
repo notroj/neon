@@ -941,6 +941,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
 	if (sess->nonce != NULL)
 	    ne_free(sess->nonce);
 	sess->nonce = ne_strdup(nextnonce);
+        sess->nonce_count = 0;
     }
 
     ne_free(hdr);
