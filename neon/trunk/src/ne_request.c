@@ -1139,7 +1139,6 @@ static int lookup_host(ne_session *sess, struct host_info *info)
 int ne_begin_request(ne_request *req)
 {
     struct body_reader *rdr;
-    struct host_info *host;
     ne_buffer *data;
     const ne_status *const st = &req->status;
     const char *value;
@@ -1156,13 +1155,6 @@ int ne_begin_request(ne_request *req)
         ne_close_connection(req->session);
     }
 
-    /* Resolve hostname if necessary. */
-    host = req->session->use_proxy?&req->session->proxy:&req->session->server;
-    if (host->address == NULL) {
-        ret = lookup_host(req->session, host);
-        if (ret) return ret;
-    }    
-    
     /* Build the request string, and send it */
     data = build_request(req);
     DEBUG_DUMP_REQUEST(data->data);
@@ -1483,15 +1475,21 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 static int open_connection(ne_session *sess) 
 {
     int ret;
+    struct host_info *host;
     
     if (sess->connected) return NE_OK;
 
-    if (!sess->use_proxy)
-	ret = do_connect(sess, &sess->server, _("Could not connect to server"));
-    else
-	ret = do_connect(sess, &sess->proxy,
-			 _("Could not connect to proxy server"));
-
+    /* Resolve hostname if necessary. */
+    host = sess->use_proxy ? &sess->proxy : &sess->server;
+    if (host->address == NULL) {
+        ret = lookup_host(sess, host);
+        if (ret) return ret;
+    }    
+    
+    ret = do_connect(sess, host, 
+                     sess->use_proxy ? 
+                     _("Could not connect to proxy server")
+                     : _("Could not connect to server"));
     if (ret != NE_OK) return ret;
 
 #ifdef NE_HAVE_SSL
