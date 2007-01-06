@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -625,25 +625,40 @@ static int digest_challenge(auth_session *sess, int attempt,
         challenge_error(errmsg, _("missing parameter in Digest challenge"));
 	return -1;
     }
+    else if (parms->stale && sess->nonce_count == 0) {
+        challenge_error(errmsg, _("initial Digest challenge was stale"));
+        return -1;
+    }
+    else if (parms->stale && (sess->alg != parms->alg
+                              || strcmp(sess->realm, parms->realm))) {
+        /* With stale=true the realm and algorithm cannot change since these
+         * require re-hashing H(A1) which defeats the point. */
+        challenge_error(errmsg, _("stale Digest challenge with new algorithm or realm"));
+        return -1;
+    }
 
     if (!parms->stale) {
-	/* Forget the old session details */
-	clean_session(sess);
+        /* Non-stale challenge: clear session and request credentials. */
+        clean_session(sess);
 
-	sess->realm = ne_strdup(parms->realm);
+        sess->realm = ne_strdup(parms->realm);
+        sess->alg = parms->alg;
+        sess->cnonce = get_cnonce();
 
-	/* Not a stale response: really need user authentication */
-	if (get_credentials(sess, errmsg, attempt, parms, password)) {
-	    /* Failed to get credentials */
-	    return -1;
-	}
+        if (get_credentials(sess, errmsg, attempt, parms, password)) {
+            /* Failed to get credentials */
+            return -1;
+        }
     }
-    sess->alg = parms->alg;
+    else {
+        /* Stale challenge: accept a new nonce or opa */
+        if (sess->nonce) ne_free(sess->nonce);
+        if (sess->opaque && parms->opaque) ne_free(sess->opaque);
+    }
+    
     sess->nonce = ne_strdup(parms->nonce);
-    sess->cnonce = get_cnonce();
-    /* TODO: add domain handling. */
-    if (parms->opaque != NULL) {
-	sess->opaque = ne_strdup(parms->opaque); /* don't strip the quotes */
+    if (parms->opaque) {
+	sess->opaque = ne_strdup(parms->opaque);
     }
     
     if (parms->got_qop) {
@@ -967,8 +982,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     /* Check for a nextnonce */
     if (nextnonce != NULL) {
 	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Found nextnonce of [%s].\n", nextnonce);
-	if (sess->nonce != NULL)
-	    ne_free(sess->nonce);
+        ne_free(sess->nonce);
 	sess->nonce = ne_strdup(nextnonce);
         sess->nonce_count = 0;
     }
