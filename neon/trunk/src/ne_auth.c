@@ -651,7 +651,7 @@ static int digest_challenge(auth_session *sess, int attempt,
         }
     }
     else {
-        /* Stale challenge: accept a new nonce or opa */
+        /* Stale challenge: accept a new nonce or opaque. */
         if (sess->nonce) ne_free(sess->nonce);
         if (sess->opaque && parms->opaque) ne_free(sess->opaque);
     }
