@@ -330,6 +330,9 @@ static int parse(void)
         { "foo/bar", NULL, NULL, 0, "foo/bar", NULL, NULL, NULL }, /* path-noscheme */
         { "", NULL, NULL, 0, "", NULL, NULL, NULL }, /* path-empty */
 
+        /* CVE-2007-0157: buffer under-read in 0.26.[012]. */
+        { "http://webdav.org\xFF", "http", "webdav.org\xFF", 0, "/", NULL, NULL, NULL },
+
 	{ NULL }
     };
     int n;

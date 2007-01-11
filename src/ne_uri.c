@@ -110,7 +110,7 @@ static const unsigned int uri_chars[256] = {
 /*   Fx */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT
 };
 
-#define uri_lookup(ch) (uri_chars[(unsigned)ch])
+#define uri_lookup(ch) (uri_chars[(unsigned char)ch])
 
 char *ne_path_parent(const char *uri) 
 {
