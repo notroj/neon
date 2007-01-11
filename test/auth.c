@@ -911,16 +911,14 @@ static int fail_challenge(void)
         { "WhizzBangAuth realm=\"foo\", " 
           "Basic realm='foo'",
           "ignored WhizzBangAuth challenge, rejected Basic challenge" },
-        { "", "could not parse challenge" }
+        { "", "could not parse challenge" },
 
-#if 0
         /* neon 0.26.x regression in "attempt" handling. */
         { "Basic realm=\"foo\", " 
           "Digest realm=\"bar\", algorithm=MD5, qop=auth, nonce=\"foo\"",
           "rejected Digest challenge, rejected Basic challenge"
           , "<bar, 0><foo, 1>"  /* Digest challenge first, Basic second. */
         }
-#endif
     };
     unsigned n;
     
