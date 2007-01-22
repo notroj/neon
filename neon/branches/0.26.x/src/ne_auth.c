@@ -100,6 +100,8 @@ struct auth_handler {
 
     ne_auth_creds creds;
     void *userdata;
+    int attempt; /* number of invocations of this callback for
+                  * current request. */
     
     struct auth_handler *next;
 };
@@ -324,7 +326,8 @@ static int get_credentials(auth_session *sess, int attempt,
                            struct auth_challenge *chall, char *pwbuf) 
 {
     return chall->handler->creds(chall->handler->userdata, sess->realm, 
-                                 attempt, sess->username, pwbuf);
+                                 chall->handler->attempt++, 
+                                 sess->username, pwbuf);
 }
 
 /* Examine a Basic auth challenge.
@@ -1132,6 +1135,7 @@ static void ah_create(ne_request *req, void *session, const char *method,
         (is_connect && sess->context == AUTH_CONNECT) ||
         (!is_connect && sess->context == AUTH_NOTCONNECT)) {
         struct auth_request *areq = ne_calloc(sizeof *areq);
+        struct auth_handler *hdl;
         
         NE_DEBUG(NE_DBG_HTTPAUTH, "ah_create, for %s\n", sess->spec->resp_hdr);
         
@@ -1140,6 +1144,12 @@ static void ah_create(ne_request *req, void *session, const char *method,
         areq->request = req;
         
         ne_set_request_private(req, sess->spec->id, areq);
+
+        /* For each new request, reset the attempt counter in every
+         * registered handler. */
+        for (hdl = sess->handlers; hdl; hdl = hdl->next) {
+            hdl->attempt = 0;
+        }
     }
 }
 
@@ -1307,6 +1317,7 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     (*hdl)->creds = creds;
     (*hdl)->userdata = userdata;
     (*hdl)->next = NULL;
+    (*hdl)->attempt = 0;
 }
 
 static void auth_register_default(ne_session *sess, int isproxy,
