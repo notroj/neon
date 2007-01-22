@@ -1,3 +1,9 @@
+Changes in release 0.26.3:
+* Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
+* Fix regression in handling of "attempt" argument passed to auth callbacks;
+  ensure the value only increments for each invocation of the callback
+* Fix handling of "nextnonce" parameter in Digest authentication
+
 Changes in release 0.26.2:
 * Fix error reported for LOCK responses lacking a Lock-Token header.
 * Use Libs.private in neon.pc for newer versions of pkg-config.
