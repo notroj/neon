@@ -891,8 +891,12 @@ static int write_reset(void)
         ne_sock_close(sock);
         return SKIP;
     }
-    ONV(ret != NE_SOCK_RESET, 
-        ("write got %d not reset: %s", ret, ne_sock_error(sock)));
+    if (ret == NE_SOCK_CLOSED) {
+        t_warning("got EOF, failed to elicit TCP RST");
+    } else {
+        ONV(ret != NE_SOCK_RESET, 
+            ("write got %d not reset: %s", ret, ne_sock_error(sock)));
+    }
     return good_close(sock);
 }
 
