@@ -1,6 +1,6 @@
 /* 
    Authentication tests
-   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -837,6 +837,60 @@ static int digest_failures(void)
 
 /* test that digest has precedence over Basic for multi-scheme
  * challenges */
+static int fail_cb(void *userdata, const char *realm, int tries, 
+		   char *un, char *pw)
+{
+    ne_buffer *buf = userdata;
+    char str[64];
+
+    ne_snprintf(str, sizeof str, "<%s, %d>", realm, tries);
+    ne_buffer_zappend(buf, str);
+
+    return -1;
+}
+
+static int fail_challenge(void)
+{
+    static const struct {
+        const char *resp, *challs;
+    } ts[] = {
+        /* neon 0.26.x regression in "attempt" handling. */
+        { "Basic realm=\"foo\", " 
+          "Digest realm=\"bar\", algorithm=MD5, qop=auth, nonce=\"foo\"", 
+          "<bar, 0><foo, 1>"  /* Digest challenge first, Basic second. */
+        }
+    };
+    unsigned n;
+    
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
+        char resp[512];
+        ne_session *sess;
+        int ret;
+        ne_buffer *buf = ne_buffer_create();
+
+        ne_snprintf(resp, sizeof resp,
+                    "HTTP/1.1 401 Auth Denied\r\n"
+                    "WWW-Authenticate: %s\r\n"
+                    "Content-Length: 0\r\n" "\r\n",
+                    ts[n].resp);
+        
+        CALL(make_session(&sess, single_serve_string, resp));
+
+        ne_set_server_auth(sess, fail_cb, buf);
+        
+        ret = any_2xx_request(sess, "/fish");
+        ONN("request success", ret == NE_OK);
+        
+        ONCMP(ts[n].challs, buf->data, "challenge callback", 
+              "invocation order");
+
+        ne_session_destroy(sess);
+        ne_buffer_destroy(buf);
+        CALL(await_server());
+    }
+
+    return OK;
+}
 
 /* test logout */
 
@@ -851,5 +905,6 @@ ne_test tests[] = {
     T(negotiate_regress),
     T(digest),
     T(digest_failures),
+    T(fail_challenge),
     T(NULL)
 };
