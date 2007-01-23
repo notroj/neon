@@ -84,9 +84,6 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
 
 #ifdef HAVE_SOCKS_H
 #include <socks.h>
@@ -127,14 +124,6 @@ typedef struct in_addr ne_inet_addr;
 #define USE_CHECK_IPV6
 #endif
 
-/* "Be Conservative In What You Build". */
-#if defined(HAVE_FCNTL) && defined(O_NONBLOCK) && defined(F_SETFL) \
-    && defined(HAVE_GETSOCKOPT) && defined(SO_ERROR) \
-    && defined(HAVE_SOCKLEN_T) && defined(SOL_SOCKET) \
-    && defined(EINPROGRESS)
-#define USE_NONBLOCKING_CONNECT
-#endif
-
 #include "ne_internal.h"
 #include "ne_utils.h"
 #include "ne_string.h"
@@ -159,7 +148,6 @@ typedef struct in_addr ne_inet_addr;
                        (e) == WSAECONNRESET || (e) == WSAENETRESET)
 #define NE_ISCLOSED(e) ((e) == WSAESHUTDOWN || (e) == WSAENOTCONN)
 #define NE_ISINTR(e) (0)
-#define NE_ISINPROGRESS(e) ((e) == WSAEWOULDBLOCK) /* says MSDN */
 #else /* Unix */
 /* Also treat ECONNABORTED and ENOTCONN as "connection reset" errors;
  * both can be returned by Winsock-based sockets layers e.g. CygWin */
@@ -172,7 +160,6 @@ typedef struct in_addr ne_inet_addr;
 #define NE_ISRESET(e) ((e) == ECONNRESET || (e) == ECONNABORTED || (e) == ENOTCONN)
 #define NE_ISCLOSED(e) ((e) == EPIPE)
 #define NE_ISINTR(e) ((e) == EINTR)
-#define NE_ISINPROGRESS(e) ((e) == EINPROGRESS)
 #endif
 
 /* Socket read timeout */
@@ -196,7 +183,7 @@ struct ne_socket_s {
     int fd;
     char error[200];
     void *progress_ud;
-    int rdtimeout, cotimeout; /* timeouts */
+    int rdtimeout; /* read timeout. */
     const struct iofns *ops;
 #ifdef NE_HAVE_SSL
     ne_ssl_socket ssl;
@@ -364,46 +351,6 @@ void ne_sock_exit(void)
     }
 }
 
-/* Await readability (rdwr = 0) or writability (rdwr != 0) for socket
- * fd for secs seconds.  Returns <0 on error, zero on timeout, >0 if
- * data is available. */
-static int raw_poll(int fdno, int rdwr, int secs)
-{
-    int ret;
-#ifdef NE_USE_POLL
-    struct pollfd fds;
-    int timeout = secs > 0 ? secs * 1000 : -1;
-
-    fds.fd = fdno;
-    fds.events = rdwr == 0 ? POLLIN : POLLOUT;
-    fds.revents = 0;
-
-    do {
-        ret = poll(&fds, 1, timeout);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
-#else
-    fd_set rdfds, wrfds;
-    struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
-
-    /* Init the fd set */
-    FD_ZERO(&rdfds);
-    FD_ZERO(&wrfds);
-    if (rdwr == 0)
-        FD_SET(fdno, &rdfds);
-    else
-        FD_SET(fdno, &wrfds);
-
-    if (tvp) {
-        tvp->tv_sec = secs;
-        tvp->tv_usec = 0;
-    }
-    do {
-	ret = select(fdno + 1, &rdfds, &wrfds, NULL, tvp);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
-#endif
-    return ret;
-}
-
 int ne_sock_block(ne_socket *sock, int n)
 {
     if (sock->bufavail)
@@ -477,7 +424,34 @@ ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t buflen)
 /* Await data on raw fd in socket. */
 static int readable_raw(ne_socket *sock, int secs)
 {
-    int ret = raw_poll(sock->fd, 0, secs);
+    int ret;
+#ifdef NE_USE_POLL
+    struct pollfd fds;
+    int timeout = secs > 0 ? secs * 1000 : -1;
+
+    fds.fd = sock->fd;
+    fds.events = POLLIN;
+    fds.revents = 0;
+
+    do {
+        ret = poll(&fds, 1, timeout);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+#else
+    int fdno = sock->fd;
+    fd_set rdfds;
+    struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
+
+    /* Init the fd set */
+    FD_ZERO(&rdfds);
+    do {
+	FD_SET(fdno, &rdfds);
+	if (tvp) {
+	    tvp->tv_sec = secs;
+	    tvp->tv_usec = 0;
+	}
+	ret = select(fdno + 1, &rdfds, NULL, NULL, tvp);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+#endif
 
     if (ret < 0) {
 	set_strerror(sock, ne_errno);
@@ -961,85 +935,8 @@ void ne_addr_destroy(ne_sock_addr *addr)
     ne_free(addr);
 }
 
-/* Perform a connect() for fd to address sa of length salen, with a
- * timeout if supported on this platform.  Returns zero on success or
- * NE_SOCK_* on failure, with sock->error set appropriately. */
-static int timed_connect(ne_socket *sock, int fd,
-                         const struct sockaddr *sa, size_t salen)
-{
-    int ret;
-
-#ifdef USE_NONBLOCKING_CONNECT
-    if (sock->cotimeout) {
-        int errnum, flags;
-
-        /* Get flags and then set O_NONBLOCK. */
-        flags = fcntl(fd, F_GETFL);
-        if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-            set_strerror(sock, errno);
-            return NE_SOCK_ERROR;
-        }
-        
-        ret = connect(fd, sa, salen);
-        if (ret == -1) {
-            errnum = ne_errno;
-            if (NE_ISINPROGRESS(errnum)) {
-                ret = raw_poll(fd, 1, sock->cotimeout);
-                if (ret > 0) { /* poll got data */
-                    socklen_t len = sizeof(errnum);
-                    
-                    /* Check whether there is a pending error for the
-                     * socket.  Per Stevens UNPv1§15.4, Solaris will
-                     * return a pending error via errno by failing the
-                     * getsockopt() call. */
-
-                    errnum = 0;
-                    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &errnum, &len))
-                        errnum = errno;
-                    
-                    if (errnum == 0) {
-                        ret = 0;
-                    } else {
-                        set_strerror(sock, errnum);
-                        ret = NE_SOCK_ERROR;
-                    }
-                } else if (ret == 0) { /* poll timed out */
-                    set_error(sock, _("Connection timed out"));
-                    ret = NE_SOCK_TIMEOUT;
-                } else /* poll failed */ {
-                    set_strerror(sock, errno);
-                    ret = NE_SOCK_ERROR;
-                }
-            } else /* non-EINPROGRESS error from connect() */ { 
-                set_strerror(sock, errnum);
-                ret = NE_SOCK_ERROR;
-            }
-        }
-        
-        /* Reset to old flags: */
-        if (fcntl(fd, F_SETFL, flags) == -1) {
-            set_strerror(sock, errno);
-            ret = NE_SOCK_ERROR;
-        }       
-    } else 
-#endif /* USE_NONBLOCKING_CONNECT */
-    {
-        ret = connect(fd, sa, salen);
-        
-        if (ret < 0) {
-            set_strerror(sock, errno);
-            ret = NE_SOCK_ERROR;
-        }
-    }
-
-    return ret;
-}
-
-/* Connect socket to address 'addr' on given 'port'.  Returns zero on
- * success or NE_SOCK_* on failure with sock->error set
- * appropriately. */
-static int connect_socket(ne_socket *sock, int fd,
-                          const ne_inet_addr *addr, unsigned int port)
+/* Connect socket 'fd' to address 'addr' on given 'port': */
+static int raw_connect(int fd, const ne_inet_addr *addr, unsigned int port)
 {
 #ifdef USE_GETADDRINFO
 #ifdef AF_INET6
@@ -1049,7 +946,7 @@ static int connect_socket(ne_socket *sock, int fd,
 	memcpy(&in6, addr->ai_addr, sizeof in6);
 	in6.sin6_port = port;
         in6.sin6_family = AF_INET6;
-        return timed_connect(sock, fd, (struct sockaddr *)&in6, sizeof in6);
+	return connect(fd, (struct sockaddr *)&in6, sizeof in6);
     } else
 #endif
     if (addr->ai_family == AF_INET) {
@@ -1057,17 +954,17 @@ static int connect_socket(ne_socket *sock, int fd,
 	memcpy(&in, addr->ai_addr, sizeof in);
 	in.sin_port = port;
         in.sin_family = AF_INET;
-        return timed_connect(sock, fd, (struct sockaddr *)&in, sizeof in);
+	return connect(fd, (struct sockaddr *)&in, sizeof in);
     } else {
-        set_strerror(sock, EINVAL);
-        return NE_SOCK_ERROR;
+	errno = EINVAL;
+	return -1;
     }
 #else
     struct sockaddr_in sa = {0};
     sa.sin_family = AF_INET;
     sa.sin_port = port;
     sa.sin_addr = *addr;
-    return timed_connect(sock, fd, (struct sockaddr *)&sa, sizeof sa);
+    return connect(fd, (struct sockaddr *)&sa, sizeof sa);
 #endif
 }
 
@@ -1075,7 +972,6 @@ ne_socket *ne_sock_create(void)
 {
     ne_socket *sock = ne_calloc(sizeof *sock);
     sock->rdtimeout = SOCKET_READ_TIMEOUT;
-    sock->cotimeout = 0;
     sock->bufpos = sock->buffer;
     sock->ops = &iofns_raw;
     sock->fd = -1;
@@ -1085,7 +981,7 @@ ne_socket *ne_sock_create(void)
 int ne_sock_connect(ne_socket *sock,
                     const ne_inet_addr *addr, unsigned int port)
 {
-    int fd, ret;
+    int fd;
 
 #ifdef USE_GETADDRINFO
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
@@ -1114,12 +1010,15 @@ int ne_sock_connect(ne_socket *sock,
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
     }
 #endif
-    
-    ret = connect_socket(sock, fd, addr, htons(port));
-    if (ret == 0)
-        sock->fd = fd;
 
-    return ret;
+    if (raw_connect(fd, addr, htons(port))) {
+        set_strerror(sock, ne_errno);
+	ne_close(fd);
+	return -1;
+    }
+
+    sock->fd = fd;
+    return 0;
 }
 
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
@@ -1132,7 +1031,7 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
 #endif
     ia = ne_calloc(sizeof *ia);
 #ifdef USE_GETADDRINFO
-    /* ai_protocol and ai_socktype aren't used by connect_socket() so
+    /* ai_protocol and ai_socktype aren't used by raw_connect so
      * ignore them here. (for now) */
     if (type == ne_iaddr_ipv4) {
 	struct sockaddr_in *in4 = ne_calloc(sizeof *in4);
@@ -1216,11 +1115,6 @@ int ne_sock_fd(const ne_socket *sock)
 void ne_sock_read_timeout(ne_socket *sock, int timeout)
 {
     sock->rdtimeout = timeout;
-}
-
-void ne_sock_connect_timeout(ne_socket *sock, int timeout)
-{
-    sock->cotimeout = timeout;
 }
 
 #ifdef NE_HAVE_SSL

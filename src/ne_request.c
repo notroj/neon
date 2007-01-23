@@ -27,6 +27,12 @@
 
 #include <sys/types.h>
 
+#ifdef HAVE_SYS_LIMITS_H
+#include <sys/limits.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h> /* for UINT_MAX etc */
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #ifdef HAVE_STRING_H
@@ -65,6 +71,44 @@ struct body_reader {
     void *userdata;
     struct body_reader *next;
 };
+
+#if !defined(LONG_LONG_MAX) && defined(LLONG_MAX)
+#define LONG_LONG_MAX LLONG_MAX
+#elif !defined(LONG_LONG_MAX) && defined(LONGLONG_MAX)
+#define LONG_LONG_MAX LONGLONG_MAX
+#endif
+
+#ifdef NE_LFS
+#define ne_lseek lseek64
+typedef off64_t ne_off_t;
+#define FMT_NE_OFF_T NE_FMT_OFF64_T
+#define NE_OFFT_MAX LONG_LONG_MAX
+#ifdef HAVE_STRTOLL
+#define ne_strtoff strtoll
+#else
+#define ne_strtoff strtoq
+#endif
+#else /* !NE_LFS */
+
+typedef off_t ne_off_t;
+#define ne_lseek lseek
+#define FMT_NE_OFF_T NE_FMT_OFF_T
+
+#if defined(SIZEOF_LONG_LONG) && defined(LONG_LONG_MAX) \
+    && SIZEOF_OFF_T == SIZEOF_LONG_LONG
+#define NE_OFFT_MAX LONG_LONG_MAX
+#else
+#define NE_OFFT_MAX LONG_MAX
+#endif
+
+#if SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOLL)
+#define ne_strtoff strtoll
+#elif SIZEOF_OFF_T > SIZEOF_LONG && defined(HAVE_STRTOQ)
+#define ne_strtoff strtoq
+#else
+#define ne_strtoff strtol
+#endif
+#endif /* NE_LFS */
 
 struct field {
     char *name, *value;
@@ -215,15 +259,11 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
     return ret;
 }
 
-static void notify_status(ne_session *sess, ne_session_status status)
+static void notify_status(ne_session *sess, ne_conn_status status,
+			  const char *info)
 {
     if (sess->notify_cb) {
-	sess->notify_cb(sess->notify_ud, status, &sess->status);
-        if (sess->progress_cb
-            && (status == ne_status_sending || status == ne_status_recving)) {
-            sess->progress_cb(sess->progress_ud, 
-                              sess->status.sr.progress, sess->status.sr.total);
-        }
+	sess->notify_cb(sess->notify_ud, status, info);
     }
 }
 
@@ -343,14 +383,11 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
 static int send_request_body(ne_request *req, int retry)
 {
     ne_session *const sess = req->session;
+    ne_off_t progress = 0;
     char buffer[NE_BUFSIZ];
     ssize_t bytes;
 
     NE_DEBUG(NE_DBG_HTTP, "Sending request body:\n");
-
-    req->session->status.sr.progress = 0;
-    req->session->status.sr.total = req->body_length;
-    notify_status(sess, ne_status_sending);
     
     /* tell the source to start again from the beginning. */
     if (req->body_cb(req->body_ud, NULL, 0) != 0) {
@@ -370,8 +407,12 @@ static int send_request_body(ne_request *req, int retry)
 		 bytes, (int)bytes, buffer);
 
         /* invoke progress callback */
-        req->session->status.sr.progress += bytes;
-        notify_status(sess, ne_status_sending);
+        if (sess->progress_cb) {
+            progress += bytes;
+            /* TODO: progress_cb offset type mismatch ick */
+            req->session->progress_cb(sess->progress_ud, progress,
+                                      req->body_length);
+        }
     }
 
     if (bytes == 0) {
@@ -477,7 +518,7 @@ void ne_set_request_body_buffer(ne_request *req, const char *buffer,
     set_body_length(req, size);
 }
 
-void ne_set_request_body_provider(ne_request *req, ne_off_t bodysize,
+void ne_set_request_body_provider(ne_request *req, off_t bodysize,
 				  ne_provide_body provider, void *ud)
 {
     req->body_cb = provider;
@@ -486,7 +527,7 @@ void ne_set_request_body_provider(ne_request *req, ne_off_t bodysize,
 }
 
 void ne_set_request_body_fd(ne_request *req, int fd,
-                            ne_off_t offset, ne_off_t length)
+                            off_t offset, off_t length)
 {
     req->body.file.fd = fd;
     req->body.file.offset = offset;
@@ -495,6 +536,27 @@ void ne_set_request_body_fd(ne_request *req, int fd,
     req->body_ud = req;
     set_body_length(req, length);
 }
+
+#ifdef NE_LFS
+void ne_set_request_body_fd64(ne_request *req, int fd,
+                              off64_t offset, off64_t length)
+{
+    req->body.file.fd = fd;
+    req->body.file.offset = offset;
+    req->body.file.length = length;
+    req->body_cb = body_fd_send;
+    req->body_ud = req;
+    set_body_length(req, length);
+}
+
+void ne_set_request_body_provider64(ne_request *req, off64_t bodysize,
+                                    ne_provide_body provider, void *ud)
+{
+    req->body_cb = provider;
+    req->body_ud = ud;
+    set_body_length(req, bodysize);
+}
+#endif
 
 void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value)
 {
@@ -775,10 +837,9 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
     if (read_response_block(req, resp, buffer, &readlen))
 	return -1;
 
-    if (readlen) {
-        req->session->status.sr.progress = 
-            resp->mode == R_CLENGTH ? resp->body.clen.total : 0;
-        notify_status(req->session, ne_status_recving);
+    if (req->session->progress_cb) {
+	req->session->progress_cb(req->session->progress_ud, resp->progress, 
+				  resp->mode==R_CLENGTH ? resp->body.clen.total:-1);
     }
 
     for (rdr = req->body_readers; rdr!=NULL; rdr=rdr->next) {
@@ -1120,8 +1181,8 @@ static int lookup_host(ne_session *sess, struct host_info *info)
     if (sess->addrlist) return NE_OK;
 
     NE_DEBUG(NE_DBG_HTTP, "Doing DNS lookup on %s...\n", info->hostname);
-    sess->status.lu.hostname = info->hostname;
-    notify_status(sess, ne_status_lookup);
+    if (sess->notify_cb)
+	sess->notify_cb(sess->notify_ud, ne_conn_namelookup, info->hostname);
     info->address = ne_addr_resolve(info->hostname, 0);
     if (ne_addr_result(info->address)) {
 	char buf[256];
@@ -1139,10 +1200,10 @@ static int lookup_host(ne_session *sess, struct host_info *info)
 int ne_begin_request(ne_request *req)
 {
     struct body_reader *rdr;
+    struct host_info *host;
     ne_buffer *data;
     const ne_status *const st = &req->status;
     const char *value;
-    struct hook *hk;
     int ret;
 
     /* If a non-idempotent request is sent on a persisted connection,
@@ -1155,6 +1216,13 @@ int ne_begin_request(ne_request *req)
         ne_close_connection(req->session);
     }
 
+    /* Resolve hostname if necessary. */
+    host = req->session->use_proxy?&req->session->proxy:&req->session->server;
+    if (host->address == NULL) {
+        ret = lookup_host(req->session, host);
+        if (ret) return ret;
+    }    
+    
     /* Build the request string, and send it */
     data = build_request(req);
     DEBUG_DUMP_REQUEST(data->data);
@@ -1244,23 +1312,12 @@ int ne_begin_request(ne_request *req)
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
     
-    NE_DEBUG(NE_DBG_HTTP, "Running post_headers hooks\n");
-    for (hk = req->session->post_headers_hooks; hk != NULL; hk = hk->next) {
-        ne_post_headers_fn fn = (ne_post_headers_fn)hk->fn;
-        fn(req, hk->userdata, &req->status);
-    }
-    
     /* Prepare for reading the response entity-body.  Call each of the
      * body readers and ask them whether they want to accept this
      * response or not. */
     for (rdr = req->body_readers; rdr != NULL; rdr=rdr->next) {
 	rdr->use = rdr->accept_response(rdr->userdata, req, st);
     }
-
-    req->session->status.sr.progress = 0;
-    req->session->status.sr.total = 
-        req->resp.mode == R_CLENGTH ? req->resp.body.clen.total : -1;
-    notify_status(req->session, ne_status_recving);
     
     return NE_OK;
 }
@@ -1433,17 +1490,11 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
         return NE_ERROR;
     }
 
-    if (sess->cotimeout)
-	ne_sock_connect_timeout(sess->socket, sess->cotimeout);
-
     if (host->current == NULL)
 	host->current = resolve_first(sess, host);
 
-    sess->status.ci.hostname = host->hostname;
-
     do {
-        sess->status.ci.address = host->current;
-	notify_status(sess, ne_status_connecting);
+	notify_status(sess, ne_conn_connecting, host->hostport);
 #ifdef NE_DEBUGGING
 	if (ne_debug_mask & NE_DBG_HTTP) {
 	    char buf[150];
@@ -1461,7 +1512,7 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 	return NE_CONNECT;
     }
 
-    notify_status(sess, ne_status_connected);
+    notify_status(sess, ne_conn_connected, host->hostport);
     
     if (sess->rdtimeout)
 	ne_sock_read_timeout(sess->socket, sess->rdtimeout);
@@ -1475,21 +1526,15 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 static int open_connection(ne_session *sess) 
 {
     int ret;
-    struct host_info *host;
     
     if (sess->connected) return NE_OK;
 
-    /* Resolve hostname if necessary. */
-    host = sess->use_proxy ? &sess->proxy : &sess->server;
-    if (host->address == NULL) {
-        ret = lookup_host(sess, host);
-        if (ret) return ret;
-    }    
-    
-    ret = do_connect(sess, host, 
-                     sess->use_proxy ? 
-                     _("Could not connect to proxy server")
-                     : _("Could not connect to server"));
+    if (!sess->use_proxy)
+	ret = do_connect(sess, &sess->server, _("Could not connect to server"));
+    else
+	ret = do_connect(sess, &sess->proxy,
+			 _("Could not connect to proxy server"));
+
     if (ret != NE_OK) return ret;
 
 #ifdef NE_HAVE_SSL

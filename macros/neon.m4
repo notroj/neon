@@ -137,7 +137,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 # Define the current versions.
 NE_VERSION_MAJOR=0
 NE_VERSION_MINOR=26
-NE_VERSION_PATCH=0
+NE_VERSION_PATCH=3
 NE_VERSION_TAG=
 
 # libtool library interface versioning.  Release policy dictates that
@@ -494,14 +494,7 @@ else
          [LFS support omitted: 64-bit support functions not found])
      fi], [NE_DISABLE_SUPPORT(LFS, [LFS support omitted: off64_t type not found])])
    CPPFLAGS=$ne_save_CPPFLAGS
-fi
-if test "$NE_FLAG_LFS" = "yes"; then
-   AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
-                      [Define to be printf format string for ne_off_t])
-else
-   AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
-fi
-])
+fi])
 
 dnl NEON_FORMAT(TYPE[, HEADERS[, [SPECIFIER]])
 dnl
@@ -576,7 +569,7 @@ AC_REQUIRE([AC_FUNC_STRERROR_R])
 
 AC_CHECK_HEADERS([sys/time.h limits.h sys/select.h arpa/inet.h libintl.h \
 	signal.h sys/socket.h netinet/in.h netinet/tcp.h netdb.h sys/poll.h \
-	sys/limits.h fcntl.h],,,
+	sys/limits.h],,,
 [AC_INCLUDES_DEFAULT
 /* netinet/tcp.h requires netinet/in.h on some platforms. */
 #ifdef HAVE_NETINET_IN_H
@@ -600,7 +593,7 @@ NE_LARGEFILE
 
 AC_REPLACE_FUNCS(strcasecmp)
 
-AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy poll fcntl getsockopt)
+AC_CHECK_FUNCS(signal setvbuf setsockopt stpcpy poll)
 
 if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
   AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
@@ -666,15 +659,6 @@ else
 #endif
 ])
 fi
-
-AC_CHECK_TYPES(socklen_t,,,[
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-# include <sys/socket.h>
-#endif
-])
 
 AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
   [#include <time.h>])
@@ -887,7 +871,6 @@ yes|openssl)
    if test "$ne_cv_lib_ssl097" = "yes"; then
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL (0.9.7 or later)])
-      NE_CHECK_FUNCS(CRYPTO_set_idptr_callback)
    else
       # Fail if OpenSSL is older than 0.9.6
       NE_CHECK_OPENSSLVER(ne_cv_lib_ssl096, 0.9.6, 0x00906000L)

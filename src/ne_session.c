@@ -68,7 +68,6 @@ void ne_session_destroy(ne_session *sess)
     
     destroy_hooks(sess->create_req_hooks);
     destroy_hooks(sess->pre_send_hooks);
-    destroy_hooks(sess->post_headers_hooks);
     destroy_hooks(sess->post_send_hooks);
     destroy_hooks(sess->destroy_req_hooks);
     destroy_hooks(sess->destroy_sess_hooks);
@@ -218,11 +217,6 @@ void ne_set_read_timeout(ne_session *sess, int timeout)
     sess->rdtimeout = timeout;
 }
 
-void ne_set_connect_timeout(ne_session *sess, int timeout)
-{
-    sess->cotimeout = timeout;
-}
-
 #define UAHDR "User-Agent: "
 #define AGENT " neon/" NEON_VERSION "\r\n"
 
@@ -253,14 +247,6 @@ void ne_fill_server_uri(ne_session *sess, ne_uri *uri)
     uri->host = ne_strdup(sess->server.hostname);
     uri->port = sess->server.port;
     uri->scheme = ne_strdup(sess->scheme);
-}
-
-void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri)
-{
-    if (sess->use_proxy) {
-        uri->host = ne_strdup(sess->proxy.hostname);
-        uri->port = sess->proxy.port;
-    }
 }
 
 const char *ne_get_error(ne_session *sess)
@@ -398,12 +384,6 @@ void ne_hook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata)
     ADD_HOOK(sess->post_send_hooks, fn, userdata);
 }
 
-void ne_hook_post_headers(ne_session *sess, ne_post_headers_fn fn, 
-                          void *userdata)
-{
-    ADD_HOOK(sess->post_headers_hooks, fn, userdata);
-}
-
 void ne_hook_destroy_request(ne_session *sess,
 			     ne_destroy_req_fn fn, void *userdata)
 {
@@ -447,12 +427,6 @@ void ne_unhook_create_request(ne_session *sess,
 void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata)
 {
     REMOVE_HOOK(sess->pre_send_hooks, fn, userdata);
-}
-
-void ne_unhook_post_headers(ne_session *sess, ne_post_headers_fn fn, 
-			    void *userdata)
-{
-    REMOVE_HOOK(sess->post_headers_hooks, fn, userdata);
 }
 
 void ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata)

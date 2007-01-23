@@ -117,9 +117,7 @@ void ne_iaddr_free(ne_inet_addr *addr);
 ne_socket *ne_sock_create(void);
 
 /* Connect the socket to server at address 'addr' on port 'port'.
- * Returns zero on success, NE_SOCK_TIMEOUT if a timeout occurs when a
- * non-zero connect timeout is configured (and is supported), or
- * NE_SOCK_ERROR on failure.  */
+ * Returns non-zero if a connection could not be established. */
 int ne_sock_connect(ne_socket *sock, const ne_inet_addr *addr, 
                     unsigned int port);
 
@@ -176,15 +174,8 @@ int ne_sock_close(ne_socket *sock);
 /* Return current error string for socket. */
 const char *ne_sock_error(const ne_socket *sock);
 
-/* Set read timeout for socket, in seconds; must be a non-zero
- * positive integer. */
+/* Set read timeout for socket. */
 void ne_sock_read_timeout(ne_socket *sock, int timeout);
-
-/* Set connect timeout for socket, in seconds; must be a positive
- * integer.  If a timeout of 'zero' is used then then no explicit
- * timeout handling will be used for ne_sock_connect(), and the
- * connect call will only timeout as dictated by the TCP stack. */
-void ne_sock_connect_timeout(ne_socket *sock, int timeout);
 
 /* Negotiate an SSL connection on socket as an SSL server, using given
  * SSL context. */
