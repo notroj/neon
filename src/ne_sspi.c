@@ -29,6 +29,10 @@
 
 #define SEC_SUCCESS(Status) ((Status) >= 0)
 
+#ifndef SECURITY_ENTRYPOINT   /* Missing in MingW 3.7 */
+#define SECURITY_ENTRYPOINT "InitSecurityInterfaceA"
+#endif
+
 struct SSPIContextStruct {
     CtxtHandle context;
     char *serverName;
@@ -278,7 +282,7 @@ static int base64ToBuffer(const char *token, SecBufferDesc * secBufferDesc)
 
     buffer->BufferType = SECBUFFER_TOKEN;
     buffer->cbBuffer =
-        ne_unbase64(token, &((unsigned char *) buffer->pvBuffer));
+        ne_unbase64(token, (unsigned char **) &buffer->pvBuffer);
 
     if (buffer->cbBuffer == 0) {
         NE_DEBUG(NE_DBG_HTTPAUTH,
