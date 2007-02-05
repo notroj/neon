@@ -533,8 +533,9 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
     int ret;
     ne_buffer *errmsg;
 
-    if (strncmp(hdr, "Negotiate", ptr - hdr) != 0) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Not a Negotiate response!\n");
+    if (strncmp(hdr, "Negotiate", ptr - duphdr) != 0) {
+        ne_set_error(sess->sess, _("Negotiate response verification failed: "
+                                   "invalid response header token"));
         ne_free(duphdr);
         return NE_ERROR;
     }
