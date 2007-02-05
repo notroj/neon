@@ -516,6 +516,12 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
 {
     ssize_t ret;
     
+#ifdef __QNX__
+    /* Test failures seen on QNX over loopback, if passing large
+     * buffer lengths to send().  */
+    if (length > 8192) length = 8192;
+#endif
+
     do {
 	ret = send(sock->fd, data, length, 0);
     } while (ret == -1 && NE_ISINTR(ne_errno));
