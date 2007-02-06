@@ -519,8 +519,9 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
     char *sep, *ptr = strchr(duphdr, ' ');
     int ret;
 
-    if (strncmp(hdr, "Negotiate", ptr - hdr) != 0) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "gssapi: Not a Negotiate response!\n");
+    if (strncmp(hdr, "Negotiate", ptr - duphdr) != 0) {
+        ne_set_error(sess->sess, _("Negotiate response verification failed: "
+                                   "invalid response header token"));
         ne_free(duphdr);
         return NE_ERROR;
     }
@@ -1172,6 +1173,13 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	    ne_free(value);
 	}
 
+#ifdef HAVE_SSPI
+        if (sess->sspi_token) {
+            /* Prevent connection closure due to use of non-idempotent
+             * request.  Completely broken, but so is the protocol. */
+            ne_set_request_flag(r, NE_REQFLAG_IDEMPOTENT, 1);
+        }
+#endif
     }
 
 }
