@@ -349,7 +349,12 @@ char *ne_strerror(int errnum, char *buf, size_t buflen)
     if (ret != buf)
 	ne_strnzcpy(buf, ret, buflen);
 #else /* POSIX-style strerror_r: */
-    strerror_r(errnum, buf, buflen);
+    char tmp[256];
+
+    if (strerror_r(errnum, tmp, sizeof tmp) == 0)
+        ne_strnzcpy(buf, tmp, buflen);
+    else
+        ne_snprintf(buf, buflen, "Unknown error %d", errnum);
 #endif
 #else /* no strerror_r: */
     ne_strnzcpy(buf, strerror(errnum), buflen);
