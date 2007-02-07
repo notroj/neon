@@ -146,8 +146,7 @@ typedef struct {
         AUTH_NOTCONNECT /* only in non-CONNECT responsees */
     } context;
     
-    /* Specifics for server/proxy auth. FIXME: need a better field
-     * name! */
+    /* Protocol type for server/proxy auth. */
     const struct auth_class *spec;
     
     /* The protocol used for this authentication session */
