@@ -45,6 +45,7 @@
 #define NE_FMT_SIZE_T "u"
 #define NE_FMT_SSIZE_T "d"
 #define NE_FMT_OFF_T "ld"
+#define NE_FMT_NE_OFF_T NE_FMT_OFF_T
 
 /* needs adjusting for Win64... */
 #define SIZEOF_INT 4
