@@ -1383,9 +1383,11 @@ static int proxy_tunnel(ne_session *sess)
     sess->persisted = 0; /* don't treat this is a persistent connection. */
 
     if (ret != NE_OK || !sess->connected || req->status.klass != 2) {
-	ne_set_error
-	    (sess, _("Could not create SSL connection through proxy server"));
-	ret = NE_ERROR;
+        char *err = ne_strdup(sess->error);
+        ne_set_error(sess, _("Could not create SSL connection "
+                             "through proxy server: %s"), err);
+        ne_free(err);
+        if (ret == NE_OK) ret = NE_ERROR;
     }
 
     ne_request_destroy(req);
