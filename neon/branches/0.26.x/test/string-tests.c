@@ -31,6 +31,7 @@
 #endif
 
 #include "ne_string.h"
+#include "ne_utils.h"
 
 #include "tests.h"
 
@@ -328,7 +329,12 @@ static int str_errors(void)
 
     /* Test truncated error string is still NUL-terminated. */
     ne_strerror(ENOENT, actual, 6);
+    NE_DEBUG(NE_DBG_HTTP, "error: %s\n", actual);
     ONN("truncated string had wrong length", strlen(actual) != 5);
+
+    ne_strerror(-1, actual, 6);
+    ONN("truncated string for bad error had wrong length", 
+        strlen(actual) != 5);
 
     return OK;
 }
