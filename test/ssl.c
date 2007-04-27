@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1094,6 +1094,32 @@ static int auth_tunnel_creds(void)
     return OK;    
 }
 
+static int auth_tunnel_fail(void)
+{
+    ne_session *sess = ne_session_create("https", "localhost", 443);
+    int ret;
+
+    CALL(spawn_server(7777, single_serve_string,
+                      "HTTP/1.1 407 Nyaaaaah\r\n"
+                      "Proxy-Authenticate: GaBoogle\r\n"
+                      "Connection: close\r\n"
+                      "\r\n"));
+    
+    ne_session_proxy(sess, "localhost", 7777);
+
+    ne_set_proxy_auth(sess, apt_creds, NULL);
+     
+    ret = any_request(sess, "/bar");
+    ONV(ret != NE_PROXYAUTH, ("bad error code for tunnel failure: %d", ret));
+
+    ONV(strstr(ne_get_error(sess), "Nyaaaaah") == NULL,
+        ("bad error string for tunnel failure: %s", ne_get_error(sess)));
+
+    ne_session_destroy(sess);
+
+    return await_server();
+}
+
 /* compare against known digest of notvalid.pem.  Via:
  *   $ openssl x509 -fingerprint -sha1 -noout -in notvalid.pem */
 #define THE_DIGEST "cf:5c:95:93:76:c6:3c:01:8b:62:" \
@@ -1528,6 +1554,7 @@ ne_test tests[] = {
     T(proxy_tunnel),
     T(auth_proxy_tunnel),
     T(auth_tunnel_creds),
+    T(auth_tunnel_fail),
 
     T(NULL) 
 };
