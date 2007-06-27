@@ -896,15 +896,10 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
         cc->p12 = NULL;
         return cc;
     } else {
-        if (ret == 0) {
-            cc = ne_calloc(sizeof *cc);
-            cc->friendly_name = NULL;
-            cc->p12 = p12;
-            return cc;
-        } else {
-            gnutls_pkcs12_deinit(p12);
-            return NULL;
-        }
+        cc = ne_calloc(sizeof *cc);
+        cc->friendly_name = NULL;
+        cc->p12 = p12;
+        return cc;
     }
 }
 
