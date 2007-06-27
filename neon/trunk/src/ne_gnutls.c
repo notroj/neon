@@ -797,14 +797,14 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
         ret = gnutls_pkcs12_get_bag(p12, i, bag);
         if (ret < 0) continue;
 
-        gnutls_pkcs12_bag_decrypt(bag, password == NULL ? "" : password);
+        gnutls_pkcs12_bag_decrypt(bag, password);
 
         for (j = 0; ret == 0 && j < gnutls_pkcs12_bag_get_count(bag); ++j) {
             gnutls_pkcs12_bag_type type;
             gnutls_datum data;
 
             if (friendly_name && *friendly_name == NULL) {
-                char *name;
+                char *name = NULL;
                 gnutls_pkcs12_bag_get_friendly_name(bag, j, &name);
                 if (name) {
                     if (name[0] == '.') name++; /* weird GnuTLS bug? */
@@ -881,9 +881,12 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
         return NULL;
     }
 
-    ret = pkcs12_parse(p12, &pkey, &cert, &friendly_name, NULL);
-
     if (gnutls_pkcs12_verify_mac(p12, "") == 0) {
+        if (pkcs12_parse(p12, &pkey, &cert, &friendly_name, "") != 0) {
+            gnutls_pkcs12_deinit(p12);
+            return NULL;
+        }
+
         cc = ne_calloc(sizeof *cc);
         cc->pkey = pkey;
         cc->decrypted = 1;
@@ -895,7 +898,7 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     } else {
         if (ret == 0) {
             cc = ne_calloc(sizeof *cc);
-            cc->friendly_name = friendly_name;
+            cc->friendly_name = NULL;
             cc->p12 = p12;
             return cc;
         } else {
