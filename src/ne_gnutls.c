@@ -896,8 +896,9 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
         cc->p12 = NULL;
         return cc;
     } else {
+        /* TODO: calling pkcs12_parse() here to find the friendly_name
+         * seems to break horribly.  */
         cc = ne_calloc(sizeof *cc);
-        cc->friendly_name = NULL;
         cc->p12 = p12;
         return cc;
     }
