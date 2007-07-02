@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -181,7 +181,7 @@ static int get_range_common(ne_session *sess, const char *uri,
     }
     else if (ret == NE_OK) {
 	if (status->klass == 2 && status->code != 206) {
-	    ne_set_error(sess, _("Resource does not support ranged GETs."));
+	    ne_set_error(sess, _("Resource does not support ranged GET requests"));
 	    ret = NE_ERROR;
 	}
 	else if (status->klass != 2) {
