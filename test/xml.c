@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -165,8 +165,10 @@ enum match_type {
     match_chunked /* parse the document one byte at a time */
 };
 
-static int parse_match(const char *doc, const char *result, enum match_type t)
+static int parse_match(const char *doc, const char *result, 
+                       enum match_type t)
 {
+    const char *origdoc = doc;
     ne_xml_parser *p = ne_xml_create();
     ne_buffer *buf = ne_buffer_create();
     int ret;
@@ -192,21 +194,26 @@ static int parse_match(const char *doc, const char *result, enum match_type t)
     }
 
     ONV(ret != ne_xml_failed(p), 
-        ("ne_xml_failed gave %d not %d", ne_xml_failed(p), ret));
+        ("'%s': ne_xml_failed gave %d not %d", origdoc, ne_xml_failed(p), ret));
 
     if (t == match_invalid)
         ONV(ret != ABORT, 
-            ("parse got %d not abort failure: %s", ret, buf->data));
+            ("for '%s': parse got %d not abort failure: %s", origdoc, ret, 
+             buf->data));
     else
-        ONV(ret, ("parse failed: %s", ne_xml_get_error(p)));
+        ONV(ret, ("for '%s': parse failed: %s", origdoc, ne_xml_get_error(p)));
     
     if (t == match_encoding) {
         const char *enc = ne_xml_doc_encoding(p);
-        ONV(strcmp(enc, result), ("encoding was `%s' not `%s'", enc, result));
-    } else if (t == match_valid)
+        ONV(strcmp(enc, result), 
+            ("for '%s': encoding was `%s' not `%s'", origdoc, enc, result));
+    }
+    else if (t == match_valid || t == match_chunked) {
         ONV(strcmp(result, buf->data),
-            ("result mismatch: %s not %s", buf->data, result));
-        
+            ("for '%s': result mismatch: %s not %s", origdoc, buf->data, 
+             result));
+    }
+
     ne_xml_destroy(p);
     ne_buffer_destroy(buf);
 
@@ -375,7 +382,7 @@ static int fail_parse(void)
         PFX "<foo::fish xmlns:foo='bar'/>",
 #endif
 
-#if 0
+        /* These are tests of XML parser itself really... */
         /* 2-byte encoding of '.': */
         PFX "<foo>" "\x2F\xC0\xAE\x2E\x2F" "</foo>",
         /* 3-byte encoding of '.': */
@@ -386,7 +393,6 @@ static int fail_parse(void)
         PFX "<foo>" "\x2F\xF8\x80\x80\x80\xAE\x2E\x2F" "</foo>",
         /* 6-byte encoding of '.': */
         PFX "<foo>" "\x2F\xFC\x80\x80\x80\x80\xAE\x2E\x2F" "</foo>",
-#endif
         /* two-byte encoding of '<' must not be parsed as a '<': */
         PFX "\xC0\xBC" "foo></foo>",
 
