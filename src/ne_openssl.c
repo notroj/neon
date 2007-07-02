@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -238,11 +238,14 @@ static int match_hostname(char *cn, const char *hostname)
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
  * *identity. */
-static int check_identity(const char *hostname, X509 *cert, char **identity)
+static int check_identity(const ne_uri *server, X509 *cert, char **identity)
 {
     STACK_OF(GENERAL_NAME) *names;
     int match = 0, found = 0;
+    const char *hostname;
     
+    hostname = server ? server->host : "";
+
     names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (names) {
 	int n;
@@ -258,7 +261,8 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
 		match = match_hostname(name, hostname);
 		ne_free(name);
 		found = 1;
-            } else if (nm->type == GEN_IPADD) {
+            } 
+            else if (nm->type == GEN_IPADD) {
                 /* compare IP address with server IP address. */
                 ne_inet_addr *ia;
                 if (nm->d.ip->length == 4)
@@ -280,8 +284,32 @@ static int check_identity(const char *hostname, X509 *cert, char **identity)
                              "address type (length %d), skipped.\n",
                              nm->d.ip->length);
                 }
-            } /* TODO: handle uniformResourceIdentifier too */
+            } 
+            else if (nm->type == GEN_URI) {
+                char *name = dup_ia5string(nm->d.ia5);
+                ne_uri uri;
 
+                if (ne_uri_parse(name, &uri) == 0 && uri.host && uri.scheme) {
+                    ne_uri tmp;
+
+                    if (identity && !found) *identity = ne_strdup(name);
+                    found = 1;
+
+                    if (server) {
+                        /* For comparison purposes, all that matters is
+                         * host, scheme and port; ignore the rest. */
+                        memset(&tmp, 0, sizeof tmp);
+                        tmp.host = uri.host;
+                        tmp.scheme = uri.scheme;
+                        tmp.port = uri.port;
+                        
+                        match = ne_uri_cmp(server, &tmp) == 0;
+                    }
+                }
+
+                ne_uri_free(&uri);
+                ne_free(name);
+            }
 	}
         /* free the whole stack. */
         sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
@@ -332,7 +360,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
     cert->subject = x5;
     /* Retrieve the cert identity; pass a dummy hostname to match. */
     cert->identity = NULL;
-    check_identity("", x5, &cert->identity);
+    check_identity(NULL, x5, &cert->identity);
     return cert;
 }
 
@@ -372,6 +400,7 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
     ASN1_TIME *notAfter = X509_get_notAfter(cert);
     int ret, failures = 0;
     long result;
+    ne_uri server;
 
     /* check expiry dates */
     if (X509_cmp_current_time(notBefore) >= 0)
@@ -379,9 +408,12 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
     else if (X509_cmp_current_time(notAfter) <= 0)
 	failures |= NE_SSL_EXPIRED;
 
-    /* Check certificate was issued to this server; pass network
-     * address of server if a proxy is not in use. */
-    ret = check_identity(sess->server.hostname, cert, NULL);
+    /* Check certificate was issued to this server; pass URI of
+     * server. */
+    memset(&server, 0, sizeof server);
+    ne_fill_server_uri(sess, &server);
+    ret = check_identity(&server, cert, NULL);
+    ne_uri_free(&server);
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));
