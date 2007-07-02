@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -190,15 +190,15 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
     switch(code) {
     case NE_SOCK_CLOSED:
 	if (sess->use_proxy) {
-	    ne_set_error(sess, _("%s: connection was closed by proxy server."),
+	    ne_set_error(sess, _("%s: connection was closed by proxy server"),
 			 doing);
 	} else {
-	    ne_set_error(sess, _("%s: connection was closed by server."),
+	    ne_set_error(sess, _("%s: connection was closed by server"),
 			 doing);
 	}
 	break;
     case NE_SOCK_TIMEOUT:
-	ne_set_error(sess, _("%s: connection timed out."), doing);
+	ne_set_error(sess, _("%s: connection timed out"), doing);
 	ret = NE_TIMEOUT;
 	break;
     case NE_SOCK_ERROR:
@@ -886,7 +886,7 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
         NE_DEBUG(NE_DBG_HTTP, "[status-line] ICY protocol; code %d\n", 
                  status->code);
     } else if (ne_parse_statusline(buffer, status)) {
-	return aborted(req, _("Could not parse response status line."), 0);
+	return aborted(req, _("Could not parse response status line"), 0);
     }
 
     return 0;
@@ -1108,7 +1108,7 @@ static int read_response_headers(ne_request *req)
 
     if (count == MAX_HEADER_FIELDS)
 	ret = aborted(
-	    req, _("Response exceeded maximum number of header fields."), 0);
+	    req, _("Response exceeded maximum number of header fields"), 0);
 
     return ret;
 }
