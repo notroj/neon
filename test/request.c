@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1529,8 +1529,8 @@ static int fail_statusline(void)
     ret = any_request(sess, "/fail");
     ONV(ret != NE_ERROR, ("request failed with %d not NE_ERROR", ret));
     
-    /* FIXME: will break for i18n. */
-    ONV(strcmp(ne_get_error(sess), "Could not parse response status line."),
+    ONV(strstr(ne_get_error(sess), 
+               "Could not parse response status line") == NULL,
 	("session error was `%s'", ne_get_error(sess)));
 
     ne_session_destroy(sess);
