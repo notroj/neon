@@ -1,6 +1,6 @@
 /* 
    neon XML parser interface
-   Copyright (C) 1999-2004, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -120,10 +120,22 @@ int ne_xml_currentline(ne_xml_parser *p);
 
 /* From a start_element callback which was passed 'attrs' using given
  * parser, return attribute of given name and namespace.  If nspace is
- * NULL, no namespace resolution is performed. */
+ * NULL, no namespace resolution is performed.  Note that this call is
+ * context-specific; if called outside a start_element callback,
+ * behaviour is undefined. */
 const char *ne_xml_get_attr(ne_xml_parser *parser,
 			    const char **attrs, const char *nspace, 
 			    const char *name);
+
+/* From a start_element callback, resolve a given XML Namespace
+ * prefix, if defined.  Given a non-NULL prefix, returns the namespace
+ * URI which corresponds to the prefix 'prefix' (of length 'length'),
+ * or NULL if no such namespace prefix is defined.  Given a NULL
+ * prefix, returns the default namespace URI or the empty string if
+ * none is defined.  Note that this call is context-specific; if
+ * called outside a start_element callback, behaviour is undefined. */
+const char *ne_xml_resolve_nspace(ne_xml_parser *parser, 
+                                  const char *prefix, size_t length);
 
 /* Return the encoding of the document being parsed.  May return NULL
  * if no encoding is defined or if the XML declaration has not yet
