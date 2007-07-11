@@ -1094,9 +1094,10 @@ int ne__ssl_init(void)
 void ne__ssl_exit(void)
 {
     /* No way to unregister the thread callbacks.  Doomed. */
-#if 0
+#if LIBGNUTLS_VERSION_MAJOR > 1 || LIBGNUTLS_VERSION_MINOR > 3 \
+    || (LIBGNUTLS_VERSION_MINOR == 3 && LIBGNUTLS_VERSION_PATCH >= 3)
     /* It's safe to call gnutls_global_deinit() here only with
-     * gnutls >= 1.3, since older versions don't refcount and
+     * gnutls >= 1.3., since older versions don't refcount and
      * doing so would prevent any other use of gnutls within
      * the process. */
     gnutls_global_deinit();
