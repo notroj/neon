@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -65,6 +65,12 @@ void ne_session_destroy(ne_session *sess)
 	ne_destroy_sess_fn fn = (ne_destroy_sess_fn)hk->fn;
 	fn(hk->userdata);
     }
+
+    /* Close the connection; note that the notifier callback could
+     * still be invoked here. */
+    if (sess->connected) {
+	ne_close_connection(sess);
+    }
     
     destroy_hooks(sess->create_req_hooks);
     destroy_hooks(sess->pre_send_hooks);
@@ -81,10 +87,6 @@ void ne_session_destroy(ne_session *sess)
     if (sess->proxy.address) ne_addr_destroy(sess->proxy.address);
     if (sess->proxy.hostname) ne_free(sess->proxy.hostname);
     if (sess->user_agent) ne_free(sess->user_agent);
-
-    if (sess->connected) {
-	ne_close_connection(sess);
-    }
 
 #ifdef NE_HAVE_SSL
     if (sess->ssl_context)
@@ -271,6 +273,12 @@ const char *ne_get_error(ne_session *sess)
 void ne_close_connection(ne_session *sess)
 {
     if (sess->connected) {
+        if (sess->notify_cb) {
+            sess->status.cd.hostname = 
+                sess->use_proxy ? sess->proxy.hostname : sess->server.hostname;
+            sess->notify_cb(sess->notify_ud, ne_status_disconnected, 
+                            &sess->status);
+        }
 	NE_DEBUG(NE_DBG_SOCKET, "Closing connection.\n");
 	ne_sock_close(sess->socket);
 	sess->socket = NULL;

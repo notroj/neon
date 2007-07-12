@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -93,7 +93,8 @@ typedef enum {
     ne_status_connecting, /* connecting to host */
     ne_status_connected, /* connected to host */
     ne_status_sending, /* sending a request */
-    ne_status_recving /* receiving a response */
+    ne_status_recving, /* receiving a response */
+    ne_status_disconnected /* disconnected from host */
 } ne_session_status;
 
 /* Status event information union; the relevant structure within
@@ -108,7 +109,7 @@ typedef union ne_session_status_info_u {
         const char *hostname;
         const ne_inet_addr *address;
     } ci;
-    struct /* ne_status_connected */ {
+    struct /* ne_status_connected, ne_status_disconnected */ {
         const char *hostname;
     } cd;
     struct /* ne_status_sending and ne_status_recving */ {
