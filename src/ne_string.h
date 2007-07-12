@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -91,6 +91,15 @@ void ne_buffer_zappend(ne_buffer *buf, const char *str);
  * NUL-terminated. The resultant string will have a NUL-terminator,
  * either way.  */
 void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
+
+/* Prints a string to the end of the buffer using printf-style format
+ * string 'format' and subsqeuent arguments.  At most 'max' characters
+ * are appended; the number of characters appended (excluding the NUL
+ * terminator) is returned.  Behaviour is undefined if 'max' is passed
+ * as zero. */
+size_t ne_buffer_snprintf(ne_buffer *buf, size_t max, 
+                          const char *format, ...)
+    ne_attribute((format(printf, 3, 4)));
 
 /* Append a literal constant string 'str' to buffer 'buf'. */
 #define ne_buffer_czappend(buf, str) \

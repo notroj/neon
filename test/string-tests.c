@@ -1,6 +1,6 @@
 /* 
    String handling tests
-   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -594,6 +594,22 @@ static int casencmp(void)
     return OK;
 }
 
+static int buf_print(void)
+{
+    ne_buffer *buf = ne_buffer_create();
+
+    ne_buffer_czappend(buf, "foo-");
+    ne_buffer_snprintf(buf, 20, "bar-%s-asda", "norman");
+    ne_buffer_czappend(buf, "-bloo");
+    ONN("snprintf return value", ne_buffer_snprintf(buf, 2, "---") != 1);
+    
+    ONCMP(buf->data, "foo-bar-norman-asda-bloo-");
+
+    ne_buffer_destroy(buf);
+    
+    return OK;
+}
+
 
 ne_test tests[] = {
     T(simple),
@@ -621,6 +637,7 @@ ne_test tests[] = {
     T(printing),
     T(casecmp),
     T(casencmp),
+    T(buf_print),
     T(NULL)
 };
 
