@@ -1979,6 +1979,9 @@ static void status_cb(void *userdata, ne_session_status status,
         ne_buffer_concat(buf, "connecting(", info->lu.hostname,
                          ",", scratch, ")-", NULL);
         break;
+    case ne_status_disconnected:
+        ne_buffer_czappend(buf, "dis");
+        /* fallthrough */
     case ne_status_connected:
         ne_buffer_concat(buf, "connected(", info->cd.hostname, 
                          ")-", NULL);
@@ -2019,7 +2022,9 @@ static int status(void)
           "send(0,5000)-"
           "send(5000,5000)-"
           "recv(0,5)-"
-          "recv(5,5)-", buf->data, "status events", "result");
+          "recv(5,5)-"
+          "disconnected(localhost)-",
+          buf->data, "status events", "result");
         
     return OK;
 }
