@@ -1,11 +1,13 @@
 Changes in release 0.26.4:
-* Fix If: header insertion by ne_lock* to use CRLF-terminated headers
 * Fix Negotiate Authentication-Info response header verification with GSSAPI
 * Fix multiple handlers with ne_add_{server,proxy}_auth (Werner Baumann)
 * Fix SSPI build with some versions of MinGW (Gisle Vanem)
-* Fix for SSPI segfault in response header verification (Mike Dicuccio)
+* Fix for SSPI segfault in response header verification (Mike DiCuccio)
 * Fix error strings for CONNECT SSL proxy tunnel request failure
 * Fix install-nls for VPATH builds (Hans Meine)
+* Fix use of unencrypted client certs with GnuTLS
+* Fix ne_lock* If: header insertion to use CRLF-terminated headers
+* Fix test suite failures on QNX by working around send() length limit
 
 Changes in release 0.26.3:
 * Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
