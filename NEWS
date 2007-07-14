@@ -8,6 +8,8 @@ Changes in release 0.26.4:
 * Fix use of unencrypted client certs with GnuTLS
 * Fix ne_lock* If: header insertion to use CRLF-terminated headers
 * Fix test suite failures on QNX by working around send() length limit
+* Fix handling of POSIX strerror_r failure case in ne_strerror
+* Fix alignment issues in test suite MD5 code
 
 Changes in release 0.26.3:
 * Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
