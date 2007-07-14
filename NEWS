@@ -1,3 +1,34 @@
+Changes in release 0.26.4:
+* Fix Negotiate Authentication-Info response header verification with GSSAPI
+* Fix multiple handlers with ne_add_{server,proxy}_auth (Werner Baumann)
+* Fix SSPI build with some versions of MinGW (Gisle Vanem)
+* Fix for SSPI segfault in response header verification (Mike DiCuccio)
+* Fix error strings for CONNECT SSL proxy tunnel request failure
+* Fix install-nls for VPATH builds (Hans Meine)
+* Fix use of unencrypted client certs with GnuTLS
+* Fix ne_lock* If: header insertion to use CRLF-terminated headers
+* Fix test suite failures on QNX by working around send() length limit
+* Fix handling of POSIX strerror_r failure case in ne_strerror
+* Fix alignment issues in test suite MD5 code
+
+Changes in release 0.26.3:
+* Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
+* Fix regression in handling of "attempt" argument passed to auth callbacks;
+  ensure the value only increments for each invocation of the callback
+* Fix handling of "nextnonce" parameter in Digest authentication
+
+Changes in release 0.26.2:
+* Fix error reported for LOCK responses lacking a Lock-Token header.
+* Use Libs.private in neon.pc for newer versions of pkg-config.
+* Build fix for platforms without libintl.h.
+* Build fixes for MinGW. (Matthias Miller)
+* Build fix for h_errno detection on HP-UX 10. (Albert Chin)
+* Win32: enable debugging; build fixes with some SDKs. (Kiyo Kelvin Lee)
+
+Changes in release 0.26.1:
+* Build fixes for Win32 (D.J. Heap) and OS X.
+* Add Simplified Chinese translation (Dongsheng Song).
+
 Changes in release 0.26.0:
 * Added internationalization support:
  - ne_i18n.h exposes ne_i18n_init(), a process-global initializer
@@ -22,6 +53,7 @@ Changes in release 0.26.0:
  - take URI as parsed ne_uri * structure rather than char *
 * Added functions which give control over authentication protocol use:
  - ne_add_server_auth(), ne_add_proxy_auth()
+* Change SSPI to only be enabled by ne_set_*_auth if SSL is in use
 * Added ne_unhook_* functions to remove hooks
 * Added ne_set_session_flags()/ne_get_session_flags() functions:
  - flags to disable persistent connection support, enable "ICY"

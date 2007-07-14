@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -92,15 +92,6 @@ void ne_buffer_zappend(ne_buffer *buf, const char *str);
  * either way.  */
 void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
 
-/* Prints a string to the end of the buffer using printf-style format
- * string 'format' and subsqeuent arguments.  At most 'max' characters
- * are appended; the number of characters appended (excluding the NUL
- * terminator) is returned.  Behaviour is undefined if 'max' is passed
- * as zero. */
-size_t ne_buffer_snprintf(ne_buffer *buf, size_t max, 
-                          const char *format, ...)
-    ne_attribute((format(printf, 3, 4)));
-
 /* Append a literal constant string 'str' to buffer 'buf'. */
 #define ne_buffer_czappend(buf, str) \
 ne_buffer_append((buf), (str), sizeof((str)) - 1)
@@ -124,8 +115,8 @@ char *ne_strerror(int errnum, char *buffer, size_t buflen);
 
 /* ne_strnzcpy copies at most 'n'-1 bytes of 'src' to 'dest', and
  * ensures that 'dest' is subsequently NUL-terminated. */
-#define ne_strnzcpy(dest, src, n) do { size_t ne__nm1 = (n) - 1;      \
-strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
+#define ne_strnzcpy(dest, src, n) do { \
+strncpy(dest, src, n-1); dest[n-1] = '\0'; } while (0)
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL. */

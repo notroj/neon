@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1274,12 +1274,12 @@ static enum {
     prog_done /* finished. */
 } prog_state = prog_transfer;
 
-static ne_off_t prog_last = -1, prog_total;
+static off_t prog_last = -1, prog_total;
 
-#define FOFF "%" NE_FMT_NE_OFF_T
+#define FOFF "%" NE_FMT_OFF_T
 
 /* callback for send_progress. */
-static void s_progress(void *userdata, ne_off_t prog, ne_off_t total)
+static void s_progress(void *userdata, off_t prog, off_t total)
 {
     NE_DEBUG(NE_DBG_HTTP, 
 	     "progress callback: " FOFF "/" FOFF ".\n",
@@ -1409,7 +1409,7 @@ static int fail_lookup(void)
  * requests on the session would crash. */
 static int fail_double_lookup(void)
 {
-     ne_session *sess = ne_session_create("http", "nonesuch.invalid", 80);
+     ne_session *sess = ne_session_create("http", "nohost.example.com", 80);
      ONN("request did not give lookup failure",
 	 any_request(sess, "/foo") != NE_LOOKUP);
      ONN("second request did not give lookup failure",
@@ -1427,7 +1427,7 @@ static int fail_connect(void)
  * request. */
 static int proxy_no_resolve(void)
 {
-     ne_session *sess = ne_session_create("http", "nonesuch2.invalid", 80);
+     ne_session *sess = ne_session_create("http", "no.such.domain", 80);
      int ret;
      
      ne_session_proxy(sess, "localhost", 7777);
@@ -1529,8 +1529,8 @@ static int fail_statusline(void)
     ret = any_request(sess, "/fail");
     ONV(ret != NE_ERROR, ("request failed with %d not NE_ERROR", ret));
     
-    ONV(strstr(ne_get_error(sess), 
-               "Could not parse response status line") == NULL,
+    /* FIXME: will break for i18n. */
+    ONV(strcmp(ne_get_error(sess), "Could not parse response status line."),
 	("session error was `%s'", ne_get_error(sess)));
 
     ne_session_destroy(sess);
@@ -1800,37 +1800,18 @@ static void hook_pre_send(ne_request *req, void *userdata,
     ne_buffer_czappend(buf, "(pre-send)\n");
 }
 
-/* Returns a static string giving a comma-separated representation of
- * the status structure passed in. */ 
-static char *status_to_string(const ne_status *status)
+static int hook_post_send(ne_request *req, void *userdata,
+                          const ne_status *status)
 {
-    static char sbuf[128];
+    ne_buffer *buf = userdata;
+    char sbuf[128];
 
     ne_snprintf(sbuf, sizeof sbuf, "HTTP/%d.%d,%d,%s", 
                 status->major_version, status->minor_version,
                 status->code, status->reason_phrase);
 
-    return sbuf;
-}
-
-static void hook_post_headers(ne_request *req, void *userdata,
-			      const ne_status *status)
-{
-    ne_buffer *buf = userdata;
-
-    ne_buffer_concat(buf, "(post-headers,", status_to_string(status), ")\n",
-		     NULL);
-}
-
-
-static int hook_post_send(ne_request *req, void *userdata,
-                          const ne_status *status)
-{
-    ne_buffer *buf = userdata;
-
-    ne_buffer_concat(buf, "(post-send,", status_to_string(status), ")\n", 
-		     NULL);
-
+    ne_buffer_concat(buf, "(post-send,", sbuf, ")\n", NULL);
+    
     return NE_OK;
 }
 
@@ -1861,7 +1842,6 @@ static int hooks(void)
 
     ne_hook_create_request(sess, thook_create_req, buf);
     ne_hook_pre_send(sess, hook_pre_send, buf);
-    ne_hook_post_headers(sess, hook_post_headers, buf);
     ne_hook_post_send(sess, hook_post_send, buf);
     ne_hook_destroy_request(sess, hook_destroy_req, buf);
     ne_hook_destroy_session(sess, hook_destroy_sess, buf);
@@ -1870,7 +1850,6 @@ static int hooks(void)
 
     ONCMP("(create,GET,/first)\n"
           "(pre-send)\n"
-          "(post-headers,HTTP/1.1,200,OK)\n"
           "(post-send,HTTP/1.1,200,OK)\n"
           "(destroy-req)\n", buf->data, "hook ordering", "first result");
 
@@ -1883,7 +1862,6 @@ static int hooks(void)
     /* Unhook real functions. */
     ne_unhook_pre_send(sess, hook_pre_send, buf);
     ne_unhook_destroy_request(sess, hook_destroy_req, buf);
-    ne_unhook_post_headers(sess, hook_post_headers, buf);
 
     CALL(any_2xx_request(sess, "/second"));
 
@@ -1962,71 +1940,6 @@ static int icy_protocol(void)
     ne_session_destroy(sess);
 
     return await_server();
-}
-
-static void status_cb(void *userdata, ne_session_status status,
-                      const ne_session_status_info *info)
-{
-    ne_buffer *buf = userdata;
-    char scratch[512];
-
-    switch (status) {
-    case ne_status_lookup:
-        ne_buffer_concat(buf, "lookup(", info->lu.hostname, ")-", NULL);
-        break;
-    case ne_status_connecting:
-        ne_iaddr_print(info->ci.address, scratch, sizeof scratch);
-        ne_buffer_concat(buf, "connecting(", info->lu.hostname,
-                         ",", scratch, ")-", NULL);
-        break;
-    case ne_status_disconnected:
-        ne_buffer_czappend(buf, "dis");
-        /* fallthrough */
-    case ne_status_connected:
-        ne_buffer_concat(buf, "connected(", info->cd.hostname, 
-                         ")-", NULL);
-        break;
-    case ne_status_sending:
-    case ne_status_recving:
-        ne_snprintf(scratch, sizeof scratch, 
-                    "%" NE_FMT_NE_OFF_T ",%" NE_FMT_NE_OFF_T, 
-                    info->sr.progress, info->sr.total);
-        ne_buffer_concat(buf, 
-                         status == ne_status_sending ? "send" : "recv",
-                         "(", scratch, ")-", NULL);
-        break;
-    default:
-        ne_buffer_czappend(buf, "bork!");
-        break;
-    }
-}
-
-static int status(void)
-{
-    ne_session *sess;
-    ne_buffer *buf = ne_buffer_create();
-
-    CALL(make_session(&sess, single_serve_string, RESP200
-                      "Content-Length: 5\r\n\r\n" "abcde"));
-
-    ne_set_notifier(sess, status_cb, buf);
-
-    CALL(any_2xx_request_body(sess, "/status"));
-
-    ne_session_destroy(sess);
-    CALL(await_server());
-
-    ONCMP("lookup(localhost)-"
-          "connecting(localhost,127.0.0.1)-"
-          "connected(localhost)-"
-          "send(0,5000)-"
-          "send(5000,5000)-"
-          "recv(0,5)-"
-          "recv(5,5)-"
-          "disconnected(localhost)-",
-          buf->data, "status events", "result");
-        
-    return OK;
 }
 
 ne_test tests[] = {
@@ -2112,6 +2025,5 @@ ne_test tests[] = {
     T(hooks),
     T(hook_self_destroy),
     T(icy_protocol),
-    T(status),
     T(NULL)
 };

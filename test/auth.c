@@ -375,16 +375,13 @@ struct digest_parms {
     int proxy;
     int send_nextnonce;
     int num_requests;
-    int stale;
     enum digest_failure {
         fail_not,
         fail_bogus_alg,
-        fail_req0_stale,
         fail_omit_qop,
         fail_omit_realm,
         fail_omit_nonce,
         fail_ai_bad_nc,
-        fail_ai_bad_nc_syntax,
         fail_ai_bad_digest,
         fail_ai_bad_cnonce,
         fail_ai_omit_cnonce,
@@ -580,9 +577,7 @@ static char *make_authinfo_header(struct digest_state *state,
         make_digest(state, parms, 1, digest);
     }
 
-    if (parms->failure == fail_ai_bad_nc_syntax) {
-        ncval = "zztop";
-    } else if (parms->failure == fail_ai_bad_nc) {
+    if (parms->failure == fail_ai_bad_nc) {
         ncval = "999";
     } else {
         ncval = state->ncval;
@@ -647,11 +642,6 @@ static char *make_digest_header(struct digest_state *state,
         ne_buffer_concat(buf, "opaque=\"", parms->opaque, "\", ", NULL);
     }
 
-    if (parms->failure == fail_req0_stale
-        || parms->stale == parms->num_requests) {
-        ne_buffer_concat(buf, "stale='true', ", NULL);
-    }
-
     ne_buffer_concat(buf, "nonce=\"", state->nonce, "\"", NULL);
 
     return ne_buffer_finish(buf);
@@ -677,11 +667,6 @@ static int serve_digest(ne_socket *sock, void *userdata)
 
     state.cnonce = state.digest = state.ncval = NULL;
 
-    parms->num_requests += parms->stale ? 1 : 0;
-
-    NE_DEBUG(NE_DBG_HTTP, ">>>> Response sequence begins, %d requests.\n",
-             parms->num_requests);
-
     want_header = parms->proxy ? "Proxy-Authorization" : "Authorization";
     digest_hdr = NULL;
     got_header = dup_header;
@@ -706,19 +691,8 @@ static int serve_digest(ne_socket *sock, void *userdata)
         ONN("no Authorization header sent", digest_hdr == NULL);
         
         CALL(verify_digest_header(&state, parms, digest_hdr));
-
-        if (parms->num_requests == parms->stale) {
-            state.nonce = ne_concat("stale-", state.nonce, NULL);
-            state.nc = 1;
-
-            ne_snprintf(resp, sizeof resp,
-                        "HTTP/1.1 %d Auth Denied\r\n"
-                        "%s\r\n"
-                        "Content-Length: 0\r\n" "\r\n",
-                        parms->proxy ? 407 : 401,
-                        make_digest_header(&state, parms));
-        }
-        else if (parms->send_ainfo) {
+        
+        if (parms->send_ainfo) {
             char *ai = make_authinfo_header(&state, parms);
             
             ne_snprintf(resp, sizeof resp,
@@ -737,7 +711,7 @@ static int serve_digest(ne_socket *sock, void *userdata)
         SEND_STRING(sock, resp);
 
         NE_DEBUG(NE_DBG_HTTP, "Handled request; %d requests remain.\n",
-                 parms->num_requests - 1);
+                 parms->num_requests);
     } while (--parms->num_requests);
 
     return OK;
@@ -746,8 +720,6 @@ static int serve_digest(ne_socket *sock, void *userdata)
 static int test_digest(struct digest_parms *parms)
 {
     ne_session *sess;
-
-    NE_DEBUG(NE_DBG_HTTP, ">>>> Request sequence begins.\n");
 
     if (parms->proxy) {
         sess = ne_session_create("http", "www.example.com", 80);
@@ -774,27 +746,24 @@ static int digest(void)
 {
     struct digest_parms parms[] = {
         /* RFC 2617-style */
-        { "WallyWorld", "this-is-a-nonce", NULL, 1, 0, 0, 0, 0, 1, 0, fail_not },
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 0, 0, 0, 0, 1, 0, fail_not },
+        { "WallyWorld", "this-is-a-nonce", NULL, 1, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 0, 0, 0, 0, 1, fail_not },
         /* ... with A-I */
-        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, 0, fail_not },
+        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, fail_not },
         /* ... with md5-sess. */
-        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 1, 0, 0, 1, 0, fail_not },
+        { "WallyWorld", "nonce-nonce-nonce", "opaque-string", 1, 1, 1, 0, 0, 1, fail_not },
         /* many requests, with changing nonces; tests for next-nonce handling bug. */
-        { "WallyWorld", "this-is-a-nonce", "opaque-thingy", 1, 1, 0, 0, 1, 20, 0, fail_not },
-        /* staleness. */
-        { "WallyWorld", "this-is-a-nonce", "opaque-thingy", 1, 1, 0, 0, 0, 3, 2, fail_not },
-
+        { "WallyWorld", "this-is-a-nonce", "opaque-thingy", 1, 1, 0, 0, 1, 20, fail_not },
 
         /* RFC 2069-style */ 
-        { "WallyWorld", "lah-di-da-di-dah", NULL, 0, 0, 0, 0, 0, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 0, 0, 0, 0, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 1, 0, 0, 0, 1, 0, fail_not },
+        { "WallyWorld", "lah-di-da-di-dah", NULL, 0, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 0, 0, 0, 0, 1, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", 0, 1, 0, 0, 0, 1, fail_not },
 
         /* Proxy auth */
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, 0, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 0, 0, 1, fail_not },
         /* Proxy + A-I */
-        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 1, 0, 1, 0, fail_not },
+        { "WallyWorld", "this-is-also-a-nonce", "opaque-string", 1, 1, 0, 1, 0, 1, fail_not },
 
         { NULL }
     };
@@ -816,14 +785,12 @@ static int digest_failures(void)
         const char *message;
     } fails[] = {
         { fail_ai_bad_nc, "nonce count mismatch" },
-        { fail_ai_bad_nc_syntax, "could not parse nonce count" },
         { fail_ai_bad_digest, "digest mismatch" },
         { fail_ai_bad_cnonce, "client nonce mismatch" },
         { fail_ai_omit_nc, "missing parameters" },
         { fail_ai_omit_digest, "missing parameters" },
         { fail_ai_omit_cnonce, "missing parameters" },
-        { fail_bogus_alg, "unknown algorithm" },
-        { fail_req0_stale, "initial Digest challenge was stale" },
+        { fail_bogus_alg, "Unknown algorithm" },
         { fail_not, NULL }
     };
     size_t n;
@@ -837,7 +804,6 @@ static int digest_failures(void)
     parms.proxy = 0;
     parms.send_nextnonce = 0;
     parms.num_requests = 1;
-    parms.stale = 0;
 
     for (n = 0; fails[n].message; n++) {
         ne_session *sess = ne_session_create("http", "localhost", 7777);
@@ -859,8 +825,7 @@ static int digest_failures(void)
 
         ne_session_destroy(sess);
         
-        if (fails[n].mode == fail_bogus_alg
-            || fails[n].mode == fail_req0_stale) {
+        if (fails[n].mode == fail_bogus_alg) {
             reap_server();
         } else {
             CALL(await_server());
@@ -870,6 +835,8 @@ static int digest_failures(void)
     return OK;
 }
 
+/* test that digest has precedence over Basic for multi-scheme
+ * challenges */
 static int fail_cb(void *userdata, const char *realm, int tries, 
 		   char *un, char *pw)
 {
@@ -885,39 +852,12 @@ static int fail_cb(void *userdata, const char *realm, int tries,
 static int fail_challenge(void)
 {
     static const struct {
-        const char *resp, *error, *challs;
+        const char *resp, *challs;
     } ts[] = {
-        /* only possible Basic parse failure. */
-        { "Basic", "missing realm in Basic challenge" },
-
-        /* Digest parameter invalid/omitted failure cases: */
-        { "Digest algorithm=MD5, qop=auth, nonce=\"foo\"",
-          "missing parameter in Digest challenge" },
-        { "Digest algorithm=MD5, qop=auth, realm=\"foo\"",
-          "missing parameter in Digest challenge" },
-        { "Digest algorithm=ZEBEDEE-GOES-BOING, qop=auth, realm=\"foo\"",
-          "unknown algorithm in Digest challenge" },
-        { "Digest algorithm=MD5-sess, realm=\"foo\"",
-          "incompatible algorithm in Digest challenge" },
-
-        /* Multiple challenge failure cases: */
-        { "Basic, Digest",
-          "missing parameter in Digest challenge, missing realm in Basic challenge" },
-        
-        { "Digest realm=\"foo\", algorithm=MD5, qop=auth, nonce=\"foo\","
-          " Basic realm=\"foo\"",
-          "rejected Digest challenge, rejected Basic challenge" },
-
-        { "WhizzBangAuth realm=\"foo\", " 
-          "Basic realm='foo'",
-          "ignored WhizzBangAuth challenge, rejected Basic challenge" },
-        { "", "could not parse challenge" },
-
         /* neon 0.26.x regression in "attempt" handling. */
         { "Basic realm=\"foo\", " 
-          "Digest realm=\"bar\", algorithm=MD5, qop=auth, nonce=\"foo\"",
-          "rejected Digest challenge, rejected Basic challenge"
-          , "<bar, 0><foo, 1>"  /* Digest challenge first, Basic second. */
+          "Digest realm=\"bar\", algorithm=MD5, qop=auth, nonce=\"foo\"", 
+          "<bar, 0><foo, 1>"  /* Digest challenge first, Basic second. */
         }
     };
     unsigned n;
@@ -939,18 +879,10 @@ static int fail_challenge(void)
         ne_set_server_auth(sess, fail_cb, buf);
         
         ret = any_2xx_request(sess, "/fish");
-        ONV(ret == NE_OK,
-            ("request success; expecting error '%s'",
-             ts[n].error));
-
-        ONV(strstr(ne_get_error(sess), ts[n].error) == NULL,
-            ("request fails with error '%s'; expecting '%s'",
-             ne_get_error(sess), ts[n].error));
+        ONN("request success", ret == NE_OK);
         
-        if (ts[n].challs) {
-            ONCMP(ts[n].challs, buf->data, "challenge callback", 
-                  "invocation order");
-        }
+        ONCMP(ts[n].challs, buf->data, "challenge callback", 
+              "invocation order");
 
         ne_session_destroy(sess);
         ne_buffer_destroy(buf);
@@ -969,9 +901,11 @@ static int multi_cb(void *userdata, const char *realm, int tries,
                     char *un, char *pw)
 {
     struct multi_context *ctx = userdata;
-
-    ne_buffer_snprintf(ctx->buf, 128, "[id=%d, realm=%s, tries=%d]", 
-                       ctx->id, realm, tries);
+    char buf[128];
+    
+    ne_snprintf(buf, sizeof buf, "[id=%d, realm=%s, tries=%d]", 
+                ctx->id, realm, tries);
+    ne_buffer_zappend(ctx->buf, buf);
 
     return -1;
 }

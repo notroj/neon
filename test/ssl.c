@@ -502,11 +502,6 @@ static int ipaddr_altname(void)
     return accept_signed_cert_for_hostname("altname5.cert", "127.0.0.1");
 }
 
-static int uri_altname(void)
-{
-    return accept_signed_cert_for_hostname("altname7.cert", "localhost");
-}
-
 /* test that the *most specific* commonName attribute is used. */
 static int multi_commonName(void)
 {
@@ -794,12 +789,6 @@ static int fail_host_ipaltname(void)
 {
     return fail_ssl_request("altname5.cert", CA_CERT, "localhost",
                             "bad IP altname cert", NE_SSL_IDMISMATCH);
-}
-
-static int fail_bad_urialtname(void)
-{
-    return fail_ssl_request("altname8.cert", CA_CERT, "localhost",
-                            "bad URI altname cert", NE_SSL_IDMISMATCH);
 }
 
 /* Test that the SSL session is cached across connections. */
@@ -1123,7 +1112,7 @@ static int auth_tunnel_fail(void)
     ret = any_request(sess, "/bar");
     ONV(ret != NE_PROXYAUTH, ("bad error code for tunnel failure: %d", ret));
 
-    ONV(strstr(ne_get_error(sess), "GaBoogle") == NULL,
+    ONV(strstr(ne_get_error(sess), "Nyaaaaah") == NULL,
         ("bad error string for tunnel failure: %s", ne_get_error(sess)));
 
     ne_session_destroy(sess);
@@ -1191,7 +1180,6 @@ static int cert_identities(void)
         { "altname2.cert", "nohost.example.com" },
         { "altname4.cert", "localhost" },
         { "ca4.pem", "fourth.example.com" },
-        { "altname8.cert", "http://nohost.example.com/" },
         { NULL, NULL }
     };
     int n;
@@ -1547,7 +1535,6 @@ ne_test tests[] = {
     T(two_subject_altname2),
     T(notdns_altname),
     T(ipaddr_altname),
-    T(uri_altname),
 
     T(multi_commonName),
     T(commonName_first),
@@ -1560,7 +1547,6 @@ ne_test tests[] = {
     T(fail_missing_CN),
     T(fail_host_ipaltname),
     T(fail_bad_ipaltname),
-    T(fail_bad_urialtname),
 
     T(session_cache),
 	
