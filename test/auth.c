@@ -997,7 +997,7 @@ static int multi_handler(void)
     ne_add_server_auth(sess, NE_AUTH_BASIC, multi_cb, &c[0]);
     ne_add_server_auth(sess, NE_AUTH_DIGEST, multi_cb, &c[1]);
     
-    ONN("request succeeded!?", any_2xx_request(sess, "/fish") != NE_OK);
+    any_request(sess, "/fish");
     
     ONCMP("[id=2, realm=food, tries=0]"
           "[id=1, realm=fish, tries=0]", buf->data,
