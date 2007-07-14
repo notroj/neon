@@ -892,6 +892,57 @@ static int fail_challenge(void)
     return OK;
 }
 
+struct multi_context {
+    int id;
+    ne_buffer *buf;
+};
+
+static int multi_cb(void *userdata, const char *realm, int tries, 
+                    char *un, char *pw)
+{
+    struct multi_context *ctx = userdata;
+    char buf[128];
+    
+    ne_snprintf(buf, sizeof buf, "[id=%d, realm=%s, tries=%d]", 
+                ctx->id, realm, tries);
+    ne_buffer_zappend(ctx->buf, buf);
+
+    return -1;
+}
+
+static int multi_handler(void)
+{
+    ne_session *sess;
+    struct multi_context c[2];
+    unsigned n;
+    ne_buffer *buf = ne_buffer_create();
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 401 Auth Denied\r\n"
+                      "WWW-Authenticate: Basic realm='fish',"
+                      " Digest realm='food', algorithm=MD5, qop=auth, nonce=gaga\r\n"
+                      "Content-Length: 0\r\n" "\r\n"));
+    
+    for (n = 0; n < 2; n++) {
+        c[n].buf = buf;
+        c[n].id = n + 1;
+    }
+
+    ne_add_server_auth(sess, NE_AUTH_BASIC, multi_cb, &c[0]);
+    ne_add_server_auth(sess, NE_AUTH_DIGEST, multi_cb, &c[1]);
+    
+    any_request(sess, "/fish");
+    
+    ONCMP("[id=2, realm=food, tries=0]"
+          "[id=1, realm=fish, tries=0]", buf->data,
+          "multiple callback", "invocation order");
+    
+    ne_session_destroy(sess);
+    ne_buffer_destroy(buf);
+
+    return await_server();
+}
+
 /* test logout */
 
 /* proxy auth, proxy AND origin */
@@ -906,5 +957,6 @@ ne_test tests[] = {
     T(digest),
     T(digest_failures),
     T(fail_challenge),
+    T(multi_handler),
     T(NULL)
 };

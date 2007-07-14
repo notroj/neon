@@ -1,6 +1,7 @@
 Changes in release 0.26.4:
 * Fix If: header insertion by ne_lock* to use CRLF-terminated headers
 * Fix Negotiate Authentication-Info response header verification with GSSAPI
+* Fix multiple handlers with ne_add_{server,proxy}_auth (Werner Baumann)
 * Fix SSPI build with some versions of MinGW (Gisle Vanem)
 * Fix for SSPI segfault in response header verification (Mike Dicuccio)
 * Fix error strings for CONNECT SSL proxy tunnel request failure

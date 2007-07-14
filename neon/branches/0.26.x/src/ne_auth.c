@@ -1317,7 +1317,7 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 
     /* Find the end of the handler list, and add a new one. */
     hdl = &ahs->handlers;
-    while (*hdl && (*hdl)->next)
+    while (*hdl)
         hdl = &(*hdl)->next;
         
     *hdl = ne_malloc(sizeof **hdl);
