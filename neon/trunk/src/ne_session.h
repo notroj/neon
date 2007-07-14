@@ -127,10 +127,10 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
                                  const ne_session_status_info *info);
 
 /* Set a status notification callback for the session, to report
- * connection status events.  Only one notification callback per
- * session can be registered; only the most recent of successive calls
- * to this function takes effect. */
-void ne_set_status(ne_session *sess, ne_notify_status status, void *userdata);
+ * session status events.  Only one notification callback per session
+ * can be registered; the most recent of successive calls to this
+ * function takes effect. */
+void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
 
 /* Certificate verification failures.
  * The certificate is not yet valid: */

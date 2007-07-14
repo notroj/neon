@@ -2009,7 +2009,7 @@ static int status(void)
     CALL(make_session(&sess, single_serve_string, RESP200
                       "Content-Length: 5\r\n\r\n" "abcde"));
 
-    ne_set_status(sess, status_cb, buf);
+    ne_set_notifier(sess, status_cb, buf);
 
     CALL(any_2xx_request_body(sess, "/status"));
 
