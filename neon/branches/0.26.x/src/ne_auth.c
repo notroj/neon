@@ -1173,13 +1173,6 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	    ne_free(value);
 	}
 
-#ifdef HAVE_SSPI
-        if (sess->sspi_token) {
-            /* Prevent connection closure due to use of non-idempotent
-             * request.  Completely broken, but so is the protocol. */
-            ne_set_request_flag(r, NE_REQFLAG_IDEMPOTENT, 1);
-        }
-#endif
     }
 
 }
