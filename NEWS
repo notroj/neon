@@ -1,3 +1,11 @@
+Changes in release 0.26.4:
+* Fix If: header insertion by ne_lock* to use CRLF-terminated headers
+* Fix Negotiate Authentication-Info response header verification with GSSAPI
+* Fix SSPI build with some versions of MinGW (Gisle Vanem)
+* Fix for SSPI segfault in response header verification (Mike Dicuccio)
+* Fix error strings for CONNECT SSL proxy tunnel request failure
+* Fix install-nls for VPATH builds (Hans Meine)
+
 Changes in release 0.26.3:
 * Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
 * Fix regression in handling of "attempt" argument passed to auth callbacks;
@@ -40,6 +48,7 @@ Changes in release 0.26.0:
  - take URI as parsed ne_uri * structure rather than char *
 * Added functions which give control over authentication protocol use:
  - ne_add_server_auth(), ne_add_proxy_auth()
+* Change SSPI to only be enabled by ne_set_*_auth if SSL is in use
 * Added ne_unhook_* functions to remove hooks
 * Added ne_set_session_flags()/ne_get_session_flags() functions:
  - flags to disable persistent connection support, enable "ICY"
