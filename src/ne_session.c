@@ -208,7 +208,7 @@ void ne_set_progress(ne_session *sess,
     sess->progress_ud = userdata;
 }
 
-void ne_set_status(ne_session *sess,
+void ne_set_notifier(ne_session *sess,
 		     ne_notify_status status, void *userdata)
 {
     sess->notify_cb = status;
