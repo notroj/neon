@@ -88,20 +88,18 @@ void ne_xml_push_handler(ne_xml_parser *p,
 
 /* ne_xml_failed returns non-zero if there was an error during
  * parsing, or zero if the parse completed successfully.  The return
- * value is equal to that of the last ne_xml_parse call for this
- * parser. */
+ * value is equal to that of the last ne_xml_parse() call for this
+ * parser object. */
 int ne_xml_failed(ne_xml_parser *p);
 
-/* Set error string for parser: the string may be truncated. */
+/* Set error string for parser.  (The string may be truncated
+ * internally). */
 void ne_xml_set_error(ne_xml_parser *p, const char *msg);
 
-/* Return the error string (never NULL).  After ne_xml_failed returns
- * >0, this will describe the parse error.  Otherwise it will be a
- * default error string. */
+/* Return the error string (and never NULL).  After ne_xml_failed
+ * returns >0, this will describe the parse error.  Otherwise it will
+ * be a default error string. */
 const char *ne_xml_get_error(ne_xml_parser *p);
-
-/* Destroy the parser object. */
-void ne_xml_destroy(ne_xml_parser *p);
 
 /* Parse the given block of input of length len.  Parser must be
  * called with len=0 to signify the end of the document (for that
@@ -111,11 +109,12 @@ void ne_xml_destroy(ne_xml_parser *p);
  * callback's return value is returned. */
 int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
 
-/* As above, casting (ne_xml_parser *)userdata internally.
+/* As ne_xml_parse, casting (ne_xml_parser *)userdata internally.
  * (This function can be passed to ne_add_response_body_reader) */
 int ne_xml_parse_v(void *userdata, const char *block, size_t len);
 
-/* Return current parse line for errors */
+/* Return current line of document during parsing or after parsing is
+ * complete. */
 int ne_xml_currentline(ne_xml_parser *p);
 
 /* From a start_element callback which was passed 'attrs' using given
@@ -141,6 +140,9 @@ const char *ne_xml_resolve_nspace(ne_xml_parser *parser,
  * if no encoding is defined or if the XML declaration has not yet
  * been parsed. */
 const char *ne_xml_doc_encoding(const ne_xml_parser *p);
+
+/* Destroy the parser object. */
+void ne_xml_destroy(ne_xml_parser *p);
 
 /* A utility interface for mapping {nspace, name} onto an integer. */
 struct ne_xml_idmap {
