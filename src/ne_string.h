@@ -29,40 +29,41 @@
 
 NE_BEGIN_DECLS
 
-/* ne_token and ne_qtoken return the next token in *str between *str
- * and separator character 'sep' or the NUL terminator. ne_qtoken
- * skips over any parts quoted using a pair of any one of the
- * characters given in 'quotes'.  After returning, *str will point to
- * the next character after the separator, or NULL if no more
- * separator characters were found.
+/* ne_token and ne_qtoken return the next token in *str before either
+ * the next separator character 'sep' or the NUL terminator.
+ * ne_qtoken skips over any parts quoted using a pair of any one of
+ * the characters given in 'quotes'.  After returning, *str will point
+ * to the next character after the separator, or NULL if no separator
+ * character was found.
  * 
- * ne_qtoken may return NULL if unterminated quotes are found. */
+ * ne_qtoken will return NULL if unterminated quotes are found. */
 char *ne_token(char **str, char sep);
 char *ne_qtoken(char **str, char sep, const char *quotes);
 
 /* Return portion of 'str' with any characters in 'whitespace' shaved
- * off the beginning and end.  Modifies str. */
+ * off the beginning and end.  Modifies str in-place. */
 char *ne_shave(char *str, const char *whitespace);
 
-/* Cleanse 'str' of non-printable characters.  'str' is modified
- * in-place, and returned. */
+/* Cleanse 'str' of non-printable (e.g. control) characters.  'str' is
+ * modified in-place, and returned. */
 char *ne_strclean(char *str);
 
-/* A base64 encoder: converts 'len' bytes of 'text' to base64.
- * Returns malloc-allocated buffer; caller must free(). */
+/* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
+ * NUL-terminated buffer which the caller must free(). */
 char *ne_base64(const unsigned char *text, size_t len);
 
-/* Base64 decoder; decodes NUL-terminated base64-encoded string
- * 'data', places malloc-allocated raw data in '*out', returns length,
- * or zero on decode error (in which case *out is undefined). */
+/* Decode NUL-terminated base64-encoded string 'data', placing
+ * malloc-allocated raw decoder output in '*out'.  Returns length, or
+ * zero on decode error (in which case the content of *out is
+ * undefined). */
 size_t ne_unbase64(const char *data, unsigned char **out);
 
 /* Dynamically-allocated string buffer.  A string buffer which grows
  * dynamically . (Strings are zero-terminated still).  A
  * string buffer ne_buffer which grows dynamically with the string. */
 typedef struct {
-    char *data; /* contents: NUL-terminated string. */
-    size_t used; /* strlen(data) */
+    char *data; /* contents: NUL-terminated string */
+    size_t used; /* strlen(data) + 1 */
     size_t length; /* number of bytes allocated */
 } ne_buffer;
 
@@ -136,9 +137,6 @@ strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
  * arguments, up to a terminating NULL pointer. */
 char *ne_concat(const char *str, ...);
 
-#define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : (ne_tolower((x)) + 10 - 'a'))
-#define NE_HEX2ASC(x) ((char) ((x) > 9 ? ((x) - 10 + 'a') : ((x) + '0')))
-
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
 size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)
@@ -164,6 +162,15 @@ int ne_strncasecmp(const char *s1, const char *s2, size_t n);
 #define ne_tolower(c) (ne_tolower_array()[(unsigned char)c])
 
 const unsigned char *ne_tolower_array(void);
+
+/* Convert an ASCII hexadecimal character in the ranges '0'..'9'
+ * 'a'..'f' 'A'..'F' to its numeric equivalent. */
+#define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : \
+                       (ne_tolower((x)) + 10 - 'a'))
+
+/* Convert an integer in the range 0..15 to the equivalent (lowercase)
+ * ASCII hexadecimal equivalent character, in the range '0..9,'a..f' */
+#define NE_HEX2ASC(x) ((char) ((x) > 9 ? ((x) - 10 + 'a') : ((x) + '0')))
 
 NE_END_DECLS
 
