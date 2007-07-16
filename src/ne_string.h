@@ -57,15 +57,21 @@ char *ne_base64(const unsigned char *text, size_t len);
  * or zero on decode error (in which case *out is undefined). */
 size_t ne_unbase64(const char *data, unsigned char **out);
 
-/* String buffer handling. (Strings are zero-terminated still).  A
- * string buffer ne_buffer * which grows dynamically with the
- * string. */
-
+/* Dynamically-allocated string buffer.  A string buffer which grows
+ * dynamically . (Strings are zero-terminated still).  A
+ * string buffer ne_buffer which grows dynamically with the string. */
 typedef struct {
-    char *data; /* contents: null-terminated string. */
-    size_t used; /* used bytes in buffer */
-    size_t length; /* length of buffer */
+    char *data; /* contents: NUL-terminated string. */
+    size_t used; /* strlen(data) */
+    size_t length; /* number of bytes allocated */
 } ne_buffer;
+
+/* Create a new string buffer object. */
+ne_buffer *ne_buffer_create(void);
+
+/* Create a new string buffer object with at least 'size' bytes of
+ * allocated space. */
+ne_buffer *ne_buffer_ncreate(size_t size);
 
 /* Returns size of data in buffer, equiv to strlen(ne_buffer_data(buf)) */
 #define ne_buffer_size(buf) ((buf)->used - 1)
@@ -75,24 +81,14 @@ typedef struct {
  * argument marking the end of the list.  */
 void ne_buffer_concat(ne_buffer *buf, ...);
 
-/* Create a new ne_buffer. */
-ne_buffer *ne_buffer_create(void);
-
-/* Create a new ne_buffer of given minimum size. */
-ne_buffer *ne_buffer_ncreate(size_t size);
-
-/* Destroys (deallocates) a buffer */
-void ne_buffer_destroy(ne_buffer *buf);
-
 /* Append a NUL-terminated string 'str' to buf. */
 void ne_buffer_zappend(ne_buffer *buf, const char *str);
 
-/* Append 'len' bytes of 'data' to buf.  'data' does not need to be
- * NUL-terminated. The resultant string will have a NUL-terminator,
- * either way.  */
+/* Append 'len' bytes of 'data' to buf, where 'data' does not contain
+ * a NUL terminator.  (A NUL terminator is appended to buf) */
 void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
 
-/* Prints a string to the end of the buffer using printf-style format
+/* Print a string to the end of the buffer using printf-style format
  * string 'format' and subsqeuent arguments.  At most 'max' characters
  * are appended; the number of characters appended (excluding the NUL
  * terminator) is returned.  Behaviour is undefined if 'max' is passed
@@ -101,21 +97,30 @@ size_t ne_buffer_snprintf(ne_buffer *buf, size_t max,
                           const char *format, ...)
     ne_attribute((format(printf, 3, 4)));
 
-/* Append a literal constant string 'str' to buffer 'buf'. */
+/* Append a literal, NUL-terminated constant string 'str' to buffer
+ * 'buf'. */
 #define ne_buffer_czappend(buf, str) \
 ne_buffer_append((buf), (str), sizeof((str)) - 1)
 
-/* Empties the contents of buf; makes the buffer zero-length. */
+/* Clear the string buffer 'buf', making it equivalent to the empty
+ * string. */
 void ne_buffer_clear(ne_buffer *buf);
 
-/* Grows the ne_buffer to a minimum size. */
+/* Grow the allocated size of string buffer 'buf' to at least 'size'
+ * bytes. */
 void ne_buffer_grow(ne_buffer *buf, size_t size);
 
+/* Re-establish the 'used' invariant if the string buffer data field is
+ * altered directly. */
 void ne_buffer_altered(ne_buffer *buf);
 
-/* Destroys a buffer, WITHOUT freeing the data, and returns the
- * data. */
+/* Destroy the string buffer object 'buf' without deallocating the
+ * data string.  The data string must subsequently be freed using
+ * ne_free(). */
 char *ne_buffer_finish(ne_buffer *buf);
+
+/* Destroy a string buffer object. */
+void ne_buffer_destroy(ne_buffer *buf);
 
 /* Thread-safe strerror() wrapper; place system error for errno value
  * 'errnum' in 'buffer', which is of length 'buflen'.  Returns
@@ -128,7 +133,7 @@ char *ne_strerror(int errnum, char *buffer, size_t buflen);
 strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
- * arguments, up to a terminating NULL. */
+ * arguments, up to a terminating NULL pointer. */
 char *ne_concat(const char *str, ...);
 
 #define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : (ne_tolower((x)) + 10 - 'a'))
