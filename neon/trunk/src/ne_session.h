@@ -98,9 +98,9 @@ typedef enum {
 } ne_session_status;
 
 /* Status event information union; the relevant structure within
- * corresponds to the event type.  The size of this structure is not
- * limited by ABI constraint; i.e. the "info" union or any existing
- * struct inside that union may be expanded in later releases. */
+ * corresponds to the event type.  WARNING: the size of this union is
+ * not limited by ABI constraint; it may be extended with additional
+ * members of different size, or existing members may be extended. */
 typedef union ne_session_status_info_u {
     struct /* ne_status_lookup */ {
         const char *hostname;
