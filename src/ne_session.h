@@ -103,18 +103,23 @@ typedef enum {
  * members of different size, or existing members may be extended. */
 typedef union ne_session_status_info_u {
     struct /* ne_status_lookup */ {
+        /* The hostname which is being resolved: */
         const char *hostname;
     } lu;
     struct /* ne_status_connecting */ {
+        /* The hostname and network address to which a connection
+         * attempt is being made: */
         const char *hostname;
         const ne_inet_addr *address;
     } ci;
     struct /* ne_status_connected, ne_status_disconnected */ {
+        /* The hostname to which a connection has just been
+         * established or closed: */
         const char *hostname;
     } cd;
     struct /* ne_status_sending and ne_status_recving */ {
-        /* If total == 0, total is unknown; otherwise, 0 <= point
-         * <= total.  */
+        /* Request/response body transfer progress; if total == 0, the
+         * total size is unknown; else 0 <= progress <= total:  */
         ne_off_t progress, total;
     } sr;
 } ne_session_status_info;
