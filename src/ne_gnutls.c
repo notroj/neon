@@ -351,7 +351,7 @@ static int match_hostname(char *cn, const char *hostname)
  * If 'identity' is non-NULL, store the malloc-allocated identity in
  * *identity.  If 'server' is non-NULL, it must be the network address
  * of the server in use, and identity must be NULL. */
-static int check_identity(const char *hostname, gnutls_x509_crt cert,
+static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
                           char **identity)
 {
     char name[255];
@@ -359,6 +359,9 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
     int ret, seq = 0;
     int match = 0, found = 0;
     size_t len;
+    const char *hostname;
+    
+    hostname = server ? server->host : "";
 
     do {
         len = sizeof name;
@@ -392,6 +395,30 @@ static int check_identity(const char *hostname, gnutls_x509_crt cert,
                          len);
             }
         } break;
+        case GNUTLS_SAN_URI: {
+            ne_uri uri;
+            
+            if (ne_uri_parse(name, &uri) == 0 && uri.host && uri.scheme) {
+                ne_uri tmp;
+                
+                if (identity && !found) *identity = ne_strdup(name);
+                found = 1;
+                
+                if (server) {
+                    /* For comparison purposes, all that matters is
+                     * host, scheme and port; ignore the rest. */
+                    memset(&tmp, 0, sizeof tmp);
+                    tmp.host = uri.host;
+                    tmp.scheme = uri.scheme;
+                    tmp.port = uri.port;
+                    
+                    match = ne_uri_cmp(server, &tmp) == 0;
+                }
+            }
+            
+            ne_uri_free(&uri);
+        } break;
+
         default:
             break;
         }
@@ -432,7 +459,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
-    check_identity("", x5, &cert->identity);
+    check_identity(NULL, x5, &cert->identity);
     return cert;
 }
 
@@ -638,6 +665,7 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
 {
     time_t before, after, now = time(NULL);
     int ret, failures = 0;
+    ne_uri server;
 
     before = gnutls_x509_crt_get_activation_time(chain->subject);
     after = gnutls_x509_crt_get_expiration_time(chain->subject);
@@ -647,7 +675,11 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
     else if (now > after)
         failures |= NE_SSL_EXPIRED;
 
-    ret = check_identity(sess->server.hostname, chain->subject, NULL);
+    memset(&server, 0, sizeof server);
+    ne_fill_server_uri(sess, &server);
+    ret = check_identity(&server, chain->subject, NULL);
+    ne_uri_free(&server);
+
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));
