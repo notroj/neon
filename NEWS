@@ -1,3 +1,56 @@
+Changes in release 0.27.0:
+* New functions:
+ - ne_session.h: ne_fill_proxy_uri() to retrieve configured proxy 
+ - ne_hook_post_headers() to hook in after response headers are read
+ - ne_socket.h: ne_sock_connect_timeout() sets connection timeout
+ - ne_session.h: ne_set_connect_timeout() sets session connection timeout
+ - ne_string.h: ne_buffer_snprintf() prints to a buffer object
+ - ne_xml.h: ne_xml_resolve_nspace() resolves namespace prefixes
+* API changes:
+ - ne_set_notifier() replaces ne_set_status(); finer-grained and type-safe
+   connection status information now provided
+ - ne_xml_dispatch_request() now only invokes the XML parser for 
+   response entities with an XML content-type, following RFC 3023 rules
+ - ne_acl_set() now takes a "const" entries array
+ - LFS compatibility functions *64 removed: all functions taking an
+ off_t now take an ne_off_t which is off64_t for LFS builds
+* GnuTLS support now on par with OpenSSL:
+ - greatly improved SSL distinguished name handling with >= GnuTLS 1.7.8
+* Other improvements and fixes:
+ - fixes for handling of "stale" parameter in Digest authentication
+ - added support for URIs in SSL server certificate subjectAltName field
+
+Changes in release 0.26.4:
+* Fix Negotiate Authentication-Info response header verification with GSSAPI
+* Fix multiple handlers with ne_add_{server,proxy}_auth (Werner Baumann)
+* Fix SSPI build with some versions of MinGW (Gisle Vanem)
+* Fix for SSPI segfault in response header verification (Mike DiCuccio)
+* Fix error strings for CONNECT SSL proxy tunnel request failure
+* Fix install-nls for VPATH builds (Hans Meine)
+* Fix use of unencrypted client certs with GnuTLS
+* Fix ne_lock* If: header insertion to use CRLF-terminated headers
+* Fix test suite failures on QNX by working around send() length limit
+* Fix handling of POSIX strerror_r failure case in ne_strerror
+* Fix alignment issues in test suite MD5 code
+
+Changes in release 0.26.3:
+* Fix buffer under-read in URI parser (Laszlo Boszormenyi, CVE-2007-0157)
+* Fix regression in handling of "attempt" argument passed to auth callbacks;
+  ensure the value only increments for each invocation of the callback
+* Fix handling of "nextnonce" parameter in Digest authentication
+
+Changes in release 0.26.2:
+* Fix error reported for LOCK responses lacking a Lock-Token header.
+* Use Libs.private in neon.pc for newer versions of pkg-config.
+* Build fix for platforms without libintl.h.
+* Build fixes for MinGW. (Matthias Miller)
+* Build fix for h_errno detection on HP-UX 10. (Albert Chin)
+* Win32: enable debugging; build fixes with some SDKs. (Kiyo Kelvin Lee)
+
+Changes in release 0.26.1:
+* Build fixes for Win32 (D.J. Heap) and OS X.
+* Add Simplified Chinese translation (Dongsheng Song).
+
 Changes in release 0.26.0:
 * Added internationalization support:
  - ne_i18n.h exposes ne_i18n_init(), a process-global initializer
