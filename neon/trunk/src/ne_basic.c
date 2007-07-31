@@ -380,9 +380,14 @@ static int copy_or_move(ne_session *sess, int is_move, int overwrite,
     ne_lock_using_parent(req, dest);
 #endif
 
-    ne_print_request_header(req, "Destination", "%s://%s%s", 
-			      ne_get_scheme(sess), 
-			      ne_get_server_hostport(sess), dest);
+    if (ne_get_session_flag(sess, NE_SESSFLAG_RFC4918)) {
+        ne_add_request_header(req, "Destination", dest);
+    }
+    else {
+        ne_print_request_header(req, "Destination", "%s://%s%s", 
+                                ne_get_scheme(sess), 
+                                ne_get_server_hostport(sess), dest);
+    }
     
     ne_add_request_header(req, "Overwrite", overwrite?"T":"F");
 

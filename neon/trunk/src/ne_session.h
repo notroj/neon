@@ -61,6 +61,11 @@ typedef enum ne_session_flag_e {
     NE_SESSFLAG_SSLv2, /* disable this flag to disable support for
                         * SSLv2, if supported by the SSL library. */
 
+    NE_SESSFLAG_RFC4918, /* enable this flag to enable support for
+                          * RFC4918-only WebDAV features; losing
+                          * backwards-compatibility with RFC2518
+                          * servers. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 
