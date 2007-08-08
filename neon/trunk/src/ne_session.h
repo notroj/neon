@@ -66,6 +66,10 @@ typedef enum ne_session_flag_e {
                           * backwards-compatibility with RFC2518
                           * servers. */
 
+    NE_SESSFLAG_CONNAUTH, /* enable this flag if an awful, broken,
+                           * RFC-violating, connection-based HTTP
+                           * authentication scheme is in use. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 

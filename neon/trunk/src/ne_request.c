@@ -1149,7 +1149,8 @@ int ne_begin_request(ne_request *req)
      * then it is impossible to distinguish between a server failure
      * and a connection timeout if an EOF/RST is received.  So don't
      * do that. */
-    if (!req->flags[NE_REQFLAG_IDEMPOTENT] && req->session->persisted) {
+    if (!req->flags[NE_REQFLAG_IDEMPOTENT] && req->session->persisted
+        && !req->session->flags[NE_SESSFLAG_CONNAUTH]) {
         NE_DEBUG(NE_DBG_HTTP, "req: Closing connection for non-idempotent "
                  "request.\n");
         ne_close_connection(req->session);
@@ -1239,7 +1240,7 @@ int ne_begin_request(ne_request *req)
         } else {
             /* fail for an invalid content-length header. */
             return aborted(req, _("Invalid Content-Length in response"), 0);
-        }            
+        }
     } else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }

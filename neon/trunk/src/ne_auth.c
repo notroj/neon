@@ -207,6 +207,8 @@ struct auth_request {
 /* Used if this Authentication-Info may be sent for non-40[17]
  * response for this protocol. */
 #define AUTH_FLAG_VERIFY_NON40x (0x0002)
+/* Used for broken the connection-based auth schemes. */
+#define AUTH_FLAG_CONN_AUTH (0x0004)
 
 struct auth_protocol {
     unsigned id; /* public NE_AUTH_* id. */
@@ -1004,15 +1006,15 @@ static const struct auth_protocol protocols[] = {
 #ifdef HAVE_GSSAPI
     { NE_AUTH_NEGOTIATE, 30, "Negotiate",
       negotiate_challenge, request_negotiate, verify_negotiate_response,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
 #ifdef HAVE_SSPI
     { NE_AUTH_NEGOTIATE, 30, "NTLM",
       sspi_challenge, request_sspi, NULL,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
     { NE_AUTH_NEGOTIATE, 30, "Negotiate",
       sspi_challenge, request_sspi, NULL,
-      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x },
+      AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
     { 0 }
 };
@@ -1239,14 +1241,6 @@ static void ah_pre_send(ne_request *r, void *cookie, ne_buffer *request)
 	    ne_buffer_concat(request, sess->spec->req_hdr, ": ", value, NULL);
 	    ne_free(value);
 	}
-
-#ifdef HAVE_SSPI
-        if (sess->sspi_token) {
-            /* Prevent connection closure due to use of non-idempotent
-             * request.  Completely broken, but so is the protocol. */
-            ne_set_request_flag(r, NE_REQFLAG_IDEMPOTENT, 1);
-        }
-#endif
     }
 
 }
@@ -1304,6 +1298,12 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 	    clean_session(sess);
 	    ret = sess->spec->fail_code;
 	}
+        
+        /* Set or clear the conn-auth flag according to whether this
+         * was an accepted challenge for a borked protocol. */
+        ne_set_session_flag(sess->sess, NE_SESSFLAG_CONNAUTH,
+                            sess->protocol 
+                            && (sess->protocol->flags & AUTH_FLAG_CONN_AUTH));
     }
 #ifdef HAVE_SSPI
     else if (sess->sspi_context) {
