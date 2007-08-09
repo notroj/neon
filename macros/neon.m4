@@ -514,7 +514,8 @@ AC_DEFUN([NEON_FORMAT], [
 
 AC_REQUIRE([NEON_FORMAT_PREP])
 
-AC_CHECK_SIZEOF($1, [$2])
+AC_CHECK_SIZEOF($1,, [AC_INCLUDES_DEFAULT
+$2])
 
 dnl Work out which specifier character to use
 m4_ifdef([ne_spec], [m4_undefine([ne_spec])])
