@@ -547,7 +547,7 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
     NE_DEBUG(NE_DBG_XMLPARSE, "XML: XML_Parse returned %d\n", ret);
     if (ret == 0 && p->failure == 0) {
 	ne_snprintf(p->error, ERR_SIZE,
-		    "XML parse error at line %d: %s", 
+		    "XML parse error at line %" NE_FMT_XML_SIZE ": %s", 
 		    XML_GetCurrentLineNumber(p->parser),
 		    XML_ErrorString(XML_GetErrorCode(p->parser)));
 	p->failure = 1;
