@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -313,6 +313,29 @@ static int addr_compare(void)
 
     ne_iaddr_free(ia1);
     ne_iaddr_free(ia2);
+    return OK;
+}
+
+static int addr_reverse(void)
+{
+    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    char buf[128];
+
+    ONN("ne_iaddr_make returned NULL", ia == NULL);
+
+    ONN("reverse lookup for 127.0.0.1 failed",
+        ne_iaddr_reverse(ia, buf, sizeof buf) != 0);
+
+    ONV(!(strcmp(buf, "localhost.localdomain") == 0
+          || strcmp(buf, "localhost") == 0),
+        ("reverse lookup for 127.0.0.1 got %s", buf));
+
+    char *c = canonical_dns("www.manyfish.co.uk");
+    ONV(strcmp(c, "monolith.manyfish.co.uk"),
+        ("canon failed: %s", c));
+
+    ne_iaddr_free(ia);
+
     return OK;
 }
 
@@ -1041,6 +1064,7 @@ ne_test tests[] = {
     T(addr_make_v4),
     T(addr_make_v6),
     T(addr_compare),
+    T(addr_reverse),
     T(just_connect),
     T(addr_connect),
     T(read_close),

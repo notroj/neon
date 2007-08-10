@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2006, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2007, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -953,6 +953,23 @@ char *ne_iaddr_print(const ne_inet_addr *ia, char *buf, size_t bufsiz)
     ne_strnzcpy(buf, inet_ntoa(*ia), bufsiz);
 #endif
     return buf;
+}
+
+int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
+{
+#ifdef USE_GETADDRINFO
+    return getnameinfo(ia->ai_addr, ia->ai_addrlen, buf, bufsiz,
+                       NULL, 0, 0);
+#else
+    struct hostent *hp;
+    
+    hp = gethostbyaddr(ia, sizeof *ia, AF_INET);
+    if (hp && hp->h_name) {
+        ne_strnzcpy(buf, hp->h_name, bufsiz);
+        return 0;
+    }
+    return -1;
+#endif
 }
 
 void ne_addr_destroy(ne_sock_addr *addr)
