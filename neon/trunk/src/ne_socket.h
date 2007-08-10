@@ -110,6 +110,11 @@ ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia);
  * buffer 'buffer', which is of length 'bufsiz'.  Returns 'buffer'. */
 char *ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
 
+/* Perform the reverse name lookup on network address 'ia', placing
+ * the returned name in the 'buf' buffer (of length 'bufsiz') if
+ * successful.  Returns zero on success, or non-zero on error. */
+int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz);
+
 /* Destroy a network address object created using ne_iaddr_make. */
 void ne_iaddr_free(ne_inet_addr *addr);
 

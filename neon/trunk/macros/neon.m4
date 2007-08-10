@@ -631,7 +631,7 @@ NE_SEARCH_LIBS(getaddrinfo, nsl,,
       AC_MSG_NOTICE([getaddrinfo support disabled on HP-UX 11.0x/11.1x]) ;;
    *)
      ne_enable_gai=yes
-     NE_CHECK_FUNCS(gai_strerror inet_ntop,,[ne_enable_gai=no; break]) ;;
+     NE_CHECK_FUNCS(gai_strerror getnameinfo inet_ntop,,[ne_enable_gai=no; break]) ;;
    esac
 ])
 
