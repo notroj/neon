@@ -1224,15 +1224,23 @@ int ne_begin_request(ne_request *req)
      * regardless of what headers are present. */
     if (req->method_is_head || st->code == 204 || st->code == 304) {
     	req->resp.mode = R_NO_BODY;
-    } else if (get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
-                                      "transfer-encoding")) {
-        /* Treat *any* t-e header as implying a chunked response
-         * regardless of value, per the "Protocol Compliance"
-         * statement in the manual. */
-        req->resp.mode = R_CHUNKED;
-        req->resp.body.chunk.remain = 0;
-    } else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
-                                               "content-length")) != NULL) {
+    }
+    /* Broken intermediaries exist which use "transfer-encoding: identity"
+     * to mean "no transfer-coding".  So that case must be ignored. */
+    else if ((value = get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
+                                             "transfer-encoding")) != NULL
+             && ne_strcasecmp(value, "identity") != 0) {
+        /* Otherwise, fail iff an unknown transfer-coding is used. */
+        if (ne_strcasecmp(value, "chunked") == 0) {
+            req->resp.mode = R_CHUNKED;
+            req->resp.body.chunk.remain = 0;
+        }
+        else {
+            return aborted(req, _("Unknown transfer-coding in response"), 0);
+        }
+    } 
+    else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
+                                             "content-length")) != NULL) {
         ne_off_t len = ne_strtoff(value, NULL, 10);
         if (len != NE_OFFT_MAX && len >= 0) {
             req->resp.mode = R_CLENGTH;
