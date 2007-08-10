@@ -303,13 +303,15 @@ static int te_header(void)
 			   "\r\n" ABCDE_CHUNKS);
 }
 
-/* test that the presence of *any* t-e header implies a chunked
- * response. */
-static int any_te_header(void)
+static int te_identity(void)
 {
-    return expect_response("abcde", single_serve_string, RESP200
-                           "Transfer-Encoding: punked\r\n" "\r\n"
-                           ABCDE_CHUNKS);
+    /* http://bugzilla.gnome.org/show_bug.cgi?id=310636 says privoxy
+     * uses the "identity" transfer-coding. */
+    return expect_response("abcde", single_serve_string,
+			   RESP200 "Transfer-Encoding: identity\r\n"
+                           "Content-Length: 5\r\n"
+			   "\r\n"
+                           "abcde");
 }
 
 static int chunk_numeric(void)
@@ -1558,6 +1560,9 @@ static int fail_on_invalid(void)
     static const struct {
         const char *resp, *error;
     } ts[] = {
+        /* non-chunked TE. */
+        { RESP200 "transfer-encoding: punked\r\n" "\r\n" ABCDE_CHUNKS ,
+          "Unknown transfer-coding" },
         /* chunk without trailing CRLF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcdeFISH", 
           "delimiter was invalid" },
@@ -2042,7 +2047,7 @@ ne_test tests[] = {
     T(no_headers),
     T(chunks),
     T(te_header),
-    T(any_te_header),
+    T(te_identity),
     T(reason_phrase),
     T(chunk_numeric),
     T(chunk_extensions),
