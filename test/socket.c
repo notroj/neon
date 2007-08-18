@@ -330,10 +330,6 @@ static int addr_reverse(void)
           || strcmp(buf, "localhost") == 0),
         ("reverse lookup for 127.0.0.1 got %s", buf));
 
-    char *c = canonical_dns("www.manyfish.co.uk");
-    ONV(strcmp(c, "monolith.manyfish.co.uk"),
-        ("canon failed: %s", c));
-
     ne_iaddr_free(ia);
 
     return OK;
