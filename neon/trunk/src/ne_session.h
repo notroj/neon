@@ -186,7 +186,8 @@ void ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
 
 /* Indicate that the certificate 'cert' is trusted; the 'cert' object
- * is duplicated internally so can be destroyed by the caller. */
+ * is duplicated internally so can be destroyed by the caller.  This
+ * function has no effect for non-SSL sessions. */
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
 
 /* If the SSL library provided a default set of CA certificates, trust

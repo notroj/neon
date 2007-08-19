@@ -1491,6 +1491,17 @@ static int cache_cert(void)
     return OK;
 }
 
+static int nonssl_trust(void)
+{
+    ne_session *sess = ne_session_create("http", "www.example.com", 80);
+    
+    ne_ssl_trust_cert(sess, def_ca_cert);
+    
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 /* TODO: code paths still to test in cert verification:
  * - server cert changes between connections: Mozilla gives
  * a "bad MAC decode" error for this; can do better?
@@ -1569,6 +1580,8 @@ ne_test tests[] = {
     T(auth_proxy_tunnel),
     T(auth_tunnel_creds),
     T(auth_tunnel_fail),
+
+    T(nonssl_trust),
 
     T(NULL) 
 };

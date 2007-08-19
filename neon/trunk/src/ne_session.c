@@ -305,7 +305,9 @@ void ne_ssl_provide_clicert(ne_session *sess,
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 {
 #ifdef NE_HAVE_SSL
-    ne_ssl_context_trustcert(sess->ssl_context, cert);
+    if (sess->ssl_context) {
+        ne_ssl_context_trustcert(sess->ssl_context, cert);
+    }
 #endif
 }
 
