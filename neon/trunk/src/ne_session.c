@@ -201,11 +201,21 @@ int ne_get_session_flag(ne_session *sess, ne_session_flag flag)
     return -1;
 }
 
-void ne_set_progress(ne_session *sess, 
-		     ne_progress progress, void *userdata)
+static void progress_notifier(void *userdata, ne_session_status status,
+                              const ne_session_status_info *info)
+{
+    ne_session *sess = userdata;
+
+    if (status == ne_status_sending || status == ne_status_recving) {
+        sess->progress_cb(sess->progress_ud, info->sr.progress, info->sr.total);    
+    }
+}
+
+void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata)
 {
     sess->progress_cb = progress;
     sess->progress_ud = userdata;
+    ne_set_notifier(sess, progress_notifier, sess);
 }
 
 void ne_set_notifier(ne_session *sess,
