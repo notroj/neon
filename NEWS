@@ -1,11 +1,11 @@
 Changes in release 0.27.0:
 * New interfaces:
- - ne_session.h: ne_fill_proxy_uri() to retrieve configured proxy 
- - ne_hook_post_headers() to hook in after response headers are read
- - ne_socket.h: ne_sock_connect_timeout() sets connection timeout
- - ne_session.h: ne_set_connect_timeout() sets session connection timeout,
-   NE_SESSFLAG_RFC4918 enables use of backwards-incompatible DAV features,
-   NE_SESSFLAG_CONNAUTH enables workarounds for broken auth schemes
+ - ne_session.h: ne_fill_proxy_uri() retrieves configured proxy,
+   ne_hook_post_headers() adds a hook after response headers are read,
+   ne_set_connect_timeout() sets session connection timeout,
+   NE_SESSFLAG_RFC4918, NE_SESSFLAG_CONNAUTH flags added
+ - ne_socket.h: ne_sock_connect_timeout() sets connection timeout,
+   ne_iaddr_reverse() performs reverse DNS lookup
  - ne_string.h: ne_buffer_snprintf() prints to a buffer object
  - ne_xml.h: ne_xml_resolve_nspace() resolves namespace prefixes
 * Interface changes:
@@ -15,12 +15,16 @@ Changes in release 0.27.0:
    response entities with an XML content-type, following RFC 3023 rules
  - ne_acl_set() now takes a "const" entries array
  - LFS compatibility functions *64 removed: all functions taking an
- off_t now take an ne_off_t which is off64_t for LFS builds
+   off_t now take an ne_off_t which is off64_t for LFS builds
 * GnuTLS support now on par with OpenSSL:
  - greatly improved SSL distinguished name handling with >= GnuTLS 1.7.8
-* Other improvements and fixes:
+* Other changes:
+ - descriptive error messages for authentication failures
+ - SSPI support uses canonical DNS server name (Yves Martin)
  - fixes for handling of "stale" parameter in Digest authentication
  - added support for URIs in SSL server certificate subjectAltName field
+ - fix compiler warnings with expat 2.x
+ - fix handling of "Transfer-Encoding: identity" responses from privoxy
 
 Changes in release 0.26.4:
 * Fix Negotiate Authentication-Info response header verification with GSSAPI
