@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs12.h>
