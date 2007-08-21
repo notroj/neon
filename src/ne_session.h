@@ -85,10 +85,18 @@ int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
  * must remain valid until the session is destroyed. */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
-/* Progress callback. */
+/* DEPRECATED: Progress callback. */
 typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
 
-/* Set a progress callback for the session. */
+/* DEPRECATED API: Set a progress callback for the session; this is
+ * deprecated in favour of ne_set_notifier().  The progress callback
+ * is invoked for after each block of the request and response body to
+ * indicate request and response progress (there is no way to
+ * distinguish between the two using this interface alone).
+ *
+ * NOTE: Use of this interface is mutually exclusive with the use of
+ * ne_set_notifier().  A call to ne_set_progress() removes the
+ * notifier callback, and vice versa. */
 void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
 
 /* Store an opaque context for the session, 'priv' is returned by a
@@ -143,7 +151,11 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
 /* Set a status notification callback for the session, to report
  * session status events.  Only one notification callback per session
  * can be registered; the most recent of successive calls to this
- * function takes effect. */
+ * function takes effect. Note that 
+ *
+ * NOTE: Use of this interface is mutually exclusive with the use of
+ * ne_set_progress().  A call to ne_set_notifier() removes the
+ * progress callback, and vice versa. */
 void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
 
 /* Certificate verification failures.

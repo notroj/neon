@@ -219,11 +219,6 @@ static void notify_status(ne_session *sess, ne_session_status status)
 {
     if (sess->notify_cb) {
 	sess->notify_cb(sess->notify_ud, status, &sess->status);
-        if (sess->progress_cb
-            && (status == ne_status_sending || status == ne_status_recving)) {
-            sess->progress_cb(sess->progress_ud, 
-                              sess->status.sr.progress, sess->status.sr.total);
-        }
     }
 }
 
