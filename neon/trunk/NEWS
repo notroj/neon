@@ -16,7 +16,7 @@ Changes in release 0.27.0:
  - ne_acl_set() now takes a "const" entries array
  - LFS compatibility functions *64 removed: all functions taking an
    off_t now take an ne_off_t which is off64_t for LFS builds
-* GnuTLS support now on par with OpenSSL:
+* GnuTLS support now mostly feature-complete with OpenSSL support:
  - greatly improved SSL distinguished name handling with GnuTLS >= 1.7.8
 * Other changes:
  - descriptive error messages for authentication failures
