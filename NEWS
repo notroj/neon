@@ -17,7 +17,7 @@ Changes in release 0.27.0:
  - LFS compatibility functions *64 removed: all functions taking an
    off_t now take an ne_off_t which is off64_t for LFS builds
 * GnuTLS support now on par with OpenSSL:
- - greatly improved SSL distinguished name handling with >= GnuTLS 1.7.8
+ - greatly improved SSL distinguished name handling with GnuTLS >= 1.7.8
 * Other changes:
  - descriptive error messages for authentication failures
  - SSPI support uses canonical DNS server name (Yves Martin)
