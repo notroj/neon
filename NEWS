@@ -1,14 +1,16 @@
 Changes in release 0.27.0:
-* New functions:
+* New interfaces:
  - ne_session.h: ne_fill_proxy_uri() to retrieve configured proxy 
  - ne_hook_post_headers() to hook in after response headers are read
  - ne_socket.h: ne_sock_connect_timeout() sets connection timeout
- - ne_session.h: ne_set_connect_timeout() sets session connection timeout
+ - ne_session.h: ne_set_connect_timeout() sets session connection timeout,
+   NE_SESSFLAG_RFC4918 enables use of backwards-incompatible DAV features,
+   NE_SESSFLAG_CONNAUTH enables workarounds for broken auth schemes
  - ne_string.h: ne_buffer_snprintf() prints to a buffer object
  - ne_xml.h: ne_xml_resolve_nspace() resolves namespace prefixes
-* API changes:
+* Interface changes:
  - ne_set_notifier() replaces ne_set_status(); finer-grained and type-safe
-   connection status information now provided
+   connection status information now provided; obsoletes ne_set_progress()
  - ne_xml_dispatch_request() now only invokes the XML parser for 
    response entities with an XML content-type, following RFC 3023 rules
  - ne_acl_set() now takes a "const" entries array
