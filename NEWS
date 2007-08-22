@@ -1,3 +1,8 @@
+Changes in release 0.27.1:
+* Fix response progress counter for notifier/progress callbacks.
+* Fix interface description for notifier interface to note that -1 
+  is used in sr.total for an "unknown" length, not 0.
+
 Changes in release 0.27.0:
 * New interfaces:
  - ne_session.h: ne_fill_proxy_uri() retrieves configured proxy,
