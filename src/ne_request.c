@@ -771,8 +771,7 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
 	return -1;
 
     if (readlen) {
-        req->session->status.sr.progress = 
-            resp->mode == R_CLENGTH ? resp->body.clen.total : 0;
+        req->session->status.sr.progress += readlen;
         notify_status(req->session, ne_status_recving);
     }
 
