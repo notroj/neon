@@ -1,7 +1,7 @@
 Changes in release 0.27.1:
-* Fix response progress counter for notifier/progress callbacks.
-* Fix interface description for notifier interface to note that -1 
-  is used in sr.total for an "unknown" length, not 0.
+* Fix response progress counter for notifier/progress callbacks
+* Fix interface description for ne_set_notifier() callback; sr.total
+  is set to -1 not 0 for an "unknown" length, not 0
 
 Changes in release 0.27.0:
 * New interfaces:

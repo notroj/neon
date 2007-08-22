@@ -74,6 +74,8 @@ fi
 # mini-expat doesn't pick up config.h
 CPPFLAGS="$CPPFLAGS -DXML_BYTE_ORDER=$ne_xml_border -DXML_DTD -I$1/xmlparse -I$1/xmltok"
 
+AC_DEFINE_UNQUOTED([NE_FMT_XML_SIZE], ["d"])
+
 # Use the bundled expat sources
 AC_LIBOBJ($2/xmltok/xmltok)
 AC_LIBOBJ($2/xmltok/xmlrole)
