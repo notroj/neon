@@ -2034,6 +2034,40 @@ static int status(void)
     return OK;
 }
 
+static int status_chunked(void)
+{
+    ne_session *sess;
+    ne_buffer *buf = ne_buffer_create();
+
+    CALL(make_session(&sess, single_serve_string, 
+                      RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
+
+    ne_set_notifier(sess, status_cb, buf);
+
+    CALL(any_2xx_request_body(sess, "/status"));
+
+    ne_session_destroy(sess);
+    CALL(await_server());
+    
+    /* This sequence is not guaranted by the API, but it's what the
+     * current implementation should do. */
+    ONCMP("lookup(localhost)-"
+          "connecting(localhost,127.0.0.1)-"
+          "connected(localhost)-"
+          "send(0,5000)-"
+          "send(5000,5000)-"
+          "recv(0,-1)-"
+          "recv(1,-1)-"
+          "recv(2,-1)-"
+          "recv(3,-1)-"
+          "recv(4,-1)-"
+          "recv(5,-1)-"
+          "disconnected(localhost)-",
+          buf->data, "status events", "result");
+        
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -2118,5 +2152,6 @@ ne_test tests[] = {
     T(hook_self_destroy),
     T(icy_protocol),
     T(status),
+    T(status_chunked),
     T(NULL)
 };
