@@ -104,7 +104,9 @@ void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
 void ne_set_session_private(ne_session *sess, const char *id, void *priv);
 void *ne_get_session_private(ne_session *sess, const char *id);
 
-/* Status event type. */
+/* Status event type.  NOTE: More event types may be added in
+ * subsequent releases, so callers must ignore unknown status types
+ * for forwards-compatibility.  */
 typedef enum {
     ne_status_lookup = 0, /* looking up hostname */
     ne_status_connecting, /* connecting to host */
@@ -135,7 +137,7 @@ typedef union ne_session_status_info_u {
         const char *hostname;
     } cd;
     struct /* ne_status_sending and ne_status_recving */ {
-        /* Request/response body transfer progress; if total == 0, the
+        /* Request/response body transfer progress; if total == -1, the
          * total size is unknown; else 0 <= progress <= total:  */
         ne_off_t progress, total;
     } sr;
