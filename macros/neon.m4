@@ -136,9 +136,9 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
 NE_VERSION_MAJOR=0
-NE_VERSION_MINOR=27
+NE_VERSION_MINOR=28
 NE_VERSION_PATCH=0
-NE_VERSION_TAG=
+NE_VERSION_TAG=-dev
 
 # libtool library interface versioning.  Release policy dictates that
 # for neon 0.x.y, each x brings an incompatible interface change, and
@@ -147,10 +147,20 @@ NE_VERSION_TAG=
 # 1.x.y, this will become N + x == CURRENT, y == RELEASE, x == AGE,
 # where N is constant (and equal to CURRENT + 1 from the final 0.x
 # release)
-NEON_INTERFACE_VERSION="${NE_VERSION_MINOR}:${NE_VERSION_PATCH}:0"
+NE_LIBTOOL_VERSINFO="${NE_VERSION_MINOR}:${NE_VERSION_PATCH}:0"
 
 NE_DEFINE_VERSIONS
 
+])
+
+dnl Adds an ABI variation tag which will be added to the SONAME of
+dnl a shared library.  e.g. NE_ADD_ABITAG(FOO)
+AC_DEFUN([NE_ADD_ABITAG], [
+if test "x${NE_LIBTOOL_RELEASE}y" = "xy"; then
+   NE_LIBTOOL_RELEASE="$1"
+else
+   NE_LIBTOOL_RELEASE="${NE_LIBTOOL_RELEASE}-$1"
+fi
 ])
 
 dnl Define the minimum required versions, usage:
@@ -498,6 +508,7 @@ fi
 if test "$NE_FLAG_LFS" = "yes"; then
    AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
                       [Define to be printf format string for ne_off_t])
+   NE_ADD_ABITAG(LFS)
 else
    AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
 fi
@@ -756,6 +767,7 @@ if test "x$neon_no_webdav" = "xyes"; then
   # No WebDAV support
   NEONOBJS="$NEONOBJS \$(NEON_BASEOBJS)"
   NE_DISABLE_SUPPORT(DAV, [WebDAV support is not enabled])
+  NE_ADD_ABITAG(NODAV)
 else
   # WebDAV support
   NEONOBJS="$NEONOBJS \$(NEON_DAVOBJS)"
