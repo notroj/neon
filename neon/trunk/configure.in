@@ -62,13 +62,6 @@ NEON_BUILD_BUNDLED=yes
 # Define NEON_VERSION etc and make the appropriate substitutions.
 NE_VERSIONS_BUNDLED
 
-# Pass the interface version on to libtool when linking libneon.la
-NEON_LINK_FLAGS="-version-info ${NEON_INTERFACE_VERSION}"
-
-# Library-internal symbols are in the ne__ namespace: tell libtool
-# to not export these from the built library if possible.
-NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
-
 # Checks to compile test suite
 NEON_TEST
 
@@ -143,6 +136,17 @@ if test "$PKG_CONFIG" != "no"; then
    fi
 fi
 AC_SUBST(NEON_PC_LIBS)
+
+# Pass the interface version on to libtool when linking libneon.la
+NEON_LINK_FLAGS="-version-info ${NE_LIBTOOL_VERSINFO}"
+# If any non-default ABI variations are used, add them to the SONAME:
+if test "x${NE_LIBTOOL_RELEASE}y" != "xy"; then
+   NEON_LINK_FLAGS="${NEON_LINK_FLAGS} -release ${NE_LIBTOOL_RELEASE}"
+fi
+
+# Library-internal symbols are in the ne__ namespace: tell libtool
+# to not export these from the built library if possible.
+NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 
 # Bundled language catalogs
 ALL_LINGUAS="cs de fr ja nn ru tr zh"
