@@ -213,12 +213,12 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
 }
 
 /* Return non-zero if hostname from certificate (cn) matches hostname
- * used for session (hostname).  (Wildcard matching is no longer
- * mandated by RFC3280, but certs are deployed which use wildcards) */
+ * used for session (hostname).  Doesn't implement complete RFC 2818
+ * logic; omits "f*.example.com" support for simplicity. */
 static int match_hostname(char *cn, const char *hostname)
 {
     const char *dot;
-    NE_DEBUG(NE_DBG_SSL, "Match %s on %s...\n", cn, hostname);
+
     dot = strchr(hostname, '.');
     if (dot == NULL) {
 	char *pnt = strchr(cn, '.');
@@ -231,13 +231,14 @@ static int match_hostname(char *cn, const char *hostname)
 	hostname = dot + 1;
 	cn += 2;
     }
+
     return !ne_strcasecmp(cn, hostname);
 }
 
 /* Check certificate identity.  Returns zero if identity matches; 1 if
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
- * *identity. */
+ * *identity.  Logic specified by RFC 2818 and RFC 3280. */
 static int check_identity(const ne_uri *server, X509 *cert, char **identity)
 {
     STACK_OF(GENERAL_NAME) *names;
