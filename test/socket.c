@@ -727,7 +727,9 @@ static int to_end(ne_socket *sock)
 } while (0)
 #define TO_FINISH return to_end(sock)
 
+#ifndef TEST_CONNECT_TIMEOUT
 #define TEST_CONNECT_TIMEOUT 0
+#endif
 #if TEST_CONNECT_TIMEOUT
 
 /* No obvious way to reliably test a connect() timeout.  But
@@ -916,6 +918,7 @@ static int ssl_truncate(void)
 /* use W Richard Stevens' SO_LINGER trick to elicit a TCP RST */
 static int serve_reset(ne_socket *sock, void *ud)
 {
+    minisleep();
     reset_socket(sock);
     exit(0);
     return 0;
