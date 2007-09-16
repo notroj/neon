@@ -2030,7 +2030,9 @@ static int status(void)
           "recv(5,5)-"
           "disconnected(localhost)-",
           buf->data, "status events", "result");
-        
+    
+    ne_buffer_destroy(buf);
+    
     return OK;
 }
 
@@ -2064,6 +2066,8 @@ static int status_chunked(void)
           "recv(5,-1)-"
           "disconnected(localhost)-",
           buf->data, "status events", "result");
+
+    ne_buffer_destroy(buf);
         
     return OK;
 }
