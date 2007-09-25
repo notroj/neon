@@ -137,7 +137,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 # Define the current versions.
 NE_VERSION_MAJOR=0
 NE_VERSION_MINOR=27
-NE_VERSION_PATCH=0
+NE_VERSION_PATCH=2
 NE_VERSION_TAG=
 
 # libtool library interface versioning.  Release policy dictates that
