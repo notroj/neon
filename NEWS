@@ -1,3 +1,12 @@
+Changes in release 0.27.2:
+* Fix crash in GSSAPI Negotiate response header verification (regression
+  since 0.26.x)
+
+Changes in release 0.27.1:
+* Fix regression in response progress counter for notifier/progress callbacks
+* Fix interface description for ne_set_notifier() callback; sr.total
+  is set to -1 not 0 for an indeterminate response length
+
 Changes in release 0.27.0:
 * New interfaces:
  - ne_session.h: ne_fill_proxy_uri() retrieves configured proxy,
