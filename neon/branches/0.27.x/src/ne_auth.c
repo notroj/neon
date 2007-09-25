@@ -436,7 +436,8 @@ static void make_gss_error(ne_buffer *buf, int *flag,
 }
 
 /* Continue a GSS-API Negotiate exchange, using input TOKEN if
- * non-NULL.  Returns non-zero on error. */
+ * non-NULL.  Returns non-zero on error, in which case *errmsg is
+ * guaranteed to be non-NULL (i.e. an error message is set). */
 static int continue_negotiate(auth_session *sess, const char *token,
                               ne_buffer **errmsg)
 {
@@ -532,7 +533,7 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
     char *duphdr = ne_strdup(hdr);
     char *sep, *ptr = strchr(duphdr, ' ');
     int ret;
-    ne_buffer *errmsg;
+    ne_buffer *errmsg = NULL;
 
     if (strncmp(hdr, "Negotiate", ptr - duphdr) != 0) {
         ne_set_error(sess->sess, _("Negotiate response verification failed: "
@@ -560,8 +561,10 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
         ne_set_error(sess->sess, _("Negotiate response verification failure: %s"),
                      errmsg->data);
     }
-    ne_buffer_destroy(errmsg);
+
+    if (errmsg) ne_buffer_destroy(errmsg);
     ne_free(duphdr);
+
     return ret ? NE_ERROR : NE_OK;
 }
 #endif
