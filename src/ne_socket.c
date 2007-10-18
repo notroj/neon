@@ -1468,8 +1468,8 @@ int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen)
         return -1;
     }
 
-    memcpy(buf, sess->session_id, *buflen);
     *buflen = sess->session_id_length;
+    memcpy(buf, sess->session_id, *buflen);
     return 0;
 #endif
 #else
