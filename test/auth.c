@@ -700,6 +700,13 @@ static int serve_digest(ne_socket *sock, void *userdata)
 
     SEND_STRING(sock, resp);
 
+    /* Give up now if we've sent a challenge which should force the
+     * client to fail immediately: */
+    if (parms->failure == fail_bogus_alg
+        || parms->failure == fail_req0_stale) {
+        return OK;
+    }
+
     do {
         CALL(discard_request(sock));
 
