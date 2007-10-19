@@ -1027,14 +1027,14 @@ static int ssl_session_id(void)
     {
         size_t len2;
 
-        len2 = len1;
+        len2 = sizeof buf;
         ONN("could not retrieve session id",
             ne_sock_sessid(sock, buf, &len2));
         
         ONN("buffer size changed!?", len1 != len2);
     }        
 
-    ONN("buffer written past end", 
+    ONN("buffer written past expected end", 
         len1 < sizeof buf && buf[len1] != 'Z');
 
     /* Attempt retrieval into too-short buffer: */
