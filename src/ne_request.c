@@ -798,9 +798,9 @@ static ne_buffer *build_request(ne_request *req)
     /* Add custom headers: */
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
 
-#define E100 "Expect: 100-continue" EOL
-    if (req->flags[NE_REQFLAG_EXPECT100])
-	ne_buffer_append(buf, E100, strlen(E100));
+    if (req->flags[NE_REQFLAG_EXPECT100]) {
+        ne_buffer_czappend(buf, "Expect: 100-continue\r\n");
+    }
 
     NE_DEBUG(NE_DBG_HTTP, "Running pre_send hooks\n");
     for (hk = req->session->pre_send_hooks; hk!=NULL; hk = hk->next) {
@@ -808,7 +808,7 @@ static ne_buffer *build_request(ne_request *req)
 	fn(req, hk->userdata, buf);
     }
     
-    ne_buffer_append(buf, "\r\n", 2);
+    ne_buffer_czappend(buf, "\r\n");
     return buf;
 }
 
