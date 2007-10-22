@@ -1113,11 +1113,9 @@ ne_socket *ne_sock_create(void)
 #ifdef USE_GETADDRINFO
 #define ia_family(a) ((a)->ai_family)
 #define ia_proto(a)  ((a)->ai_protocol)
-#define ia_saddr(a)  ((a)->ai_addr)
 #else
 #define ia_family(a) AF_INET
 #define ia_proto(a)  0
-#define ia_saddr(a)  (*a)
 #endif
 
 void ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
@@ -1165,8 +1163,13 @@ static int do_bind(int fd, int peer_family,
 
         if (addr == &dummy_laddr)
             memset(&in, 0, sizeof in);
-        else
-            memcpy(&in, ia_saddr(addr), sizeof in);
+        else {
+#ifdef USE_GETADDRINFO
+            memcpy(&in, addr->ai_addr, sizeof in);
+#else
+            in.sin_addr = *addr;
+#endif
+        }
         in.sin_port = htons(port);
         in.sin_family = AF_INET;
 
@@ -1245,7 +1248,7 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
     memcpy(ia->ai_addr, sad, len);
     ia->ai_family = sad->sa_family;
 #else
-    memcpy(ia, &saun.sin.s_addr, sizeof *ia);
+    memcpy(ia, &saun.sin.sin_addr.s_addr, sizeof *ia);
 #endif    
 
 #ifdef USE_GETADDRINFO
