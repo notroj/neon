@@ -192,11 +192,15 @@ struct iofns {
     int (*readable)(ne_socket *s, int n);
 };
 
+static const ne_inet_addr dummy_laddr;
+
 struct ne_socket_s {
     int fd;
     char error[200];
     void *progress_ud;
     int rdtimeout, cotimeout; /* timeouts */
+    const ne_inet_addr *laddr;
+    unsigned int lport;
     const struct iofns *ops;
 #ifdef NE_HAVE_SSL
     ne_ssl_socket ssl;
@@ -1105,18 +1109,79 @@ ne_socket *ne_sock_create(void)
     return sock;
 }
 
+
+#ifdef USE_GETADDRINFO
+#define ia_family(a) ((a)->ai_family)
+#define ia_proto(a)  ((a)->ai_protocol)
+#define ia_saddr(a)  ((a)->ai_addr)
+#else
+#define ia_family(a) AF_INET
+#define ia_proto(a)  0
+#define ia_saddr(a)  (*a)
+#endif
+
+void ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
+                     unsigned int port)
+{
+    sock->lport = port;
+    sock->laddr = addr ? addr : &dummy_laddr;    
+}
+
+/* Bind socket 'fd' to address/port 'addr' and 'port', for subsequent
+ * connect() to address of family 'peer_family'. */
+static int do_bind(int fd, int peer_family, 
+                   const ne_inet_addr *addr, unsigned int port)
+{
+#if defined(HAVE_SETSOCKOPT) && defined(SO_REUSEADDR) && defined(SOL_SOCKET)
+    {
+        int flag = 1;
+
+        (void) setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof flag);
+        /* An error here is not fatal, so ignore it. */
+    }
+#endif        
+    
+
+#ifdef USE_GETADDRINFO
+    /* Use a sockaddr_in6 if an AF_INET6 local address is specifed, or
+     * if no address is specified and the peer address is AF_INET6: */
+    if ((addr != &dummy_laddr && addr->ai_family == AF_INET6)
+        || (addr == &dummy_laddr && peer_family == AF_INET6)) {
+        struct sockaddr_in6 in6;
+        
+        if (addr == &dummy_laddr)
+            memset(&in6, 0, sizeof in6);
+        else
+            memcpy(&in6, addr->ai_addr, sizeof in6);
+        in6.sin6_port = htons(port);
+        /* fill in the _family field for AIX 4.3, which forgets to do so. */
+        in6.sin6_family = AF_INET6;
+
+        return bind(fd, (struct sockaddr *)&in6, sizeof in6);
+    } else
+#endif
+    {
+	struct sockaddr_in in;
+
+        if (addr == &dummy_laddr)
+            memset(&in, 0, sizeof in);
+        else
+            memcpy(&in, ia_saddr(addr), sizeof in);
+        in.sin_port = htons(port);
+        in.sin_family = AF_INET;
+
+        return bind(fd, (struct sockaddr *)&in, sizeof in);
+    }
+}
+
 int ne_sock_connect(ne_socket *sock,
                     const ne_inet_addr *addr, unsigned int port)
 {
     int fd, ret;
 
-#ifdef USE_GETADDRINFO
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
      * implementations do not set ai_socktype, e.g. RHL6.2. */
-    fd = socket(addr->ai_family, SOCK_STREAM, addr->ai_protocol);
-#else
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-#endif
+    fd = socket(ia_family(addr), SOCK_STREAM, ia_proto(addr));
     if (fd < 0) {
         set_strerror(sock, ne_errno);
 	return -1;
@@ -1129,6 +1194,17 @@ int ne_sock_connect(ne_socket *sock,
         return NE_SOCK_ERROR;
     }
 #endif
+
+    if (sock->laddr && (sock->laddr == &dummy_laddr || 
+                        ia_family(sock->laddr) == ia_family(addr))) {
+        ret = do_bind(fd, ia_family(addr), sock->laddr, sock->lport);
+        if (ret < 0) {
+            int errnum = errno;
+            ne_close(fd);
+            set_strerror(sock, errnum);
+            return NE_SOCK_ERROR;
+        }
+    }
 
 #if defined(TCP_NODELAY) && defined(HAVE_SETSOCKOPT) && defined(IPPROTO_TCP)
     { /* Disable the Nagle algorithm; better to add write buffering
@@ -1143,6 +1219,43 @@ int ne_sock_connect(ne_socket *sock,
         sock->fd = fd;
 
     return ret;
+}
+
+ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
+{
+    union saun {
+        struct sockaddr_in sin;
+#ifdef USE_GETADDRINFO
+        struct sockaddr_in6 sin6;
+#endif
+    } saun;
+    socklen_t len = sizeof saun;
+    ne_inet_addr *ia;
+    struct sockaddr *sad = (struct sockaddr *)&saun;
+
+    if (getpeername(sock->fd, sad, &len) != 0) {
+        set_strerror(sock, errno);
+        return NULL;
+    }
+
+    ia = ne_calloc(sizeof *ia);
+#ifdef USE_GETADDRINFO
+    ia->ai_addr = ne_malloc(sizeof *ia);
+    ia->ai_addrlen = len;
+    memcpy(ia->ai_addr, sad, len);
+    ia->ai_family = sad->sa_family;
+#else
+    memcpy(ia, &saun.sin.s_addr, sizeof *ia);
+#endif    
+
+#ifdef USE_GETADDRINFO
+    *port = ntohs(sad->sa_family == AF_INET ? 
+                  saun.sin.sin_port : saun.sin6.sin6_port);
+#else
+    *port = ntohs(saun.sin.sin_port);
+#endif
+
+    return ia;
 }
 
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)

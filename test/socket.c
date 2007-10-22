@@ -214,9 +214,10 @@ static int resolve_ipv6(void)
 #endif
 
 static const unsigned char raw_127[4] = "\x7f\0\0\01", /* 127.0.0.1 */
-raw6_nuls[16] = /* :: */ "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+    raw6_nuls[16] = /* :: */ "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 #ifdef TEST_IPV6
 static const unsigned char 
+raw6_local[16] = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1",
 raw6_cafe[16] = /* feed::cafe */ "\xfe\xed\0\0\0\0\0\0\0\0\0\0\0\0\xca\xfe",
 raw6_babe[16] = /* cafe:babe:: */ "\xca\xfe\xba\xbe\0\0\0\0\0\0\0\0\0\0\0\0";
 #endif
@@ -360,6 +361,34 @@ static int addr_connect(void)
     CALL(await_server());
 
     ne_iaddr_free(ia);
+    return OK;
+}
+
+static int addr_peer(void)
+{
+    ne_socket *sock = ne_sock_create();
+    ne_inet_addr *ia, *ia2;
+    unsigned int port = 9999;
+    int ret;
+
+    ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    ONN("ne_iaddr_make returned NULL", ia == NULL);
+    
+    CALL(spawn_server(7777, serve_close, NULL));
+    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
+
+    ia2 = ne_sock_peer(sock, &port);
+    ret = ne_iaddr_cmp(ia, ia2);
+    ONV(ret != 0,
+        ("comparison of peer with server address was %d", ret));
+
+    ONV(port != 7777, ("got peer port %u", port));
+ 
+    ne_sock_close(sock);
+    CALL(await_server());
+
+    ne_iaddr_free(ia);
+    ne_iaddr_free(ia2);
     return OK;
 }
 
@@ -561,12 +590,11 @@ static int line_expect(ne_socket *sock, const char *line)
 {
     ssize_t ret = ne_sock_readline(sock, buffer, BUFSIZ);
     size_t len = strlen(line);
+    NE_DEBUG(NE_DBG_SOCKET, " -> expected=%s -> actual=%s", line, buffer);
     ONV(ret == NE_SOCK_CLOSED, ("socket closed, expecting `%s'", line));
     ONV(ret < 0, ("socket error `%s', expecting `%s'", 
 		  ne_sock_error(sock), line));
-    ONV((size_t)ret != len, 
-	("readline got %" NE_FMT_SSIZE_T ", expecting `%s'", ret, line));
-    ONV(strcmp(line, buffer),
+    ONV((size_t)ret != len || strcmp(line, buffer),
 	("readline mismatch: `%s' not `%s'", buffer, line));
     return OK;
 }
@@ -1052,6 +1080,74 @@ static int ssl_session_id(void)
     return await_server();
 }
 
+static int serve_ppeer(ne_socket *sock, void *ud)
+{
+    unsigned int port = 99999;
+    ne_inet_addr *ia = ne_sock_peer(sock, &port);
+    char buf[128], line[256];
+
+    if (ia == NULL)
+        ne_snprintf(line, sizeof line, "error: %s", ne_sock_error(sock));
+    else
+        ne_snprintf(line, sizeof line,
+                    "%s@%u\n", ne_iaddr_print(ia, buf, sizeof buf),
+                    port);
+
+    CALL(full_write(sock, line, strlen(line)));
+         
+    ne_iaddr_free(ia);
+    
+    return OK;
+}
+
+static int try_prebind(int addr, int port)
+{
+    ne_socket *sock = ne_sock_create();
+    ne_inet_addr *ia;
+    char buf[128], line[256];
+
+    ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    ONN("ne_iaddr_make returned NULL", ia == NULL);
+    
+    CALL(spawn_server(7777, serve_ppeer, NULL));
+
+    ne_sock_prebind(sock, addr ? ia : NULL, port ? 7778 : 0);
+
+    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
+
+    ne_snprintf(line, sizeof line,
+                "%s@%d\n", ne_iaddr_print(ia, buf, sizeof buf),
+                7778);
+    
+    if (!port) {
+        /* Don't know what port will be chosen, so... */
+        ssize_t ret = ne_sock_readline(sock, buffer, BUFSIZ);
+        
+        ONV(ret < 0, ("socket error `%s'", ne_sock_error(sock)));
+
+        ONV(strncmp(line, buffer, strchr(line, '@') - line) != 0,
+            ("bad address: '%s', expecting '%s'",
+             buffer, line));
+    }
+    else {
+        LINE(line);
+    }
+
+    ne_sock_close(sock);
+    CALL(await_server());
+
+    ne_iaddr_free(ia);
+    return OK;
+}
+
+static int prebind(void)
+{
+    CALL(try_prebind(1, 0));
+    CALL(try_prebind(0, 1));
+    CALL(try_prebind(1, 1));
+
+    return OK;
+}
 
 ne_test tests[] = {
     T(multi_init),
@@ -1066,6 +1162,7 @@ ne_test tests[] = {
     T(addr_reverse),
     T(just_connect),
     T(addr_connect),
+    T(addr_peer),
     T(read_close),
     T(peek_close),
     T(single_read),
@@ -1086,6 +1183,7 @@ ne_test tests[] = {
     T(large_writes),
     T(echo_lines),
     T(blocking),
+    T(prebind),
 #ifdef SOCKET_SSL
     T(ssl_closure),
     T(ssl_truncate),
