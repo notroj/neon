@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -121,6 +121,18 @@ void ne_iaddr_free(ne_inet_addr *addr);
 /* Create a socket object; returns NULL on error. */
 ne_socket *ne_sock_create(void);
 
+/* Specify an address to which the local end of the socket will be
+ * bound during a subsequent ne_sock_connect() call.  If the address
+ * passed to ne_sock_connect() is of a different type (family) to
+ * 'addr', 'addr' is ignored.  Either 'addr' may be NULL, to use the
+ * given port with unspecified address, or 'port' may be 0, to use the
+ * given address with an unspecified port.
+ *
+ * (Note: This function is not equivalent to a BSD socket bind(), it
+ * only takes effect during the _connect() call). */
+void ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
+                     unsigned int port);
+
 /* Connect the socket to server at address 'addr' on port 'port'.
  * Returns zero on success, NE_SOCK_TIMEOUT if a timeout occurs when a
  * non-zero connect timeout is configured (and is supported), or
@@ -173,6 +185,10 @@ int ne_sock_accept(ne_socket *sock, int fd);
 
 /* Returns the file descriptor used for socket 'sock'. */
 int ne_sock_fd(const ne_socket *sock);
+
+/* Return address of peer, or NULL on error.  The returned address
+ * must be destroyed by caller using ne_iaddr_free. */
+ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port);
 
 /* Close the socket and destroy the socket object.  Returns zero on
  * success, or an errno value if close() failed. */
