@@ -196,11 +196,11 @@ static const ne_inet_addr dummy_laddr;
 
 struct ne_socket_s {
     int fd;
-    char error[200];
+    unsigned int lport;
+    const ne_inet_addr *laddr;
+
     void *progress_ud;
     int rdtimeout, cotimeout; /* timeouts */
-    const ne_inet_addr *laddr;
-    unsigned int lport;
     const struct iofns *ops;
 #ifdef NE_HAVE_SSL
     ne_ssl_socket ssl;
@@ -210,10 +210,12 @@ struct ne_socket_s {
      * advances through ->buffer.  ->bufavail gives the number of
      * bytes which remain to be consumed in ->buffer (from ->bufpos),
      * and is hence always <= RDBUFSIZ. */
-#define RDBUFSIZ 4096
-    char buffer[RDBUFSIZ];
     char *bufpos;
     size_t bufavail;
+#define RDBUFSIZ 4096
+    char buffer[RDBUFSIZ];
+    /* Error string. */
+    char error[192];
 };
 
 /* ne_sock_addr represents an Internet address. */
