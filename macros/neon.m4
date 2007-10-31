@@ -680,7 +680,7 @@ else
 fi
 
 AC_CHECK_TYPES(socklen_t,,
-/* Linux accept(2) says this should be size_t for SunOS 5... gah. */
+# Linux accept(2) says this should be size_t for SunOS 5... gah.
 [AC_DEFINE([socklen_t], [int], 
                         [Define if socklen_t is not available])],[
 #ifdef HAVE_SYS_TYPES_H
