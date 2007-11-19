@@ -10,10 +10,6 @@ For one-point-oh
 Longer term
 -----------
 
-2. Add proper domain support to authentication code. (requires full
-   URI parsing support). Need to tell the auth layer the server
-   details.
-
 6. PUT with ranges... ne_put_range
 
 9. DeltaV support (http://www.webdav.org/deltav/). See also the

@@ -107,9 +107,7 @@ struct auth_handler {
 struct auth_challenge {
     const struct auth_protocol *protocol;
     struct auth_handler *handler;
-    const char *realm;
-    const char *nonce;
-    const char *opaque;
+    const char *realm, *nonce, *opaque, *domain;
     unsigned int stale; /* if stale=true */
     unsigned int got_qop; /* we were given a qop directive */
     unsigned int qop_auth; /* "auth" token in qop attrib */
@@ -178,6 +176,8 @@ typedef struct {
     char *nonce;
     char *cnonce;
     char *opaque;
+    char **domains; /* list of paths given as domain. */
+    size_t ndomains; /* size of domains array */
     auth_qop qop;
     auth_algorithm alg;
     unsigned int nonce_count;
@@ -244,6 +244,16 @@ struct auth_protocol {
 static void challenge_error(ne_buffer **errmsg, const char *fmt, ...)
     ne_attribute((format(printf, 2, 3)));
 
+/* Free the domains array, precondition sess->ndomains > 0. */
+static void free_domains(auth_session *sess)
+{
+    do {
+        ne_free(sess->domains[sess->ndomains - 1]);
+    } while (--sess->ndomains);
+    ne_free(sess->domains);
+    sess->domains = NULL;
+}
+
 static void clean_session(auth_session *sess) 
 {
     if (sess->basic) ne_free(sess->basic);
@@ -257,6 +267,7 @@ static void clean_session(auth_session *sess)
         ne_md5_destroy_ctx(sess->stored_rdig);
         sess->stored_rdig = NULL;
     }
+    if (sess->ndomains) free_domains(sess);
 #ifdef HAVE_GSSAPI
     {
         unsigned int major;
@@ -612,6 +623,61 @@ static int sspi_challenge(auth_session *sess, int attempt,
 }
 #endif
 
+/* Parse the "domain" challenge parameter and set the domains array up
+ * in the session appropriately. */
+static int parse_domain(auth_session *sess, const char *domain)
+{
+    char *cp = ne_strdup(domain), *p = cp;
+    ne_uri base = {0};
+    int invalid = 0;
+
+    ne_fill_server_uri(sess->sess, &base);
+
+    do {
+        char *token = ne_token(&p, ',');
+        ne_uri rel, absolute;
+        
+        if (ne_uri_parse(token, &rel) == 0) {
+            /* Resolve relative to the Request-URI. */
+            ne_uri_resolve(&base, &rel, &absolute);
+
+            base.path = absolute.path;
+            
+            /* Ignore URIs not on this server. */
+            if (ne_uri_cmp(&absolute, &base) == 0) {
+                sess->domains = ne_realloc(sess->domains, 
+                                           ++sess->ndomains *
+                                           sizeof(*sess->domains));
+                sess->domains[sess->ndomains - 1] = ne_strdup(absolute.path);
+                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using domain %s from %s\n",
+                         absolute.path, token);
+                absolute.path = NULL;
+            }
+            else {
+                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignoring domain %s\n",
+                         token);
+            }
+
+            ne_uri_free(&absolute);
+        }
+        else {
+            invalid = 1;
+        }
+        
+        ne_uri_free(&rel);
+        
+    } while (p && !invalid);
+
+    if (invalid && sess->ndomains) {
+        free_domains(sess);
+    }
+
+    ne_free(cp);
+    ne_uri_free(&base);
+
+    return invalid;
+}
+
 /* Examine a digest challenge: return 0 if it is a valid Digest challenge,
  * else non-zero. */
 static int digest_challenge(auth_session *sess, int attempt,
@@ -647,6 +713,14 @@ static int digest_challenge(auth_session *sess, int attempt,
     if (!parms->stale) {
         /* Non-stale challenge: clear session and request credentials. */
         clean_session(sess);
+
+        /* The domain paramater must be parsed after the session is
+         * cleaned; ignore domain for proxy auth. */
+        if (parms->domain && sess->spec == &ah_server_class
+            && parse_domain(sess, parms->domain)) {
+            challenge_error(errmsg, _("could not parse domain in Digest challenge"));
+            return -1;
+        }
 
         sess->realm = ne_strdup(parms->realm);
         sess->alg = parms->alg;
@@ -721,6 +795,30 @@ static int digest_challenge(auth_session *sess, int attempt,
     return 0;
 }
 
+/* Returns non-zero if given URI is inside the authentication domain
+ * defined for the session. */
+static int inside_domain(auth_session *sess, const char *uri)
+{
+    size_t n;
+    int inside = 0;
+    
+    /* For non-abs_path URIs, ignore. */
+    if (uri[0] != '/') {
+        return 1;
+    }
+
+    for (n = 0; n < sess->ndomains && !inside; n++) {
+        const char *d = sess->domains[n];
+        
+        inside = (d[strlen(d)-1] == '/' && strncmp(uri, d, strlen(d)) == 0)
+            || strcmp(d, uri) == 0;
+    }
+    
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Inside auth domain: %d.\n", inside);
+    
+    return inside;
+}            
+
 /* Return Digest authentication credentials header value for the given
  * session. */
 static char *request_digest(auth_session *sess, struct auth_request *req) 
@@ -730,6 +828,12 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     char nc_value[9] = {0};
     const char *qop_value = "auth"; /* qop-value */
     ne_buffer *ret;
+
+    /* Do not submit credentials if an auth domain is defined and this
+     * request-uri fails outside it. */
+    if (sess->ndomains && !inside_domain(sess, req->uri)) {
+        return NULL;
+    }
 
     /* Increase the nonce-count */
     if (sess->qop != auth_qop_none) {
@@ -1163,6 +1267,9 @@ static int auth_challenge(auth_session *sess, int attempt,
             
             chall->got_qop = chall->qop_auth;
 	}
+        else if (ne_strcasecmp(key, "domain") == 0) {
+            chall->domain = val;
+        }
     }
     
     sess->protocol = NULL;
