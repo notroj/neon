@@ -55,14 +55,13 @@
 
     <itemizedlist>
       <listitem><simpara>The <literal>SIGPIPE</literal> signal
-      disposition must be set to
-      <emphasis>ignored</emphasis>.</simpara></listitem>
+      disposition must be set to <emphasis>ignored</emphasis> or
+      otherwise handled to avoid process termination when writing to a
+      socket which has been shutdown by the peer.</simpara></listitem>
 
-      <listitem><simpara>OpenSSL requires global initialization to
-      load shared lookup tables.</simpara></listitem>
-
-      <listitem><simpara>The SOCKS library requires initialization
-      before use.</simpara></listitem>
+      <listitem><simpara>OpenSSL and GnuTLSrequire global
+      initialization to load shared lookup
+      tables.</simpara></listitem>
 
       <listitem><simpara>The Win32 socket library requires
       initialization before use.</simpara></listitem>
@@ -70,11 +69,15 @@
 
     The <xref linkend="ne_sock_init"/> function should be called
     before any other use of &neon; to perform any necessary
-    initialization needed for the particular platform.</para>
+    initialization needed for the particular platform.  Applications
+    wishing to perform all the necessary process-global initialization
+    steps themselves may omit to call <xref linkend="ne_sock_init"/>
+    (and <xref linkend="ne_sock_exit"/>); &neon; neither checks whether
+    these functions are called nor calls them itself.</para>
 
-    <para>For some applications it may be necessary to call <xref
-    linkend="ne_i18n_init"/> to initialize the internationalization
-    support in &neon;.</para>
+    <para>For some applications and configurations it may be necessary
+    to call <xref linkend="ne_i18n_init"/> to initialize the support
+    for internationalization in &neon;.</para>
 
   </refsect2>
 
@@ -142,7 +145,7 @@
         <term>gnutls_, gcry_, gpg_</term>
         <listitem><simpara>Namespaces used by the GnuTLS library (and
         dependencies thereof)</simpara></listitem>
-      </varlistentry>        
+      </varlistentry>
 
       <varlistentry>
 	<term>XML_, Xml[A-Z]</term> <listitem><simpara>Namespaces
@@ -229,6 +232,24 @@
     application to associate a context with the callback.  The
     userdata is of type <type>void *</type>, allowing any pointer to
     be used.</para>
+
+  </refsect2>
+
+  <refsect2>
+    <title>Large File Support</title>
+
+    <para>Since version 0.27.0, &neon; transparently uses the "LFS
+    transitional" interfaces in places where file-backed file
+    descriptors are manipulated.  This means files larger than 2GiB
+    can be handled on platforms with a native 32-bit
+    <literal>off_t</literal> type, where LFS support is
+    available.</para>
+
+    <para>Some interfaces use the <literal>ne_off_t</literal> type,
+    which is defined to be either <literal>off_t</literal> or
+    <literal>off64_t</literal> according to whether LFS support is
+    detected at build time.  &neon; does use or require the
+    <literal>-D_FILE_OFFSET_BITS=64</literal> macro definition.</para>
 
   </refsect2>
 
