@@ -1199,6 +1199,15 @@ int ne_sock_connect(ne_socket *sock,
         return NE_SOCK_ERROR;
     }
 #endif
+   
+#if defined(HAVE_FCNTL) && defined(F_GETFD) && defined(F_SETFD) \
+    && defined(FD_CLOEXEC)
+    /* Set the FD_CLOEXEC bit for the new fd. */
+    if ((ret = fcntl(fd, F_GETFD)) >= 0) {
+        fcntl(fd, F_SETFD, ret | FD_CLOEXEC);
+        /* ignore failure; not a critical error. */
+    }
+#endif
 
     if (sock->laddr && (sock->laddr == &dummy_laddr || 
                         ia_family(sock->laddr) == ia_family(addr))) {
