@@ -67,8 +67,10 @@ int ne_mkcol(ne_session *sess, const char *path);
 /* Adds a Depth: header to a request */
 void ne_add_depth_header(ne_request *req, int depth);
 
-/* Retrieve modification time of resource at location 'path', place in
- * *modtime.  (uses HEAD) */
+/* Retrieve modification time of resource at location 'path', using
+ * the HEAD method, placing parsed time in *modtime.  *modtime is set
+ * to -1 if no Last-Modified response header was given, or the date
+ * given could not be parsed. */
 int ne_getmodtime(ne_session *sess, const char *path, time_t *modtime);
 
 typedef struct {

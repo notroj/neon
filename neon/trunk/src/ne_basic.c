@@ -63,8 +63,12 @@ int ne_getmodtime(ne_session *sess, const char *uri, time_t *modtime)
     if (ret == NE_OK && ne_get_status(req)->klass != 2) {
 	*modtime = -1;
 	ret = NE_ERROR;
-    } else if (value) {
+    } 
+    else if (value) {
         *modtime = ne_httpdate_parse(value);
+    }
+    else {
+        *modtime = -1;
     }
 
     ne_request_destroy(req);
