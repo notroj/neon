@@ -1170,7 +1170,7 @@ static void challenge_error(ne_buffer **errbuf, const char *fmt, ...)
         ne_buffer_append(*errbuf, err, len);
     }
     else {
-        ne_buffer_concat(*errbuf, _(", "), err, NULL);
+        ne_buffer_concat(*errbuf, ", ", err, NULL);
     }
 }
 
