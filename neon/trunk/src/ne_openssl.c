@@ -548,8 +548,10 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         SSL_CTX_set_options(ctx->ctx, SSL_OP_ALL);
     } else if (mode == NE_SSL_CTX_SERVER) {
         ctx->ctx = SSL_CTX_new(SSLv23_server_method());
+        SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
     } else {
         ctx->ctx = SSL_CTX_new(SSLv2_server_method());
+        SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
     }
     return ctx;
 }
