@@ -1231,6 +1231,8 @@ int ne_sock_connect(ne_socket *sock,
     ret = connect_socket(sock, fd, addr, htons(port));
     if (ret == 0)
         sock->fd = fd;
+    else
+        ne_close(fd);
 
     return ret;
 }
