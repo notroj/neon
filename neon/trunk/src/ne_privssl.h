@@ -39,6 +39,7 @@
 struct ne_ssl_context_s {
     SSL_CTX *ctx;
     SSL_SESSION *sess;
+    const char *hostname; /* for SNI */
 };
 
 typedef SSL *ne_ssl_socket;

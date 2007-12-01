@@ -70,6 +70,9 @@ typedef enum ne_session_flag_e {
                            * RFC-violating, connection-based HTTP
                            * authentication scheme is in use. */
 
+    NE_SESSFLAG_TLS_SNI, /* disable this flag to disable use of the
+                          * TLS Server Name Indication extension. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 

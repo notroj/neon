@@ -147,6 +147,7 @@ ne_session *ne_session_create(const char *scheme,
     if (sess->use_ssl) {
         sess->ssl_context = ne_ssl_context_create(0);
         sess->flags[NE_SESSFLAG_SSLv2] = 1;
+        sess->flags[NE_SESSFLAG_TLS_SNI] = 1;
     }
 #endif
 
