@@ -624,6 +624,10 @@ int ne__negotiate_ssl(ne_session *sess)
     int freechain = 0; /* non-zero if chain should be free'd. */
 
     NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
+    
+    /* Pass through the hostname if SNI is enabled. */
+    ctx->hostname = 
+        sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
 
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
 	if (ctx->sess) {

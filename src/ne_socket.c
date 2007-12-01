@@ -1505,6 +1505,17 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
     SSL_set_fd(ssl, sock->fd);
     sock->ops = &iofns_ssl;
+
+#ifdef SSL_set_tlsext_host_name
+    if (ctx->hostname) {
+        /* Try to enable SNI, but ignore failure (should only fail for
+         * >255 char hostnames, which are probably not legal
+         * anyway).  */
+        if (SSL_set_tlsext_host_name(ssl, ctx->hostname) != 1) {
+            ERR_clear_error();
+        }
+    }
+#endif
     
     if (ctx->sess)
 	SSL_set_session(ssl, ctx->sess);
