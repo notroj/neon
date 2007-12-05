@@ -802,26 +802,32 @@ static int digest_challenge(auth_session *sess, int attempt,
     return 0;
 }
 
-/* Returns non-zero if given URI is inside the authentication domain
- * defined for the session. */
-static int inside_domain(auth_session *sess, const char *uri)
+/* Returns non-zero if given Request-URI is inside the authentication
+ * domain defined for the session. */
+static int inside_domain(auth_session *sess, const char *req_uri)
 {
-    size_t n;
     int inside = 0;
+    size_t n;
+    ne_uri uri;
     
-    /* For non-abs_path URIs, ignore. */
-    if (uri[0] != '/') {
-        return 1;
+    /* Parse the Request-URI; it will be an absoluteURI if using a
+     * proxy, and possibly '*'. */
+    if (strcmp(req_uri, "*") == 0 || ne_uri_parse(req_uri, &uri) != 0) {
+        /* Presume outside the authentication domain. */
+        return 0;
     }
 
     for (n = 0; n < sess->ndomains && !inside; n++) {
         const char *d = sess->domains[n];
         
-        inside = (d[strlen(d)-1] == '/' && strncmp(uri, d, strlen(d)) == 0)
-            || strcmp(d, uri) == 0;
+        inside = (d[strlen(d)-1] == '/'
+                  && strncmp(uri.path, d, strlen(d)) == 0)
+            || strcmp(d, uri.path) == 0;
     }
     
-    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Inside auth domain: %d.\n", inside);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: '%s' is inside auth domain: %d.\n", 
+             uri.path, inside);
+    ne_uri_free(&uri);
     
     return inside;
 }            
