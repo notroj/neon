@@ -547,7 +547,8 @@ static int verify_digest_header(struct digest_state *state,
 
     DIGCMP(realm);
     DIGCMP(username);
-    DIGCMP(uri);
+    if (!parms->domain)
+        DIGCMP(uri);
     DIGCMP(nonce);
     DIGCMP(opaque);
     DIGCMP(algorithm);
@@ -558,6 +559,9 @@ static int verify_digest_header(struct digest_state *state,
         
     if (newstate.cnonce) {
         state->cnonce = ne_strdup(newstate.cnonce);
+    }
+    if (parms->domain) {
+        state->uri = ne_strdup(newstate.uri);
     }
 
     ONN("no digest param given", !state->digest);
@@ -721,22 +725,13 @@ static int serve_digest(ne_socket *sock, void *userdata)
         digest_hdr = NULL;
         CALL(discard_request(sock));
 
-        if (digest_hdr && parms->domain && (parms->num_requests & 1) == 0) {
+        if (digest_hdr && parms->domain && (parms->num_requests & 1) != 0) {
             SEND_STRING(sock, "HTTP/1.1 400 Used Auth Outside Domain\r\n\r\n");
             return OK;
         }
-        else if (parms->domain && (parms->num_requests & 1) == 0) {
+        else if (digest_hdr == NULL && parms->domain && (parms->num_requests & 1) != 0) {
             /* Do nothing. */
-        }
-        else if (parms->domain && parms->num_requests == 5) {
-            /* next URI */
-            state.uri = "/fish/2";
-        }
-        else if (parms->domain && parms->num_requests == 3) {
-            state.uri = "/other";
-        }
-        else if (parms->domain && parms->num_requests == 1) {
-            state.uri = "*";
+            NE_DEBUG(NE_DBG_HTTP, "No Authorization header sent, good.\n");
         }
         else {
             ONN("no Authorization header sent", digest_hdr == NULL);
@@ -1056,18 +1051,19 @@ static int domains(void)
     parms.rfc2617 = 1;
     parms.nonce = "agoog";
     parms.domain = "http://localhost:7777/fish/ https://example.com /agaor /other";
-    parms.num_requests = 7;
+    parms.num_requests = 6;
 
     CALL(make_session(&sess, serve_digest, &parms));
 
     ne_set_server_auth(sess, auth_cb, NULL);
+
+    ne_session_proxy(sess, "localhost", 7777);
 
     CALL(any_2xx_request(sess, "/fish/0"));
     CALL(any_2xx_request(sess, "/outside"));
     CALL(any_2xx_request(sess, "/other"));
     CALL(any_2xx_request(sess, "/fish"));
     CALL(any_2xx_request(sess, "/fish/2"));
-    CALL(any_2xx_request(sess, "/goop"));
     CALL(any_2xx_request(sess, "*"));
     
     ne_session_destroy(sess);
