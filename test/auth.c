@@ -1071,6 +1071,23 @@ static int domains(void)
     return await_server();
 }
 
+static int defaults(void)
+{
+    ne_session *sess;
+    
+    CALL(make_session(&sess, auth_serve, CHAL_WALLY));
+    ne_add_server_auth(sess, NE_AUTH_DEFAULT, auth_cb, NULL);
+    CALL(any_2xx_request(sess, "/norman"));
+    ne_session_destroy(sess);
+    CALL(await_server());
+
+    CALL(make_session(&sess, auth_serve, CHAL_WALLY));
+    ne_add_server_auth(sess, NE_AUTH_ALL, auth_cb, NULL);
+    CALL(any_2xx_request(sess, "/norman"));
+    ne_session_destroy(sess);
+    return await_server();
+}
+
 /* test logout */
 
 /* proxy auth, proxy AND origin */
@@ -1087,5 +1104,6 @@ ne_test tests[] = {
     T(fail_challenge),
     T(multi_handler),
     T(domains),
+    T(defaults),
     T(NULL)
 };

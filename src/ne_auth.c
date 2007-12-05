@@ -1475,6 +1475,18 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     auth_session *ahs;
     struct auth_handler **hdl;
 
+    /* Handle the _ALL and _DEFAULT protocol masks: */
+    if (protomask == NE_AUTH_ALL) {
+        protomask |= NE_AUTH_BASIC | NE_AUTH_DIGEST | NE_AUTH_NEGOTIATE;
+    }
+    else if (protomask == NE_AUTH_DEFAULT) {
+        protomask |= NE_AUTH_BASIC | NE_AUTH_DIGEST;
+        
+        if (strcmp(ne_get_scheme(sess), "https") == 0 || isproxy) {
+            protomask |= NE_AUTH_NEGOTIATE;
+        }
+    }
+
     ahs = ne_get_session_private(sess, id);
     if (ahs == NULL) {
         ahs = ne_calloc(sizeof *ahs);
@@ -1526,29 +1538,16 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     (*hdl)->attempt = 0;
 }
 
-static void auth_register_default(ne_session *sess, int isproxy,
-                                  const struct auth_class *ahc, const char *id,
-                                  ne_auth_creds creds, void *userdata) 
-{
-    unsigned protomask = NE_AUTH_BASIC|NE_AUTH_DIGEST;
-    
-    if (strcmp(ne_get_scheme(sess), "https") == 0 || isproxy) {
-        protomask |= NE_AUTH_NEGOTIATE;
-    }
-
-    auth_register(sess, isproxy, protomask, ahc, id, creds, userdata);
-}
-
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register_default(sess, 0, &ah_server_class, HOOK_SERVER_ID,
-                          creds, userdata);
+    auth_register(sess, 0, NE_AUTH_DEFAULT, &ah_server_class, HOOK_SERVER_ID,
+                  creds, userdata);
 }
 
 void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register_default(sess, 1, &ah_proxy_class, HOOK_PROXY_ID,
-                          creds, userdata);
+    auth_register(sess, 1, NE_AUTH_DEFAULT, &ah_proxy_class, HOOK_PROXY_ID,
+                  creds, userdata);
 }
 
 void ne_add_server_auth(ne_session *sess, unsigned protocol, 
