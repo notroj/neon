@@ -453,7 +453,7 @@ void ne_uri_free(ne_uri *u)
 char *ne_path_unescape(const char *uri) 
 {
     const char *pnt;
-    char *ret, *retpos, buf[5] = { "0x00\0" };
+    char *ret, *retpos, buf[5] = { "0x00" };
     retpos = ret = ne_malloc(strlen(uri) + 1);
     for (pnt = uri; *pnt != '\0'; pnt++) {
 	if (*pnt == '%') {
