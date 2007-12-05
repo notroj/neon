@@ -1534,6 +1534,11 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     gnutls_session_set_ptr(sock->ssl, userdata);
     gnutls_credentials_set(sock->ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
+    if (ctx->hostname) {
+        gnutls_server_name_set(sock->ssl, GNUTLS_NAME_DNS, ctx->hostname,
+                               strlen(ctx->hostname));
+    }                               
+
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
 
     if (ctx->cache.client.data) {
