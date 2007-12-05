@@ -225,6 +225,13 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
  * Returns zero on success, non-zero on error. */
 int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
 
+/* Return human-readable name of SSL/TLS cipher used for connection,
+ * or NULL if none.  The format of this string is not intended to be
+ * fixed or parseable, but is informational only.  Return value is
+ * NUL-terminated malloc-allocated string if not NULL, which must be
+ * freed by the caller. */
+char *ne_sock_cipher(ne_socket *sock);
+
 NE_END_DECLS
 
 #endif /* NE_SOCKET_H */
