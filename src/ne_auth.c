@@ -639,7 +639,7 @@ static int parse_domain(auth_session *sess, const char *domain)
     ne_fill_server_uri(sess->sess, &base);
 
     do {
-        char *token = ne_token(&p, ',');
+        char *token = ne_token(&p, ' ');
         ne_uri rel, absolute;
         
         if (ne_uri_parse(token, &rel) == 0) {
