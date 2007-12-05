@@ -633,9 +633,10 @@ static int sspi_challenge(auth_session *sess, int attempt,
 static int parse_domain(auth_session *sess, const char *domain)
 {
     char *cp = ne_strdup(domain), *p = cp;
-    ne_uri base = {0};
+    ne_uri base;
     int invalid = 0;
 
+    memset(&base, 0, sizeof base);
     ne_fill_server_uri(sess->sess, &base);
 
     do {
@@ -649,14 +650,14 @@ static int parse_domain(auth_session *sess, const char *domain)
             base.path = absolute.path;
             
             /* Ignore URIs not on this server. */
-            if (ne_uri_cmp(&absolute, &base) == 0) {
+            if (absolute.path && ne_uri_cmp(&absolute, &base) == 0) {
                 sess->domains = ne_realloc(sess->domains, 
                                            ++sess->ndomains *
                                            sizeof(*sess->domains));
-                sess->domains[sess->ndomains - 1] = ne_strdup(absolute.path);
+                sess->domains[sess->ndomains - 1] = absolute.path;
+                absolute.path = NULL;
                 NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using domain %s from %s\n",
                          absolute.path, token);
-                absolute.path = NULL;
             }
             else {
                 NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignoring domain %s\n",
@@ -678,6 +679,7 @@ static int parse_domain(auth_session *sess, const char *domain)
     }
 
     ne_free(cp);
+    base.path = NULL;
     ne_uri_free(&base);
 
     return invalid;
