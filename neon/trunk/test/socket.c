@@ -494,6 +494,7 @@ static int fullread_expect(ne_socket *sock, const char *str, size_t len)
     return OK;
 }
 
+#define FULLREAD(str) CALL(fullread_expect(sock, str, strlen(str)))
 
 /* Declare a struct string */
 #define DECL(var,str) struct string var = { str, 0 }; var.len = strlen(str)
@@ -544,7 +545,6 @@ static int small_reads(void)
 
 /* peek or read, expecting to get given string. */
 #define READ(str) CALL(read_expect(sock, str, strlen(str)))
-#define FULLREAD(str) CALL(fullread_expect(sock, str, strlen(str)))
 #define PEEK(str) CALL(peek_expect(sock, str, strlen(str)))
 
 /* Stress out the read buffer handling a little. */
@@ -831,6 +831,7 @@ static int serve_expect(ne_socket *sock, void *ud)
 static int full_write(ne_socket *sock, const char *data, size_t len)
 {
     int ret = ne_sock_fullwrite(sock, data, len);
+    NE_DEBUG(NE_DBG_SOCKET, "wrote: [%.*s]\n", (int)len, data);
     ONV(ret, ("write failed (%d): %s", ret, ne_sock_error(sock)));
     return OK;
 }
@@ -1149,6 +1150,47 @@ static int prebind(void)
     return OK;
 }
 
+static int serve_cipher(ne_socket *sock, void *ud)
+{
+    char *ciph = ne_sock_cipher(sock);
+    char *s = ciph && strlen(ciph) ? ciph : "NULL";
+
+    CALL(full_write(sock, s, strlen(s)));
+
+    if (ciph) ne_free(ciph);
+    
+    return OK;
+}
+
+static int cipher(void)
+{
+    ne_socket *sock;
+
+#ifdef SOCKET_SSL
+    char *ciph;
+
+    CALL(begin(&sock, serve_cipher, NULL));
+
+    ciph = ne_sock_cipher(sock);
+
+    ONN("NULL/empty cipher", ciph == NULL || strlen(ciph) == 0);
+
+    FULLREAD(ciph);
+    
+    ne_free(ciph);
+    
+#else
+    CALL(begin(&sock, serve_cipher, NULL));
+
+    ONN("non-NULL cipher for non-SSL socket", 
+        ne_sock_cipher(sock) != NULL);
+
+    FULLREAD("NULL");
+
+#endif
+    return finish(sock, 1);
+}
+
 ne_test tests[] = {
     T(multi_init),
     T_LEAKY(resolve),
@@ -1171,6 +1213,7 @@ ne_test tests[] = {
     T(read_and_peek),
     T(larger_read),
     T(ssl_session_id),
+    T(cipher),
     T(line_simple),
     T(line_closure),
     T(line_empty),
