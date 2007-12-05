@@ -45,6 +45,8 @@
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
+#elif defined(HAVE_GNUTLS)
+#include <gcrypt.h>
 #endif
 
 #include <errno.h>
@@ -296,11 +298,16 @@ static char *get_cnonce(void)
 
     hash = ne_md5_create_ctx();
 
+#ifdef HAVE_GNUTLS
+    gcry_create_nonce(data, sizeof data);
+    ne_md5_process_bytes(data, sizeof data, hash);
+#else
+
 #ifdef HAVE_OPENSSL
     if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
 	ne_md5_process_bytes(data, sizeof data, hash);
     else {
-#endif
+#endif /* HAVE_OPENSSL */
     /* Fallback sources of random data: all bad, but no good sources
      * are available. */
 
@@ -332,6 +339,7 @@ static char *get_cnonce(void)
 #ifdef HAVE_OPENSSL
     }
 #endif
+#endif /* HAVE_GNUTLS */
 
     ne_md5_finish_ascii(hash, ret);
     ne_md5_destroy_ctx(hash);
