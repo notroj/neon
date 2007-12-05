@@ -299,47 +299,44 @@ static char *get_cnonce(void)
     hash = ne_md5_create_ctx();
 
 #ifdef HAVE_GNUTLS
-    gcry_create_nonce(data, sizeof data);
-    ne_md5_process_bytes(data, sizeof data, hash);
-#else
-
-#ifdef HAVE_OPENSSL
-    if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0)
+    if (1) {
+        gcry_create_nonce(data, sizeof data);
+        ne_md5_process_bytes(data, sizeof data, hash);
+    }
+    else
+#elif defined(HAVE_OPENSSL)
+    if (RAND_status() == 1 && RAND_pseudo_bytes(data, sizeof data) >= 0) {
 	ne_md5_process_bytes(data, sizeof data, hash);
-    else {
+    } 
+    else 
 #endif /* HAVE_OPENSSL */
-    /* Fallback sources of random data: all bad, but no good sources
-     * are available. */
-
-    /* Uninitialized stack data; yes, happy valgrinders, this is
-     * supposed to be here. */
-    ne_md5_process_bytes(data, sizeof data, hash);
-    
+    {
+        /* Fallback sources of random data: all bad, but no good sources
+         * are available. */
+        
+        /* Uninitialized stack data; yes, happy valgrinders, this is
+         * supposed to be here. */
+        ne_md5_process_bytes(data, sizeof data, hash);
+        
+        {
 #ifdef HAVE_GETTIMEOFDAY
-    {
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) == 0)
-	    ne_md5_process_bytes(&tv, sizeof tv, hash);
-    }
+            struct timeval tv;
+            if (gettimeofday(&tv, NULL) == 0)
+                ne_md5_process_bytes(&tv, sizeof tv, hash);
 #else /* HAVE_GETTIMEOFDAY */
-    {
-	time_t t = time(NULL);
-	ne_md5_process_bytes(&t, sizeof t, hash);
-    }
+            time_t t = time(NULL);
+            ne_md5_process_bytes(&t, sizeof t, hash);
 #endif
-    {
+        }
+        {
 #ifdef WIN32
-	DWORD pid = GetCurrentThreadId();
+            DWORD pid = GetCurrentThreadId();
 #else
-	pid_t pid = getpid();
+            pid_t pid = getpid();
 #endif
-	ne_md5_process_bytes(&pid, sizeof pid, hash);
+            ne_md5_process_bytes(&pid, sizeof pid, hash);
+        }
     }
-
-#ifdef HAVE_OPENSSL
-    }
-#endif
-#endif /* HAVE_GNUTLS */
 
     ne_md5_finish_ascii(hash, ret);
     ne_md5_destroy_ctx(hash);
