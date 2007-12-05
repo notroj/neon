@@ -67,7 +67,7 @@ ne_ssl_certificate *ne_ssl_cert_import(const char *data);
 
 /* Returns the identity of the certificate, or NULL if none is given.
  * For a server certificate this will be the hostname of the server to
- * whom the cert was issued.  String returned is UTF-8-encoded. */
+ * which the cert was issued.  String returned is UTF-8-encoded. */
 const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert);
 
 /* Return the certificate of the entity which signed certificate
