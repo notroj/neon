@@ -54,6 +54,8 @@ struct ne_ssl_context_s {
     gnutls_certificate_credentials cred;
     int verify; /* non-zero if client cert verification required */
 
+    const char *hostname; /* for SNI */
+
     /* Session cache. */
     union ne_ssl_scache {
         struct {

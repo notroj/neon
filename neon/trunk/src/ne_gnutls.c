@@ -717,6 +717,10 @@ int ne__negotiate_ssl(ne_session *sess)
 
     NE_DEBUG(NE_DBG_SSL, "Negotiating SSL connection.\n");
 
+    /* Pass through the hostname if SNI is enabled. */
+    ctx->hostname = 
+        sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
+
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
 	ne_set_error(sess, _("SSL negotiation failed: %s"),
 		     ne_sock_error(sess->socket));
