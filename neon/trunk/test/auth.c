@@ -1055,7 +1055,7 @@ static int domains(void)
     parms.realm = "WallyWorld";
     parms.rfc2617 = 1;
     parms.nonce = "agoog";
-    parms.domain = "http://localhost:7777/fish/,https://example.com/agaor,/other";
+    parms.domain = "http://localhost:7777/fish/ https://example.com /agaor /other";
     parms.num_requests = 7;
 
     CALL(make_session(&sess, serve_digest, &parms));
