@@ -46,7 +46,9 @@ void ne_session_destroy(ne_session *sess);
  * session. */
 void ne_close_connection(ne_session *sess);
 
-/* Set the proxy server to be used for the session. */
+/* Set the proxy server to be used for the session.  This function
+ * must only be called before any requests are created for the
+ * session. */
 void ne_session_proxy(ne_session *sess,
 		      const char *hostname, unsigned int port);
 
