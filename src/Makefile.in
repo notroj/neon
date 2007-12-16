@@ -152,3 +152,6 @@ ne_acl.@NEON_OBJEXT@: ne_acl.c $(top_builddir)/config.h ne_request.h ne_utils.h 
 ne_openssl.@NEON_OBJEXT@: ne_openssl.c $(top_builddir)/config.h ne_ssl.h ne_defs.h ne_string.h \
   ne_alloc.h ne_session.h ne_uri.h ne_socket.h ne_internal.h ne_private.h \
   ne_request.h ne_utils.h ne_privssl.h
+ne_gnutls.@NEON_OBJEXT@: ne_gnutls.c $(top_builddir)/config.h ne_ssl.h ne_defs.h ne_string.h \
+  ne_alloc.h ne_session.h ne_uri.h ne_socket.h ne_internal.h ne_private.h \
+  ne_request.h ne_utils.h ne_privssl.h
