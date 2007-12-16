@@ -1049,6 +1049,14 @@ static int ssl_session_id(void)
     ONN("retrieve session id length",
         ne_sock_sessid(sock, NULL, &len1));
 
+    if (len1 == 0) {
+        /* recent versions of OpenSSL seem to do this, not sure
+         * why or whether it's bad. */
+        finish(sock, 1);
+        t_context("zero-length session ID, cannot test further");
+        return SKIP;
+    }            
+
     if (len1 < sizeof buf) {
         buf[len1] = 'Z';
     }
