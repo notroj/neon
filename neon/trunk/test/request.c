@@ -2051,7 +2051,7 @@ static int status_chunked(void)
     ne_session_destroy(sess);
     CALL(await_server());
     
-    /* This sequence is not guaranted by the API, but it's what the
+    /* This sequence is not guaranteed by the API, but it's what the
      * current implementation should do. */
     ONCMP("lookup(localhost)-"
           "connecting(localhost,127.0.0.1)-"
