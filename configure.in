@@ -183,7 +183,7 @@ memleak)
   AC_MSG_NOTICE([Configured with development-only flags:
 
 WARNING: This copy of neon has been configured with memory leak checking
-WARNING: enabled, which should only be used in a development copy of neon.
+WARNING: enabled, which should only be used in a development build of neon.
 WARNING: This neon library should not be installed for use by applications.
 ]);;
 esac
