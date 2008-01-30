@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -70,6 +70,9 @@ struct ne_session_s {
     /* application-provided address list */
     const ne_inet_addr **addrlist;
     size_t numaddrs, curaddr;
+
+    /* Local address to which sockets should be bound. */
+    const ne_inet_addr *local_addr;
 
     /* Settings */
     int use_proxy; /* do we have a proxy server? */

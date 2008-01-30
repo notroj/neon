@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -171,6 +171,11 @@ void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n)
 {
     sess->addrlist = addrs;
     sess->numaddrs = n;
+}
+
+void ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr)
+{
+    sess->local_addr = addr;    
 }
 
 void ne_set_error(ne_session *sess, const char *format, ...)
