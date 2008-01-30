@@ -164,7 +164,7 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
 /* Set a status notification callback for the session, to report
  * session status events.  Only one notification callback per session
  * can be registered; the most recent of successive calls to this
- * function takes effect. Note that 
+ * function takes effect.
  *
  * NOTE: Use of this interface is mutually exclusive with the use of
  * ne_set_progress().  A call to ne_set_notifier() removes the
