@@ -145,7 +145,7 @@ static int dispatch_to_fd(ne_request *req, int fd, const char *range)
         if (range && st->code == 206 
             && (value == NULL || strncmp(value, "bytes ", 6) != 0
                 || strncmp(range + 6, value + 6, rlen)
-                || value[6 + rlen] != '/')) {
+                || (range[5 + rlen] != '-' && value[6 + rlen] != '/'))) {
             ne_set_error(sess, _("Response did not include requested range"));
             return NE_ERROR;
         }
