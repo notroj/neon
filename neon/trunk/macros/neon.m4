@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2007 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2008 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -600,7 +600,7 @@ AC_REQUIRE([NE_SNPRINTF])
 AC_CACHE_CHECK([for timezone global], ne_cv_cc_timezone, [
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 #include <time.h>]],
-[[time_t t = 0 - timezone;]])],
+[[time_t t = 0 - timezone; timezone = 1;]])],
 ne_cv_cc_timezone=yes, ne_cv_cc_timezone=no)])
 
 if test "$ne_cv_cc_timezone" = "yes"; then
@@ -694,7 +694,7 @@ AC_CHECK_TYPES(socklen_t,,
 AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
   [#include <time.h>])
 
-if test $ac_cv_member_struct_tm_tm_gmtoff$ac_cv_member_struct_tm___tm_gmtoff = nono; then
+if test ${ac_cv_member_struct_tm_tm_gmtoff}${ac_cv_member_struct_tm___tm_gmtoff}${ne_cv_cc_timezone} = nonono; then
   AC_MSG_WARN([no timezone handling in date parsing on this platform])
 fi
 
