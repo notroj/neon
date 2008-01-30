@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -89,6 +89,12 @@ int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
  * addresses for this session, addrs[0]...addrs[n-1].  The addrs array
  * must remain valid until the session is destroyed. */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
+
+/* Bind connections to the specified local address.  If the address
+ * determined for the remote host has a different family (type) to
+ * 'addr', 'addr' will be ignored.  The 'addr' object must remain
+ * valid until the session is destroyed. */
+void ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr);
 
 /* DEPRECATED: Progress callback. */
 typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);

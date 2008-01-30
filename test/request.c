@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2072,6 +2072,26 @@ static int status_chunked(void)
     return OK;
 }
 
+static const unsigned char raw_127[4] = "\x7f\0\0\01"; /* 127.0.0.1 */
+
+static int local_addr(void)
+{
+    ne_session *sess;
+    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+
+    CALL(make_session(&sess, single_serve_string, RESP200 
+                      "Connection: close\r\n\r\n"));
+
+    ne_set_localaddr(sess, ia);
+
+    ONREQ(any_request(sess, "/foo"));
+
+    ne_session_destroy(sess);
+    ne_iaddr_free(ia);
+
+    return reap_server();
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -2157,5 +2177,6 @@ ne_test tests[] = {
     T(icy_protocol),
     T(status),
     T(status_chunked),
+    T(local_addr),
     T(NULL)
 };

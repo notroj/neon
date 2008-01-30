@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -1440,6 +1440,9 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 
     if (sess->cotimeout)
 	ne_sock_connect_timeout(sess->socket, sess->cotimeout);
+
+    if (sess->local_addr)
+        ne_sock_prebind(sess->socket, sess->local_addr, 0);
 
     if (host->current == NULL)
 	host->current = resolve_first(sess, host);
