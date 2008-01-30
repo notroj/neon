@@ -1757,24 +1757,22 @@ static int send_bad_offset(void)
 {
     ne_session *sess;
     ne_request *req;
-    char *fn = "empty.txt";
-    int ret, fd;
+    int ret, fds[2];
 
     CALL(make_session(&sess, single_serve_string,
                       RESP200 "Content-Length: 0\r\n" "\r\n"));
 
-    fd = open(fn, O_RDWR|O_CREAT);
-
-    ONV(fd < 0, ("could not find %s", fn));
+    /* create a pipe, on which seek is guaranteed to fail. */
+    ONN("could not create pipe", pipe(fds) != 0);
 
     req = ne_request_create(sess, "PUT", "/null");
 
-    ne_set_request_body_fd(req, fd, -500, 5);
+    ne_set_request_body_fd(req, fds[0], 500, 5);
     
     ret = ne_request_dispatch(req);
 
-    close(fd);
-    unlink(fn);
+    close(fds[0]);
+    close(fds[1]);
 
     ONN("request dispatched with bad offset!", ret == NE_OK);
     ONV(ret != NE_ERROR,
