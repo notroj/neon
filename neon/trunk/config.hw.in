@@ -57,7 +57,11 @@
 
 /* Win32 uses a underscore, so we use a macro to eliminate that. */
 #define snprintf			_snprintf
+/* VS2008 has this already defined */
+#if (_MSC_VER < 1500)
 #define vsnprintf			_vsnprintf
+#endif
+
 #if defined(_MSC_VER) && _MSC_VER >= 1400
 #define strcasecmp			_strcmpi
 #define strncasecmp			_strnicmp
