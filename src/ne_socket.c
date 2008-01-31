@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2007, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>, 
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -1462,7 +1462,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
         gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUEST);
 
     sock->ssl = ssl;
-    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr)(long)sock->fd);
     ret = gnutls_handshake(ssl);
     if (ret < 0) {
         return error_gnutls(sock, ret);
@@ -1539,7 +1539,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
                                strlen(ctx->hostname));
     }                               
 
-    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr) sock->fd);
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr)(long)sock->fd);
 
     if (ctx->cache.client.data) {
 #if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
