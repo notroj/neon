@@ -20,6 +20,7 @@ libdir = @libdir@
 mandir = @mandir@
 man1dir = $(mandir)/man1
 man3dir = $(mandir)/man3
+datarootdir = @datarootdir@
 datadir = @datadir@
 docdir = $(datadir)/doc/neon-@NEON_VERSION@
 includedir = @includedir@
