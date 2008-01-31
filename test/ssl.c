@@ -341,6 +341,16 @@ static int load_client_cert(void)
  
     cc = ne_ssl_clicert_exkey_read("nkclient.p12");
     ONN("failed to load clicert without pkey", cc == NULL);
+    ONN("unencrypted cert marked encrypted?", ne_ssl_clicert_encrypted(cc));
+    ne_ssl_clicert_free(cc);
+    
+    /* test for ccert without a cert, ncclient.p12 */
+    cc = ne_ssl_clicert_read("ncclient.p12");
+    ONN("did not fail to load clicert without cert", cc != NULL);
+
+    cc = ne_ssl_clicert_exkey_read("enkclient.p12");
+    ONN("failed to load clicert without pkey", cc == NULL);
+    ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
     ne_ssl_clicert_free(cc);
 
     /* tests for loading bogus files. */
