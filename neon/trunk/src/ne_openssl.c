@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -824,6 +824,11 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
             return NULL;
         }
     }
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_exkey_read(const char *filename)
+{
+    return NULL;
 }
 
 int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *cc)

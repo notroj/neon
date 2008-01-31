@@ -1,6 +1,6 @@
 /*
    neon SSL/TLS support using GNU TLS
-   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -69,6 +69,7 @@ struct ne_ssl_certificate_s {
 struct ne_ssl_client_cert_s {
     gnutls_pkcs12 p12;
     int decrypted; /* non-zero if successfully decrypted. */
+    int keyless;
     ne_ssl_certificate cert;
     gnutls_x509_privkey pkey;
     char *friendly_name;
@@ -502,13 +503,18 @@ static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
     ne_ssl_client_cert *newcc = ne_calloc(sizeof *newcc);
 
     newcc->decrypted = 1;
-
-    ret = gnutls_x509_privkey_init(&newcc->pkey);
-    if (ret != 0) goto dup_error;
-
-    ret = gnutls_x509_privkey_cpy(newcc->pkey, cc->pkey);
-    if (ret != 0) goto dup_error;
     
+    if (cc->keyless) {
+        newcc->keyless = 1;
+    }
+    else {
+        ret = gnutls_x509_privkey_init(&newcc->pkey);
+        if (ret != 0) goto dup_error;
+        
+        ret = gnutls_x509_privkey_cpy(newcc->pkey, cc->pkey);
+        if (ret != 0) goto dup_error;
+    }    
+
     newcc->cert.subject = x509_crt_copy(cc->cert.subject);
     if (!newcc->cert.subject) goto dup_error;
 
@@ -814,7 +820,8 @@ static int read_to_datum(const char *filename, gnutls_datum *datum)
 
 /* Parses a PKCS#12 structure and loads the certificate, private key
  * and friendly name if possible.  Returns zero on success, non-zero
- * on error. */
+ * on error. pkey may be NULL, in which case any contained private key
+ * is ignored. */
 static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
                         gnutls_x509_crt *x5, char **friendly_name,
                         const char *password)
@@ -850,6 +857,8 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
             switch (type) {
             case GNUTLS_BAG_PKCS8_KEY:
             case GNUTLS_BAG_PKCS8_ENCRYPTED_KEY:
+                if (!pkey) continue;
+
                 gnutls_x509_privkey_init(pkey);
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
@@ -891,7 +900,7 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
     return ret;
 }
 
-ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
+static ne_ssl_client_cert *read_client_cert(const char *filename, int key_required)
 {
     int ret;
     gnutls_datum data;
@@ -916,7 +925,15 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     }
 
     if (gnutls_pkcs12_verify_mac(p12, "") == 0) {
-        if (pkcs12_parse(p12, &pkey, &cert, &friendly_name, "") != 0) {
+        if (pkcs12_parse(p12, key_required ? &pkey : NULL, &cert, 
+                         &friendly_name, "") != 0) {
+            gnutls_pkcs12_deinit(p12);
+            return NULL;
+        }
+
+        if (!cert || (!pkey && key_required)) {
+            if (cert) gnutls_x509_crt_deinit(cert);
+            if (pkey) gnutls_x509_privkey_deinit(pkey);
             gnutls_pkcs12_deinit(p12);
             return NULL;
         }
@@ -924,6 +941,7 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
         cc = ne_calloc(sizeof *cc);
         cc->pkey = pkey;
         cc->decrypted = 1;
+        cc->keyless = !key_required;
         cc->friendly_name = friendly_name;
         populate_cert(&cc->cert, cert);
         gnutls_pkcs12_deinit(p12);
@@ -934,8 +952,19 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
          * seems to break horribly.  */
         cc = ne_calloc(sizeof *cc);
         cc->p12 = p12;
+        cc->keyless = !key_required;
         return cc;
     }
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
+{
+    return read_client_cert(filename, 1);
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_exkey_read(const char *filename)
+{
+    return read_client_cert(filename, 0);
 }
 
 int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *cc)
@@ -956,6 +985,12 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *cc, const char *password)
     ret = pkcs12_parse(cc->p12, &pkey, &cert, NULL, password);
     if (ret < 0)
         return ret;
+    
+    if (!cert || (!pkey && !cc->keyless)) {
+        if (cert) gnutls_x509_crt_deinit(cert);
+        if (pkey) gnutls_x509_privkey_deinit(pkey);
+        return -1;
+    }
 
     gnutls_pkcs12_deinit(cc->p12);
     populate_cert(&cc->cert, cert);
