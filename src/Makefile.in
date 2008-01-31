@@ -54,7 +54,7 @@ OBJECTS = @NEONOBJS@ @NEON_EXTRAOBJS@
 .SUFFIXES:
 .SUFFIXES: .c .lo .o
 
-.PHONY: all all-yes all-no libneon-gnutls libneon-no check-incl \
+.PHONY: all all-yes all-no libneon-gnutls libneon-none check-incl \
 	clean check-c++ update-deps
 
 all: all-@NEON_BUILD_BUNDLED@
@@ -63,7 +63,7 @@ all-no:
 	@echo "Bundled neon build not being used."
 
 libneon-gnutls: libneon-gnutls.@NEON_LIBEXT@
-libneon-no:
+libneon-none:
 	@:
 
 .c.lo:

@@ -158,7 +158,7 @@ install-lib: subdirs
 	$(LIBTOOL) --mode=install $(INSTALL) src/libneon.la \
 		$(DESTDIR)$(libdir)/libneon.la
 
-install-lib-ssl-no: 
+install-lib-ssl-none:
 install-lib-ssl-gnutls:
 	$(LIBTOOL) --mode=install $(INSTALL) src/libneon-@NE_SSL_LIBNAME@.la \
 		$(DESTDIR)$(libdir)/libneon-@NE_SSL_LIBNAME@.la
