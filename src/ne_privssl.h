@@ -79,6 +79,9 @@ struct ne_ssl_context_s {
 
 typedef gnutls_session ne_ssl_socket;
 
+ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
+                                                 size_t der_len);
+
 #endif /* HAVE_GNUTLS */
 
 ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
