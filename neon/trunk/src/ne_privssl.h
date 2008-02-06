@@ -1,6 +1,6 @@
 /* 
    SSL interface definitions internal to neon.
-   Copyright (C) 2003-2005, 2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2005, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -70,11 +70,6 @@ struct ne_ssl_context_s {
         } client;
 #endif
     } cache;
-
-#ifdef HAVE_GNUTLS_SIGN_CALLBACK_SET
-    gnutls_sign_func sign_func;
-    void *sign_data;
-#endif
 };
 
 typedef gnutls_session ne_ssl_socket;

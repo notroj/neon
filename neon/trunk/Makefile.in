@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2008 Joe Orton <joe@manyfish.co.uk>
+# Copyright (C) 2001-2006 Joe Orton <joe@manyfish.co.uk>
 # Copyright (C) 1994, 1995-8, 1999, 2000 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
@@ -59,11 +59,10 @@ MSGMERGE = msgmerge
 LINGUAS = @ALL_LINGUAS@
 
 # The headers to distribute - making up the public interface of neon
-DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h		\
-	ne_socket.h ne_basic.h ne_207.h ne_props.h ne_xml.h ne_dates.h	\
-	ne_string.h ne_defs.h ne_locks.h ne_alloc.h ne_md5.h ne_i18n.h	\
-	ne_redirect.h ne_auth.h ne_compress.h ne_acl.h ne_ssl.h		\
-	ne_xmlreq.h ne_gnutls.h
+DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \
+	ne_basic.h ne_207.h ne_props.h ne_xml.h ne_dates.h ne_string.h	  \
+	ne_defs.h ne_locks.h ne_alloc.h ne_md5.h ne_i18n.h ne_redirect.h  \
+	ne_auth.h ne_compress.h ne_acl.h ne_ssl.h ne_xmlreq.h
 
 all: subdirs
 
@@ -149,21 +148,13 @@ install-memleak:
 	@echo "ERROR: purposes only; this copy of neon must not be installed."
 	@false
 
-install-yes: install-lib install-headers install-config install-docs install-nls \
-	install-lib-ssl-@NE_SSL_LIBNAME@
+install-yes: install-lib install-headers install-config install-docs install-nls
 
 # libtool does all the necessary magic here
 install-lib: subdirs
 	$(INSTALL) -d $(DESTDIR)$(libdir)
 	$(LIBTOOL) --mode=install $(INSTALL) src/libneon.la \
 		$(DESTDIR)$(libdir)/libneon.la
-
-install-lib-ssl-none:
-install-lib-ssl-gnutls:
-	$(LIBTOOL) --mode=install $(INSTALL) src/libneon-@NE_SSL_LIBNAME@.la \
-		$(DESTDIR)$(libdir)/libneon-@NE_SSL_LIBNAME@.la
-	$(INSTALL_DATA) neon-@NE_SSL_LIBNAME@.pc \
-		$(DESTDIR)$(pkgconfigdir)/neon-@NE_SSL_LIBNAME@.pc
 
 install-headers:
 	$(INSTALL) -d $(DESTDIR)$(neonincludes)

@@ -1,6 +1,6 @@
 #! /bin/sh
 # Originally from libxml, Copyright (C) Daniel Veillard
-# Adapted for neon, Copyright (C) 2000-2008 Joe Orton.
+# Modifications for neon Copyright (C) 2000-2006 Joe Orton.
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -17,9 +17,7 @@ Known values for OPTION are:
   --prefix=DIR		change neon prefix [default $prefix]
   --libs		print library linking information
   --la-file		print location of libtool .la file
-  --la-file=gnutls	print location of libneon-gnutls .la file
   --cflags		print pre-processor and compiler flags
-  --cflags-gnutls       print additional CFLAGS needed by ne_gnutls.h
   --help		display this help and exit
   --version		output version information
   --support FEATURE     exit with success if feature is supported
@@ -70,14 +68,6 @@ while test $# -gt 0; do
 	usage 0
 	;;
 
-    --cflags=gnutls)
-        if [ "x@NE_SSL_LIBNAME@" = "xgnutls" ]; then
-            echo @NE_SSL_CFLAGS@ 
-        else
-            echo neon-config: GnuTLS toolkit interface not supported
-        fi
-        ;;
-
     --cflags)
        	echo -I${includedir}/neon @NEON_CFLAGS@
        	;;
@@ -95,14 +85,6 @@ while test $# -gt 0; do
 	echo ${libdir}/libneon.la
 	;;
 
-    --la-file=gnutls)
-        if [ "x@NE_SSL_LIBNAME@" = "xgnutls" ]; then
-            echo ${libdir}/libneon-gnutls.la
-        else
-            echo neon-config: GnuTLS toolkit interface not supported
-        fi
-        ;;
-
     --support)
 	shift
 
@@ -119,8 +101,7 @@ while test $# -gt 0; do
 	;;
 
     *)
-        echo "neon-config: unrecognized option $1, see --help" 1>&2
-        exit 1
+	usage 1 1>&2
 	;;
     esac
     shift

@@ -1,6 +1,6 @@
 /* 
    SSL/TLS abstraction layer for neon
-   Copyright (C) 2003-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2006, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -119,20 +119,10 @@ void ne_ssl_cert_free(ne_ssl_certificate *cert);
 /* A client certificate (and private key). */
 typedef struct ne_ssl_client_cert_s ne_ssl_client_cert;
 
-/* Read a client certificate and private key from a PKCS#12-format
- * file; returns NULL if the file could not be parsed, otherwise
- * returns a client certificate object. */
+/* Read a client certificate and private key from a PKCS12 file;
+ * returns NULL if the file could not be parsed, or otherwise
+ * returning a client certificate object. */
 ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
-
-/* Read a client certificate from a PKCS#12-format file which does not
- * contain a private key; returns NULL if the file could not be
- * parsed, or otherwise returns a client certificate object.  (Even if
- * the file does contain a private key, it will be ignored).
- *
- * The client cert object returned here must only be passed to
- * ne_ssl_set_clicert if an external signing callback is also used
- * (see ne_ssl_set_gnutls_signcb). */
-ne_ssl_client_cert *ne_ssl_clicert_exkey_read(const char *filename);
 
 /* Returns the "friendly name" given for the client cert, or NULL if
  * none given.  This can be called before or after the client cert has

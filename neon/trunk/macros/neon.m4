@@ -777,19 +777,18 @@ else
   NE_ENABLE_SUPPORT(DAV, [WebDAV support is enabled])
 fi
 
-AC_SUBST(NEON_LIBEXT)
+AC_SUBST(NEON_TARGET)
 AC_SUBST(NEON_OBJEXT)
 AC_SUBST(NEONOBJS)
 AC_SUBST(NEON_EXTRAOBJS)
-AC_SUBST(NE_LIBNEON_LTFLAGS)
-AC_SUBST(NE_LIBSSL_LTFLAGS)
+AC_SUBST(NEON_LINK_FLAGS)
 
 ])
 
 # The libtoolized build case:
 AC_DEFUN([NEON_LIBTOOL_BUILD], [
 
-NEON_LIBEXT=la
+NEON_TARGET=libneon.la
 NEON_OBJEXT=lo
 
 NEON_COMMON_BUILD($#, $*)
@@ -812,7 +811,7 @@ AC_PATH_TOOL(RANLIB, ranlib, :, $ne_PATH)
 # The non-libtool build case:
 AC_DEFUN([NEON_NORMAL_BUILD], [
 
-NEON_LIBEXT=a
+NEON_TARGET=libneon.a
 NEON_OBJEXT=o
 
 AC_REQUIRE([NE_FIND_AR])
@@ -882,8 +881,6 @@ AC_ARG_WITH(ssl,
 AC_ARG_WITH(egd,
 [[  --with-egd[=PATH]       enable EGD support [using EGD socket at PATH]]])
 
-NE_SSL_LIBNAME=none
-
 case $with_ssl in
 /*)
    AC_MSG_NOTICE([to use SSL libraries in non-standard locations, try --with-ssl --with-libs=$with_ssl])
@@ -952,8 +949,7 @@ gnutls)
       ;;
    esac
 
-   NE_SSL_CFLAGS=`$GNUTLS_CONFIG --cflags`
-   CPPFLAGS="$CPPFLAGS $NE_SSL_CFLAGS"   
+   CPPFLAGS="$CPPFLAGS `$GNUTLS_CONFIG --cflags`"
 
    AC_CHECK_HEADER([gnutls/gnutls.h],,
       [AC_MSG_ERROR([could not find gnutls/gnutls.h in include path])])
@@ -964,15 +960,12 @@ gnutls)
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
 
    # Check for functions in later releases
-   NE_CHECK_FUNCS([gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \
-                   gnutls_sign_callback_set])
+   NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava)
 
    # Check for iconv support if using the new RDN access functions:
    if test ${ac_cv_func_gnutls_x509_dn_get_rdn_ava}X${ac_cv_header_iconv_h} = yesXyes; then
       AC_CHECK_FUNCS(iconv)
    fi
-
-   NE_SSL_LIBNAME=gnutls
    ;;
 *) # Default to off; only create crypto-enabled binaries if requested.
    NE_DISABLE_SUPPORT(SSL, [SSL support is not enabled])
@@ -980,9 +973,7 @@ gnutls)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_stubssl"
    ;;
 esac
-
-AC_SUBST(NE_SSL_LIBNAME)
-AC_SUBST(NE_SSL_CFLAGS)
+AC_SUBST(NEON_SUPPORTS_SSL)
 
 AC_ARG_WITH(ca-bundle, 
   AS_HELP_STRING(--with-ca-bundle, specify filename of an SSL CA root bundle),,
