@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -797,14 +797,7 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     if (PKCS12_parse(p12, NULL, &pkey, &cert, NULL) == 1) {
         /* Success - no password needed for decryption. */
         int len = 0;
-        unsigned char *name;
-
-        if (!cert || !pkey) {
-            PKCS12_free(p12);
-            return NULL;
-        }
-
-        name = X509_alias_get0(cert, &len);
+        unsigned char *name = X509_alias_get0(cert, &len);
         
         cc = ne_calloc(sizeof *cc);
         cc->pkey = pkey;
@@ -831,11 +824,6 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
             return NULL;
         }
     }
-}
-
-ne_ssl_client_cert *ne_ssl_clicert_exkey_read(const char *filename)
-{
-    return NULL;
 }
 
 int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *cc)

@@ -6,7 +6,7 @@ m4_define(ne_version, [m4_translit(m4_include(.version), [
 
 AC_INIT(neon, ne_version, [neon@webdav.org])
 
-AC_COPYRIGHT([Copyright 2000-2008 Joe Orton and others
+AC_COPYRIGHT([Copyright 2000-2005 Joe Orton and others
 This configure script may be copied, distributed and modified under the 
 terms of the GNU Library General Public license; see src/COPYING.LIB for
 more details.])
@@ -138,17 +138,15 @@ fi
 AC_SUBST(NEON_PC_LIBS)
 
 # Pass the interface version on to libtool when linking libneon.la
-NE_LIBNEON_LTFLAGS="-version-info ${NE_LIBTOOL_VERSINFO}"
+NEON_LINK_FLAGS="-version-info ${NE_LIBTOOL_VERSINFO}"
 # If any non-default ABI variations are used, add them to the SONAME:
 if test "x${NE_LIBTOOL_RELEASE}y" != "xy"; then
-   NE_LIBNEON_LTFLAGS="${NE_LIBNEON_LTFLAGS} -release ${NE_LIBTOOL_RELEASE}"
+   NEON_LINK_FLAGS="${NEON_LINK_FLAGS} -release ${NE_LIBTOOL_RELEASE}"
 fi
 
 # Library-internal symbols are in the ne__ namespace: tell libtool
 # to not export these from the built library if possible.
-NE_LIBNEON_LTFLAGS="$NE_LIBNEON_LTFLAGS -export-symbols-regex '^ne_[[^_]]'"
-
-NE_LIBSSL_LTFLAGS="-version-info 1:0:0"
+NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 
 # Bundled language catalogs
 ALL_LINGUAS="cs de fr ja nn pl ru tr zh"
@@ -156,9 +154,6 @@ AC_SUBST(ALL_LINGUAS)
 
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
 AC_CONFIG_FILES([Makefile src/Makefile test/Makefile neon.pc])
-if test x$NE_SSL_LIBNAME = xgnutls; then
-   AC_CONFIG_FILES([neon-gnutls.pc])
-fi
 
 AC_SUBST(NEON_VERSION)
 AC_SUBST(NEON_BUILD_BUNDLED)
