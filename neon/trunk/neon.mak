@@ -116,6 +116,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_dates.obj" \
 	"$(INTDIR)\ne_i18n.obj" \
 	"$(INTDIR)\ne_md5.obj" \
+	"$(INTDIR)\ne_pkcs11.obj" \
 	"$(INTDIR)\ne_redirect.obj" \
 	"$(INTDIR)\ne_request.obj" \
 	"$(INTDIR)\ne_session.obj" \
@@ -174,6 +175,7 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_session.obj"
 	-@erase "$(INTDIR)\ne_openssl.obj"
 	-@erase "$(INTDIR)\ne_stubssl.obj"
+	-@erase "$(INTDIR)\ne_pkcs11.obj"
 	-@erase "$(INTDIR)\ne_socket.obj"
 	-@erase "$(INTDIR)\ne_sspi.obj"
 	-@erase "$(INTDIR)\ne_string.obj"
@@ -220,6 +222,7 @@ CLEAN: $(ZLIB_CLEAN)
 "$(INTDIR)\ne_session.obj":  .\src\ne_session.c
 "$(INTDIR)\ne_openssl.obj":  .\src\ne_openssl.c
 "$(INTDIR)\ne_stubssl.obj":  .\src\ne_stubssl.c
+"$(INTDIR)\ne_pkcs11.obj":   .\src\ne_pkcs11.c
 "$(INTDIR)\ne_socket.obj":   .\src\ne_socket.c
 "$(INTDIR)\ne_sspi.obj":     .\src\ne_sspi.c
 "$(INTDIR)\ne_string.obj":   .\src\ne_string.c

@@ -318,6 +318,13 @@ void ne_ssl_provide_clicert(ne_session *sess,
     sess->ssl_provide_ud = userdata;
 }
 
+void ne_ssl_set_pkcs11_pin(ne_session *sess, 
+                           ne_ssl_pkcs11_pin_fn fn, void *userdata)
+{
+    sess->ssl_pk11pin_fn = fn;
+    sess->ssl_pk11pin_ud = userdata;
+}
+
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 {
 #ifdef NE_HAVE_SSL
