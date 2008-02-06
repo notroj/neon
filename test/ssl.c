@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -294,8 +294,11 @@ static int load_client_cert(void)
     ONN("could not load client.p12", cc == NULL);
     ONN("client.p12 not encrypted!?", !ne_ssl_clicert_encrypted(cc));
     name = ne_ssl_clicert_name(cc);
-    ONN("no friendly name given", name == NULL);
-    ONV(strcmp(name, CC_NAME), ("friendly name was %s not %s", name, CC_NAME));
+    if (name == NULL) {
+        t_warning("no friendly name given");
+    } else {
+        ONV(strcmp(name, CC_NAME), ("friendly name was %s not %s", name, CC_NAME));
+    }
     ONN("failed to decrypt", ne_ssl_clicert_decrypt(cc, "foobar"));
     ne_ssl_clicert_free(cc);
 
@@ -325,12 +328,20 @@ static int load_client_cert(void)
     ONV(name != NULL, ("noclient.p12 had friendly name `%s'", name));
     ne_ssl_clicert_free(cc);
 
-    /* test for ccert without a friendly name, noclient.p12 */
+    /* test for ccert with a bundled CA. */
     cc = ne_ssl_clicert_read("clientca.p12");
     ONN("could not load clientca.p12", cc == NULL);
     ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
     ONN("could not decrypt clientca.p12", ne_ssl_clicert_decrypt(cc, "foobar"));
     ne_ssl_clicert_free(cc);
+
+    /* test for ccert without a private key, nkclient.p12 */
+    cc = ne_ssl_clicert_read("nkclient.p12");
+    ONN("did not fail to load clicert without pkey", cc != NULL);
+    
+    /* test for ccert without a cert, ncclient.p12 */
+    cc = ne_ssl_clicert_read("ncclient.p12");
+    ONN("did not fail to load clicert without cert", cc != NULL);
 
     /* tests for loading bogus files. */
     cc = ne_ssl_clicert_read("Makefile");

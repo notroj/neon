@@ -167,6 +167,15 @@ echo | ${MKPKCS12} -name "An Unencrypted Neon Client Cert" -out unclient.p12
 # generate a PKCS#12 cert with no friendly name
 echo | ${MKPKCS12} -out noclient.p12
 
+# generate a PKCS#12 cert with no private keys
+echo | ${MKPKCS12} -nokeys -out nkclient.p12
+
+# generate a PKCS#12 cert without the cert
+echo | ${MKPKCS12} -nokeys -out ncclient.p12
+
+# generate an encoded PKCS#12 cert with no private keys
+echo foobar | ${MKPKCS12} -nokeys -out enkclient.p12
+
 # a PKCS#12 cert including a bundled CA cert
 echo foobar | ${MKPKCS12} -certfile ca/cert.pem -name "A Neon Client Cert With CA" -out clientca.p12
 
