@@ -1124,11 +1124,13 @@ yes|no) AC_MSG_ERROR([--with-libs must be passed a directory argument]) ;;
      ne_add_CPPFLAGS="$ne_add_CPPFLAGS -I${dir}/include"
      ne_add_LDFLAGS="$ne_add_LDFLAGS -L${dir}/lib"
      ne_add_PATH="${ne_add_PATH}${dir}/bin:"
+     PKG_CONFIG_PATH=${PKG_CONFIG_PATH}${PKG_CONFIG_PATH+:}${dir}/lib/pkgconfig
    done
    IFS=$ne_save_IFS
    CPPFLAGS="${ne_add_CPPFLAGS} $CPPFLAGS"
    LDFLAGS="${ne_add_LDFLAGS} $LDFLAGS"
-   PATH=${ne_add_PATH}$PATH ;;
+   PATH=${ne_add_PATH}$PATH 
+   export PKG_CONFIG_PATH ;;
 esac])])
 
 AC_DEFUN([NEON_I18N], [
