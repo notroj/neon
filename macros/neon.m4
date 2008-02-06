@@ -960,7 +960,8 @@ gnutls)
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
 
    # Check for functions in later releases
-   NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava)
+   NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \ 
+                  gnutls_sign_callback_set)
 
    # Check for iconv support if using the new RDN access functions:
    if test ${ac_cv_func_gnutls_x509_dn_get_rdn_ava}X${ac_cv_header_iconv_h} = yesXyes; then
