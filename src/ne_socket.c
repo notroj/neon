@@ -1629,8 +1629,8 @@ int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen)
 
 char *ne_sock_cipher(ne_socket *sock)
 {
-    if (sock->ssl) {
 #ifdef NE_HAVE_SSL
+    if (sock->ssl) {
 #ifdef HAVE_OPENSSL
         const char *name = SSL_get_cipher(sock->ssl);
         return ne_strdup(name);
@@ -1638,9 +1638,10 @@ char *ne_sock_cipher(ne_socket *sock)
         const char *name = gnutls_cipher_get_name(gnutls_cipher_get(sock->ssl));
         return ne_strdup(name);
 #endif
-#endif /* NE_HAVE_SSL */
     }
-    else {
+    else 
+#endif /* NE_HAVE_SSL */
+    {
         return NULL;
     }    
 }
