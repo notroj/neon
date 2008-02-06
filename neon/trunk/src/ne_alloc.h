@@ -22,9 +22,9 @@
 #ifndef NE_ALLOC_H
 #define NE_ALLOC_H
 
-#ifdef WIN32
 #include <stdlib.h>
-#else
+
+#ifndef WIN32
 #include <sys/types.h>
 #endif
 
