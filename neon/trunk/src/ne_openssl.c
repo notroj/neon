@@ -797,7 +797,14 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     if (PKCS12_parse(p12, NULL, &pkey, &cert, NULL) == 1) {
         /* Success - no password needed for decryption. */
         int len = 0;
-        unsigned char *name = X509_alias_get0(cert, &len);
+        unsigned char *name;
+
+        if (!cert || !pkey) {
+            PKCS12_free(p12);
+            return NULL;
+        }
+
+        name = X509_alias_get0(cert, &len);
         
         cc = ne_calloc(sizeof *cc);
         cc->pkey = pkey;

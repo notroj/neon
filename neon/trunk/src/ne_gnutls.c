@@ -956,6 +956,12 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *cc, const char *password)
     ret = pkcs12_parse(cc->p12, &pkey, &cert, NULL, password);
     if (ret < 0)
         return ret;
+    
+    if (!cert || (!pkey && !cc->keyless)) {
+        if (cert) gnutls_x509_crt_deinit(cert);
+        if (pkey) gnutls_x509_privkey_deinit(pkey);
+        return -1;
+    }
 
     gnutls_pkcs12_deinit(cc->p12);
     populate_cert(&cc->cert, cert);
