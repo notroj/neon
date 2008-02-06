@@ -1,3 +1,25 @@
+Changes in release 0.28.0:
+* Interface changes:
+ - ne_acl.h: changed ne_acl_entry struct fields; apply->target,
+   principal->tname; all principles set via single "principles" 
+   bitfield using NE_ACL_* constants, inverting old logic (Henrik Holst)
+* New interfaces:
+ - ne_auth.h: added NE_AUTH_ALL and NE_AUTH_DEFAULT constants
+ - ne_socket.h: added ne_sock_peer(), ne_sock_prebind(), ne_sock_cipher()
+ - ne_session.h: NE_SESSFLAG_TLSSNI flag added; ne_set_localaddr() added
+* Other changes:
+ - add TLS SNI support and enabled by default (where supported)
+ - add Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
+ - add support for the 'domain' parameter in Digest authentication
+ - the FD_CLOEXEC flag is set on socket fds
+ - fix timezone handling in ne_dates for more platforms (Alessandro Vesely)
+ - fix ne_simple_propfind to print XML namespaces in flat property values
+ - fix ne_get_range() for unspecified end-range case (Henrik Holst)
+ - fix ne_strclean() to be locale-independent and avoid possible Win32 crash
+ - fix ne_get_error() to not "clean" localized error strings
+ - fix ne_ssl_clicert_read() to fail for client certs missing cert or key
+ - fix Win32 build with VS 2008 (Stefan Küng)
+ 
 Changes in release 0.27.0:
 * New interfaces:
  - ne_session.h: ne_fill_proxy_uri() retrieves configured proxy,
