@@ -28,7 +28,6 @@
 #include "ne_request.h"
 #include "ne_socket.h"
 #include "ne_ssl.h"
-#include "ne_pkcs11.h"
 
 struct host_info {
     char *hostname;
@@ -107,9 +106,6 @@ struct ne_session_s {
     /* Client cert provider callback: */
     ne_ssl_provide_fn ssl_provide_fn;
     void *ssl_provide_ud;
-
-    ne_ssl_pkcs11_pin_fn ssl_pk11pin_fn;
-    void *ssl_pk11pin_ud;
 
     ne_session_status_info status;
 
