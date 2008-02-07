@@ -329,7 +329,6 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
 static int match_hostname(char *cn, const char *hostname)
 {
     const char *dot;
-    NE_DEBUG(NE_DBG_SSL, "Match %s on %s...\n", cn, hostname);
     dot = strchr(hostname, '.');
     if (dot == NULL) {
 	char *pnt = strchr(cn, '.');
@@ -443,7 +442,10 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
         }
     }
 
-    NE_DEBUG(NE_DBG_SSL, "Identity match: %s\n", match ? "good" : "bad");
+    if (*hostname)
+        NE_DEBUG(NE_DBG_SSL, "ssl: Identity match for '%s': %s\n", hostname, 
+                 match ? "good" : "bad");
+
     return match ? 0 : 1;
 }
 
