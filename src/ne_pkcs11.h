@@ -79,12 +79,12 @@ void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider);
  * (and indefinitely) until either the returned PIN code is correct,
  * the callback returns failure, or the token refuses login (e.g. when
  * the token is locked due to too many incorrect PINs!).  For the
- * first such invocation, the 'attempt' counter will have value 1; it
- * will increase by one for each subsequent attempt.
+ * first such invocation, the 'attempt' counter will have value zero;
+ * it will increase by one for each subsequent attempt.
  *
- * The NE_SSL_P11PIN_COUNT_LOW and/or NE_SSL_P11PIN_FAST_TRY hints may
- * be set in the 'flags' argument, if these hints are made available
- * by the token. */
+ * The NE_SSL_P11PIN_COUNT_LOW and/or NE_SSL_P11PIN_FINAL_TRY hints
+ * may be set in the 'flags' argument, if these hints are made
+ * available by the token; not all tokens expose these hints. */
 typedef int (*ne_ssl_pkcs11_pin_fn)(void *userdata, int attempt,
                                     const char *slot_descr,
                                     const char *token_label,
