@@ -32,24 +32,17 @@
 #include "ne_private.h"
 #include "ne_privssl.h"
 
-struct pk11_context {
+struct ne_ssl_pkcs11_provider_s {
     pakchois_module_t *module;
+    ne_ssl_pkcs11_pin_fn pin_fn;
+    void *pin_data;
     pakchois_session_t *session;
+    ne_ssl_client_cert *clicert;
     ck_object_handle_t privkey;
 };
 
-static void pk11_destroy(void *userdata)
-{
-    struct pk11_context *pk11 = userdata;
-
-    if (pk11->session) {
-        pakchois_close_session(pk11->session);
-    }
-    pakchois_module_destroy(pk11->module);
-    ne_free(pk11);
-}
-
-static int pk11_find_x509(pakchois_session_t *pks, ne_session *sess,
+static int pk11_find_x509(ne_ssl_pkcs11_provider *prov,
+                          pakchois_session_t *pks, 
                           unsigned char *certid, unsigned long *cid_len)
 {
     struct ck_attribute a[3];
@@ -97,7 +90,7 @@ static int pk11_find_x509(pakchois_session_t *pks, ne_session *sess,
             cc = ne__ssl_clicert_exkey_import(value, a[0].value_len);
             if (cc) {
                 NE_DEBUG(NE_DBG_SSL, "pk11: Imported X.509 cert.\n");
-                ne_ssl_set_clicert(sess, cc);
+                prov->clicert = cc;
                 found = 1;
                 *cid_len = a[1].value_len;
                 break;
@@ -112,7 +105,8 @@ static int pk11_find_x509(pakchois_session_t *pks, ne_session *sess,
     return found;    
 }
 
-static int pk11_find_pkey(struct pk11_context *ctx, pakchois_session_t *pks,
+static int pk11_find_pkey(ne_ssl_pkcs11_provider *prov, 
+                          pakchois_session_t *pks,
                           unsigned char *certid, unsigned long cid_len)
 {
     struct ck_attribute a[3];
@@ -150,7 +144,7 @@ static int pk11_find_pkey(struct pk11_context *ctx, pakchois_session_t *pks,
     if (rv == CKR_OK && count == 1) {
         NE_DEBUG(NE_DBG_SSL, "pk11: Found private key.\n");
         found = 1;
-        ctx->privkey = obj;
+        prov->privkey = obj;
     }
 
     pakchois_find_objects_final(pks);
@@ -158,15 +152,15 @@ static int pk11_find_pkey(struct pk11_context *ctx, pakchois_session_t *pks,
     return found;
 }
 
-static int find_client_cert(ne_session *sess, struct pk11_context *ctx,
+static int find_client_cert(ne_ssl_pkcs11_provider *prov,
                             pakchois_session_t *pks)
 {
     unsigned char certid[8192];
     unsigned long cid_len = sizeof certid;
 
     /* TODO: match cert subject too. */
-    return pk11_find_x509(pks, sess, certid, &cid_len) 
-        && pk11_find_pkey(ctx, pks, certid, cid_len);
+    return pk11_find_x509(prov, pks, certid, &cid_len) 
+        && pk11_find_pkey(prov, pks, certid, cid_len);
 }
 
 /* Callback invoked by GnuTLS to provide the signature.  The signature
@@ -178,12 +172,12 @@ static int pk11_sign_callback(gnutls_session_t session,
                               const gnutls_datum_t *hash,
                               gnutls_datum_t *signature)
 {
-    struct pk11_context *ctx = userdata;
+    ne_ssl_pkcs11_provider *prov = userdata;
     ck_rv_t rv;
     struct ck_mechanism mech;
     unsigned long siglen;
 
-    if (!ctx->session || ctx->privkey == CK_INVALID_HANDLE) {
+    if (!prov->session || prov->privkey == CK_INVALID_HANDLE) {
         NE_DEBUG(NE_DBG_SSL, "p11: Boo, can't sign :(\n");
         return GNUTLS_E_NO_CERTIFICATE_FOUND;
     }
@@ -196,14 +190,14 @@ static int pk11_sign_callback(gnutls_session_t session,
 
     /* Initialize signing operation; using the private key discovered
      * earlier. */
-    rv = pakchois_sign_init(ctx->session, &mech, ctx->privkey);
+    rv = pakchois_sign_init(prov->session, &mech, prov->privkey);
     if (rv != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "p11: SignInit failed: %lx.\n", rv);
         return GNUTLS_E_PK_SIGN_FAILED;
     }
 
     /* Work out how long the signature must be: */
-    rv = pakchois_sign(ctx->session, hash->data, hash->size, NULL, &siglen);
+    rv = pakchois_sign(prov->session, hash->data, hash->size, NULL, &siglen);
     if (rv != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "p11: Sign failed.\n");
         return GNUTLS_E_PK_SIGN_FAILED;
@@ -212,7 +206,7 @@ static int pk11_sign_callback(gnutls_session_t session,
     signature->data = gnutls_malloc(siglen);
     signature->size = siglen;
 
-    rv = pakchois_sign(ctx->session, hash->data, hash->size, 
+    rv = pakchois_sign(prov->session, hash->data, hash->size, 
                        signature->data, &siglen);
     if (rv != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "p11: Sign failed.\n");
@@ -239,15 +233,14 @@ static void terminate_string(unsigned char *str, size_t len)
         ptr[1] = '\0';
 }
 
-static int pk11_login(pakchois_module_t *module, ck_slot_id_t slot_id,
-                      ne_session *sess, pakchois_session_t *pks, 
-                      struct ck_slot_info *sinfo)
+static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
+                      pakchois_session_t *pks, struct ck_slot_info *sinfo)
 {
     struct ck_token_info tinfo;
     int attempt = 0;
     ck_rv_t rv;
 
-    if (pakchois_get_token_info(module, slot_id, &tinfo) != CKR_OK) {
+    if (pakchois_get_token_info(prov->module, slot_id, &tinfo) != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "pk11: GetTokenInfo failed\n");
         /* TODO: propagate error. */
         return -1;
@@ -274,7 +267,7 @@ static int pk11_login(pakchois_module_t *module, ck_slot_id_t slot_id,
 
     /* Otherwise, PIN entry is necessary for login, so fail if there's
      * no callback. */
-    if (!sess->ssl_pk11pin_fn) {
+    if (!prov->pin_fn) {
         NE_DEBUG(NE_DBG_SSL, "pk11: No pin callback but login required.\n");
         /* TODO: propagate error. */
         return -1;
@@ -289,7 +282,8 @@ static int pk11_login(pakchois_module_t *module, ck_slot_id_t slot_id,
         /* If login has been attempted once already, check the token
          * status again, the flags might change. */
         if (attempt++) {
-            if (pakchois_get_token_info(module, slot_id, &tinfo) != CKR_OK) {
+            if (pakchois_get_token_info(prov->module, slot_id, 
+                                        &tinfo) != CKR_OK) {
                 NE_DEBUG(NE_DBG_SSL, "pk11: GetTokenInfo failed\n");
                 /* TODO: propagate error. */
                 return -1;
@@ -303,10 +297,9 @@ static int pk11_login(pakchois_module_t *module, ck_slot_id_t slot_id,
         
         terminate_string(tinfo.label, sizeof tinfo.label);
 
-        if (sess->ssl_pk11pin_fn(sess->ssl_pk11pin_ud, attempt,
-                                 (const char *)sinfo->slot_description,
-                                 (const char *)tinfo.label,
-                                 flags, pin)) {
+        if (prov->pin_fn(prov->pin_data, attempt,
+                         (char *)sinfo->slot_description,
+                         (char *)tinfo.label, flags, pin)) {
             return -1;
         }
 
@@ -326,11 +319,17 @@ static void pk11_provide(void *userdata, ne_session *sess,
                          const ne_ssl_dname *const *dnames,
                          int dncount)
 {
-    struct pk11_context *ctx = userdata;
+    ne_ssl_pkcs11_provider *prov = userdata;
     ck_slot_id_t *slots;
     unsigned long scount, n;
 
-    if (pakchois_get_slot_list(ctx->module, 1, NULL, &scount) != CKR_OK
+    if (prov->clicert) {
+        NE_DEBUG(NE_DBG_SSL, "pk11: Using existing clicert.\n");
+        ne_ssl_set_clicert(sess, prov->clicert);
+        return;
+    }
+
+    if (pakchois_get_slot_list(prov->module, 1, NULL, &scount) != CKR_OK
         || scount == 0) {
         NE_DEBUG(NE_DBG_SSL, "pk11: No slots.\n");
         /* TODO: propagate error. */
@@ -338,7 +337,7 @@ static void pk11_provide(void *userdata, ne_session *sess,
     }
 
     slots = ne_malloc(scount * sizeof *slots);
-    if (pakchois_get_slot_list(ctx->module, 1, slots, &scount) != CKR_OK)  {
+    if (pakchois_get_slot_list(prov->module, 1, slots, &scount) != CKR_OK)  {
         ne_free(slots);
         NE_DEBUG(NE_DBG_SSL, "pk11: Really, no slots?\n");
         /* TODO: propagate error. */
@@ -352,7 +351,7 @@ static void pk11_provide(void *userdata, ne_session *sess,
         ck_rv_t rv;
         struct ck_slot_info sinfo;
 
-        if (pakchois_get_slot_info(ctx->module, slots[n], &sinfo) != CKR_OK) {
+        if (pakchois_get_slot_info(prov->module, slots[n], &sinfo) != CKR_OK) {
             NE_DEBUG(NE_DBG_SSL, "pk11: GetSlotInfo failed\n");
             continue;
         }
@@ -362,7 +361,7 @@ static void pk11_provide(void *userdata, ne_session *sess,
             continue;
         }
         
-        rv = pakchois_open_session(ctx->module, slots[n], 
+        rv = pakchois_open_session(prov->module, slots[n], 
                                    CKF_SERIAL_SESSION,
                                    NULL, NULL, &pks);
         if (rv != CKR_OK) {
@@ -371,11 +370,11 @@ static void pk11_provide(void *userdata, ne_session *sess,
             continue;
         }
 
-        if (pk11_login(ctx->module, slots[n], sess, pks, &sinfo) == 0) {
-            if (find_client_cert(sess, ctx, pks)) {
+        if (pk11_login(prov, slots[n], pks, &sinfo) == 0) {
+            if (find_client_cert(prov, pks)) {
                 NE_DEBUG(NE_DBG_SSL, "pk11: Setup complete.\n");
-                ctx->session = pks;
-                
+                prov->session = pks;
+                ne_ssl_set_clicert(sess, prov->clicert);
                 return;
             }
         }
@@ -386,81 +385,103 @@ static void pk11_provide(void *userdata, ne_session *sess,
     ne_free(slots);
 }
 
-static int pk11_setup(ne_session *sess, pakchois_module_t *module)
+static int pk11_init(ne_ssl_pkcs11_provider **provider,
+                     pakchois_module_t *module)
 {
-    struct pk11_context *ctx;
+    ne_ssl_pkcs11_provider *prov;
 
-    ctx = ne_malloc(sizeof *ctx);
-    ctx->module = module;
-    ctx->session = NULL;
-    ctx->privkey = CK_INVALID_HANDLE;
+    prov = *provider = ne_calloc(sizeof *prov);
+    prov->module = module;
+    prov->privkey = CK_INVALID_HANDLE;
 
-    ne_hook_destroy_session(sess, pk11_destroy, ctx);
+    return NE_PK11_OK;
+}
 
-    ne_ssl_provide_clicert(sess, pk11_provide, ctx);
+int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
+                                const char *name)
+{
+    pakchois_module_t *pm;
     
-    /* FIXME: this is bad, because it means only one PKCS#11 provider
-     * can be used at a time ("last through the door wins"), but needs
-     * to be done early currently so that ne_sock_connect_ssl installs
-     * the callback. */
+    if (pakchois_module_load(&pm, name) == CKR_OK) {
+        return pk11_init(provider, pm);
+    }
+    else {
+        return NE_PK11_FAILED;
+    }
+}
 
+int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
+                                    const char *name, const char *directory,
+                                    const char *cert_prefix, 
+                                    const char *key_prefix,
+                                    const char *secmod_db)
+{
+    pakchois_module_t *pm;
+    
+    if (pakchois_module_nssload(&pm, name, directory, cert_prefix,
+                                key_prefix, secmod_db) == CKR_OK) {
+        return pk11_init(provider, pm);
+    }
+    else {
+        return NE_PK11_FAILED;
+    }
+}
+
+void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
+                                ne_ssl_pkcs11_pin_fn fn,
+                                void *userdata)
+{
+    provider->pin_fn = fn;
+    provider->pin_data = userdata;
+
+}
+
+void ne_ssl_set_pkcs11_provider(ne_session *sess, 
+                                ne_ssl_pkcs11_provider *provider)
+{
     sess->ssl_context->sign_func = pk11_sign_callback;
-    sess->ssl_context->sign_data = ctx;
+    sess->ssl_context->sign_data = provider;
 
-    return NE_OK;
+    ne_ssl_provide_clicert(sess, pk11_provide, provider);
 }
 
-int ne_ssl_provide_pkcs11_clicert(ne_session *sess, const char *provider)
+void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *prov)
 {
-    pakchois_module_t *pm;
-    ck_rv_t rv;
- 
-    rv = pakchois_module_load(&pm, provider);
-    if (rv != CKR_OK) {
-        ne_set_error(sess, _("Could not load PKCS#11 module: %ld"), rv);
-        return NE_LOOKUP;
+    if (prov->session) {
+        pakchois_close_session(prov->session);
     }
-
-    return pk11_setup(sess, pm);
-}
-
-int ne_ssl_provide_nsspk11_clicert(ne_session *sess, 
-                                   const char *provider,
-                                   const char *directory,
-                                   const char *cert_prefix,
-                                   const char *key_prefix,
-                                   const char *secmod_db)
-{
-    pakchois_module_t *pm;
-    ck_rv_t rv;
-
-    rv = pakchois_module_nssload(&pm, provider, 
-                                 directory, cert_prefix,
-                                 key_prefix, secmod_db);
-    if (rv != CKR_OK) {
-        ne_set_error(sess, _("Could not load PKCS#11 module: %ld"), rv);
-        return NE_LOOKUP;
+    if (prov->clicert) {
+        ne_ssl_clicert_free(prov->clicert);
     }
-
-    return pk11_setup(sess, pm);
+    pakchois_module_destroy(prov->module);
+    ne_free(prov);
 }
 
 #else /* !HAVE_PAKCHOIS */
 
-int ne_ssl_provide_pkcs11_clicert(ne_session *sess, const char *provider)
+int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
+                                const char *name)
 {
-    return NE_FAILED;
+    return NE_PK11_NOTIMPL;
 }
 
-int ne_ssl_provide_nsspk11_clicert(ne_session *sess, 
-                                   const char *provider,
-                                   const char *directory,
-                                   const char *cert_prefix,
-                                   const char *key_prefix,
-                                   const char *secmod_db)
+int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
+                                    const char *name, const char *directory,
+                                    const char *cert_prefix, 
+                                    const char *key_prefix,
+                                    const char *secmod_db)
 {
-    return NE_FAILED;
+    return NE_PK11_NOTIMPL;
 }
+
+void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider) { }
+
+void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
+                                ne_ssl_pkcs11_pin_fn fn,
+                                void *userdata) { }
+
+void ne_ssl_set_pkcs11_provider(ne_session *sess,
+                                ne_ssl_pkcs11_provider *provider) { }
 
 #endif /* HAVE_PAKCHOIS */
 
