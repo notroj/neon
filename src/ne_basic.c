@@ -1,6 +1,6 @@
 /* 
    Basic HTTP and WebDAV methods
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -307,29 +307,52 @@ int ne_get_content_type(ne_request *req, ne_content_type *ct)
     return 0;
 }
 
-static void parse_dav_header(const char *value, ne_server_capabilities *caps)
+static const struct options_map {
+    const char *name;
+    unsigned int cap;
+} options_map[] = {
+    { "1", NE_CAP_DAV_CLASS1 },
+    { "2", NE_CAP_DAV_CLASS2 },
+    { "3", NE_CAP_DAV_CLASS3 },
+    { "<http://apache.org/dav/propset/fs/1>", NE_CAP_MODDAV_EXEC },
+    { "access-control", NE_CAP_DAV_ACL },
+    { "version-control", NE_CAP_VER_CONTROL },
+    { "checkout-in-place", NE_CAP_CO_IN_PLACE },
+    { "version-history", NE_CAP_VER_HISTORY },
+    { "workspace", NE_CAP_WORKSPACE },
+    { "update", NE_CAP_UPDATE },
+    { "label", NE_CAP_LABEL },
+    { "working-resource", NE_CAP_WORK_RESOURCE },
+    { "merge", NE_CAP_MERGE },
+    { "baseline", NE_CAP_BASELINE },
+    { "version-controlled-collection", NE_CAP_VC_COLLECTION }
+};
+
+static void parse_dav_header(const char *value, unsigned int *caps)
 {
     char *tokens = ne_strdup(value), *pnt = tokens;
     
-    do {
-	char *tok = ne_qtoken(&pnt, ',',  "\"'");
-	if (!tok) break;
-	
-	tok = ne_shave(tok, " \r\t\n");
+    *caps = 0;
 
-	if (strcmp(tok, "1") == 0) {
-	    caps->dav_class1 = 1;
-	} else if (strcmp(tok, "2") == 0) {
-	    caps->dav_class2 = 1;
-	} else if (strcmp(tok, "<http://apache.org/dav/propset/fs/1>") == 0) {
-	    caps->dav_executable = 1;
-	}
+    do {
+        char *tok = ne_qtoken(&pnt, ',',  "\"'");
+        unsigned n;
+
+        if (!tok) break;
+        
+        tok = ne_shave(tok, " \r\t\n");
+
+        for (n = 0; n < sizeof(options_map)/sizeof(options_map[0]); n++) {
+            if (strcmp(tok, options_map[n].name) == 0) {
+                *caps |= options_map[n].cap;
+            }
+        }
     } while (pnt != NULL);
     
     ne_free(tokens);
 }
 
-int ne_options(ne_session *sess, const char *uri, ne_server_capabilities *caps)
+int ne_options2(ne_session *sess, const char *uri, unsigned int *caps)
 {
     ne_request *req = ne_request_create(sess, "OPTIONS", uri);
     int ret = ne_request_dispatch(req);
@@ -343,6 +366,23 @@ int ne_options(ne_session *sess, const char *uri, ne_server_capabilities *caps)
     
     ne_request_destroy(req);
 
+    return ret;
+}
+
+int ne_options(ne_session *sess, const char *path,
+               ne_server_capabilities *caps)
+{
+    int ret;
+    unsigned int capmask = 0;
+    
+    memset(caps, 0, sizeof *caps);
+
+    ret = ne_options2(sess, path, &capmask);
+
+    caps->dav_class1 = capmask & NE_CAP_DAV_CLASS1 ? 1 : 0;
+    caps->dav_class2 = capmask & NE_CAP_DAV_CLASS2 ? 1 : 0;
+    caps->dav_executable = capmask & NE_CAP_MODDAV_EXEC ? 1 : 0;
+    
     return ret;
 }
 
