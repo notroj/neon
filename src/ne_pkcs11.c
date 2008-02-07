@@ -178,7 +178,7 @@ static int pk11_sign_callback(gnutls_session_t session,
     unsigned long siglen;
 
     if (!prov->session || prov->privkey == CK_INVALID_HANDLE) {
-        NE_DEBUG(NE_DBG_SSL, "p11: Boo, can't sign :(\n");
+        NE_DEBUG(NE_DBG_SSL, "pk11: Cannot sign, no session/key.\n");
         return GNUTLS_E_NO_CERTIFICATE_FOUND;
     }
 
@@ -192,14 +192,14 @@ static int pk11_sign_callback(gnutls_session_t session,
      * earlier. */
     rv = pakchois_sign_init(prov->session, &mech, prov->privkey);
     if (rv != CKR_OK) {
-        NE_DEBUG(NE_DBG_SSL, "p11: SignInit failed: %lx.\n", rv);
+        NE_DEBUG(NE_DBG_SSL, "pk11: SignInit failed: %lx.\n", rv);
         return GNUTLS_E_PK_SIGN_FAILED;
     }
 
     /* Work out how long the signature must be: */
     rv = pakchois_sign(prov->session, hash->data, hash->size, NULL, &siglen);
     if (rv != CKR_OK) {
-        NE_DEBUG(NE_DBG_SSL, "p11: Sign failed.\n");
+        NE_DEBUG(NE_DBG_SSL, "pk11: Sign1 failed.\n");
         return GNUTLS_E_PK_SIGN_FAILED;
     }
 
@@ -209,11 +209,11 @@ static int pk11_sign_callback(gnutls_session_t session,
     rv = pakchois_sign(prov->session, hash->data, hash->size, 
                        signature->data, &siglen);
     if (rv != CKR_OK) {
-        NE_DEBUG(NE_DBG_SSL, "p11: Sign failed.\n");
+        NE_DEBUG(NE_DBG_SSL, "pk11: Sign2 failed.\n");
         return GNUTLS_E_PK_SIGN_FAILED;
     }
 
-    NE_DEBUG(NE_DBG_SSL, "p11: signed.\n");
+    NE_DEBUG(NE_DBG_SSL, "pk11: Signed successfully.\n");
 
     return 0;
 }
