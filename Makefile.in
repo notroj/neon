@@ -62,7 +62,7 @@ LINGUAS = @ALL_LINGUAS@
 DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \
 	ne_basic.h ne_207.h ne_props.h ne_xml.h ne_dates.h ne_string.h	  \
 	ne_defs.h ne_locks.h ne_alloc.h ne_md5.h ne_i18n.h ne_redirect.h  \
-	ne_auth.h ne_compress.h ne_acl.h ne_ssl.h ne_xmlreq.h
+	ne_auth.h ne_compress.h ne_acl.h ne_ssl.h ne_xmlreq.h ne_pkcs11.h
 
 all: subdirs
 
