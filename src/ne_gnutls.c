@@ -923,7 +923,8 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     }
 
     if (gnutls_pkcs12_verify_mac(p12, "") == 0) {
-        if (pkcs12_parse(p12, &pkey, &cert, &friendly_name, "") != 0) {
+        if (pkcs12_parse(p12, &pkey, &cert, &friendly_name, "") != 0
+            || !cert || !pkey) {
             gnutls_pkcs12_deinit(p12);
             return NULL;
         }
@@ -963,6 +964,7 @@ ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
     
     cc = ne_calloc(sizeof *cc);
     cc->keyless = 1;
+    cc->decrypted = 1;
     populate_cert(&cc->cert, x5);
 
     return cc;    
