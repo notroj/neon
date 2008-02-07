@@ -281,7 +281,7 @@ static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
 
         /* If login has been attempted once already, check the token
          * status again, the flags might change. */
-        if (attempt++) {
+        if (attempt) {
             if (pakchois_get_token_info(prov->module, slot_id, 
                                         &tinfo) != CKR_OK) {
                 NE_DEBUG(NE_DBG_SSL, "pk11: GetTokenInfo failed\n");
@@ -297,7 +297,7 @@ static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
         
         terminate_string(tinfo.label, sizeof tinfo.label);
 
-        if (prov->pin_fn(prov->pin_data, attempt,
+        if (prov->pin_fn(prov->pin_data, attempt++,
                          (char *)sinfo->slot_description,
                          (char *)tinfo.label, flags, pin)) {
             return -1;

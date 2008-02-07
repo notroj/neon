@@ -72,8 +72,15 @@ void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider);
  * The PIN code, as a NUL-terminated ASCII string, should be copied
  * into the 'pin' buffer (of fixed length NE_SSL_P11PINLEN), and
  * return 0 to indicate success. Alternatively, the callback may
- * return -1 to indicate failure (in which case, the pin buffer is
- * ignored).  When the PIN is needed for the first time, the 
+ * return -1 to indicate failure and cancel PIN entry (in which case,
+ * the contents of the 'pin' parameter are ignored).
+ *
+ * When a PIN is required, the callback will be invoked repeatedly
+ * (and indefinitely) until either the returned PIN code is correct,
+ * the callback returns failure, or the token refuses login (e.g. when
+ * the token is locked due to too many incorrect PINs!).  For the
+ * first such invocation, the 'attempt' counter will have value 1; it
+ * will increase by one for each subsequent attempt.
  *
  * The NE_SSL_P11PIN_COUNT_LOW and/or NE_SSL_P11PIN_FAST_TRY hints may
  * be set in the 'flags' argument, if these hints are made available
