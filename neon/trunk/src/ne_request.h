@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2006, 2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -278,9 +278,14 @@ void ne_hook_destroy_request(ne_session *sess,
 			     ne_destroy_req_fn fn, void *userdata);
 
 typedef void (*ne_destroy_sess_fn)(void *userdata);
-/* Hook called when the session is destroyed. */
+/* Hook called when the session is about to be destroyed. */
 void ne_hook_destroy_session(ne_session *sess,
 			     ne_destroy_sess_fn fn, void *userdata);
+
+typedef void (*ne_close_conn_fn)(void *userdata);
+/* Hook called when the connection is closed; note that this hook
+ * may be called *AFTER* the destroy_session hook. */
+void ne_hook_close_conn(ne_session *sess, ne_close_conn_fn fn, void *userdata);
 
 /* The ne_unhook_* functions remove a hook registered with the given
  * session.  If a hook is found which was registered with a given
@@ -298,6 +303,8 @@ void ne_unhook_destroy_request(ne_session *sess,
                                ne_destroy_req_fn fn, void *userdata);
 void ne_unhook_destroy_session(ne_session *sess,
                                ne_destroy_sess_fn fn, void *userdata);
+void ne_unhook_close_conn(ne_session *sess, 
+                          ne_close_conn_fn fn, void *userdata);
 
 /* Store an opaque context for the request, 'priv' is returned by a
  * call to ne_request_get_private with the same ID. */
