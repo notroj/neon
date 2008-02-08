@@ -235,19 +235,19 @@ CLEAN: $(ZLIB_CLEAN)
 	<<tempfile.bat
   @echo off
   cd /d "$(ZLIB_SRC)"
-  "$(MAKE)" /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" STATICLIB=$(ZLIB_STATICLIB) $(ZLIB_STATICLIB)
+  $(MAKE) /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" STATICLIB=$(ZLIB_STATICLIB) $(ZLIB_STATICLIB)
 <<
 
 "$(ZLIB_SRC)\$(ZLIB_IMPLIB)":
 	<<tempfile.bat
   @echo off
   cd /d "$(ZLIB_SRC)"
-  "$(MAKE)" /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) $(ZLIB_SHAREDLIB) $(ZLIB_IMPLIB)
+  $(MAKE) /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) $(ZLIB_SHAREDLIB) $(ZLIB_IMPLIB)
 <<
 
 ZLIB_CLEAN:
 	<<tempfile.bat
   @echo off
   cd /d "$(ZLIB_SRC)"
-  "$(MAKE)" /nologo /f win32\Makefile.msc STATICLIB=$(ZLIB_STATICLIB) SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) clean
+  $(MAKE) /nologo /f win32\Makefile.msc STATICLIB=$(ZLIB_STATICLIB) SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) clean
 <<
