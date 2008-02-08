@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.4\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2007-11-26 19:58+0000\n"
+"POT-Creation-Date: 2008-02-08 16:56+0000\n"
 "PO-Revision-Date: 2002-11-07 18:11+0100\n"
 "Last-Translator: Karl Ove Hufthammer <karl@huftis.org>\n"
 "Language-Team: Norwegian Nynorsk <i18n-nn@lister.ping.uio.no>\n"
@@ -23,129 +23,129 @@ msgstr ""
 "Ugyldig HTTP-statuslinje i statuselement på linje %d av svaret:\n"
 "Statuslinja var: %s"
 
-#: src/ne_auth.c:128
+#: src/ne_auth.c:130
 #, fuzzy, c-format
 msgid "Could not authenticate to server: %s"
 msgstr "Klarte ikkje kopla til tenaren."
 
-#: src/ne_auth.c:133
+#: src/ne_auth.c:135
 #, fuzzy, c-format
 msgid "Could not authenticate to proxy server: %s"
 msgstr "Klarte ikkje kopla til mellomtenar"
 
-#: src/ne_auth.c:353
+#: src/ne_auth.c:358
 #, c-format
 msgid "rejected %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:369
+#: src/ne_auth.c:374
 msgid "missing realm in Basic challenge"
 msgstr ""
 
-#: src/ne_auth.c:464
+#: src/ne_auth.c:469
 msgid "invalid Negotiate token"
 msgstr ""
 
-#: src/ne_auth.c:487
+#: src/ne_auth.c:492
 #, fuzzy
 msgid "GSSAPI authentication error: "
 msgstr "Krev autentisering på %s «%s»:\n"
 
-#: src/ne_auth.c:500
+#: src/ne_auth.c:505
 #, c-format
 msgid "GSSAPI failure (code %u)"
 msgstr ""
 
-#: src/ne_auth.c:535
+#: src/ne_auth.c:540
 msgid "ignoring empty Negotiate continuation"
 msgstr ""
 
-#: src/ne_auth.c:550
+#: src/ne_auth.c:555
 #, c-format
 msgid "Negotiate response verification failed: invalid response header token"
 msgstr ""
 
-#: src/ne_auth.c:572
+#: src/ne_auth.c:577
 #, fuzzy, c-format
 msgid "Negotiate response verification failure: %s"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_auth.c:690
+#: src/ne_auth.c:697
 msgid "unknown algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:694
+#: src/ne_auth.c:701
 msgid "incompatible algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:698
+#: src/ne_auth.c:705
 msgid "missing parameter in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:702
+#: src/ne_auth.c:709
 msgid "initial Digest challenge was stale"
 msgstr ""
 
-#: src/ne_auth.c:709
+#: src/ne_auth.c:716
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr ""
 
-#: src/ne_auth.c:721
+#: src/ne_auth.c:728
 #, fuzzy
 msgid "could not parse domain in Digest challenge"
 msgstr "Klarte ikkje tolka storleik på oppdelt svar"
 
-#: src/ne_auth.c:1025
+#: src/ne_auth.c:1038
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:1030
+#: src/ne_auth.c:1043
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1040
+#: src/ne_auth.c:1053
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 
-#: src/ne_auth.c:1045
+#: src/ne_auth.c:1058
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:1088
+#: src/ne_auth.c:1101
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1214
+#: src/ne_auth.c:1227
 #, c-format
 msgid "ignored %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:1293
+#: src/ne_auth.c:1306
 #, fuzzy
 msgid "could not parse challenge"
 msgstr "Klarte ikkje tolka storleik på oppdelt svar"
 
-#: src/ne_basic.c:94
+#: src/ne_basic.c:98
 #, fuzzy, c-format
 msgid "Could not determine file size: %s"
 msgstr "Fann ikkje fillengda: %s"
 
-#: src/ne_basic.c:145
+#: src/ne_basic.c:149
 #, c-format
 msgid "Response did not include requested range"
 msgstr ""
 
-#: src/ne_basic.c:179
+#: src/ne_basic.c:183
 #, fuzzy, c-format
 msgid "Range is not satisfiable"
 msgstr "Området finst ikkje."
 
-#: src/ne_basic.c:184
+#: src/ne_basic.c:188
 #, fuzzy, c-format
 msgid "Resource does not support ranged GET requests"
 msgstr "Tenaren kan ikkje handtera kommandoar for delvis GET."
@@ -165,26 +165,26 @@ msgstr "Klarte ikkje opna fil: "
 msgid "Could not initialize zlib"
 msgstr "Klarte ikkje opna fil: "
 
-#: src/ne_gnutls.c:162
+#: src/ne_gnutls.c:160
 #, c-format
 msgid "[unprintable:#%lu]"
 msgstr ""
 
-#: src/ne_gnutls.c:188
+#: src/ne_gnutls.c:186
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:685 src/ne_openssl.c:419
+#: src/ne_gnutls.c:691 src/ne_openssl.c:419
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:721 src/ne_openssl.c:632
+#: src/ne_gnutls.c:731 src/ne_openssl.c:638
 #, fuzzy, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "Klarte ikkje skriva til fil: %s"
 
-#: src/ne_gnutls.c:730
+#: src/ne_gnutls.c:740
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -208,17 +208,17 @@ msgstr ""
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_openssl.c:651
+#: src/ne_openssl.c:657
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:660
+#: src/ne_openssl.c:666
 #, fuzzy, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_props.c:371 src/ne_props.c:411
+#: src/ne_props.c:371 src/ne_props.c:435
 #, fuzzy
 msgid "Response exceeds maximum property count"
 msgstr "Svaret inneheld for mange header-felt."
@@ -337,39 +337,39 @@ msgstr "Klarte ikkje oppretta SSL-tilkopling til mellomtenar"
 msgid "Could not create socket"
 msgstr "Klarte ikkje forhandla SSL-økt"
 
-#: src/ne_request.c:1496
+#: src/ne_request.c:1499
 msgid "Could not connect to proxy server"
 msgstr "Klarte ikkje kopla til mellomtenar"
 
-#: src/ne_request.c:1497
+#: src/ne_request.c:1500
 msgid "Could not connect to server"
 msgstr "Klarte ikkje kopla til tenaren."
 
-#: src/ne_session.c:339 src/ne_session.c:350
+#: src/ne_session.c:356 src/ne_session.c:367
 #, fuzzy
 msgid "[invalid date]"
 msgstr "[ugyldig dato]"
 
-#: src/ne_session.c:363
+#: src/ne_session.c:380
 #, fuzzy
 msgid "certificate is not yet valid"
 msgstr "Sertifikatet er gyldig"
 
-#: src/ne_session.c:364
+#: src/ne_session.c:381
 #, fuzzy
 msgid "certificate has expired"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_session.c:365
+#: src/ne_session.c:382
 #, fuzzy
 msgid "certificate issued for a different hostname"
 msgstr "Sertifikatet er utferda av:"
 
-#: src/ne_session.c:366
+#: src/ne_session.c:383
 msgid "issuer is not trusted"
 msgstr ""
 
-#: src/ne_session.c:371
+#: src/ne_session.c:388
 #, fuzzy
 msgid "Server certificate verification failed: "
 msgstr "Tenarsertifikatet er utgått på dato."
@@ -420,22 +420,22 @@ msgstr "%s: sambandet vart tidsavbrote."
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1469
+#: src/ne_socket.c:1471
 #, fuzzy
 msgid "Client certificate verification failed"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_socket.c:1485
+#: src/ne_socket.c:1487
 #, fuzzy
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1492
+#: src/ne_socket.c:1494
 #, fuzzy
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1498
+#: src/ne_socket.c:1500
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "Klarte ikkje forhandla SSL-økt"
