@@ -58,7 +58,7 @@ void ne_session_destroy(ne_session *sess)
 {
     struct hook *hk;
 
-    NE_DEBUG(NE_DBG_HTTP, "ne_session_destroy called.\n");
+    NE_DEBUG(NE_DBG_HTTP, "sess: Destroying session.\n");
 
     /* Run the destroy hooks. */
     for (hk = sess->destroy_sess_hooks; hk != NULL; hk = hk->next) {
@@ -69,7 +69,7 @@ void ne_session_destroy(ne_session *sess)
     /* Close the connection; note that the notifier callback could
      * still be invoked here. */
     if (sess->connected) {
-	ne_close_connection(sess);
+        ne_close_connection(sess);
     }
     
     destroy_hooks(sess->create_req_hooks);
@@ -289,18 +289,28 @@ const char *ne_get_error(ne_session *sess)
 void ne_close_connection(ne_session *sess)
 {
     if (sess->connected) {
+        struct hook *hk;
+
+        NE_DEBUG(NE_DBG_SOCKET, "sess: Closing connection.\n");
+
         if (sess->notify_cb) {
             sess->status.cd.hostname = 
                 sess->use_proxy ? sess->proxy.hostname : sess->server.hostname;
             sess->notify_cb(sess->notify_ud, ne_status_disconnected, 
                             &sess->status);
         }
-	NE_DEBUG(NE_DBG_SOCKET, "Closing connection.\n");
+
+        /* Run the close_conn hooks. */
+        for (hk = sess->close_conn_hooks; hk != NULL; hk = hk->next) {
+            ne_close_conn_fn fn = (ne_close_conn_fn)hk->fn;
+            fn(hk->userdata);
+        }
+
 	ne_sock_close(sess->socket);
 	sess->socket = NULL;
-	NE_DEBUG(NE_DBG_SOCKET, "Connection closed.\n");
+        NE_DEBUG(NE_DBG_SOCKET, "sess: Connection closed.\n");
     } else {
-	NE_DEBUG(NE_DBG_SOCKET, "(Not closing closed connection!).\n");
+        NE_DEBUG(NE_DBG_SOCKET, "sess: Not closing closed connection.\n");
     }
     sess->connected = 0;
 }
@@ -442,6 +452,12 @@ void ne_hook_destroy_session(ne_session *sess,
     ADD_HOOK(sess->destroy_sess_hooks, fn, userdata);
 }
 
+void ne_hook_close_conn(ne_session *sess,
+                        ne_close_conn_fn fn, void *userdata)
+{
+    ADD_HOOK(sess->close_conn_hooks, fn, userdata);
+}
+
 void ne_set_session_private(ne_session *sess, const char *id, void *userdata)
 {
     add_hook(&sess->private, id, NULL, userdata);
@@ -496,4 +512,10 @@ void ne_unhook_destroy_session(ne_session *sess,
                                ne_destroy_sess_fn fn, void *userdata)
 {
     REMOVE_HOOK(sess->destroy_sess_hooks, fn, userdata);
+}
+
+void ne_unhook_close_conn(ne_session *sess,
+                          ne_close_conn_fn fn, void *userdata)
+{
+    REMOVE_HOOK(sess->close_conn_hooks, fn, userdata);
 }

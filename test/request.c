@@ -1851,6 +1851,13 @@ static void hook_destroy_sess(void *userdata)
     ne_buffer_czappend(buf, "(destroy-sess)\n");
 }
 
+static void hook_close_conn(void *userdata)
+{
+    ne_buffer *buf = userdata;
+
+    ne_buffer_czappend(buf, "(close-conn)\n");
+}
+
 static int hooks(void)
 {
     ne_buffer *buf = ne_buffer_create();
@@ -1868,6 +1875,7 @@ static int hooks(void)
     ne_hook_post_send(sess, hook_post_send, buf);
     ne_hook_destroy_request(sess, hook_destroy_req, buf);
     ne_hook_destroy_session(sess, hook_destroy_sess, buf);
+    ne_hook_close_conn(sess, hook_close_conn, buf);
 
     CALL(any_2xx_request(sess, "/first"));
 
@@ -1913,7 +1921,8 @@ static int hooks(void)
     ne_session_destroy(sess);
     CALL(await_server());
 
-    ONCMP("(destroy-sess)\n", buf->data, "hook ordering", "first destroyed session");
+    ONCMP("(destroy-sess)\n"
+          "(close-conn)\n", buf->data, "hook ordering", "first destroyed session");
 
     ne_buffer_clear(buf);
 
