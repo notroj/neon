@@ -78,6 +78,7 @@ void ne_session_destroy(ne_session *sess)
     destroy_hooks(sess->post_send_hooks);
     destroy_hooks(sess->destroy_req_hooks);
     destroy_hooks(sess->destroy_sess_hooks);
+    destroy_hooks(sess->close_conn_hooks);
     destroy_hooks(sess->private);
 
     ne_free(sess->scheme);
