@@ -1,8 +1,6 @@
 /*
    Access control
    Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
-   Copyright (C) 2001, Arun Garg <arung@pspl.co.in>
-   Copyright (C) 2007 Henrik Holst <henrik.holst2@gmail.com>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -63,92 +61,47 @@ static ne_buffer *acl_body(const ne_acl_entry *right, int count)
 
 	ne_buffer_concat(body, "<ace>" EOL "<principal>", NULL);
 
-	switch (right[m].target) {
+	switch (right[m].apply) {
 	case ne_acl_all:
-	    ne_buffer_czappend(body, "<all/>" EOL);
-	    break;
-	case ne_acl_authenticated:
-	    ne_buffer_czappend(body, "<authenticated/>" EOL);
-	    break;
-	case ne_acl_unauthenticated:
-	    ne_buffer_czappend(body, "<unauthenticated/>" EOL);
-	    break;
-	case ne_acl_self:
-	    ne_buffer_czappend(body, "<self/>" EOL);
+	    ne_buffer_zappend(body, "<all/>" EOL);
 	    break;
 	case ne_acl_property:
-	    ne_buffer_concat(body, "<property><", right[m].tname,
+	    ne_buffer_concat(body, "<property><", right[m].principal,
 			     "/></property>" EOL, NULL);
 	    break;
 	case ne_acl_href:
-	    ne_buffer_concat(body, "<href>", right[m].tname,
+	    ne_buffer_concat(body, "<href>", right[m].principal,
 			     "</href>" EOL, NULL);
 	    break;
 	}
 
-	ne_buffer_concat(body, "</principal>" EOL 
-                         "<", type, ">" EOL, NULL);
-
-	if ((right[m].privileges & NE_ACL_READ) == NE_ACL_READ)
+	ne_buffer_concat(body, "</principal>" EOL "<", type, ">" EOL, NULL);
+	
+	if (right[m].read == 0)
 	    ne_buffer_concat(body,
 			     "<privilege>" "<read/>" "</privilege>" EOL,
 			     NULL);
-
-	if ((right[m].privileges & NE_ACL_WRITE) == NE_ACL_WRITE)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<write/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_WRITE_PROPERTIES) == NE_ACL_WRITE_PROPERTIES)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<write-properties/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_WRITE_CONTENT) == NE_ACL_WRITE_CONTENT)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<write-content/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_UNLOCK) == NE_ACL_UNLOCK)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<unlock/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_READ_ACL) == NE_ACL_READ_ACL)
+	if (right[m].read_acl == 0)
 	    ne_buffer_concat(body,
 			     "<privilege>" "<read-acl/>" "</privilege>" EOL,
 			     NULL);
-
-	if ((right[m].privileges & NE_ACL_READ_CUPRIVSET) == NE_ACL_READ_CUPRIVSET)
+	if (right[m].write == 0)
 	    ne_buffer_concat(body,
-			     "<privilege>" "<read-current-user-privileges-set/>" "</privilege>" EOL,
+			     "<privilege>" "<write/>" "</privilege>" EOL,
 			     NULL);
-
-	if ((right[m].privileges & NE_ACL_WRITE_ACL) == NE_ACL_WRITE_ACL)
+	if (right[m].write_acl == 0)
 	    ne_buffer_concat(body,
 			     "<privilege>" "<write-acl/>" "</privilege>" EOL,
 			     NULL);
-
-	if ((right[m].privileges & NE_ACL_BIND) == NE_ACL_BIND)
+	if (right[m].read_cuprivset == 0)
 	    ne_buffer_concat(body,
-			     "<privilege>" "<bind/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_UNBIND) == NE_ACL_UNBIND)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<unbind/>" "</privilege>" EOL,
-			     NULL);
-
-	if ((right[m].privileges & NE_ACL_ALL) == NE_ACL_ALL)
-	    ne_buffer_concat(body,
-			     "<privilege>" "<all/>" "</privilege>" EOL,
-			     NULL);
-
+			     "<privilege>"
+			     "<read-current-user-privilege-set/>"
+			     "</privilege>" EOL, NULL);
 	ne_buffer_concat(body, "</", type, ">" EOL, NULL);
-	ne_buffer_czappend(body, "</ace>" EOL);
+	ne_buffer_zappend(body, "</ace>" EOL);
     }
-
-    ne_buffer_czappend(body, "</acl>" EOL);
+    ne_buffer_zappend(body, "</acl>" EOL);
 
     return body;
 }
