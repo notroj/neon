@@ -90,7 +90,8 @@ struct ne_session_s {
     int rdtimeout, cotimeout; /* read, connect timeouts. */
 
     struct hook *create_req_hooks, *pre_send_hooks, *post_send_hooks,
-        *post_headers_hooks, *destroy_req_hooks, *destroy_sess_hooks, *private;
+        *post_headers_hooks, *destroy_req_hooks, *destroy_sess_hooks, 
+        *close_conn_hooks, *private;
 
     char *user_agent; /* full User-Agent: header field */
 
