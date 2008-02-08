@@ -1,16 +1,15 @@
 Changes in release 0.28.0:
 * Interface changes:
- - ne_acl.h: changed ne_acl_entry struct fields; apply->target,
-   principal->tname; all principles set via single "principles" 
-   bitfield using NE_ACL_* constants, inverting old logic (Henrik Holst)
+ - none, API and ABI backwards-compatible with 0.27.x
 * New interfaces:
+ - ne_pkcs11.h: added basic PKCS#11 support (requires GnuTLS and pakchois)
  - ne_auth.h: added NE_AUTH_ALL and NE_AUTH_DEFAULT constants
  - ne_socket.h: added ne_sock_peer(), ne_sock_prebind(), ne_sock_cipher()
- - ne_session.h: NE_SESSFLAG_TLSSNI flag added; ne_set_localaddr() added
- - ne_pkcs11.h: added basic PKCS#11 support (requires GnuTLS and pakchois)
+ - ne_session.h: NE_SESSFLAG_TLSSNI flag added; TLS SNI support is enabled
+   by default, where supported; ne_set_localaddr() added
+ - ne_request.h: added close_conn hooks (Robert J. van der Boon)
  - ne_basic.h: added ne_options2()
 * Other changes:
- - add TLS SNI support and enabled by default (where supported)
  - add Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
  - add support for the 'domain' parameter in Digest authentication
  - fix fd leak in ne_sock_connect() error path (Andrew Teirney)
