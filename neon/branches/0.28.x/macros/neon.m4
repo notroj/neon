@@ -150,11 +150,7 @@ NE_DEFINE_VERSIONS
 dnl Adds an ABI variation tag which will be added to the SONAME of
 dnl a shared library.  e.g. NE_ADD_ABITAG(FOO)
 AC_DEFUN([NE_ADD_ABITAG], [
-if test "x${NE_LIBTOOL_RELEASE}y" = "xy"; then
-   NE_LIBTOOL_RELEASE="$1"
-else
-   NE_LIBTOOL_RELEASE="${NE_LIBTOOL_RELEASE}-$1"
-fi
+: Disabled for 0.28 to retain 0.27 ABI
 ])
 
 dnl Define the minimum required versions, usage:
