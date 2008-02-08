@@ -7,19 +7,24 @@ Changes in release 0.28.0:
  - ne_auth.h: added NE_AUTH_ALL and NE_AUTH_DEFAULT constants
  - ne_socket.h: added ne_sock_peer(), ne_sock_prebind(), ne_sock_cipher()
  - ne_session.h: NE_SESSFLAG_TLSSNI flag added; ne_set_localaddr() added
+ - ne_pkcs11.h: added basic PKCS#11 support (requires GnuTLS and pakchois)
+ - ne_basic.h: added ne_options2()
 * Other changes:
  - add TLS SNI support and enabled by default (where supported)
  - add Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
  - add support for the 'domain' parameter in Digest authentication
+ - fix fd leak in ne_sock_connect() error path (Andrew Teirney)
  - the FD_CLOEXEC flag is set on socket fds
  - fix timezone handling in ne_dates for more platforms (Alessandro Vesely)
- - fix ne_simple_propfind to print XML namespaces in flat property values
+ - fix ne_simple_propfind() to print XML namespaces in flat property values
  - fix ne_get_range() for unspecified end-range case (Henrik Holst)
  - fix ne_strclean() to be locale-independent and avoid possible Win32 crash
  - fix ne_get_error() to not "clean" localized error strings
  - fix ne_ssl_clicert_read() to fail for client certs missing cert or key
- - fix Win32 build with VS 2008 (Stefan Küng)
- 
+ - Win32: fix build with VS 2008 (Stefan Kueng)
+ - Win32: fix neon.mak to not double-quote $(MAKE) (Henrik Holst)
+ - improve strength of Digest cnonces in GnuTLS builds
+
 Changes in release 0.27.0:
 * New interfaces:
  - ne_session.h: ne_fill_proxy_uri() retrieves configured proxy,
