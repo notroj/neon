@@ -262,6 +262,13 @@ NEON_CHECK_VERSION([
     NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
     NEON_CHECK_SUPPORT([ts_ssl], [TS_SSL], [thread-safe SSL])
     neon_got_library=yes
+    if test $NE_FLAG_LFS = yes; then
+       NEON_FORMAT(off64_t)
+       AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
+            [Define to be printf format string for ne_off_t])
+    else
+       AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
+    fi
 ], [neon_got_library=no])
 ])
 
@@ -871,6 +878,10 @@ AC_ARG_WITH(ssl,
 AC_ARG_WITH(egd,
 [[  --with-egd[=PATH]       enable EGD support [using EGD socket at PATH]]])
 
+AC_ARG_WITH(pakchois,
+            AS_HELP_STRING([--without-pakchois],
+                           [disable support for PKCS#11 using pakchois]))
+
 case $with_ssl in
 /*)
    AC_MSG_NOTICE([to use SSL libraries in non-standard locations, try --with-ssl --with-libs=$with_ssl])
@@ -959,13 +970,15 @@ gnutls)
    fi
 
    if test x${ac_cv_func_gnutls_sign_callback_set} = xyes; then
-      # PKCS#11... ho!
-      NE_PKG_CONFIG(NE_PK11, pakchois,
-        [AC_MSG_NOTICE(using pakchois for PKCS11 support)
-         AC_DEFINE(HAVE_PAKCHOIS, 1, [Define if pakchois library supported])
-         CPPFLAGS="$CPPFLAGS ${NE_PK11_CFLAGS}"
-         NEON_LIBS="${NEON_LIBS} ${NE_PK11_LIBS}"],
-        [AC_MSG_NOTICE(pakchois library not found; no PKCS11 support)])
+      if test "$with_pakchois" != "no"; then
+         # PKCS#11... ho!
+         NE_PKG_CONFIG(NE_PK11, pakchois,
+           [AC_MSG_NOTICE(using pakchois for PKCS11 support)
+            AC_DEFINE(HAVE_PAKCHOIS, 1, [Define if pakchois library supported])
+            CPPFLAGS="$CPPFLAGS ${NE_PK11_CFLAGS}"
+            NEON_LIBS="${NEON_LIBS} ${NE_PK11_LIBS}"],
+           [AC_MSG_NOTICE(pakchois library not found; no PKCS11 support)])
+      fi
    fi
 
    ;;
