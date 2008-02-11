@@ -272,6 +272,13 @@ NEON_CHECK_VERSION([
     NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
     NEON_CHECK_SUPPORT([ts_ssl], [TS_SSL], [thread-safe SSL])
     neon_got_library=yes
+    if test $NE_FLAG_LFS = yes; then
+       NEON_FORMAT(off64_t)
+       AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
+            [Define to be printf format string for ne_off_t])
+    else
+       AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
+    fi
 ], [neon_got_library=no])
 ])
 
