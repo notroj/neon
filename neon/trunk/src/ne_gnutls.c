@@ -362,11 +362,12 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
     hostname = server ? server->host : "";
 
     do {
-        len = sizeof name;
+        len = sizeof name - 1;
         ret = gnutls_x509_crt_get_subject_alt_name(cert, seq, name, &len,
                                                    &critical);
         switch (ret) {
         case GNUTLS_SAN_DNSNAME:
+            name[len] = '\0';
             if (identity && !found) *identity = ne_strdup(name);
             match = match_hostname(name, hostname);
             found = 1;
@@ -395,6 +396,8 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
         } break;
         case GNUTLS_SAN_URI: {
             ne_uri uri;
+            
+            name[len] = '\0';
             
             if (ne_uri_parse(name, &uri) == 0 && uri.host && uri.scheme) {
                 ne_uri tmp;
