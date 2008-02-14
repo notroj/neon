@@ -492,7 +492,7 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
     ne_session *const sess = SSL_get_app_data(ssl);
 
     if (!sess->client_cert && sess->ssl_provide_fn) {
-	ne_ssl_dname **dnames = NULL;
+	ne_ssl_dname **dnames = NULL, *dnarray = NULL;
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
 
@@ -500,9 +500,10 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 
         if (count > 0) {
             dnames = ne_malloc(count * sizeof(ne_ssl_dname *));
+            dnarray = ne_malloc(count * sizeof(ne_ssl_dname));
             
             for (n = 0; n < count; n++) {
-                dnames[n] = ne_malloc(sizeof(ne_ssl_dname));
+                dnames[n] = &dnarray[n];
                 dnames[n]->dn = sk_X509_NAME_value(ca_list, n);
             }
         }
@@ -511,8 +512,7 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 	sess->ssl_provide_fn(sess->ssl_provide_ud, sess, 
                              (const ne_ssl_dname *const *)dnames, count);
         if (count) {
-            for (n = 0; n < count; n++)
-                ne_free(dnames[n]);
+            ne_free(dnarray);
             ne_free(dnames);
         }
     }
