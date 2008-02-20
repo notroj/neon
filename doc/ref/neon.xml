@@ -248,7 +248,7 @@
     <para>Some interfaces use the <literal>ne_off_t</literal> type,
     which is defined to be either <literal>off_t</literal> or
     <literal>off64_t</literal> according to whether LFS support is
-    detected at build time.  &neon; does use or require the
+    detected at build time.  &neon; does not use or require the
     <literal>-D_FILE_OFFSET_BITS=64</literal> macro definition.</para>
 
   </refsect2>
