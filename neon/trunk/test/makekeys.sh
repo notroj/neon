@@ -3,7 +3,7 @@
 
 srcdir=${1-.}
 
-OPENSSL=${OPENSSL-openssl}
+OPENSSL=@OPENSSL@
 CONF=${srcdir}/openssl.conf
 REQ="${OPENSSL} req -config ${CONF}"
 CA="${OPENSSL} ca -config ${CONF} -batch"
@@ -182,3 +182,17 @@ echo foobar | ${MKPKCS12} -certfile ca/cert.pem -name "A Neon Client Cert With C
 ### a file containing a complete chain
 
 cat ca/cert.pem server.cert > chain.pem
+
+### NSS database initialization, for testing PKCS#11.
+CERTUTIL=@CERTUTIL@
+PK12UTIL=@PK12UTIL@
+
+if [ ${CERTUTIL} != "notfound" -a ${PK12UTIL} != "notfound" ]; then
+  rm -rf nssdb
+  echo foobar > nssdb.pw
+  mkdir nssdb
+  ${CERTUTIL} -d nssdb -N -f nssdb.pw
+  ${PK12UTIL} -d nssdb -K foobar -W '' -i unclient.p12
+  ${CERTUTIL} -d nssdb -f nssdb.pw -n 'The CA Cert' -t T -A < ca/cert.pem
+  rm -f nssdb.pw
+fi
