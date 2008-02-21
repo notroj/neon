@@ -1552,7 +1552,7 @@ static int pkcs11(void)
         return SKIP;
     }
 
-    ret = ne_ssl_pkcs11_nss_provider_init(&prov, "softokn3f", "nssdb/", NULL, 
+    ret = ne_ssl_pkcs11_nss_provider_init(&prov, "softokn3", "nssdb/", NULL, 
                                           NULL, NULL);
     if (ret) {
         if (ret == NE_PK11_NOTIMPL)
