@@ -293,8 +293,10 @@ static void init_ipv6(void)
     else
         close(fd);
 }
-#else
+#elif defined(AF_INET6)
 #define ipv6_disabled (0)
+#else
+#define ipv6_disabled (1)
 #endif
 
 /* If init_state is N where > 0, ne_sock_init has been called N times;
@@ -823,7 +825,10 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 #ifdef USE_GETADDRINFO
     struct addrinfo hints = {0};
     char *pnt;
+
     hints.ai_socktype = SOCK_STREAM;
+
+#ifdef AF_INET6
     if (hostname[0] == '[' && ((pnt = strchr(hostname, ']')) != NULL)) {
 	char *hn = ne_strdup(hostname + 1);
 	hn[pnt - hostname - 1] = '\0';
@@ -833,7 +838,9 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
         hints.ai_family = AF_INET6;
 	addr->errnum = getaddrinfo(hn, NULL, &hints, &addr->result);
 	ne_free(hn);
-    } else {
+    } else 
+#endif /* AF_INET6 */
+    {
 #ifdef USE_GAI_ADDRCONFIG /* added in the RFC3493 API */
         hints.ai_flags = AI_ADDRCONFIG;
         hints.ai_family = AF_UNSPEC;
@@ -1142,7 +1149,7 @@ static int do_bind(int fd, int peer_family,
 #endif        
     
 
-#ifdef USE_GETADDRINFO
+#if defined(USE_GETADDRINFO) && defined(AF_INET6)
     /* Use a sockaddr_in6 if an AF_INET6 local address is specifed, or
      * if no address is specified and the peer address is AF_INET6: */
     if ((addr != &dummy_laddr && addr->ai_family == AF_INET6)
@@ -1312,7 +1319,7 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
 
 ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia)
 {
-#ifdef USE_GETADDRINFO
+#if defined(USE_GETADDRINFO) && defined(AF_INET6)
     return ia->ai_family == AF_INET6 ? ne_iaddr_ipv6 : ne_iaddr_ipv4;
 #else
     return ne_iaddr_ipv4;
@@ -1329,16 +1336,20 @@ int ne_iaddr_cmp(const ne_inet_addr *i1, const ne_inet_addr *i2)
 	    *in2 = SACAST(in, i2->ai_addr);
 	return memcmp(&in1->sin_addr.s_addr, &in2->sin_addr.s_addr, 
 		      sizeof in1->sin_addr.s_addr);
-    } else if (i1->ai_family == AF_INET6) {
+    } 
+#ifdef AF_INET6
+    else if (i1->ai_family == AF_INET6) {
 	struct sockaddr_in6 *in1 = SACAST(in6, i1->ai_addr), 
 	    *in2 = SACAST(in6, i2->ai_addr);
 	return memcmp(in1->sin6_addr.s6_addr, in2->sin6_addr.s6_addr,
 		      sizeof in1->sin6_addr.s6_addr);
-    } else
+    } 
+#endif /* AF_INET6 */
+    else
 	return -1;
 #else
     return memcmp(&i1->s_addr, &i2->s_addr, sizeof i1->s_addr);
-#endif
+#endif /* USE_GETADDRINFO */
 }
 
 void ne_iaddr_free(ne_inet_addr *addr)
