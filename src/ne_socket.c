@@ -1248,7 +1248,7 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
 {
     union saun {
         struct sockaddr_in sin;
-#ifdef USE_GETADDRINFO
+#if defined(USE_GETADDRINFO) && defined(AF_INET6)
         struct sockaddr_in6 sin6;
 #endif
     } saun;
@@ -1261,6 +1261,13 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
         return NULL;
     }
 
+#if !defined(USE_GETADDRINFO) || !defined(AF_INET6)
+    if (sad->sa_family != AF_INET) {
+        set_error(sock, _("Socket family not supported"));
+        return NULL;
+    }
+#endif                  
+
     ia = ne_calloc(sizeof *ia);
 #ifdef USE_GETADDRINFO
     ia->ai_addr = ne_malloc(sizeof *ia);
@@ -1271,7 +1278,7 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
     memcpy(ia, &saun.sin.sin_addr.s_addr, sizeof *ia);
 #endif    
 
-#ifdef USE_GETADDRINFO
+#if defined(USE_GETADDRINFO) && defined(AF_INET6)
     *port = ntohs(sad->sa_family == AF_INET ? 
                   saun.sin.sin_port : saun.sin6.sin6_port);
 #else
