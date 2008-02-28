@@ -334,7 +334,7 @@ static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
 
     NE_DEBUG(NE_DBG_SSL, "pk11: Login result = %lu\n", rv);
 
-    return rv == CKR_OK ? 0 : -1;
+    return (rv == CKR_OK || rv == CKR_USER_ALREADY_LOGGED_IN) ? 0 : -1;
 }
 
 static void pk11_provide(void *userdata, ne_session *sess,
