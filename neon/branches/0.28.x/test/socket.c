@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -257,7 +257,9 @@ static int addr_make_v6(void)
 	ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv6, as[n].addr);
 	char pr[128];
 
-	ONV(ia == NULL, ("could not make address for %d", n));
+	ONV(ia == NULL, ("could not make address for '%s'", 
+                         as[n].rep));
+
 	ne_iaddr_print(ia, pr, sizeof pr);
 	ONV(strcmp(pr, as[n].rep), 
 	    ("address %d was '%s' not '%s'", n, pr, as[n].rep));
@@ -298,6 +300,7 @@ static int addr_compare(void)
 #ifdef TEST_IPV6
     ne_iaddr_free(ia2);
     ia2 = ne_iaddr_make(ne_iaddr_ipv6, raw6_cafe);
+    ONN("could not make IPv6 address", !ia2);
     ret = ne_iaddr_cmp(ia1, ia2);
     ONN("comparison of IPv4 and IPv6 addresses was zero", ret == 0);
 
