@@ -871,11 +871,14 @@ static int client_cert_provided(void)
     return OK;
 }
 
+#define DN_COUNT 5
+
 static void cc_check_dnames(void *userdata, ne_session *sess,
                             const ne_ssl_dname *const *dns, int dncount)
 {
     int n, *ret = userdata;
-    static const char *expected[4] = {
+    static const char *expected[DN_COUNT] = {
+        CACERT_DNAME,
         "First Random CA, CAs Ltd., Lincoln, Lincolnshire, GB",
         "Second Random CA, CAs Ltd., Falmouth, Cornwall, GB",
         "Third Random CA, CAs Ltd., Ipswich, Suffolk, GB",
@@ -884,13 +887,14 @@ static void cc_check_dnames(void *userdata, ne_session *sess,
 
     ne_ssl_set_clicert(sess, def_cli_cert);
 
-    if (dncount != 4) {
-        t_context("dname count was %d not 4", dncount);
+    if (dncount != DN_COUNT) {
+        t_context("dname count was %d not %d", dncount, 
+                  DN_COUNT);
         *ret = -1;
         return;
     }
     
-    for (n = 0; n < 4; n++) {
+    for (n = 0; n < DN_COUNT; n++) {
         char which[5];
 
         sprintf(which, "%d", n);

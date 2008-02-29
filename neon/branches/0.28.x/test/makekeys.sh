@@ -116,7 +116,7 @@ ${MKCERT} -key ${srcdir}/server.key -out ca3.pem
 csr_fields "Fourth Random CA" "fourth.example.com" "CAs Ltd." Norwich Norfolk | \
 ${MKCERT} -key ${srcdir}/server.key -out ca4.pem
 
-cat ca[1234].pem > calist.pem
+cat ca/cert.pem ca[1234].pem > calist.pem
 
 csr_fields "Wildcard Cert Dept" "*.example.com" | \
 ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr

@@ -24,6 +24,10 @@
 
 #include <sys/types.h>
 
+#ifdef WIN32
+#include <stdlib.h> /* for size_t */
+#endif
+
 #include "ne_defs.h"
 #include "ne_ssl.h" /* for ne_ssl_context */
 
