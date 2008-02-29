@@ -655,9 +655,9 @@ static int parse_domain(auth_session *sess, const char *domain)
                                            ++sess->ndomains *
                                            sizeof(*sess->domains));
                 sess->domains[sess->ndomains - 1] = absolute.path;
-                absolute.path = NULL;
                 NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using domain %s from %s\n",
                          absolute.path, token);
+                absolute.path = NULL;
             }
             else {
                 NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignoring domain %s\n",
