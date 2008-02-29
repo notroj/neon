@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -820,9 +820,7 @@ static int inside_domain(auth_session *sess, const char *req_uri)
     for (n = 0; n < sess->ndomains && !inside; n++) {
         const char *d = sess->domains[n];
         
-        inside = (d[strlen(d)-1] == '/'
-                  && strncmp(uri.path, d, strlen(d)) == 0)
-            || strcmp(d, uri.path) == 0;
+        inside = strncmp(uri.path, d, strlen(d)) == 0;
     }
     
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: '%s' is inside auth domain: %d.\n", 

@@ -1061,7 +1061,7 @@ static int domains(void)
 
     CALL(any_2xx_request(sess, "/fish/0"));
     CALL(any_2xx_request(sess, "/outside"));
-    CALL(any_2xx_request(sess, "/other"));
+    CALL(any_2xx_request(sess, "/others"));
     CALL(any_2xx_request(sess, "/fish"));
     CALL(any_2xx_request(sess, "/fish/2"));
     CALL(any_2xx_request(sess, "*"));
