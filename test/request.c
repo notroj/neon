@@ -203,7 +203,7 @@ static int reason_phrase(void)
 
     CALL(make_session(&sess, single_serve_string, RESP200
 		      "Connection: close\r\n\r\n"));
-    CALL(any_request(sess, "/foo"));
+    ONREQ(any_request(sess, "/foo"));
     CALL(await_server());
     
     ONV(strcmp(ne_get_error(sess), "200 OK"),
@@ -1607,12 +1607,12 @@ static int versions(void)
 		      "HTTP/1.0 200 OK\r\n"
 		      "Content-Length: 0\r\n\r\n"));
     
-    CALL(any_request(sess, "/http11"));
+    ONREQ(any_request(sess, "/http11"));
 	 
     ONN("did not detect HTTP/1.1 compliance",
 	ne_version_pre_http11(sess) != 0);
 	 
-    CALL(any_request(sess, "/http10"));
+    ONREQ(any_request(sess, "/http10"));
 
     ONN("did not detect lack of HTTP/1.1 compliance",
 	ne_version_pre_http11(sess) == 0);
@@ -1655,7 +1655,7 @@ static int hook_create_req(void)
     args.uri = "/foo";
     args.result = -1;
 
-    CALL(any_request(sess, "/foo"));
+    ONREQ(any_request(sess, "/foo"));
     
     ONN("first hook never called", args.result == -1);
     if (args.result) return FAIL;
@@ -1666,7 +1666,7 @@ static int hook_create_req(void)
     /* force use of absoluteURI in request-uri */
     ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_request(sess, "/bar"));
+    ONREQ(any_request(sess, "/bar"));
     
     ONN("second hook never called", args.result == -1);
     if (args.result) return FAIL;
