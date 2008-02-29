@@ -1466,7 +1466,7 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
     if (ret) {
         ne_set_error(sess, "%s: %s", err, ne_sock_error(sess->socket));
         ne_sock_close(sess->socket);
-	return NE_CONNECT;
+	return ret == NE_SOCK_TIMEOUT ? NE_TIMEOUT : NE_CONNECT;
     }
 
     notify_status(sess, ne_status_connected);
