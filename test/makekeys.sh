@@ -14,6 +14,8 @@ REQDN=reqDN
 STRMASK=default
 export REQDN STRMASK
 
+openssl version
+
 set -ex
 
 mkdir ca
