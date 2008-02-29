@@ -45,6 +45,7 @@
 #error SSL not supported
 #endif
 
+#include "ne_pkcs11.h"
 
 #define SERVER_CERT "server.cert"
 #define CA_CERT "ca/cert.pem"
@@ -1517,6 +1518,63 @@ static int nonssl_trust(void)
     return OK;
 }
 
+/* PIN password provider callback. */
+static int pkcs11_pin(void *userdata, int attempt,
+                      const char *slot_descr, const char *token_label,
+                      unsigned int flags, char *pin)
+{
+    char *sekrit = userdata;
+
+    NE_DEBUG(NE_DBG_SSL, "pkcs11: slot = [%s], token = [%s]\n",
+             slot_descr, token_label);
+
+    if (attempt == 0) {
+        strcpy(pin, sekrit);
+        return 0;
+    }
+    else {
+        return -1;
+    }
+}
+
+/* Test that the on-demand client cert provider callback is used. */
+static int pkcs11(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    ne_ssl_pkcs11_provider *prov;
+    int ret;
+
+    args.require_cc = 1;
+
+    if (access("nssdb", R_OK|X_OK)) {
+        t_warning("NSS required for PKCS#11 testing");
+        return SKIP;
+    }
+
+    ret = ne_ssl_pkcs11_nss_provider_init(&prov, "softokn3", "nssdb/", NULL, 
+                                          NULL, NULL);
+    if (ret) {
+        if (ret == NE_PK11_NOTIMPL)
+            t_context("pakchois library required for PKCS#11 support");
+        else
+            t_context("could not load NSS softokn3 PKCS#11 provider");
+        return SKIP;
+    }
+
+    ne_ssl_pkcs11_provider_pin(prov, pkcs11_pin, "foobar");
+    
+    ne_ssl_set_pkcs11_provider(sess, prov);
+
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT,
+                         NULL, NULL));
+
+    ne_session_destroy(sess);
+    ne_ssl_pkcs11_provider_destroy(prov);
+
+    return OK;
+}
+
 /* TODO: code paths still to test in cert verification:
  * - server cert changes between connections: Mozilla gives
  * a "bad MAC decode" error for this; can do better?
@@ -1597,6 +1655,8 @@ ne_test tests[] = {
     T(auth_tunnel_fail),
 
     T(nonssl_trust),
+
+    T(pkcs11),
 
     T(NULL) 
 };
