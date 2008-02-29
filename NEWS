@@ -1,3 +1,9 @@
+Changes in release 0.28.1:
+* Fix Win32 build.
+* Fix build on SCO OpenServer 5.0.x (thanks to Nico Kadel-Garcia)
+* Fix handling of Digest domain paramater values without a trailing slash.
+* Add --without-pakchois to configure (Arfrever Frehtes Taifersar Arahesis)
+
 Changes in release 0.28.0:
 * Interface changes:
  - none, API and ABI backwards-compatible with 0.27.x
@@ -23,6 +29,15 @@ Changes in release 0.28.0:
  - Win32: fix build with VS 2008 (Stefan Kueng)
  - Win32: fix neon.mak to not double-quote $(MAKE) (Henrik Holst)
  - improve strength of Digest cnonces in GnuTLS builds
+
+Changes in release 0.27.2:
+* Fix crash in GSSAPI Negotiate response header verification (regression
+  since 0.26.x)
+
+Changes in release 0.27.1:
+* Fix regression in response progress counter for notifier/progress callbacks
+* Fix interface description for ne_set_notifier() callback; sr.total
+  is set to -1 not 0 for an indeterminate response length
 
 Changes in release 0.27.0:
 * New interfaces:
