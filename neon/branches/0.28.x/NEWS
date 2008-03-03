@@ -3,6 +3,7 @@ Changes in release 0.28.1:
 * Fix build on SCO OpenServer 5.0.x (thanks to Nico Kadel-Garcia)
 * Fix handling of Digest domain paramater values without a trailing slash.
 * Add --without-pakchois to configure (Arfrever Frehtes Taifersar Arahesis)
+* zh message catalog renamed to zh_CN, translation updated (Dongsheng Song)
 
 Changes in release 0.28.0:
 * Interface changes:
