@@ -115,6 +115,7 @@ if test "$NEON_NEED_XML_PARSER" = "yes"; then
        # Special case for Subversion
        ne_expdir=`echo $with_expat | sed 's:/libexpat.la$::'`
        AC_DEFINE(HAVE_EXPAT)
+       AC_DEFINE_UNQUOTED([NE_FMT_XML_SIZE], ["d"])
        CPPFLAGS="$CPPFLAGS -I$ne_expdir"
        if test "x${NEON_TARGET}" = "xlibneon.la"; then
          NEON_LTLIBS=$with_expat
