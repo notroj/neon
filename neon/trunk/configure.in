@@ -152,7 +152,7 @@ fi
 NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 
 # Bundled language catalogs
-ALL_LINGUAS="cs de fr ja nn pl ru tr zh"
+ALL_LINGUAS="cs de fr ja nn pl ru tr zh_CN"
 AC_SUBST(ALL_LINGUAS)
 
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
