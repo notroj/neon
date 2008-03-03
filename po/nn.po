@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.4\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2008-02-08 16:56+0000\n"
+"POT-Creation-Date: 2008-03-03 08:58+0000\n"
 "PO-Revision-Date: 2002-11-07 18:11+0100\n"
 "Last-Translator: Karl Ove Hufthammer <karl@huftis.org>\n"
 "Language-Team: Norwegian Nynorsk <i18n-nn@lister.ping.uio.no>\n"
@@ -95,37 +95,37 @@ msgstr ""
 msgid "could not parse domain in Digest challenge"
 msgstr "Klarte ikkje tolka storleik på oppdelt svar"
 
-#: src/ne_auth.c:1038
+#: src/ne_auth.c:1036
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:1043
+#: src/ne_auth.c:1041
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1053
+#: src/ne_auth.c:1051
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 
-#: src/ne_auth.c:1058
+#: src/ne_auth.c:1056
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:1101
+#: src/ne_auth.c:1099
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1227
+#: src/ne_auth.c:1225
 #, c-format
 msgid "ignored %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:1306
+#: src/ne_auth.c:1304
 #, fuzzy
 msgid "could not parse challenge"
 msgstr "Klarte ikkje tolka storleik på oppdelt svar"
@@ -174,17 +174,17 @@ msgstr ""
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:691 src/ne_openssl.c:419
+#: src/ne_gnutls.c:694 src/ne_openssl.c:419
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:731 src/ne_openssl.c:638
+#: src/ne_gnutls.c:734 src/ne_openssl.c:638
 #, fuzzy, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "Klarte ikkje skriva til fil: %s"
 
-#: src/ne_gnutls.c:740
+#: src/ne_gnutls.c:743
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -374,68 +374,72 @@ msgstr ""
 msgid "Server certificate verification failed: "
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_socket.c:507 src/ne_socket.c:561 src/ne_socket.c:664
+#: src/ne_socket.c:509 src/ne_socket.c:563 src/ne_socket.c:666
 #, fuzzy
 msgid "Connection closed"
 msgstr "Tilkoplinga vart lukka av tenaren"
 
-#: src/ne_socket.c:571 src/ne_socket.c:676
+#: src/ne_socket.c:573 src/ne_socket.c:678
 #, fuzzy
 msgid "Secure connection truncated"
 msgstr "Sambandet vart tidsavbrote."
 
-#: src/ne_socket.c:583 src/ne_socket.c:688
+#: src/ne_socket.c:585 src/ne_socket.c:690
 #, fuzzy, c-format
 msgid "SSL error: %s"
 msgstr "%s: Feil: %s\n"
 
-#: src/ne_socket.c:586
+#: src/ne_socket.c:588
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:669
+#: src/ne_socket.c:671
 #, fuzzy, c-format
 msgid "SSL alert received: %s"
 msgstr "%s: Feil: %s\n"
 
-#: src/ne_socket.c:684
+#: src/ne_socket.c:686
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:783
+#: src/ne_socket.c:785
 msgid "Line too long"
 msgstr "For lang linje"
 
-#: src/ne_socket.c:923 src/ne_socket.c:929
+#: src/ne_socket.c:930 src/ne_socket.c:936
 msgid "Host not found"
 msgstr "Fann ikkje vert"
 
-#: src/ne_socket.c:1036
+#: src/ne_socket.c:1043
 #, fuzzy
 msgid "Connection timed out"
 msgstr "%s: sambandet vart tidsavbrote."
 
-#: src/ne_socket.c:1198
+#: src/ne_socket.c:1205
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1471
+#: src/ne_socket.c:1266
+msgid "Socket family not supported"
+msgstr ""
+
+#: src/ne_socket.c:1489
 #, fuzzy
 msgid "Client certificate verification failed"
 msgstr "Tenarsertifikatet er utgått på dato."
 
-#: src/ne_socket.c:1487
+#: src/ne_socket.c:1505
 #, fuzzy
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1494
+#: src/ne_socket.c:1512
 #, fuzzy
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL avslått grunna mangel på entropi"
 
-#: src/ne_socket.c:1500
+#: src/ne_socket.c:1518
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "Klarte ikkje forhandla SSL-økt"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.28.0\n"
 "Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2008-02-08 16:56+0000\n"
+"POT-Creation-Date: 2008-03-03 08:58+0000\n"
 "PO-Revision-Date: 2007-11-24 14:00+0100\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -98,44 +98,44 @@ msgstr "nieaktualne wezwanie Digest z nowym algorytmem lub domeną"
 msgid "could not parse domain in Digest challenge"
 msgstr "nie można parsować domeny w wezwaniu Digest"
 
-#: src/ne_auth.c:1038
+#: src/ne_auth.c:1036
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr "Porażka wzajemnego uwierzytelniania Digest: brakujące parametry"
 
-#: src/ne_auth.c:1043
+#: src/ne_auth.c:1041
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność posłańca klienta"
 
-#: src/ne_auth.c:1053
+#: src/ne_auth.c:1051
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: nie można parsować licznika "
 "posłańca"
 
-#: src/ne_auth.c:1058
+#: src/ne_auth.c:1056
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność licznika posłańca (%"
 "u nie %u)"
 
-#: src/ne_auth.c:1101
+#: src/ne_auth.c:1099
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność request-digest "
 "mismatch"
 
-#: src/ne_auth.c:1227
+#: src/ne_auth.c:1225
 #, c-format
 msgid "ignored %s challenge"
 msgstr "wezwanie %s zignorowane"
 
-#: src/ne_auth.c:1306
+#: src/ne_auth.c:1304
 msgid "could not parse challenge"
 msgstr "nie można parsować wezwania"
 
@@ -181,17 +181,17 @@ msgstr "[niedrukowalne:#%lu]"
 msgid "[unprintable]"
 msgstr "[niedrukowalne]"
 
-#: src/ne_gnutls.c:691 src/ne_openssl.c:419
+#: src/ne_gnutls.c:694 src/ne_openssl.c:419
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
-#: src/ne_gnutls.c:731 src/ne_openssl.c:638
+#: src/ne_gnutls.c:734 src/ne_openssl.c:638
 #, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "Negocjacja SSL nie udała się: %s"
 
-#: src/ne_gnutls.c:740
+#: src/ne_gnutls.c:743
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr "Serwer nie wysłał łańcucha certyfikatu"
@@ -372,62 +372,66 @@ msgstr "wydawca nie jest zaufany"
 msgid "Server certificate verification failed: "
 msgstr "Weryfikacja certyfikatu serwera nie powiodła się: "
 
-#: src/ne_socket.c:507 src/ne_socket.c:561 src/ne_socket.c:664
+#: src/ne_socket.c:509 src/ne_socket.c:563 src/ne_socket.c:666
 msgid "Connection closed"
 msgstr "Połączenie zamknięte"
 
-#: src/ne_socket.c:571 src/ne_socket.c:676
+#: src/ne_socket.c:573 src/ne_socket.c:678
 msgid "Secure connection truncated"
 msgstr "Bezpieczne połączenie obcięte"
 
-#: src/ne_socket.c:583 src/ne_socket.c:688
+#: src/ne_socket.c:585 src/ne_socket.c:690
 #, c-format
 msgid "SSL error: %s"
 msgstr "Błąd SSL: %s"
 
-#: src/ne_socket.c:586
+#: src/ne_socket.c:588
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr "Kod błędu SSL %d/%d/%lu"
 
-#: src/ne_socket.c:669
+#: src/ne_socket.c:671
 #, c-format
 msgid "SSL alert received: %s"
 msgstr "Alarm SSL otrzymany: %s"
 
-#: src/ne_socket.c:684
+#: src/ne_socket.c:686
 msgid "SSL socket read failed"
 msgstr "Odczytywanie gniazda SSL nie powiodło się"
 
-#: src/ne_socket.c:783
+#: src/ne_socket.c:785
 msgid "Line too long"
 msgstr "Linia zbyt długa"
 
-#: src/ne_socket.c:923 src/ne_socket.c:929
+#: src/ne_socket.c:930 src/ne_socket.c:936
 msgid "Host not found"
 msgstr "Host nieznaleziony"
 
-#: src/ne_socket.c:1036
+#: src/ne_socket.c:1043
 msgid "Connection timed out"
 msgstr "Czas połączenia się skończył"
 
-#: src/ne_socket.c:1198
+#: src/ne_socket.c:1205
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 
-#: src/ne_socket.c:1471
+#: src/ne_socket.c:1266
+msgid "Socket family not supported"
+msgstr ""
+
+#: src/ne_socket.c:1489
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1487
+#: src/ne_socket.c:1505
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1494
+#: src/ne_socket.c:1512
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
 
-#: src/ne_socket.c:1500
+#: src/ne_socket.c:1518
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 
