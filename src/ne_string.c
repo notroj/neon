@@ -346,7 +346,7 @@ size_t ne_unbase64(const char *data, unsigned char **out)
 }
 
 /* Character map array; array[n] = isprint(n) ? 0x20 : n.  Used by
- * ne_strclean as a locale-indepdenent isprint(). */
+ * ne_strclean as a locale-independent isprint(). */
 static const unsigned char ascii_printable[256] = {
     0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 
     0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 
