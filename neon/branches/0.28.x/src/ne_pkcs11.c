@@ -41,6 +41,28 @@ struct ne_ssl_pkcs11_provider_s {
     ck_object_handle_t privkey;
 };
 
+/* To do list for PKCS#11 support:
+
+   - propagate error strings back to ne_session; use new 
+   pakchois_error() for pakchois API 0.2
+   - add API to specify a particular slot number to use for clicert
+   - add API to specify a particular cert ID for clicert
+   - find a certificate which has an issuer matching the 
+     CA dnames given by GnuTLS
+   - make sure subject name matches betweeen pubkey and privkey
+   - support DSA along with RSA
+   - check error handling & fail gracefully if the token is 
+   ejected mid-session
+   - add API to enumerate/search provided certs and allow 
+     direct choice? (or just punt)
+   - the session<->provider interface requires that 
+   one clicert is used for all sessions.  remove this limitation
+   - add API to import all CA certs as trusted
+   (CKA_CERTIFICATE_CATEGORY seems to be unused unfortunately; 
+    just add all X509 certs with CKA_TRUSTED set to true))
+
+*/
+
 static int pk11_find_x509(ne_ssl_pkcs11_provider *prov,
                           pakchois_session_t *pks, 
                           unsigned char *certid, unsigned long *cid_len)
@@ -312,7 +334,7 @@ static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
 
     NE_DEBUG(NE_DBG_SSL, "pk11: Login result = %lu\n", rv);
 
-    return rv == CKR_OK ? 0 : -1;
+    return (rv == CKR_OK || rv == CKR_USER_ALREADY_LOGGED_IN) ? 0 : -1;
 }
 
 static void pk11_provide(void *userdata, ne_session *sess,
