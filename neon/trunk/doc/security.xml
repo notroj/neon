@@ -46,8 +46,8 @@
     &neon; itself is fixed and is not proportional to the response
     size.</para>
 
-    <sect2>Test cases for all the above attacks are present in the
-    &neon; test suite.</sect2>
+    <para>Test cases for all the above attacks are present in the
+    &neon; test suite.</para>
 
   </sect2>
 
@@ -92,9 +92,9 @@
     can be overridden by the use of a callback installed using <xref
     linkend="ne_ssl_set_verify"/>.</para>
   
-    <sect2>Test cases for the correctness of the implementation of the
+    <para>Test cases for the correctness of the implementation of the
     identity verification algorithm are present in the &neon; test
-    suite.</sect2>
+    suite.</para>
 
   </sect2>
 
