@@ -421,14 +421,19 @@ static int serve_twice(ne_socket *sock, void *userdata)
 /* Test persistent connection handling: serve 'response' twice on a
  * single TCP connection, expecting to get a response body equal to
  * 'body' both times. */
-static int test_persist(const char *response, const char *body)
+static int test_persist_p(const char *response, const char *body, int proxy)
 {
     ne_session *sess = ne_session_create("http", "localhost", 7777);
     ne_buffer *buf = ne_buffer_create();
 
     ON(sess == NULL || buf == NULL);
     ON(spawn_server(7777, serve_twice, (char *)response));
-    
+
+    if (proxy) {
+        ne_session_proxy(sess, "localhost", 7777);
+        ne_set_session_flag(sess, NE_SESSFLAG_CONNAUTH, 1);
+    }
+
     CALL(run_request(sess, 200, construct_get, buf));
     
     ONV(strcmp(buf->data, body),
@@ -449,6 +454,11 @@ static int test_persist(const char *response, const char *body)
     return OK;
 }
 
+static int test_persist(const char *response, const char *body)
+{
+    return test_persist_p(response, body, 0);
+}
+
 static int persist_http11(void)
 {
     return test_persist(RESP200 "Content-Length: 5\r\n\r\n" "abcde",
@@ -467,6 +477,14 @@ static int persist_http10(void)
 			"Connection: keep-alive\r\n"
 			"Content-Length: 5\r\n\r\n" "abcde",
 			"abcde");
+}
+
+static int persist_proxy_http10(void)
+{
+    return test_persist_p("HTTP/1.0 200 OK\r\n"
+                          "Proxy-Connection: keep-alive\r\n"
+                          "Content-Length: 5\r\n\r\n" "abcde",
+                          "abcde", 1);
 }
 
 /* Server function for fail_early_eof */
@@ -2124,6 +2142,7 @@ ne_test tests[] = {
     T(persist_http11),
     T(persist_chunked),
     T(persist_http10),
+    T(persist_proxy_http10),
     T(persist_timeout),
     T(no_persist_http10),
     T(ptimeout_eof),
