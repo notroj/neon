@@ -82,6 +82,7 @@ struct field {
 
 /* pre-calculated hash values for given header names: */
 #define HH_HV_CONNECTION        (0x14)
+#define HH_HV_PROXY_CONNECTION  (0x1A)
 #define HH_HV_CONTENT_LENGTH    (0x13)
 #define HH_HV_TRANSFER_ENCODING (0x07)
 
@@ -400,6 +401,12 @@ static void add_fixed_headers(ne_request *req)
                           "Keep-Alive: " EOL
                           "Connection: TE, Keep-Alive" EOL
                           "TE: trailers" EOL);
+    } else if (!req->session->is_http11 && req->session->use_proxy) {
+        ne_buffer_czappend(req->headers, 
+                           "Keep-Alive: " EOL
+                           "Proxy-Connection: Keep-Alive" EOL
+                           "Connection: TE" EOL
+                           "TE: trailers" EOL);
     } else {
         ne_buffer_czappend(req->headers, 
                            "Connection: TE" EOL
@@ -1137,7 +1144,7 @@ int ne_begin_request(ne_request *req)
     const ne_status *const st = &req->status;
     const char *value;
     struct hook *hk;
-    int ret;
+    int ret, forced_closure = 0;
 
     /* If a non-idempotent request is sent on a persisted connection,
      * then it is impossible to distinguish between a server failure
@@ -1190,6 +1197,7 @@ int ne_begin_request(ne_request *req)
 
             if (strcmp(token, "close") == 0) {
                 req->can_persist = 0;
+                forced_closure = 1;
             } else if (strcmp(token, "keep-alive") == 0) {
                 req->can_persist = 1;
             } else if (!req->session->is_http11
@@ -1201,6 +1209,25 @@ int ne_begin_request(ne_request *req)
         } while (ptr);
         
         ne_free(vcopy);
+    }
+
+    /* Support "Proxy-Connection: keep-alive" for compatibility with
+     * some HTTP/1.0 proxies; it is risky to do this, because an
+     * intermediary proxy may not support this HTTP/1.0 extension, but
+     * will not strip the header either.  Persistent connection
+     * support is enabled based on the presence of this header if:
+     * a) it is *necessary* to do so due to the use of a connection-auth
+     * scheme, and
+     * b) connection closure was not forced via "Connection: close".  */
+    if (req->session->use_proxy && !req->session->is_http11
+        && !forced_closure && req->session->flags[NE_SESSFLAG_CONNAUTH]) {
+        value = get_response_header_hv(req, HH_HV_PROXY_CONNECTION,
+                                       "proxy-connection");
+        if (value && ne_strcasecmp(value, "keep-alive") == 0) {
+            NE_DEBUG(NE_DBG_HTTP, "req: Using persistent connection "
+                     "for HTTP/1.0 proxy requiring conn-auth hack.\n");
+            req->can_persist = 1;
+        }
     }
 
     /* Decide which method determines the response message-length per
