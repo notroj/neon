@@ -1,3 +1,7 @@
+Changes in release 0.28.2:
+* Support "Proxy-Connection: Keep-Alive" for compatibility with HTTP/1.0
+ proxies which require persistent connections for NTLM authentication
+
 Changes in release 0.28.1:
 * Fix Win32 build
 * Fix build on SCO OpenServer 5.0.x (thanks to Nico Kadel-Garcia)
