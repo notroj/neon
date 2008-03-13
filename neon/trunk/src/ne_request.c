@@ -405,7 +405,7 @@ static void add_fixed_headers(ne_request *req)
         ne_buffer_czappend(req->headers, 
                            "Keep-Alive: " EOL
                            "Proxy-Connection: Keep-Alive" EOL
-                           "Connection: TE, Keep-Alive" EOL
+                           "Connection: TE" EOL
                            "TE: trailers" EOL);
     } else {
         ne_buffer_czappend(req->headers, 
