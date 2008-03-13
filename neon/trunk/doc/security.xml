@@ -5,9 +5,9 @@
   <para>&neon; is intended to be secure against a specific threat
   model: use of a malicious HTTP server.  Under this threat model, a
   range of attacks are possible against a client when the user (or
-  application) can be tricked into using an untrusted HTTP server
-  under the control of a attacker.  This section documents the types
-  of possible attack and describes how they affect &neon;.</para>
+  application) can be tricked into accessing an HTTP server which is
+  controlled by an attacker.  This section documents the types of
+  possible attack and describes how they affect &neon;.</para>
 
   <sect2>
     <title>CPU or memory consumption attacks</title>
