@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -113,6 +113,12 @@ ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia);
 /* Print the string representation of network address 'ia' into the
  * buffer 'buffer', which is of length 'bufsiz'.  Returns 'buffer'. */
 char *ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
+
+/* Dump the raw byte representation (in network byte order) of address
+ * 'ia' into the buffer 'buffer', which must be of a suitable length
+ * (4 bytes for an IPv4 address, 16 bytes for an IPv6 address).
+ * Returns 'buffer'. */
+unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
 
 /* Perform the reverse name lookup on network address 'ia', placing
  * the returned name in the 'buf' buffer (of length 'bufsiz') if

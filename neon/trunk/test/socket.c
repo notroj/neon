@@ -226,6 +226,7 @@ static int addr_make_v4(void)
 {
     ne_inet_addr *ia;
     char pr[50];
+    unsigned char raw[5];
     
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
@@ -234,6 +235,11 @@ static int addr_make_v4(void)
     ONV(strcmp(pr, "127.0.0.1"), ("address was %s not 127.0.0.1", pr));
 
     ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv4);
+
+    raw[4] = 'Z';
+    ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
+    ONN("raw address mismatch", memcmp(raw, raw_127, 4) != 0);
+    ONN("ne_iaddr_raw buffer overflow", raw[4] != 'Z');
 
     ne_iaddr_free(ia);
     return OK;
@@ -256,6 +262,7 @@ static int addr_make_v6(void)
     for (n = 0; as[n].rep != NULL; n++) {
 	ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv6, as[n].addr);
 	char pr[128];
+        unsigned char raw[17];
 
 	ONV(ia == NULL, ("could not make address for '%s'", 
                          as[n].rep));
@@ -265,6 +272,11 @@ static int addr_make_v6(void)
 	    ("address %d was '%s' not '%s'", n, pr, as[n].rep));
 	
         ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv6);
+
+        raw[16] = 'Z';
+        ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
+        ONN("raw address mismatch", memcmp(raw, as[n].addr, 4) != 0);
+        ONN("ne_iaddr_raw buffer overflow", raw[16] != 'Z');
 
 	ne_iaddr_free(ia);
     }
