@@ -12,7 +12,12 @@ if test ! -f .version; then
 fi
 set -e
 echo -n "libtoolize... "
-${LIBTOOLIZE:-libtoolize} --copy --force >/dev/null
+LIBTOOLIZE=${LIBTOOLIZE:-libtoolize}
+if ${LIBTOOLIZE} --help | grep -- --install > /dev/null; then
+   ${LIBTOOLIZE} --copy --force --install >/dev/null;
+else
+   ${LIBTOOLIZE} --copy --force >/dev/null
+fi
 echo -n "aclocal... "
 ${ACLOCAL:-aclocal} -I macros
 echo -n "autoheader... "
