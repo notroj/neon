@@ -49,7 +49,7 @@ struct ne_ssl_pkcs11_provider_s {
    - add API to specify a particular cert ID for clicert
    - find a certificate which has an issuer matching the 
      CA dnames given by GnuTLS
-   - make sure subject name matches betweeen pubkey and privkey
+   - make sure subject name matches between pubkey and privkey
    - support DSA along with RSA
    - check error handling & fail gracefully if the token is 
    ejected mid-session
