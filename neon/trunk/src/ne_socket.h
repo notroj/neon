@@ -207,6 +207,11 @@ int ne_sock_close(ne_socket *sock);
 /* Return current error string for socket. */
 const char *ne_sock_error(const ne_socket *sock);
 
+/* Set the error string for the socket; takes printf-like format
+ * string. */
+void ne_sock_set_error(ne_socket *sock, const char *format, ...)
+    ne_attribute((format (printf, 2, 3)));
+
 /* Set read timeout for socket, in seconds; must be a non-zero
  * positive integer. */
 void ne_sock_read_timeout(ne_socket *sock, int timeout);

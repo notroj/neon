@@ -1214,6 +1214,18 @@ static int cipher(void)
     return finish(sock, 1);
 }
 
+static int error(void)
+{
+    ne_socket *sock = ne_sock_create();
+
+    ne_sock_set_error(sock, "%s:%s", "fish", "42");
+    
+    ONCMP("fish:42", ne_sock_error(sock), "socket error", "set");
+
+    ne_sock_close(sock);
+    return OK;
+}
+
 ne_test tests[] = {
     T(multi_init),
     T_LEAKY(resolve),
@@ -1250,6 +1262,7 @@ ne_test tests[] = {
     T(echo_lines),
     T(blocking),
     T(prebind),
+    T(error),
 #ifdef SOCKET_SSL
     T(ssl_closure),
     T(ssl_truncate),
