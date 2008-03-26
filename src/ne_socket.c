@@ -1687,6 +1687,15 @@ const char *ne_sock_error(const ne_socket *sock)
     return sock->error;
 }
 
+void ne_sock_set_error(ne_socket *sock, const char *format, ...)
+{
+    va_list params;
+
+    va_start(params, format);
+    ne_vsnprintf(sock->error, sizeof sock->error, format, params);
+    va_end(params);
+}
+
 /* Closes given ne_socket */
 int ne_sock_close(ne_socket *sock)
 {
