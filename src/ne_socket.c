@@ -116,9 +116,7 @@ typedef struct addrinfo ne_inet_addr;
 typedef struct in_addr ne_inet_addr;
 #endif
 
-#ifdef NE_HAVE_SSL
 #include "ne_privssl.h" /* MUST come after ne_inet_addr is defined */
-#endif
 
 /* To avoid doing AAAA queries unless absolutely necessary, either use
  * AI_ADDRCONFIG where available, or a run-time check for working IPv6
