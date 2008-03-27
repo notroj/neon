@@ -247,6 +247,37 @@ int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
  * freed by the caller. */
 char *ne_sock_cipher(ne_socket *sock);
 
+/* SOCKS proxy protocol version: */
+enum ne_sock_sversion {
+    NE_SOCK_SOCKSV4 = 0,
+    NE_SOCK_SOCKSV4A,
+    NE_SOCK_SOCKSV5
+};
+
+/* Given a socket 'sock' which is connected to a SOCKS proxy, initiate
+ * a connection to a destination server using that proxy, specified
+ * either by network address or hostname, at given port 'port'.
+ *
+ * If 'vers' is NE_SOCKS_V4, addr must be an IPv4 address; hostname
+ * and password are ignored; username must be non-NULL.
+ *
+ * If 'vers' is NE_SOCKS_V4A, hostname must be non-NULL; addr is
+ * ignored; password is ignored; username must be non-NULL.
+ *
+ * If 'vers' is NE_SOCKS_V5, addr may be NULL, in which case hostname
+ * must be non-NULL.  addr if non-NULL may be an IPv4 or IPv6 address;
+ * username may be NULL, in which case password is ignored.  If
+ * username is non-NULL password must also be non-NULL.
+ *
+ * Returns 0 on success, or NE_SOCK_* on failure - in which case, the
+ * socket error string is set.  On failure, the socket must be closed
+ * by the caller.
+ */
+int ne_sock_proxy(ne_socket *sock, enum ne_sock_sversion vers,
+                  const ne_inet_addr *addr, const char *hostname, 
+                  unsigned int port,
+                  const char *username, const char *password);
+
 NE_END_DECLS
 
 #endif /* NE_SOCKET_H */

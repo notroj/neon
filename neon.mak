@@ -121,6 +121,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_request.obj" \
 	"$(INTDIR)\ne_session.obj" \
 	"$(INTDIR)\ne_socket.obj" \
+	"$(INTDIR)\ne_socks.obj" \
 	"$(INTDIR)\ne_sspi.obj" \
 	"$(INTDIR)\ne_string.obj" \
 	"$(INTDIR)\ne_uri.obj" \
@@ -177,6 +178,7 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_stubssl.obj"
 	-@erase "$(INTDIR)\ne_pkcs11.obj"
 	-@erase "$(INTDIR)\ne_socket.obj"
+	-@erase "$(INTDIR)\ne_socks.obj"
 	-@erase "$(INTDIR)\ne_sspi.obj"
 	-@erase "$(INTDIR)\ne_string.obj"
 	-@erase "$(INTDIR)\ne_uri.obj"
@@ -224,6 +226,7 @@ CLEAN: $(ZLIB_CLEAN)
 "$(INTDIR)\ne_stubssl.obj":  .\src\ne_stubssl.c
 "$(INTDIR)\ne_pkcs11.obj":   .\src\ne_pkcs11.c
 "$(INTDIR)\ne_socket.obj":   .\src\ne_socket.c
+"$(INTDIR)\ne_socks.obj":    .\src\ne_socks.c
 "$(INTDIR)\ne_sspi.obj":     .\src\ne_sspi.c
 "$(INTDIR)\ne_string.obj":   .\src\ne_string.c
 "$(INTDIR)\ne_uri.obj":      .\src\ne_uri.c
