@@ -1236,7 +1236,7 @@ struct socks_server {
         fail_no_auth,
         fail_bogus_auth, 
         fail_auth_close, 
-        fail_auth_denied, 
+        fail_auth_denied 
     } failure;
     unsigned int expect_port;
     ne_inet_addr *expect_addr;
@@ -1580,7 +1580,7 @@ static int fail_socks(void)
           "Could not read login reply: Connection closed",
           "foo", "bar" },
         { NE_SOCK_SOCKSV5, fail_auth_denied, 
-          "Authentication failed", "foo", "bar" },
+          "Authentication failed", "foo", "bar" }
     };
     unsigned n;
 
