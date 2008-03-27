@@ -1226,6 +1226,396 @@ static int error(void)
     return OK;
 }
 
+struct socks_server {
+    enum ne_sock_sversion version;
+    enum socks_failure {
+        fail_none = 0,
+        fail_init_vers,
+        fail_init_close,
+        fail_init_trunc,
+        fail_no_auth,
+        fail_bogus_auth, 
+        fail_auth_close, 
+        fail_auth_denied, 
+    } failure;
+    unsigned int expect_port;
+    ne_inet_addr *expect_addr;
+    const char *expect_fqdn;
+    const char *username;
+    const char *password;
+    server_fn server;
+    void *userdata;
+};
+
+#define V5_METH_NONE 0x00
+#define V5_METH_AUTH 0x02
+#define V5_ADDR_IPV4 0x01
+#define V5_ADDR_FQDN 0x03
+#define V5_ADDR_IPV6 0x04
+
+static int read_socks_string(ne_socket *sock, const char *ctx,
+                             unsigned char *buf, unsigned int *olen)
+{
+    unsigned char len;
+    ssize_t ret;
+
+    ret = ne_sock_read(sock, (char *)&len, 1);
+    ONV(ret != 1, ("%s length read failed: %s", ctx, ne_sock_error(sock)));
+
+    ONV(len == 0, ("%s gave zero-length string", ctx));
+
+    ret = ne_sock_fullread(sock, (char *)buf, len);
+    ONV(ret != 0, ("%s string read failed, got %" NE_FMT_SSIZE_T 
+                   " bytes (%s)", ctx, ret, ne_sock_error(sock)));
+    
+    *olen = len;
+
+    return OK;    
+}
+
+static int read_socks_byte(ne_socket *sock, const char *ctx,
+                           unsigned char *buf)
+{
+    ONV(ne_sock_read(sock, (char *)buf, 1) != 1, 
+        ("%s byte read failed: %s", ctx, ne_sock_error(sock)));
+    return OK;    
+}
+
+static int expect_socks_byte(ne_socket *sock, const char *ctx,
+                             unsigned char c)
+{
+    unsigned char b;
+
+    CALL(read_socks_byte(sock, ctx, &b));
+
+    ONV(b != c, ("%s got byte %hx not %hx", ctx, b, c));
+    
+    return OK;
+}    
+
+static int read_socks_0string(ne_socket *sock, const char *ctx,
+                              unsigned char *buf, unsigned *len)
+{
+    unsigned char *end = buf + *len, *p = buf;
+
+    while (p < end) {
+        CALL(read_socks_byte(sock, "NUL-terminated string read", p));
+
+        if (*p == '\0')
+            break;
+        p++;
+        
+    } 
+
+    *len = p - buf;
+
+    return OK;
+}
+
+static int socks_server(ne_socket *sock, void *userdata)
+{
+    struct socks_server *srv = userdata;
+    unsigned char buf[1024];
+    unsigned int len, port, version;
+    unsigned char atype;
+    ssize_t ret;
+
+    version = srv->version == NE_SOCK_SOCKSV5 ? 5 : 4;
+
+    ne_sock_read_timeout(sock, 5);
+
+    CALL(expect_socks_byte(sock, "client version", version));
+
+    if (version != 5) {
+        unsigned char raw[16];
+
+        CALL(expect_socks_byte(sock, "v4 command", 0x01));
+
+        ret = ne_sock_fullread(sock, (char *)buf, 6);
+        ONV(ret != 0,
+            ("v4 address read failed with %" NE_FMT_SSIZE_T
+             " (%s)", ret, ne_sock_error(sock)));
+
+        ONN("bad v4A bogus address",
+            srv->version == NE_SOCK_SOCKSV4A && srv->expect_addr == NULL
+            && memcmp(buf + 2, "\0\0\0", 3) != 0 && buf[6] != 0);
+
+        if (srv->expect_addr) {
+            ONN("v4 address mismatch", 
+                memcmp(ne_iaddr_raw(srv->expect_addr, raw), buf + 2, 4) != 0);        
+        }
+
+        port = (buf[0] << 8) | buf[1];
+        ONV(port != srv->expect_port,
+            ("got bad v4 port %u, expected %u", port, srv->expect_port));
+        
+        len = sizeof buf;
+        CALL(read_socks_0string(sock, "v4 username read", buf, &len));
+
+        ONV(srv->username == NULL && len, ("unexpected v4 username %s", buf));
+        ONV(srv->username && !len, 
+            ("no v4 username given, expected %s", srv->username));
+        ONV(srv->username && len && strcmp(srv->username, (char *)buf),
+            ("bad v4 username, expected %s got %s", srv->username, buf));
+        
+        if (srv->expect_addr == NULL) {
+            len = sizeof buf;
+            CALL(read_socks_0string(sock, "v4A hostname read", buf, &len));
+            ONV(strcmp(srv->expect_fqdn, (char *)buf) != 0,
+                ("bad v4A hostname: %s not %s", buf, srv->expect_fqdn));
+        }
+
+        CALL(full_write(sock, "\x00\x5A"
+                        "\x00\x00" "\x00\x00\x00\x00"
+                        "ok!\n", 12));
+    
+        return srv->server(sock, srv->userdata);
+    }
+
+    CALL(read_socks_string(sock, "client method list", buf, &len));
+
+    if (srv->failure == fail_init_vers) {
+        CALL(full_write(sock, "\x01\x02", 2));
+        return OK;
+    }
+    else if (srv->failure == fail_init_close) {
+        return OK;
+    }
+    else if (srv->failure == fail_init_trunc) {
+        CALL(full_write(sock, "\x05", 1));
+        return OK;
+    }
+    else if (srv->failure == fail_no_auth) {
+        CALL(full_write(sock, "\x05\xff", 2));
+        return OK;
+    }
+    else if (srv->failure == fail_bogus_auth) {
+        CALL(full_write(sock, "\x05\xfe", 2));
+        return OK;
+    }
+
+    ONN("client did not advertise no-auth method",
+        memchr(buf, V5_METH_NONE, len) == NULL);
+    
+    if (srv->username) {
+        int match = 0;
+         
+        ONN("client did not advertise authn method",
+            memchr(buf, V5_METH_AUTH, len) == NULL);
+        
+        CALL(full_write(sock, "\x05\x02", 2));
+        
+        CALL(expect_socks_byte(sock, "client auth version", 0x01));
+
+        CALL(read_socks_string(sock, "client username", buf, &len));
+        
+        match = len == strlen(srv->username)
+            && memcmp(buf, srv->username, len) == 0;
+        
+        CALL(read_socks_string(sock, "client password", buf, &len));
+        
+        match = match && len == strlen(srv->password)
+            && memcmp(buf, srv->password, len) == 0;
+
+        if (srv->failure == fail_auth_close) {
+            return OK;
+        }
+
+        if (match && srv->failure != fail_auth_denied) {
+            CALL(full_write(sock, "\x01\x00", 2));
+        }
+        else {
+            CALL(full_write(sock, "\x01\x01", 2));
+        }
+        
+        if (srv->failure == fail_auth_denied) {
+            return OK;
+        }
+    }
+    else {
+        CALL(full_write(sock, "\x05\x00", 2));
+    }
+    
+    CALL(expect_socks_byte(sock, "command version", version));
+
+    CALL(expect_socks_byte(sock, "command number", 0x01));
+    CALL(read_socks_byte(sock, "reserved byte", buf));
+
+    CALL(read_socks_byte(sock, "address type", &atype));
+
+    ONN("bad address type byte", 
+        (atype != V5_ADDR_IPV4 && atype != V5_ADDR_IPV6
+         && atype != V5_ADDR_FQDN));
+
+    if (atype == V5_ADDR_FQDN) {
+        ONN("unexpected FQDN from client", srv->expect_fqdn == NULL);
+        CALL(read_socks_string(sock, "read FQDN", buf, &len));
+        ONV(len != strlen(srv->expect_fqdn)
+            || memcmp(srv->expect_fqdn, buf, len) != 0,
+            ("FQDN mismatch: %.*s not %s", len, buf, 
+             srv->expect_fqdn));
+    }
+    else {
+        unsigned char raw[16];
+
+        ONN("unexpected IP literal from client", srv->expect_addr == NULL);
+
+        ONV((atype == V5_ADDR_IPV4
+             && ne_iaddr_typeof(srv->expect_addr) != ne_iaddr_ipv4)
+            || (atype == V5_ADDR_IPV6
+                && ne_iaddr_typeof(srv->expect_addr) != ne_iaddr_ipv6),
+            ("address type mismatch: %hx not %d",
+             atype, ne_iaddr_typeof(srv->expect_addr)));
+
+        len = atype == V5_ADDR_IPV4 ? 4 : 16;
+        ret = ne_sock_fullread(sock, (char *)buf, len);
+        ONV(ret != 0,
+            ("address read failed with %" NE_FMT_SSIZE_T
+             " (%s)", ret, ne_sock_error(sock)));
+
+        ne_iaddr_raw(srv->expect_addr, raw);
+        
+        ONN("address mismatch", memcmp(raw, buf, len) != 0);        
+    }
+
+    CALL(read_socks_byte(sock, "port high byte", buf));
+    CALL(read_socks_byte(sock, "port low byte", buf + 1));
+    
+    port = (buf[0] << 8) | buf[1];
+    ONV(port != srv->expect_port,
+        ("got bad port %u, expected %u", port, srv->expect_port));
+
+    CALL(full_write(sock, "\x05\x00\x00"
+                    "\x01" "\x00\x00\x00\x00"
+                    "\x00\x00"
+                    "ok!\n", 14));
+    
+    return srv->server(sock, srv->userdata);
+}
+
+static int begin_socks(ne_socket **sock, struct socks_server *srv,
+                       server_fn server, void *userdata)
+{
+    srv->server = server;
+    srv->userdata = userdata;
+    CALL(spawn_server(7777, socks_server, srv));
+    return do_connect(sock, localhost, 7777);
+}
+
+static int socks_proxy(void)
+{
+    static const struct {
+        enum ne_sock_sversion version;
+        int addr;
+        const char *fqdn;
+        unsigned int port;
+        const char *username, *password;
+    } ts[] = {
+        { NE_SOCK_SOCKSV4, 4, NULL, 55555, NULL, NULL },
+        { NE_SOCK_SOCKSV4, 4, NULL, 55555, "foobar", NULL },
+        { NE_SOCK_SOCKSV4A, 0, "www.example.com", 55555, NULL, NULL },
+        { NE_SOCK_SOCKSV5, 0, "www.example.com", 55555, NULL, NULL },
+        { NE_SOCK_SOCKSV5, 4, NULL, 55555, NULL, NULL },
+        { NE_SOCK_SOCKSV5, 6, NULL, 55555, NULL, NULL },
+        { NE_SOCK_SOCKSV5, 0, "www.example.com", 55555, "norman", "foobar" }
+    };
+    unsigned n;
+
+    for (n = 0; n < sizeof(ts)/sizeof(ts[n]); n++) {
+        ne_socket *sock;
+        struct socks_server arg = {0};
+        int ret;
+
+        arg.version = ts[n].version;
+        arg.expect_port = ts[n].port;
+        if (ts[n].addr == 4)
+            arg.expect_addr = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+        else if (ts[n].addr == 6)
+            arg.expect_addr = ne_iaddr_make(ne_iaddr_ipv4, raw6_cafe);
+        else
+            arg.expect_fqdn = ts[n].fqdn;
+        arg.username = ts[n].username;
+        arg.password = ts[n].password;
+        
+        CALL(begin_socks(&sock, &arg, echo_server, NULL));
+
+        ret = ne_sock_proxy(sock, ts[n].version, arg.expect_addr, 
+                            ts[n].fqdn, ts[n].port,
+                            ts[n].username, ts[n].password);
+        ONV(ret, ("proxy connect #%u gave %d", n, ret));
+        FULLREAD("ok!\n");
+        ECHO("hello,\n");
+        ECHO("\n");
+        ECHO("world\n");
+        
+        CALL(finish(sock, 0));
+    }
+
+    return OK;
+}
+
+static int fail_socks(void)
+{
+    static const struct {
+        enum ne_sock_sversion version;
+        enum socks_failure failure;
+        const char *expect;
+        const char *username, *password;
+    } ts[] = {
+        { NE_SOCK_SOCKSV5, fail_init_vers, 
+          "Invalid version in proxy response", NULL, NULL },
+        { NE_SOCK_SOCKSV5, fail_init_trunc,
+          "Could not read initial response from proxy: Connection closed",
+          NULL, NULL },
+        { NE_SOCK_SOCKSV5, fail_init_close, 
+          "Could not read initial response from proxy: Connection closed", 
+          NULL, NULL },
+        { NE_SOCK_SOCKSV5, fail_no_auth, 
+          "No acceptable authentication method",
+          NULL, NULL },
+        { NE_SOCK_SOCKSV5, fail_bogus_auth, 
+          "Unexpected authentication method chosen",
+          NULL, NULL },
+        { NE_SOCK_SOCKSV5, fail_auth_close, 
+          "Could not read login reply: Connection closed",
+          "foo", "bar" },
+        { NE_SOCK_SOCKSV5, fail_auth_denied, 
+          "Authentication failed", "foo", "bar" },
+    };
+    unsigned n;
+
+    for (n = 0; n < sizeof(ts)/sizeof(ts[n]); n++) {
+        ne_socket *sock;
+        struct socks_server arg = {0};
+        int ret;
+
+        arg.version = ts[n].version;
+        arg.failure = ts[n].failure;
+        arg.expect_port = 5555;
+        arg.expect_addr = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+        arg.username = ts[n].username;
+        arg.password = ts[n].password;
+        
+        CALL(begin_socks(&sock, &arg, echo_server, NULL));
+
+        ret = ne_sock_proxy(sock, ts[n].version, arg.expect_addr, 
+                            NULL, arg.expect_port,
+                            ts[n].username, ts[n].password);
+        ONV(ret == 0, 
+            ("proxy connect #%u succeeded, expected failure '%s'", n, 
+             ts[n].expect));
+        
+        if (ret != 0 && strstr(ne_sock_error(sock), ts[n].expect) == NULL) {
+            t_warning("proxy connect #%u got unexpected failure '%s', wanted '%s'",
+                      n, ne_sock_error(sock), ts[n].expect);
+        }    
+
+        CALL(finish(sock, 0));
+    }
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(multi_init),
     T_LEAKY(resolve),
@@ -1278,5 +1668,7 @@ ne_test tests[] = {
     T(readline_timeout),
     T(fullread_timeout),
     T(block_timeout),
+    T(socks_proxy),
+    T(fail_socks),
     T(NULL)
 };
