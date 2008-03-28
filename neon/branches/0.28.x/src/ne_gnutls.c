@@ -815,10 +815,13 @@ static int read_to_datum(const char *filename, gnutls_datum *datum)
     }
 
     if (!feof(f)) {
+        fclose(f);
         ne_buffer_destroy(buf);
         return -1;
     }
     
+    fclose(f);
+
     datum->size = ne_buffer_size(buf);
     datum->data = (unsigned char *)ne_buffer_finish(buf);
     return 0;
