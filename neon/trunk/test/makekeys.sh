@@ -25,6 +25,9 @@ echo 01 > ca/serial
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > ca/key.pem
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > client.key
 
+${OPENSSL} dsaparam -genkey -rand ${srcdir}/../configure 1024 > client.dsap
+${OPENSSL} gendsa client.dsap > clientdsa.key
+
 ${MKCERT} -key ca/key.pem -out ca/cert.pem <<EOF
 US
 California
@@ -126,6 +129,9 @@ ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
 csr_fields "Neon Client Cert" ignored.example.com | \
 ${REQ} -new -key client.key -out client.csr
 
+csr_fields "Neon Client Cert" ignored.example.com | \
+${REQ} -new -key clientdsa.key -out clientdsa.csr
+
 ### requests using special DN.
 
 REQDN=reqDN.doubleCN
@@ -148,7 +154,8 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 
 ### don't put ${REQ} invocations after here
 
-for f in server client twocn caseless cnfirst missingcn justmail twoou wildcard; do
+for f in server client clientdsa twocn caseless cnfirst \
+    missingcn justmail twoou wildcard; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
@@ -165,6 +172,12 @@ echo foobar | ${MKPKCS12} -name "Just A Neon Client Cert" -out client.p12
 
 # generate a PKCS#12 cert with no password and a friendly name
 echo | ${MKPKCS12} -name "An Unencrypted Neon Client Cert" -out unclient.p12
+
+# PKCS#12 cert with DSA key
+echo | ${OPENSSL} pkcs12 -name "An Unencrypted Neon DSA Client Cert" \
+    -export -passout stdin \
+    -in clientdsa.cert -inkey clientdsa.key \
+    -out dsaclient.p12
 
 # generate a PKCS#12 cert with no friendly name
 echo | ${MKPKCS12} -out noclient.p12
@@ -190,11 +203,16 @@ CERTUTIL=@CERTUTIL@
 PK12UTIL=@PK12UTIL@
 
 if [ ${CERTUTIL} != "notfound" -a ${PK12UTIL} != "notfound" ]; then
-  rm -rf nssdb
+  rm -rf nssdb nssdb-dsa
+  mkdir nssdb nssdb-dsa
+
   echo foobar > nssdb.pw
-  mkdir nssdb
+
   ${CERTUTIL} -d nssdb -N -f nssdb.pw
   ${PK12UTIL} -d nssdb -K foobar -W '' -i unclient.p12
-  ${CERTUTIL} -d nssdb -f nssdb.pw -n 'The CA Cert' -t T -A < ca/cert.pem
+
+  ${CERTUTIL} -d nssdb-dsa -N -f nssdb.pw
+  ${PK12UTIL} -d nssdb-dsa -K foobar -W '' -i dsaclient.p12
+
   rm -f nssdb.pw
 fi
