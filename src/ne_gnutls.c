@@ -54,9 +54,19 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #include "ne_private.h"
 #include "ne_privssl.h"
 
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020302
+/* The GnuTLS DN functions in 2.3.2 and later allow a simpler DN
+ * abstraction to be used. */
+#define HAVE_NEW_DN_API
+#endif
+
 struct ne_ssl_dname_s {
+#ifdef HAVE_NEW_DN_API
+    gnutls_x509_dn_t dn;
+#else
     int subject; /* non-zero if this is the subject DN object */
     gnutls_x509_crt cert;
+#endif
 };
 
 struct ne_ssl_certificate_s {
@@ -177,6 +187,9 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
     ne_buffer *buf;
     gnutls_x509_ava_st val;
 
+#ifdef HAVE_NEW_DN_API
+    dn = name->dn;
+#else
     if (name->subject)
         ret = gnutls_x509_crt_get_subject(name->cert, &dn);
     else
@@ -184,6 +197,7 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
     
     if (ret)
         return ne_strdup(_("[unprintable]"));
+#endif /* HAVE_NEW_DN_API */
 
     buf = ne_buffer_create();
     
@@ -277,6 +291,17 @@ int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
 {
     char c1[1024], c2[1024];
     size_t s1 = sizeof c1, s2 = sizeof c2;
+    int n;
+
+#ifdef HAVE_NEW_DN_API
+    n = gnutls_x509_dn_export(dn1->dn, GNUTLS_X509_FMT_DER, c1, &s1);
+    if (n) {
+        return 1;
+    }
+        
+    if (gnutls_x509_dn_export(dn2->dn, GNUTLS_X509_FMT_DER, c2, &s2))
+        return -1;
+#else
     int ret;
 
     if (dn1->subject)
@@ -292,6 +317,7 @@ int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
         ret = gnutls_x509_crt_get_issuer_dn(dn2->cert, c2, &s2);
     if (ret)
         return -1;
+#endif /* HAVE_NEW_DN_API */
     
     if (s1 != s2)
         return s2 - s1;
@@ -456,10 +482,15 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
 static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
                                          gnutls_x509_crt x5)
 {
+#ifdef HAVE_NEW_DN_API
+    gnutls_x509_crt_get_subject(x5, &cert->subj_dn.dn);
+    gnutls_x509_crt_get_issuer(x5, &cert->issuer_dn.dn);
+#else
     cert->subj_dn.cert = x5;
     cert->subj_dn.subject = 1;
     cert->issuer_dn.cert = x5;
     cert->issuer_dn.subject = 0;
+#endif
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
