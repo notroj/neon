@@ -665,20 +665,41 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     ne_free(ctx);
 }
 
+#ifdef HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS
+/* Return the issuer of the given certificate, or NULL if none can be
+ * found. */
+static gnutls_x509_crt find_issuer(gnutls_x509_crt *ca_list,
+                                   unsigned int num_cas,
+                                   gnutls_x509_crt cert)
+{
+    unsigned int n;
+
+    for (n = 0; n < num_cas; n++) {
+        if (gnutls_x509_crt_check_issuer(cert, ca_list[n]) == 1)
+            return ca_list[n];
+    }
+
+    return NULL;
+}
+#endif
+
 /* Return the certificate chain sent by the peer, or NULL on error. */
-static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
+static ne_ssl_certificate *make_peers_chain(gnutls_session sock,
+                                            gnutls_certificate_credentials crd)
 {
     ne_ssl_certificate *current = NULL, *top = NULL;
     const gnutls_datum *certs;
     unsigned int n, count;
+    ne_ssl_certificate *cert;
 
     certs = gnutls_certificate_get_peers(sock, &count);
     if (!certs) {
         return NULL;
     }
+
+    NE_DEBUG(NE_DBG_SSL, "ssl: Got %u certs in peer chain.\n", count);
     
     for (n = 0; n < count; n++) {
-        ne_ssl_certificate *cert;
         gnutls_x509_crt x5;
 
         if (gnutls_x509_crt_init(&x5) ||
@@ -687,7 +708,7 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
             return NULL;
         }
 
-        cert = populate_cert(ne_malloc(sizeof *cert), x5);
+        cert = populate_cert(ne_calloc(sizeof *cert), x5);
         
         if (top == NULL) {
             current = top = cert;
@@ -696,6 +717,37 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
             current = cert;
         }
     }
+
+#ifdef HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS
+    /* GnuTLS only returns the peers which were *sent* by the server
+     * in the Certificate list during the handshake.  Fill in the
+     * complete chain manually against the certs we trust: */
+    if (current->issuer == NULL) {
+        gnutls_x509_crt issuer;
+        gnutls_x509_crt *ca_list;
+        unsigned int num_cas;
+        
+        gnutls_certificate_get_x509_cas(crd, &ca_list, &num_cas);
+
+        do { 
+            /* Look up the issuer. */
+            issuer = find_issuer(ca_list, num_cas, current->subject);
+            if (issuer) {
+                issuer = x509_crt_copy(issuer);
+                cert = populate_cert(ne_calloc(sizeof *cert), issuer);
+                /* Check that the issuer does not match the current
+                 * cert. */
+                if (ne_ssl_cert_cmp(current, cert)) {
+                    current = current->issuer = cert;
+                }
+                else {
+                    ne_ssl_cert_free(cert);
+                    issuer = NULL;
+                }
+            }
+        } while (issuer);
+    }
+#endif
     
     return top;
 }
@@ -769,7 +821,7 @@ int ne__negotiate_ssl(ne_session *sess)
 
     sock = ne__sock_sslsock(sess->socket);
 
-    chain = make_peers_chain(sock);
+    chain = make_peers_chain(sock, ctx->cred);
     if (chain == NULL) {
         ne_set_error(sess, _("Server did not send certificate chain"));
         return NE_ERROR;
