@@ -39,6 +39,7 @@ struct ne_ssl_pkcs11_provider_s {
     pakchois_session_t *session;
     ne_ssl_client_cert *clicert;
     ck_object_handle_t privkey;
+    ck_key_type_t keytype;
 };
 
 /* To do list for PKCS#11 support:
@@ -50,7 +51,6 @@ struct ne_ssl_pkcs11_provider_s {
    - find a certificate which has an issuer matching the 
      CA dnames given by GnuTLS
    - make sure subject name matches between pubkey and privkey
-   - support DSA along with RSA
    - check error handling & fail gracefully if the token is 
    ejected mid-session
    - add API to enumerate/search provided certs and allow 
@@ -60,6 +60,7 @@ struct ne_ssl_pkcs11_provider_s {
    - add API to import all CA certs as trusted
    (CKA_CERTIFICATE_CATEGORY seems to be unused unfortunately; 
     just add all X509 certs with CKA_TRUSTED set to true))
+   - make DSA work
 
 */
 
@@ -133,14 +134,12 @@ static int pk11_find_pkey(ne_ssl_pkcs11_provider *prov,
 {
     struct ck_attribute a[3];
     ck_object_class_t class;
-    ck_key_type_t type;
     ck_rv_t rv;
     ck_object_handle_t obj;
     unsigned long count;
     int found = 0;
 
     class = CKO_PRIVATE_KEY;
-    type = CKK_RSA; /* FIXME: check from the cert whether DSA or RSA */
 
     /* Find an object with private key class and a certificate ID
      * which matches the certificate. */
@@ -148,14 +147,11 @@ static int pk11_find_pkey(ne_ssl_pkcs11_provider *prov,
     a[0].type = CKA_CLASS;
     a[0].value = &class;
     a[0].value_len = sizeof class;
-    a[1].type = CKA_KEY_TYPE;
-    a[1].value = &type;
-    a[1].value_len = sizeof type;
-    a[2].type = CKA_ID;
-    a[2].value = certid;
-    a[2].value_len = cid_len;
+    a[1].type = CKA_ID;
+    a[1].value = certid;
+    a[1].value_len = cid_len;
 
-    rv = pakchois_find_objects_init(pks, a, 3);
+    rv = pakchois_find_objects_init(pks, a, 2);
     if (rv != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "pk11: FindObjectsInit failed.\n");
         /* TODO: error propagation */
@@ -165,8 +161,19 @@ static int pk11_find_pkey(ne_ssl_pkcs11_provider *prov,
     rv = pakchois_find_objects(pks, &obj, 1, &count);
     if (rv == CKR_OK && count == 1) {
         NE_DEBUG(NE_DBG_SSL, "pk11: Found private key.\n");
-        found = 1;
-        prov->privkey = obj;
+
+        a[0].type = CKA_KEY_TYPE;
+        a[0].value = &prov->keytype;
+        a[0].value_len = sizeof prov->keytype;
+
+        if (pakchois_get_attribute_value(pks, obj, a, 1) == CKR_OK
+            || (prov->keytype != CKK_RSA && prov->keytype != CKK_DSA)) {
+            found = 1;
+            prov->privkey = obj;
+        }
+        else {
+            NE_DEBUG(NE_DBG_SSL, "pk11: Could not determine key type.\n");
+        }
     }
 
     pakchois_find_objects_final(pks);
@@ -204,9 +211,7 @@ static int pk11_sign_callback(gnutls_session_t session,
         return GNUTLS_E_NO_CERTIFICATE_FOUND;
     }
 
-    /* FIXME: from the object determine whether this should be
-     * CKM_DSA, or CKM_RSA_PKCS, or something unknown (&fail). */
-    mech.mechanism = CKM_RSA_PKCS;
+    mech.mechanism = prov->keytype == CKK_DSA ? CKM_DSA : CKM_RSA_PKCS;
     mech.parameter = NULL;
     mech.parameter_len = 0;
 
