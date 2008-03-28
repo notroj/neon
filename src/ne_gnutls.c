@@ -578,14 +578,52 @@ static int provide_client_cert(gnutls_session session,
         return GNUTLS_E_RECEIVED_ILLEGAL_PARAMETER;
     }
 
-    if (!sess->client_cert && sess->ssl_provide_fn) {
-        /* The dname array cannot be converted without better dname
-         * support from GNUTLS. */
-        sess->ssl_provide_fn(sess->ssl_provide_ud, sess,
-                             NULL, 0);
-    }
+    NE_DEBUG(NE_DBG_SSL, "ssl: Client cert provider callback; %d CA names.\n",
+             nreqs);
 
-    NE_DEBUG(NE_DBG_SSL, "In client cert provider callback.\n");
+    if (!sess->client_cert && sess->ssl_provide_fn) {
+#ifdef HAVE_NEW_DN_API
+        const ne_ssl_dname **dns;
+        ne_ssl_dname *dnarray;
+        unsigned dncount = 0;
+        int n;
+
+        dns = ne_malloc(nreqs * sizeof(ne_ssl_dname *));
+        dnarray = ne_calloc(nreqs * sizeof(ne_ssl_dname));
+
+        for (n = 0; n < nreqs; n++) {
+            gnutls_x509_dn_t dn;
+
+            if (gnutls_x509_dn_init(&dn) == 0) {
+                dnarray[n].dn = dn;
+                if (gnutls_x509_dn_import(dn, &req_ca_rdn[n]) == 0) {
+                    dns[dncount++] = &dnarray[n];
+                }
+                else {
+                    gnutls_x509_dn_deinit(dn);
+                }            
+            }
+        }
+       
+        NE_DEBUG(NE_DBG_SSL, "ssl: Mapped %d CA names to %u DN objects.\n",
+                 nreqs, dncount);
+
+        sess->ssl_provide_fn(sess->ssl_provide_ud, sess, dns, dncount);
+        
+        for (n = 0; n < nreqs; n++) {
+            if (dnarray[n].dn) {
+                gnutls_x509_dn_deinit(dnarray[n].dn);
+            }
+        }
+
+        ne_free(dns);
+        ne_free(dnarray);
+#else /* HAVE_NEW_DN_API */
+        /* Nothing to do here other than pretend no CA names were
+         * given, and hope the caller can cope. */
+        sess->ssl_provide_fn(sess->ssl_provide_ud, sess, NULL, 0);
+#endif
+    }
 
     if (sess->client_cert) {
         gnutls_certificate_type type = gnutls_certificate_type_get(session);
