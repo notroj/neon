@@ -972,7 +972,8 @@ gnutls)
 
    # Check for functions in later releases
    NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \ 
-                  gnutls_sign_callback_set)
+                  gnutls_sign_callback_set \
+                  gnutls_certificate_get_x509_cas)
 
    # Check for iconv support if using the new RDN access functions:
    if test ${ac_cv_func_gnutls_x509_dn_get_rdn_ava}X${ac_cv_header_iconv_h} = yesXyes; then
