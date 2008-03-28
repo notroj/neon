@@ -1537,8 +1537,7 @@ static int pkcs11_pin(void *userdata, int attempt,
     }
 }
 
-/* Test that the on-demand client cert provider callback is used. */
-static int pkcs11(void)
+static int nss_pkcs11_test(const char *dbname)
 {
     ne_session *sess = DEFSESS;
     struct ssl_server_args args = {SERVER_CERT, NULL};
@@ -1547,12 +1546,12 @@ static int pkcs11(void)
 
     args.require_cc = 1;
 
-    if (access("nssdb", R_OK|X_OK)) {
+    if (access(dbname, R_OK|X_OK)) {
         t_warning("NSS required for PKCS#11 testing");
         return SKIP;
     }
 
-    ret = ne_ssl_pkcs11_nss_provider_init(&prov, "softokn3", "nssdb/", NULL, 
+    ret = ne_ssl_pkcs11_nss_provider_init(&prov, "softokn3", dbname, NULL, 
                                           NULL, NULL);
     if (ret) {
         if (ret == NE_PK11_NOTIMPL)
@@ -1563,16 +1562,24 @@ static int pkcs11(void)
     }
 
     ne_ssl_pkcs11_provider_pin(prov, pkcs11_pin, "foobar");
-    
     ne_ssl_set_pkcs11_provider(sess, prov);
 
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT,
-                         NULL, NULL));
+    ret = any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL);
 
     ne_session_destroy(sess);
     ne_ssl_pkcs11_provider_destroy(prov);
 
-    return OK;
+    return ret;
+}
+
+static int pkcs11(void)
+{
+    return nss_pkcs11_test("nssdb");
+}
+
+static int pkcs11_dsa(void)
+{
+    return nss_pkcs11_test("nssdb-dsa");
 }
 
 /* TODO: code paths still to test in cert verification:
@@ -1657,6 +1664,7 @@ ne_test tests[] = {
     T(nonssl_trust),
 
     T(pkcs11),
+    T_XFAIL(pkcs11_dsa), /* unclear why this fails currently. */
 
     T(NULL) 
 };
