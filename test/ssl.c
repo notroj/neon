@@ -111,7 +111,8 @@ static int ssl_server(ne_socket *sock, void *userdata)
         args->ca_list = CA_CERT;
     }
 
-    ne_ssl_context_set_verify(ctx, args->require_cc, NULL, args->ca_list);
+    ne_ssl_context_set_verify(ctx, args->require_cc, 
+                              args->ca_list, args->ca_list);
 
     ONV(ne_sock_accept_ssl(sock, ctx),
         ("SSL accept failed: %s", ne_sock_error(sock)));
