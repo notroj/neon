@@ -87,11 +87,11 @@ ${REQ} -new -key ${srcdir}/server.key -out altname7.csr
 csr_fields "Bad ipAddress altname Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname8.csr
 
+csr_fields "Bad Hostname Department" nohost.example.com | \
+${REQ} -new -key ${srcdir}/server.key -out wrongcn.csr
+
 csr_fields "Self-Signed" | \
 ${MKCERT} -key ${srcdir}/server.key -out ssigned.pem
-
-csr_fields "Bad Hostname Department" nohost.example.com | \
-${MKCERT} -key ${srcdir}/server.key -out wrongcn.pem
 
 # default => T61String
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
@@ -155,7 +155,7 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 ### don't put ${REQ} invocations after here
 
 for f in server client clientdsa twocn caseless cnfirst \
-    missingcn justmail twoou wildcard; do
+    missingcn justmail twoou wildcard wrongcn; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
