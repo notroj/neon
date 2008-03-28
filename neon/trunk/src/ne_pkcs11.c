@@ -167,7 +167,7 @@ static int pk11_find_pkey(ne_ssl_pkcs11_provider *prov,
         a[0].value_len = sizeof prov->keytype;
 
         if (pakchois_get_attribute_value(pks, obj, a, 1) == CKR_OK
-            || (prov->keytype != CKK_RSA && prov->keytype != CKK_DSA)) {
+            && (prov->keytype == CKK_RSA || prov->keytype == CKK_DSA)) {
             found = 1;
             prov->privkey = obj;
         }
