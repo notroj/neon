@@ -1,6 +1,7 @@
 Changes in release 0.28.2:
 * Support "Proxy-Connection: Keep-Alive" for compatibility with HTTP/1.0
  proxies which require persistent connections for NTLM authentication
+* Fix an fd leak in ne_ssl_{,cli}cert_read (GnuTLS only)
 
 Changes in release 0.28.1:
 * Fix Win32 build
