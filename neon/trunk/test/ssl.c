@@ -631,11 +631,11 @@ static int parse_chain(void)
     int ret = 0;
     struct ssl_server_args args = {"wrongcn.cert", 0};
 
-    args.ca_list = "ca/cert.pem";    
+    args.ca_list = CA_CERT;
 
     /* The cert is signed by the CA but has a CN mismatch, so will
      * force the verification callback to be invoked. */
-    CALL(any_ssl_request(sess, ssl_server, &args, "ca/cert.pem", 
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, 
 			 check_chain, &ret));
     ne_session_destroy(sess);
 
