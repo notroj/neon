@@ -291,13 +291,10 @@ int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
 {
     char c1[1024], c2[1024];
     size_t s1 = sizeof c1, s2 = sizeof c2;
-    int n;
 
 #ifdef HAVE_NEW_DN_API
-    n = gnutls_x509_dn_export(dn1->dn, GNUTLS_X509_FMT_DER, c1, &s1);
-    if (n) {
+    if (gnutls_x509_dn_export(dn1->dn, GNUTLS_X509_FMT_DER, c1, &s1))
         return 1;
-    }
         
     if (gnutls_x509_dn_export(dn2->dn, GNUTLS_X509_FMT_DER, c2, &s2))
         return -1;
