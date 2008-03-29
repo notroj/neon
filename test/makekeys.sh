@@ -14,7 +14,7 @@ REQDN=reqDN
 STRMASK=default
 export REQDN STRMASK
 
-openssl version
+openssl version 1>&2
 
 set -ex
 
