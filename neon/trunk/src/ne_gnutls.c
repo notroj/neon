@@ -38,6 +38,7 @@
 #ifdef NE_HAVE_TS_SSL
 #include <errno.h>
 #include <pthread.h>
+#include <gcrypt.h>
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #else
 #include <gcrypt.h>
