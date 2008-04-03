@@ -1286,6 +1286,9 @@ int ne__ssl_init(void)
 #ifdef NE_HAVE_TS_SSL
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 #endif
+#ifdef GCRYCTL_ENABLE_QUICK_RANDOM
+    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
+#endif
     return gnutls_global_init();
 }
 
