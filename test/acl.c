@@ -1,6 +1,6 @@
 /* 
    Dummy ACL tests
-   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2003, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,9 +46,8 @@ static int grant_all(void)
 {
     ne_acl_entry e = {0};
 
-    e.target = ne_acl_all;
+    e.apply = ne_acl_all;
     e.type = ne_acl_grant;
-    e.privileges = NE_ACL_ALL;
 
     CALL(test_acl("/foo", &e, 1));
 
@@ -59,10 +58,9 @@ static int deny_all(void)
 {
     ne_acl_entry e = {0};
 
-    e.target = ne_acl_all;
+    e.apply = ne_acl_all;
     e.type = ne_acl_deny;
-    e.privileges = NE_ACL_ALL;
-
+    
     CALL(test_acl("/foo", &e, 1));
 
     return OK;
@@ -72,10 +70,9 @@ static int deny_one(void)
 {
     ne_acl_entry e = {0};
 
-    e.target = ne_acl_href;
-    e.tname = "http://webdav.org/users/joe";
+    e.apply = ne_acl_href;
     e.type = ne_acl_deny;
-    e.privileges = NE_ACL_ALL;
+    e.principal = "http://webdav.org/users/joe";
 
     CALL(test_acl("/foo", &e, 1));
 
@@ -86,10 +83,9 @@ static int deny_byprop(void)
 {
     ne_acl_entry e = {0};
 
-    e.target = ne_acl_property;
+    e.apply = ne_acl_property;
     e.type = ne_acl_deny;
-    e.tname = "owner";
-    e.privileges = NE_ACL_ALL;
+    e.principal = "owner";
 
     CALL(test_acl("/foo", &e, 1));
 

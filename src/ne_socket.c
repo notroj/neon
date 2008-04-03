@@ -116,7 +116,9 @@ typedef struct addrinfo ne_inet_addr;
 typedef struct in_addr ne_inet_addr;
 #endif
 
+#ifdef NE_HAVE_SSL
 #include "ne_privssl.h" /* MUST come after ne_inet_addr is defined */
+#endif
 
 /* To avoid doing AAAA queries unless absolutely necessary, either use
  * AI_ADDRCONFIG where available, or a run-time check for working IPv6
@@ -966,24 +968,6 @@ char *ne_iaddr_print(const ne_inet_addr *ia, char *buf, size_t bufsiz)
     return buf;
 }
 
-unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buf)
-{
-#ifdef USE_GETADDRINFO
-#ifdef AF_INET6
-    if (ia->ai_family == AF_INET6) {
-	struct sockaddr_in6 *in6 = SACAST(in6, ia->ai_addr);
-        return memcpy(buf, in6->sin6_addr.s6_addr, sizeof in6->sin6_addr.s6_addr);
-    } else
-#endif /* AF_INET6 */
-    {
-	struct sockaddr_in *in = SACAST(in, ia->ai_addr);
-        return memcpy(buf, &in->sin_addr.s_addr, sizeof in->sin_addr.s_addr);
-    }
-#else /* !USE_GETADDRINFO */
-    return memcpy(buf, &ia->s_addr, sizeof ia->s_addr);
-#endif
-}
-
 int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
 {
 #ifdef USE_GETADDRINFO
@@ -1683,15 +1667,6 @@ char *ne_sock_cipher(ne_socket *sock)
 const char *ne_sock_error(const ne_socket *sock)
 {
     return sock->error;
-}
-
-void ne_sock_set_error(ne_socket *sock, const char *format, ...)
-{
-    va_list params;
-
-    va_start(params, format);
-    ne_vsnprintf(sock->error, sizeof sock->error, format, params);
-    va_end(params);
 }
 
 /* Closes given ne_socket */
