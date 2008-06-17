@@ -151,6 +151,10 @@ fi
 # to not export these from the built library if possible.
 NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 
+if test x${enable_shared}${pic_mode}z = xnodefaultz; then
+   CFLAGS="$CFLAGS -prefer-pic"
+fi
+
 # Bundled language catalogs
 ALL_LINGUAS="cs de fr ja nn pl ru tr zh_CN"
 AC_SUBST(ALL_LINGUAS)
