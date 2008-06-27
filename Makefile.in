@@ -203,6 +203,11 @@ compile-gmo:
 	 $(MSGFMT) --statistics -c -o po/$$f.gmo $(top_srcdir)/po/$$f.po; \
 	done
 
+update-copyright: Makefile
+	sed -n 'p;/^Portions are/q' < README > README.orig
+	(cat README.orig; grep -h Copyright src/*.[ch] \
+		| sed -r 's/\(C\) [12].+[0-9],? /(C) /;s/^ *//' | sort -u) > README
+
 doc-status:
 	@echo -n "Missing docs for:"
 	@for f in `nm src/.libs/libneon.so | grep ' T ' | colrm 1 11`; do \
