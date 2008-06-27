@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -1243,9 +1243,8 @@ int ne_sock_connect(ne_socket *sock,
         }
     }
 
-#if defined(TCP_NODELAY) && defined(HAVE_SETSOCKOPT) && defined(IPPROTO_TCP)
-    { /* Disable the Nagle algorithm; better to add write buffering
-       * instead of doing this. */
+#if defined(HAVE_SETSOCKOPT) && (defined(TCP_NODELAY) || defined(WIN32))
+    { /* Disable the Nagle algorithm. */
         int flag = 1;
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
     }
