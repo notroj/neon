@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>, 
+   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -396,10 +396,15 @@ static int raw_poll(int fdno, int rdwr, int secs)
     /* Init the fd set */
     FD_ZERO(&rdfds);
     FD_ZERO(&wrfds);
-    if (rdwr == 0)
+
+    /* Note that (amazingly) the FD_SET macro does not expand
+     * correctly on Netware if not inside a compound statement
+     * block. */
+    if (rdwr == 0) {
         FD_SET(fdno, &rdfds);
-    else
+    } else {
         FD_SET(fdno, &wrfds);
+    }
 
     if (tvp) {
         tvp->tv_sec = secs;
@@ -1227,9 +1232,8 @@ int ne_sock_connect(ne_socket *sock,
         }
     }
 
-#if defined(TCP_NODELAY) && defined(HAVE_SETSOCKOPT) && defined(IPPROTO_TCP)
-    { /* Disable the Nagle algorithm; better to add write buffering
-       * instead of doing this. */
+#if defined(HAVE_SETSOCKOPT) && (defined(TCP_NODELAY) || defined(WIN32))
+    { /* Disable the Nagle algorithm. */
         int flag = 1;
         setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
     }
