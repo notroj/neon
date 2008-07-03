@@ -45,6 +45,10 @@ typedef off_t ne_off_t;
 #define ssize_t int
 #endif
 
+#ifdef __NETWARE__
+#include <time.h> /* for time_t */
+#endif
+
 #ifdef __GNUC__
 #if __GNUC__ >= 3
 #define ne_attribute_malloc __attribute__((malloc))
