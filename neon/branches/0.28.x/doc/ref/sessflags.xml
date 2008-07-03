@@ -82,6 +82,14 @@
 	      use</simpara>
 	    </listitem>
 	  </varlistentry>
+	  <varlistentry>
+            <term><constant>NE_SESSFLAG_TLS_SNI</constant></term>
+	    <listitem>
+	      <simpara>disable this flag if a server is used
+              which does not correctly support the TLS SNI 
+              extension</simpara>
+	    </listitem>
+	  </varlistentry>
 
         </variablelist>
   </refsect1>
