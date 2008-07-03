@@ -394,10 +394,15 @@ static int raw_poll(int fdno, int rdwr, int secs)
     /* Init the fd set */
     FD_ZERO(&rdfds);
     FD_ZERO(&wrfds);
-    if (rdwr == 0)
+
+    /* Note that (amazingly) the FD_SET macro does not expand
+     * correctly on Netware if not inside a compound statement
+     * block. */
+    if (rdwr == 0) {
         FD_SET(fdno, &rdfds);
-    else
+    } else {
         FD_SET(fdno, &wrfds);
+    }
 
     if (tvp) {
         tvp->tv_sec = secs;
