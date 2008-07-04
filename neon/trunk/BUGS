@@ -43,3 +43,9 @@ W8޳����s0��
   address list and at best should do the DNS lookup again.
 
 * should 207 code strclean the error string from the response body?
+
+* load_client_cert fails with:
+
+  load_client_cert: (did not fail to load clicert without pkey)
+
+  on RHEL4 openssl.
