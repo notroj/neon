@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
             printf("%2d. %s%.*s ", n, test_name, 
                    (int) (strlen(dots) - strlen(test_name)), dots);
         else {
-            printf("\r%s%.*s %u/%u ", test_suite, 
+            printf("\r%s%.*s %2u/%2u ", test_suite, 
                    (int) (strlen(dots) - strlen(test_suite)), dots,
                    n + 1, count);
             fflush(stdout);
@@ -360,9 +360,10 @@ int main(int argc, char *argv[])
 
 	reap_server();
             
-        printf("\r%s%.*s %u/%u ", test_suite, 
-               (int) (strlen(dots) - strlen(test_suite)), dots,
-               n + 1, count);
+        if (quiet)
+            printf("\r%s%.*s %2u/%2u ", test_suite, 
+                   (int) (strlen(dots) - strlen(test_suite)), dots,
+                   n + 1, count);
     }
 
     /* discount skipped tests */
@@ -380,7 +381,7 @@ int main(int argc, char *argv[])
             printf("<- all tests skipped for `%s'.\n", test_suite);
     } else {
         if (quiet) {
-            printf("\r%s%.*s %u/%u ", test_suite, 
+            printf("\r%s%.*s %2u/%2u ", test_suite, 
                    (int) (strlen(dots) - strlen(test_suite)), dots,
                    passes, count);
             if (fails == 0) {
