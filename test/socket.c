@@ -1548,6 +1548,9 @@ static int socks_proxy(void)
         ECHO("\n");
         ECHO("world\n");
         
+        if (ts[n].addr)
+            ne_iaddr_free(arg.expect_addr);
+
         CALL(finish(sock, 0));
     }
 
@@ -1609,6 +1612,8 @@ static int fail_socks(void)
             t_warning("proxy connect #%u got unexpected failure '%s', wanted '%s'",
                       n, ne_sock_error(sock), ts[n].expect);
         }    
+
+        ne_iaddr_free(arg.expect_addr);
 
         CALL(finish(sock, 0));
     }
