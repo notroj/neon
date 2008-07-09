@@ -33,6 +33,7 @@ NEON_LINK_FLAGS = @NEON_LINK_FLAGS@
 LIBS = @NEON_LIBS@ @NEON_LTLIBS@
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS)
+LT_COMPILE = $(LIBTOOL) --quiet --mode=compile $(COMPILE)
 LINK = $(LIBTOOL) --quiet --mode=link $(CC) -no-undefined $(LDFLAGS)
 
 NEON_BASEOBJS = ne_request.@NEON_OBJEXT@ ne_session.@NEON_OBJEXT@	\
@@ -64,7 +65,7 @@ all-no:
 	@echo "Bundled neon build not being used."
 
 .c.lo:
-	$(LIBTOOL) --quiet --mode=compile $(COMPILE) -c $< -o $@
+	$(LT_COMPILE) -c $< -o $@
 .c.o:
 	$(COMPILE) -c $< -o $@
 
