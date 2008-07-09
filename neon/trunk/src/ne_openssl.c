@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -582,7 +582,7 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
 
     ret = SSL_CTX_use_PrivateKey_file(ctx->ctx, key, SSL_FILETYPE_PEM);
     if (ret == 1) {
-        ret = SSL_CTX_use_certificate_file(ctx->ctx, cert, SSL_FILETYPE_PEM);
+        ret = SSL_CTX_use_certificate_chain_file(ctx->ctx, cert);
     }
 
     return ret == 1 ? 0 : -1;
