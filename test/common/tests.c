@@ -363,14 +363,11 @@ int main(int argc, char *argv[])
         printf("\r%s%.*s %u/%lu ", test_suite, 
                strlen(dots) - strlen(test_suite), dots,
                n + 1, count);
-
     }
 
     /* discount skipped tests */
     if (skipped) {
-        if (quiet) 
-            printf("(%d skipped) ", skipped);
-        else
+        if (!quiet) 
             printf("-> %d %s.\n", skipped,
                    skipped == 1 ? "test was skipped" : "tests were skipped");
 	n -= skipped;
@@ -382,7 +379,23 @@ int main(int argc, char *argv[])
         else
             printf("<- all tests skipped for `%s'.\n", test_suite);
     } else {
-        if (!quiet)
+        if (quiet) {
+            printf("\r%s%.*s %u/%lu ", test_suite, 
+                   strlen(dots) - strlen(test_suite), dots,
+                   passes, count);
+            if (fails == 0) {
+                COL("32"); 
+                printf("passed");
+                NOCOL;
+                putchar(' ');
+            }
+            else {
+                printf("passed, %d failed ", fails);
+            }                       
+            if (skipped)
+                printf("(%d skipped) ", skipped);
+        }
+        else
             printf("<- summary for `%s': "
                    "of %d tests run: %d passed, %d failed. %.1f%%\n",
                    test_suite, n, passes, fails, 100*(float)passes/n);
