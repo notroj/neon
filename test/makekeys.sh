@@ -22,7 +22,12 @@ mkdir ca
 touch ca/index.txt
 echo 01 > ca/serial
 
+mkdir ca2
+touch ca2/index.txt
+echo 01 > ca2/serial
+
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > ca/key.pem
+${OPENSSL} genrsa -rand ${srcdir}/../configure > ca2/key.pem
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > client.key
 
 ${OPENSSL} dsaparam -genkey -rand ${srcdir}/../configure 1024 > client.dsap
@@ -57,6 +62,10 @@ neon@webdav.org
 .
 EOF
 }
+
+# Create intermediary CA
+csr_fields IntermediaryCA | ${REQ} -new -key ca2/key.pem -out ca2.csr
+${CA} -extensions caExt -days 3560 -in ca2.csr -out ca2/cert.pem
 
 csr_fields | ${REQ} -new -key ${srcdir}/server.key -out server.csr
 
@@ -163,6 +172,12 @@ for n in 1 2 3 4 5 6 7 8; do
  ${CA} -extensions altExt${n} -days 900 \
      -in altname${n}.csr -out altname${n}.cert
 done
+
+# Sign this CSR using the intermediary CA
+${CA} -name neonca2 -days 900 -in server.csr -out ca2server.cert
+# And create a file with the concatenation of both EE and intermediary
+# cert.
+cat ca2server.cert ca2/cert.pem > ca2server.pem
 
 MKPKCS12="${OPENSSL} pkcs12 -export -passout stdin -in client.cert -inkey client.key"
 

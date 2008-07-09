@@ -66,7 +66,7 @@ all: $(TESTS)
 clean:
 	rm -f $(TESTS) $(HELPERS) *.*o common/*.*o libtest.*a *.log
 	rm -f *.gc* *.da *.bb* common/*.bb* common/*.gc* common/*.da
-	rm -rf ca .libs nssdb*
+	rm -rf ca ca2 .libs nssdb*
 	rm -f ca-stamp client.key *.csr ssigned.pem wrongcn.pem \
 	   server.cert client.cert *.p12 *.cert sparse.bin
 
@@ -129,7 +129,7 @@ random.txt: $(NEWS)
 # since it changes for every invocation; not helpful for regression
 # testing.
 ca-stamp: makekeys $(srcdir)/openssl.conf
-	rm -rf ca
+	rm -rf ca ca2
 	OPENSSL=$(OPENSSL) \
 	 $(SHELL) makekeys $(srcdir) 2>makekeys.out
 	@echo timestamp > ca-stamp

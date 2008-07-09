@@ -48,6 +48,7 @@
 #include "ne_pkcs11.h"
 
 #define SERVER_CERT "server.cert"
+#define CA2_SERVER_CERT "ca2server.pem"
 #define CA_CERT "ca/cert.pem"
 
 #define SERVER_DNAME "Neon QA Dept, Neon Hackers Ltd, " \
@@ -409,6 +410,15 @@ static int simple_eof(void)
     ne_session *sess = DEFSESS;
 
     CALL(any_ssl_request(sess, serve_eof, SERVER_CERT, CA_CERT, NULL, NULL));
+    ne_session_destroy(sess);
+    return OK;
+}
+
+static int intermediary(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {CA2_SERVER_CERT, 0};
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
     ne_session_destroy(sess);
     return OK;
 }
@@ -1621,6 +1631,7 @@ ne_test tests[] = {
     T(empty_truncated_eof),
     T(fail_not_ssl),
     T(cache_cert),
+    T(intermediary),
 
     T(client_cert_pkcs12),
     T(ccert_unencrypted),
