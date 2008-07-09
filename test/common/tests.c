@@ -155,6 +155,7 @@ int main(int argc, char *argv[])
 {
     int n;
     static const char dots[] = "......................";
+    char *tmp;
     
     /* get basename(argv[0]) */
     test_suite = strrchr(argv[0], '/');
@@ -219,7 +220,7 @@ int main(int argc, char *argv[])
 	printf(" Socket library initalization failed.\n");
     }
 
-    if (getenv("TEST_QUIET")) {
+    if ((tmp = getenv("TEST_QUIET")) != NULL && strcmp(tmp, "1") == 0) {
         quiet = 1;
     }
 
@@ -360,10 +361,12 @@ int main(int argc, char *argv[])
 
 	reap_server();
             
-        if (quiet)
+        if (quiet) {
             printf("\r%s%.*s %2u/%2u ", test_suite, 
                    (int) (strlen(dots) - strlen(test_suite)), dots,
                    n + 1, count);
+            fflush(stdout);
+        }
     }
 
     /* discount skipped tests */
@@ -410,7 +413,7 @@ int main(int argc, char *argv[])
                        warnings==1?" was":"s were");
             }
         }
-        else {
+        else if (quiet) {
             putchar('\n');
         }
     }
