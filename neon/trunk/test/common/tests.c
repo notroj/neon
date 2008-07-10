@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
         }
 
 	/* align the result column if we've had warnings. */
-	if (warned) {
+	if (warned && !quiet) {
 	    printf("    %s ", dots);
 	}
 
@@ -307,6 +307,9 @@ int main(int argc, char *argv[])
             NOCOL;
             if (quiet && is_xfail) {
                 printf(" - %s", test_name);
+                if (have_context) {
+                    printf(" (%s)", test_context);
+                }
             }
 	    if (warned && !quiet) {
 		printf(" (with %d warning%s)", warned, (warned > 1)?"s":"");
@@ -314,7 +317,7 @@ int main(int argc, char *argv[])
 #ifdef NEON_MEMLEAK
             if (is_xleaky) {
                 if (quiet) {
-                    printf("expected leak - %s: %" NE_FMT_SIZE_T " bytes\n",
+                    printf("expected leak - %s: %" NE_FMT_SIZE_T " bytes",
                            test_name, ne_alloc_used - allocated);
                 }
                 else {
@@ -323,7 +326,7 @@ int main(int argc, char *argv[])
                 }
             }
 #endif
-	    if (!quiet) putchar('\n');
+	    if (!quiet || is_xfail) putchar('\n');
 	    break;
 	case FAILHARD:
 	    aborted = 1;
