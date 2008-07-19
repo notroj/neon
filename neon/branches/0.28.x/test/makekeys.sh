@@ -75,13 +75,13 @@ ${REQ} -new -key ${srcdir}/server.key -out altname4.csr
 csr_fields "Good ipAddress altname Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname5.csr
 
-csr_fields "Bad ipAddress altname Dept" nowhere.example.com | \
+csr_fields "Bad ipAddress altname 1 Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname6.csr
 
-csr_fields "Bad ipAddress altname Dept" nowhere.example.com | \
+csr_fields "Bad ipAddress altname 2 Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname7.csr
 
-csr_fields "Bad ipAddress altname Dept" nowhere.example.com | \
+csr_fields "Bad ipAddress altname 3 Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname8.csr
 
 csr_fields "Self-Signed" | \
