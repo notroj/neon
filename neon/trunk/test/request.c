@@ -2117,6 +2117,26 @@ static int local_addr(void)
     return reap_server();
 }
 
+/* Regression in 0.27.0, ne_set_progress(sess, NULL, NULL) should
+ * register the progress callback. */
+static int dereg_progress(void)
+{
+    ne_session *sess;
+
+    CALL(make_session(&sess, single_serve_string, 
+                      RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
+
+    ne_set_progress(sess, NULL, NULL);
+
+    ONREQ(any_request(sess, "/foo"));
+
+    ne_session_destroy(sess);
+    
+    return await_server();    
+}
+
+/* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(single_get_clength),
@@ -2204,5 +2224,6 @@ ne_test tests[] = {
     T(status),
     T(status_chunked),
     T(local_addr),
+    T(dereg_progress),
     T(NULL)
 };
