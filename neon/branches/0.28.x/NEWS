@@ -1,10 +1,11 @@
 Changes in release 0.28.3:
+* Fix parsing of *-Authenticate response header with LWS after quoted value
 * Fix ne_set_progress(, NULL, ) to match pre-0.27 behaviour (and not crash)
-* Fix to disable Nagle on Win32 with some compilers (thanks to Stefan Küng)
+* Fix to disable Nagle on Win32 with newer toolchain (thanks to Stefan Küng)
 * Fix build on Netware (Guenter Knauf)
-* Compile with PIC flags by default for static builds
 * Fix issues in testsuite SSL cert setup if using old versions of OpenSSL
 * Mark ne_{,buffer_}concat with sentinel attribute for GCC >= 4.
+* Compile with PIC flags by default even for static library builds
 
 Changes in release 0.28.2:
 * Support "Proxy-Connection: Keep-Alive" for compatibility with HTTP/1.0
