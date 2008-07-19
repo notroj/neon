@@ -4,7 +4,7 @@ dnl Extract the version (sans LF) from .version, created at release-time.
 m4_define(ne_version, [m4_translit(m4_include(.version), [
 ])])
 
-AC_INIT(neon, ne_version, [neon@webdav.org])
+AC_INIT(neon, ne_version, [neon@lists.manyfish.co.uk])
 
 AC_COPYRIGHT([Copyright 2000-2008 Joe Orton and others
 This configure script may be copied, distributed and modified under the 
