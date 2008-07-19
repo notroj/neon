@@ -13,7 +13,7 @@
 
 # This file is part of the neon HTTP/WebDAV client library.
 # See http://www.webdav.org/neon/ for the latest version. 
-# Please send any feedback to <neon@webdav.org>
+# Please send any feedback to <neon@lists.manyfish.co.uk>
 
 # Check for XML parser, supporting libxml 2.x and expat 1.95.x,
 # or a bundled copy of expat.
