@@ -639,12 +639,12 @@ int ne__negotiate_ssl(ne_session *sess)
 	    ctx->sess = NULL;
 	}
         if (sess->ssl_cc_requested) {
-            ne_set_error(sess, _("SSL negotiation failed, "
+            ne_set_error(sess, _("SSL handshake failed, "
                                  "client certificate was requested: %s"),
                          ne_sock_error(sess->socket));
         }
         else {
-            ne_set_error(sess, _("SSL negotiation failed: %s"),
+            ne_set_error(sess, _("SSL handshake failed: %s"),
                          ne_sock_error(sess->socket));
         }
         return NE_ERROR;
