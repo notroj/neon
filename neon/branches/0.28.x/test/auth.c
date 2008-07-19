@@ -1,6 +1,6 @@
 /* 
    Authentication tests
-   Copyright (C) 2001-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -468,10 +468,8 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
 
     make_digest(state, parms, 0, digest);
 
-    NE_DEBUG(NE_DBG_HTTP, "Got digest: %s, expected: %s\n", 
-             state->digest, digest);
-
-    ONCMP(digest, state->digest, "Digest response", "request-digest");
+    ONV(strcmp(digest, state->digest),
+        ("bad digest; expected %s got %s", state->digest, digest));
 
     return OK;
 }
