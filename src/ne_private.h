@@ -99,6 +99,9 @@ struct ne_session_s {
     ne_ssl_client_cert *client_cert;
     ne_ssl_certificate *server_cert;
     ne_ssl_context *ssl_context;
+    int ssl_cc_requested; /* set to non-zero if a client cert was
+                           * requested during initial handshake, but
+                           * none could be provided. */
 #endif
 
     /* Server cert verification callback: */

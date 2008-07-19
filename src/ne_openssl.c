@@ -526,6 +526,7 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 	*pkey = cc->pkey;
 	return 1;
     } else {
+        sess->ssl_cc_requested = 1;
 	NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
 	return 0;
     }
@@ -629,15 +630,24 @@ int ne__negotiate_ssl(ne_session *sess)
     ctx->hostname = 
         sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
 
+    sess->ssl_cc_requested = 0;
+
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
 	if (ctx->sess) {
 	    /* remove cached session. */
 	    SSL_SESSION_free(ctx->sess);
 	    ctx->sess = NULL;
 	}
-	ne_set_error(sess, _("SSL negotiation failed: %s"),
-		     ne_sock_error(sess->socket));
-	return NE_ERROR;
+        if (sess->ssl_cc_requested) {
+            ne_set_error(sess, _("SSL negotiation failed, "
+                                 "client certificate was requested: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        else {
+            ne_set_error(sess, _("SSL negotiation failed: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        return NE_ERROR;
     }	
     
     ssl = ne__sock_sslsock(sess->socket);

@@ -75,6 +75,7 @@ struct ssl_server_args {
     /* client cert handling: */
     int require_cc; /* require a client cert if non-NULL */
     const char *ca_list; /* file of CA certs to verify client cert against */
+    int fail_silently; /* exit with success if handshake fails */
     
     /* session caching: */
     int cache; /* use the session cache if non-zero */
@@ -117,8 +118,11 @@ static int ssl_server(ne_socket *sock, void *userdata)
     ne_ssl_context_set_verify(ctx, args->require_cc, 
                               args->ca_list, args->ca_list);
 
-    ONV(ne_sock_accept_ssl(sock, ctx),
-        ("SSL accept failed: %s", ne_sock_error(sock)));
+    ret = ne_sock_accept_ssl(sock, ctx);
+    if (ret && args->fail_silently) {
+        return 0;
+    }
+    ONV(ret, ("SSL accept failed: %s", ne_sock_error(sock)));
 
     args->count++;
 
@@ -997,6 +1001,38 @@ static int ccert_unencrypted(void)
     return OK;
 }
 
+#define NOCERT_MESSAGE "client certificate was requested"
+
+/* Tests for useful error message if a handshake fails where a client
+ * cert was requested. */
+static int no_client_cert(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    int ret;
+
+    args.require_cc = 1;
+    args.fail_silently = 1;
+
+    ne_ssl_trust_cert(sess, def_ca_cert);
+
+    CALL(spawn_server(7777, ssl_server, &args));
+    
+    ret = any_request(sess, "/failme");
+
+    ONV(ret != NE_ERROR,
+        ("unexpected result %d: %s", ret, ne_get_error(sess)));
+
+    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL,
+        ("error message was '%s', missing '%s'", 
+         ne_get_error(sess), NOCERT_MESSAGE));
+    
+    reap_server();
+
+    ne_session_destroy(sess);    
+    return OK;
+}
+
 /* non-zero if a server auth header was received */
 static int got_server_auth; 
 
@@ -1651,6 +1687,7 @@ ne_test tests[] = {
     T(ccert_unencrypted),
     T(client_cert_provided),
     T(cc_provided_dnames),
+    T(no_client_cert),
 
     T(parse_cert),
     T(parse_chain),
