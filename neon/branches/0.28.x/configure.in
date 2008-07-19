@@ -40,7 +40,7 @@ dnl is not available.
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
 
 AC_DISABLE_SHARED
-AC_PROG_LIBTOOL
+m4_ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 
 AC_EXEEXT
 
