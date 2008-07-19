@@ -36,3 +36,9 @@ Cache-Control: no-cache
 Pragma: no-cache
 Connection: close
 W8޳����s0��
+
+* load_client_cert fails with:
+
+  load_client_cert: (did not fail to load clicert without pkey)
+
+  on RHEL4 openssl.
