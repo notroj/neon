@@ -104,6 +104,8 @@ typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
  * is invoked for after each block of the request and response body to
  * indicate request and response progress (there is no way to
  * distinguish between the two using this interface alone).
+ * If progress is NULL, any existing callback is deregistered and will
+ * no longer be invoked.
  *
  * NOTE: Use of this interface is mutually exclusive with the use of
  * ne_set_notifier().  A call to ne_set_progress() removes the
@@ -164,7 +166,8 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
 /* Set a status notification callback for the session, to report
  * session status events.  Only one notification callback per session
  * can be registered; the most recent of successive calls to this
- * function takes effect.
+ * function takes effect.  If status is NULL, any existing callback
+ * is deregistered and will no longer be invoked.
  *
  * NOTE: Use of this interface is mutually exclusive with the use of
  * ne_set_progress().  A call to ne_set_notifier() removes the

@@ -220,9 +220,14 @@ static void progress_notifier(void *userdata, ne_session_status status,
 
 void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata)
 {
-    sess->progress_cb = progress;
-    sess->progress_ud = userdata;
-    ne_set_notifier(sess, progress_notifier, sess);
+    if (progress) {
+        sess->progress_cb = progress;
+        sess->progress_ud = userdata;
+        ne_set_notifier(sess, progress_notifier, sess);
+    }
+    else {
+        ne_set_notifier(sess, NULL, NULL);
+    }
 }
 
 void ne_set_notifier(ne_session *sess,
