@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2007, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -80,7 +80,8 @@ ne_buffer *ne_buffer_ncreate(size_t size);
 /* Concatenate all given strings onto the end of the buffer.  The
  * strings must all be NUL-terminated, and MUST be followed by a NULL
  * argument marking the end of the list.  */
-void ne_buffer_concat(ne_buffer *buf, ...);
+void ne_buffer_concat(ne_buffer *buf, ...)
+    ne_attribute_sentinel;
 
 /* Append a NUL-terminated string 'str' to buf. */
 void ne_buffer_zappend(ne_buffer *buf, const char *str);
@@ -135,7 +136,8 @@ strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL pointer. */
-char *ne_concat(const char *str, ...);
+char *ne_concat(const char *str, ...)
+    ne_attribute_sentinel;
 
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
