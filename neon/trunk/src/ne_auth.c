@@ -968,6 +968,7 @@ static int tokenize(char **hdr, char **key, char **value, char *sep,
 	case AFTER_EQ_QUOTED:
 	    if (*pnt == '\"') {
 		state = AFTER_EQ;
+                *pnt = '\0';
 	    }
 	    break;
 	}

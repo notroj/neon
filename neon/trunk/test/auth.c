@@ -148,7 +148,10 @@ static int basic(void)
         /* multi-header case 3 */
         "WWW-Authenticate: FooBarChall foo=\"bar\"\r\n"
         CHAL_WALLY "\r\n"
-        "WWW-Authenticate: BarFooScheme bar=\"foo\""
+        "WWW-Authenticate: BarFooScheme bar=\"foo\"",
+
+        /* quoting test; fails to handle scheme properly with <= 0.28.2. */
+        "WWW-Authenticate: Basic realm=\"WallyWorld\" , BarFooScheme"
     };
     size_t n;
     
