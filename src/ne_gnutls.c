@@ -641,6 +641,7 @@ static int provide_client_cert(gnutls_session session,
         }
     } else {
         NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
+        sess->ssl_cc_requested = 1;
         return GNUTLS_E_NO_CERTIFICATE_FOUND;
     }
 
@@ -851,9 +852,16 @@ int ne__negotiate_ssl(ne_session *sess)
         sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
 
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
-	ne_set_error(sess, _("SSL handshake failed: %s"),
-		     ne_sock_error(sess->socket));
-	return NE_ERROR;
+        if (sess->ssl_cc_requested) {
+            ne_set_error(sess, _("SSL handshake failed, "
+                                 "client certificate was requested: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        else {
+            ne_set_error(sess, _("SSL handshake failed: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        return NE_ERROR;
     }
 
     sock = ne__sock_sslsock(sess->socket);
