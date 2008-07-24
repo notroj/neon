@@ -400,7 +400,30 @@ void ne__ssl_set_verify_err(ne_session *sess, int failures)
 	}
     }
 }
-#endif
+
+/* This doesn't actually implement complete RFC 2818 logic; omits
+ * "f*.example.com" support for simplicity. */
+int ne__ssl_match_hostname(char *cn, const char *hostname)
+{
+    const char *dot;
+
+    dot = strchr(hostname, '.');
+    if (dot == NULL) {
+	char *pnt = strchr(cn, '.');
+	/* hostname is not fully-qualified; unqualify the cn. */
+	if (pnt != NULL) {
+	    *pnt = '\0';
+	}
+    }
+    else if (strncmp(cn, "*.", 2) == 0) {
+	hostname = dot + 1;
+	cn += 2;
+    }
+
+    return !ne_strcasecmp(cn, hostname);
+}
+
+#endif /* NE_HAVE_SSL */
 
 typedef void (*void_fn)(void);
 
