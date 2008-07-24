@@ -348,27 +348,6 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-/* Return non-zero if hostname from certificate (cn) matches hostname
- * used for session (hostname).  (Wildcard matching is no longer
- * mandated by RFC3280, but certs are deployed which use wildcards) */
-static int match_hostname(char *cn, const char *hostname)
-{
-    const char *dot;
-    dot = strchr(hostname, '.');
-    if (dot == NULL) {
-	char *pnt = strchr(cn, '.');
-	/* hostname is not fully-qualified; unqualify the cn. */
-	if (pnt != NULL) {
-	    *pnt = '\0';
-	}
-    }
-    else if (strncmp(cn, "*.", 2) == 0) {
-	hostname = dot + 1;
-	cn += 2;
-    }
-    return !ne_strcasecmp(cn, hostname);
-}
-
 /* Check certificate identity.  Returns zero if identity matches; 1 if
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
@@ -394,7 +373,7 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
         case GNUTLS_SAN_DNSNAME:
             name[len] = '\0';
             if (identity && !found) *identity = ne_strdup(name);
-            match = match_hostname(name, hostname);
+            match = ne__ssl_match_hostname(name, hostname);
             found = 1;
             break;
         case GNUTLS_SAN_IPADDRESS: {
@@ -463,7 +442,7 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
                                                 seq, 0, name, &len);
             if (ret == 0) {
                 if (identity) *identity = ne_strdup(name);
-                match = match_hostname(name, hostname);
+                match = ne__ssl_match_hostname(name, hostname);
             }
         } else {
             return -1;
