@@ -99,6 +99,9 @@ struct ne_session_s {
     ne_ssl_client_cert *client_cert;
     ne_ssl_certificate *server_cert;
     ne_ssl_context *ssl_context;
+    int ssl_cc_requested; /* set to non-zero if a client cert was
+                           * requested during initial handshake, but
+                           * none could be provided. */
 #endif
 
     /* Server cert verification callback: */
@@ -123,5 +126,10 @@ int ne__negotiate_ssl(ne_session *sess);
 
 /* Set the session error appropriate for SSL verification failures. */
 void ne__ssl_set_verify_err(ne_session *sess, int failures);
+
+/* Return non-zero if hostname from certificate (cn) matches hostname
+ * used for session (hostname); follows RFC2818 logic.  cn is modified
+ * in-place. */
+int ne__ssl_match_hostname(char *cn, const char *hostname);
 
 #endif /* HTTP_PRIVATE_H */

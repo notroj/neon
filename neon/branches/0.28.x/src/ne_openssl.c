@@ -212,29 +212,6 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-/* Return non-zero if hostname from certificate (cn) matches hostname
- * used for session (hostname).  Doesn't implement complete RFC 2818
- * logic; omits "f*.example.com" support for simplicity. */
-static int match_hostname(char *cn, const char *hostname)
-{
-    const char *dot;
-
-    dot = strchr(hostname, '.');
-    if (dot == NULL) {
-	char *pnt = strchr(cn, '.');
-	/* hostname is not fully-qualified; unqualify the cn. */
-	if (pnt != NULL) {
-	    *pnt = '\0';
-	}
-    }
-    else if (strncmp(cn, "*.", 2) == 0) {
-	hostname = dot + 1;
-	cn += 2;
-    }
-
-    return !ne_strcasecmp(cn, hostname);
-}
-
 /* Check certificate identity.  Returns zero if identity matches; 1 if
  * identity does not match, or <0 if the certificate had no identity.
  * If 'identity' is non-NULL, store the malloc-allocated identity in
@@ -259,7 +236,7 @@ static int check_identity(const ne_uri *server, X509 *cert, char **identity)
 	    if (nm->type == GEN_DNS) {
 		char *name = dup_ia5string(nm->d.ia5);
                 if (identity && !found) *identity = ne_strdup(name);
-		match = match_hostname(name, hostname);
+		match = ne__ssl_match_hostname(name, hostname);
 		ne_free(name);
 		found = 1;
             } 
@@ -343,7 +320,7 @@ static int check_identity(const ne_uri *server, X509 *cert, char **identity)
             return -1;
         }
         if (identity) *identity = ne_strdup(cname->data);
-        match = match_hostname(cname->data, hostname);
+        match = ne__ssl_match_hostname(cname->data, hostname);
         ne_buffer_destroy(cname);
     }
 
@@ -526,6 +503,7 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 	*pkey = cc->pkey;
 	return 1;
     } else {
+        sess->ssl_cc_requested = 1;
 	NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
 	return 0;
     }
@@ -629,15 +607,24 @@ int ne__negotiate_ssl(ne_session *sess)
     ctx->hostname = 
         sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
 
+    sess->ssl_cc_requested = 0;
+
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
 	if (ctx->sess) {
 	    /* remove cached session. */
 	    SSL_SESSION_free(ctx->sess);
 	    ctx->sess = NULL;
 	}
-	ne_set_error(sess, _("SSL negotiation failed: %s"),
-		     ne_sock_error(sess->socket));
-	return NE_ERROR;
+        if (sess->ssl_cc_requested) {
+            ne_set_error(sess, _("SSL negotiation failed, "
+                                 "client certificate was requested: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        else {
+            ne_set_error(sess, _("SSL negotiation failed: %s"),
+                         ne_sock_error(sess->socket));
+        }
+        return NE_ERROR;
     }	
     
     ssl = ne__sock_sslsock(sess->socket);
