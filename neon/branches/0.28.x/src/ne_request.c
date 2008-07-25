@@ -286,8 +286,12 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
     if (count) {
         if (req->body.file.remain == 0)
             return 0;
-        if ((off_t)count > req->body.file.remain)
-            count = req->body.file.remain;
+
+        /* Casts here are necessary for LFS platforms for safe and
+         * warning-free assignment/comparison between 32-bit size_t
+         * and 64-bit off64_t: */
+        if ((ne_off_t)count > req->body.file.remain)
+            count = (size_t)req->body.file.remain;
 	return read(req->body.file.fd, buffer, count);
     } else {
         ne_off_t newoff;
