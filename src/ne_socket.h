@@ -177,6 +177,19 @@ int ne_sock_block(ne_socket *sock, int n);
  * on error. */
 int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t count); 
 
+/* I/O vector. */
+struct ne_iovec {
+    void *base;
+    size_t len;
+};
+
+/* Writes 'count' blocks described by 'vector' to the socket.
+ * Guarantees to either write all the bytes or to fail.  Count must be
+ * greater than zero and smaller than the system-defined maximum
+ * vector limit.  Returns 0 on success, or NE_SOCK_* on error. */
+int ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector,
+                       int count); 
+
 /* Read an LF-terminated line into 'buffer', and NUL-terminate it.
  * At most 'len' bytes are read (including the NUL terminator).
  * Returns:
