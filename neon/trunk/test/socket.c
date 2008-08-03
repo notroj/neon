@@ -886,6 +886,43 @@ static int large_writes(void)
     return finish(sock, 1);    
 }
 
+static int full_writev(ne_socket *sock, struct ne_iovec *vec, int count)
+{
+    int ret = ne_sock_fullwritev(sock, vec, count);
+    NE_DEBUG(NE_DBG_SOCKET, "wrote vector (%d)\n", count);
+    ONV(ret, ("writev failed (%d): %s", ret, ne_sock_error(sock)));
+    return OK;
+}
+
+#undef LARGE_SIZE
+#define LARGE_SIZE (123456 * 4)
+
+static int large_writev(void)
+{
+    struct string str;
+    ne_socket *sock;
+    ssize_t n;
+    struct ne_iovec vec[4];
+
+    str.data = ne_malloc(LARGE_SIZE);
+    str.len = LARGE_SIZE;
+
+    for (n = 0; n < LARGE_SIZE; n++)
+	str.data[n] = 41 + n % 130;
+    
+    for (n = 0; n < 4; n++) {
+        vec[n].base = str.data + n * LARGE_SIZE / 4;
+        vec[n].len = LARGE_SIZE / 4;
+    }
+
+    CALL(begin(&sock, serve_expect, &str));
+    CALL(full_writev(sock, vec, 4));
+    
+    ne_free(str.data);
+    return finish(sock, 1);    
+}
+
+
 /* echoes back lines. */
 static int echo_server(ne_socket *sock, void *ud)
 {
@@ -1654,6 +1691,7 @@ ne_test tests[] = {
     T(line_long_chunked),
     T(small_writes),
     T(large_writes),
+    T(large_writev),
     T(echo_lines),
     T(blocking),
     T(prebind),
