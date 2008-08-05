@@ -150,8 +150,10 @@ typedef union ne_session_status_info_u {
         const char *hostname;
     } cd;
     struct /* ne_status_sending and ne_status_recving */ {
-        /* Request/response body transfer progress; if total == -1, the
-         * total size is unknown; else 0 <= progress <= total:  */
+        /* Request/response body transfer progress; if total == -1,
+         * the total size is unknown; otherwise, total gives the total
+         * number of bytes which will be transferred.  progress gives
+         * the number of bytes transferred so far. */
         ne_off_t progress, total;
     } sr;
 } ne_session_status_info;
