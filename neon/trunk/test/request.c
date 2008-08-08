@@ -1794,7 +1794,8 @@ static int send_bad_offset(void)
 
     ONN("request dispatched with bad offset!", ret == NE_OK);
     ONV(ret != NE_ERROR,
-        ("request failed with non-NE_ERROR: %s", ne_get_error(sess)));
+        ("request failed with unexpected error code %d: %s", 
+         ret, ne_get_error(sess)));
 
     ONV(strstr(ne_get_error(sess), "Could not seek") == NULL,
         ("bad error message from seek failure: %s", ne_get_error(sess)));
