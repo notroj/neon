@@ -1072,6 +1072,32 @@ static int domains(void)
     return await_server();
 }
 
+/* This segfaulted with 0.28.0 through 0.28.2 inclusive. */
+static int CVE_2008_3746(void)
+{
+    ne_session *sess;
+    struct digest_parms parms;
+
+    memset(&parms, 0, sizeof parms);
+    parms.realm = "WallyWorld";
+    parms.rfc2617 = 1;
+    parms.nonce = "agoog";
+    parms.domain = "foo";
+    parms.num_requests = 1;
+
+    CALL(make_session(&sess, serve_digest, &parms));
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+
+    ne_session_proxy(sess, "localhost", 7777);
+
+    any_2xx_request(sess, "/fish/0");
+    
+    ne_session_destroy(sess);
+
+    return await_server();
+}
+
 static int defaults(void)
 {
     ne_session *sess;
@@ -1106,5 +1132,6 @@ ne_test tests[] = {
     T(multi_handler),
     T(domains),
     T(defaults),
+    T(CVE_2008_3746),
     T(NULL)
 };
