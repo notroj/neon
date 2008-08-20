@@ -645,11 +645,13 @@ static int parse_domain(auth_session *sess, const char *domain)
         
         if (ne_uri_parse(token, &rel) == 0) {
             /* Resolve relative to the Request-URI. */
+            base.path = "/";
             ne_uri_resolve(&base, &rel, &absolute);
 
+            /* Compare against the resolved path to check this URI has
+             * the same (scheme, host, port) components; ignore it
+             * otherwise: */
             base.path = absolute.path;
-            
-            /* Ignore URIs not on this server. */
             if (absolute.path && ne_uri_cmp(&absolute, &base) == 0) {
                 sess->domains = ne_realloc(sess->domains, 
                                            ++sess->ndomains *
