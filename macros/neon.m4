@@ -136,18 +136,12 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 
 # Define the current versions.
 NE_VERSION_MAJOR=0
-NE_VERSION_MINOR=29
-NE_VERSION_PATCH=0
-NE_VERSION_TAG=-dev
+NE_VERSION_MINOR=28
+NE_VERSION_PATCH=3
+NE_VERSION_TAG=
 
-# libtool library interface versioning.  Release policy dictates that
-# for neon 0.x.y, each x brings an incompatible interface change, and
-# each y brings no interface change, and since this policy has been
-# followed since 0.1, x == CURRENT, y == RELEASE, 0 == AGE.  For
-# 1.x.y, this will become N + x == CURRENT, y == RELEASE, x == AGE,
-# where N is constant (and equal to CURRENT + 1 from the final 0.x
-# release)
-NE_LIBTOOL_VERSINFO="${NE_VERSION_MINOR}:${NE_VERSION_PATCH}:0"
+# 0.28.x is backwards-compatible with 0.27.x, so AGE=1
+NE_LIBTOOL_VERSINFO="28:${NE_VERSION_PATCH}:1"
 
 NE_DEFINE_VERSIONS
 
@@ -156,11 +150,7 @@ NE_DEFINE_VERSIONS
 dnl Adds an ABI variation tag which will be added to the SONAME of
 dnl a shared library.  e.g. NE_ADD_ABITAG(FOO)
 AC_DEFUN([NE_ADD_ABITAG], [
-if test "x${NE_LIBTOOL_RELEASE}y" = "xy"; then
-   NE_LIBTOOL_RELEASE="$1"
-else
-   NE_LIBTOOL_RELEASE="${NE_LIBTOOL_RELEASE}-$1"
-fi
+: Disabled for 0.28 to retain 0.27 ABI
 ])
 
 dnl Define the minimum required versions, usage:
@@ -972,8 +962,7 @@ gnutls)
 
    # Check for functions in later releases
    NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \ 
-                  gnutls_sign_callback_set \
-                  gnutls_certificate_get_x509_cas)
+                  gnutls_sign_callback_set)
 
    # Check for iconv support if using the new RDN access functions:
    if test ${ac_cv_func_gnutls_x509_dn_get_rdn_ava}X${ac_cv_header_iconv_h} = yesXyes; then
