@@ -5,7 +5,7 @@ Changes in release 0.28.3:
 * Fix ne_set_progress(, NULL, ) to match pre-0.27 behaviour (and not crash)
 * Fix to disable Nagle on Win32 with newer toolchain (thanks to Stefan Küng)
 * Fix build on Netware (Guenter Knauf)
-* Document existing API ne_uri_parse() postcondition and ne_uri_resolve()
+* Document existing ne_uri_parse() API postcondition and ne_uri_resolve()
   pre/postconditions regarding the ->path field in ne_uri structures 
 * Mark ne_{,buffer_}concat with sentinel attribute for GCC >= 4.
 * Distinguish the error message for an SSL handshake which fails after a 
