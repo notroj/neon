@@ -1,10 +1,15 @@
 Changes in release 0.28.3:
+* SECURITY (CVE-2008-3746): Fix potential NULL pointer dereference in
+  Digest domain parameter support; could allow a DoS by a malicious server
 * Fix parsing of *-Authenticate response header with LWS after quoted value
 * Fix ne_set_progress(, NULL, ) to match pre-0.27 behaviour (and not crash)
 * Fix to disable Nagle on Win32 with newer toolchain (thanks to Stefan Küng)
 * Fix build on Netware (Guenter Knauf)
-* Fix issues in testsuite SSL cert setup if using old versions of OpenSSL
+* Document existing API ne_uri_parse() postcondition and ne_uri_resolve()
+  pre/postconditions regarding the ->path field in ne_uri structures 
 * Mark ne_{,buffer_}concat with sentinel attribute for GCC >= 4.
+* Distinguish the error message for an SSL handshake which fails after a 
+ client cert was requested.
 * Compile with PIC flags by default even for static library builds
 
 Changes in release 0.28.2:
