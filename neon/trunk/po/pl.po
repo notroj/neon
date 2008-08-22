@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.28.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2008-08-21 22:00+0200\n"
+"POT-Creation-Date: 2008-08-22 12:42+0100\n"
 "PO-Revision-Date: 2008-08-21 22:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -181,22 +181,22 @@ msgstr "[niedrukowalne:#%lu]"
 msgid "[unprintable]"
 msgstr "[niedrukowalne]"
 
-#: src/ne_gnutls.c:794 src/ne_openssl.c:396
+#: src/ne_gnutls.c:799 src/ne_openssl.c:396
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
-#: src/ne_gnutls.c:835 src/ne_openssl.c:619
+#: src/ne_gnutls.c:840 src/ne_openssl.c:633
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
 
-#: src/ne_gnutls.c:840 src/ne_openssl.c:624
+#: src/ne_gnutls.c:845 src/ne_openssl.c:638
 #, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Uzgodnienie SSL nie udało się: %s"
 
-#: src/ne_gnutls.c:850
+#: src/ne_gnutls.c:855
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr "Serwer nie wysłał łańcucha certyfikatu"
@@ -221,12 +221,12 @@ msgstr ""
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_openssl.c:644
+#: src/ne_openssl.c:658
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
 
-#: src/ne_openssl.c:653
+#: src/ne_openssl.c:667
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"

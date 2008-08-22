@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy-0.10.10\n"
-"Report-Msgid-Bugs-To: neon@webdav.org\n"
-"POT-Creation-Date: 2007-11-26 19:58+0000\n"
+"Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
+"POT-Creation-Date: 2008-08-22 12:42+0100\n"
 "PO-Revision-Date: 2001-01-03 HO:MI+ZONE\n"
 "Last-Translator: A. Sinan Unur <sinan@unur.com>\n"
 "Language-Team: tr\n"
@@ -24,128 +24,128 @@ msgstr ""
 "Invalid HTTP status line in status element at line %d of response:\n"
 "Status line was: %s"
 
-#: src/ne_auth.c:128
+#: src/ne_auth.c:130
 #, fuzzy, c-format
 msgid "Could not authenticate to server: %s"
 msgstr "Sunucuyla baðlantý kurulamadý"
 
-#: src/ne_auth.c:133
+#: src/ne_auth.c:135
 #, fuzzy, c-format
 msgid "Could not authenticate to proxy server: %s"
 msgstr "Ara sunucuyla baðlantý kurulamadý"
 
-#: src/ne_auth.c:353
+#: src/ne_auth.c:358
 #, c-format
 msgid "rejected %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:369
+#: src/ne_auth.c:374
 msgid "missing realm in Basic challenge"
 msgstr ""
 
-#: src/ne_auth.c:464
+#: src/ne_auth.c:469
 msgid "invalid Negotiate token"
 msgstr ""
 
-#: src/ne_auth.c:487
+#: src/ne_auth.c:492
 msgid "GSSAPI authentication error: "
 msgstr ""
 
-#: src/ne_auth.c:500
+#: src/ne_auth.c:505
 #, c-format
 msgid "GSSAPI failure (code %u)"
 msgstr ""
 
-#: src/ne_auth.c:535
+#: src/ne_auth.c:540
 msgid "ignoring empty Negotiate continuation"
 msgstr ""
 
-#: src/ne_auth.c:550
+#: src/ne_auth.c:555
 #, c-format
 msgid "Negotiate response verification failed: invalid response header token"
 msgstr ""
 
-#: src/ne_auth.c:572
+#: src/ne_auth.c:577
 #, c-format
 msgid "Negotiate response verification failure: %s"
 msgstr ""
 
-#: src/ne_auth.c:690
+#: src/ne_auth.c:699
 msgid "unknown algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:694
+#: src/ne_auth.c:703
 msgid "incompatible algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:698
+#: src/ne_auth.c:707
 msgid "missing parameter in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:702
+#: src/ne_auth.c:711
 msgid "initial Digest challenge was stale"
 msgstr ""
 
-#: src/ne_auth.c:709
+#: src/ne_auth.c:718
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr ""
 
-#: src/ne_auth.c:721
+#: src/ne_auth.c:730
 #, fuzzy
 msgid "could not parse domain in Digest challenge"
 msgstr "Parça boyutu anlaþýlamadý"
 
-#: src/ne_auth.c:1025
+#: src/ne_auth.c:1039
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:1030
+#: src/ne_auth.c:1044
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1040
+#: src/ne_auth.c:1054
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 
-#: src/ne_auth.c:1045
+#: src/ne_auth.c:1059
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:1088
+#: src/ne_auth.c:1102
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1214
+#: src/ne_auth.c:1228
 #, c-format
 msgid "ignored %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:1293
+#: src/ne_auth.c:1307
 #, fuzzy
 msgid "could not parse challenge"
 msgstr "Parça boyutu anlaþýlamadý"
 
-#: src/ne_basic.c:94
+#: src/ne_basic.c:98
 #, fuzzy, c-format
 msgid "Could not determine file size: %s"
 msgstr "Dosya açýlamadý: "
 
-#: src/ne_basic.c:145
+#: src/ne_basic.c:149
 #, c-format
 msgid "Response did not include requested range"
 msgstr ""
 
-#: src/ne_basic.c:179
+#: src/ne_basic.c:183
 #, c-format
 msgid "Range is not satisfiable"
 msgstr ""
 
-#: src/ne_basic.c:184
+#: src/ne_basic.c:188
 #, fuzzy, c-format
 msgid "Resource does not support ranged GET requests"
 msgstr "Sunucu kýsmi GET iþlemini desteklemiyor."
@@ -165,26 +165,31 @@ msgstr "Dosya açýlamadý: "
 msgid "Could not initialize zlib"
 msgstr "Dosyaya yazým yapýlamadý: "
 
-#: src/ne_gnutls.c:162
+#: src/ne_gnutls.c:172
 #, c-format
 msgid "[unprintable:#%lu]"
 msgstr ""
 
-#: src/ne_gnutls.c:188
+#: src/ne_gnutls.c:201
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:685 src/ne_openssl.c:419
+#: src/ne_gnutls.c:799 src/ne_openssl.c:396
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:721 src/ne_openssl.c:632
+#: src/ne_gnutls.c:840 src/ne_openssl.c:633
+#, c-format
+msgid "SSL handshake failed, client certificate was requested: %s"
+msgstr ""
+
+#: src/ne_gnutls.c:845 src/ne_openssl.c:638
 #, fuzzy, c-format
-msgid "SSL negotiation failed: %s"
+msgid "SSL handshake failed: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_gnutls.c:730
+#: src/ne_gnutls.c:855
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -203,22 +208,22 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:451
+#: src/ne_openssl.c:428
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_openssl.c:651
+#: src/ne_openssl.c:658
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:660
+#: src/ne_openssl.c:667
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr ""
 
-#: src/ne_props.c:371 src/ne_props.c:411
+#: src/ne_props.c:371 src/ne_props.c:435
 msgid "Response exceeds maximum property count"
 msgstr ""
 
@@ -227,208 +232,342 @@ msgstr ""
 msgid "Could not parse redirect destination URL"
 msgstr "Durum satýrý anlaþýlamadý."
 
-#: src/ne_request.c:193
+#: src/ne_request.c:194
 #, fuzzy, c-format
 msgid "%s: connection was closed by proxy server"
 msgstr "%s: baðlantý ara sunucu tarafinden kesildi."
 
-#: src/ne_request.c:196
+#: src/ne_request.c:197
 #, fuzzy, c-format
 msgid "%s: connection was closed by server"
 msgstr "%s: baðlantý sunucu tarafinden kesildi."
 
-#: src/ne_request.c:201
+#: src/ne_request.c:202
 #, fuzzy, c-format
 msgid "%s: connection timed out"
 msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
 
-#: src/ne_request.c:306
+#: src/ne_request.c:311
 msgid "offset invalid"
 msgstr ""
 
-#: src/ne_request.c:311
+#: src/ne_request.c:316
 #, fuzzy, c-format
 msgid "Could not seek to offset %s of request body file: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_request.c:359
+#: src/ne_request.c:364
 msgid "Could not send request body"
 msgstr "Ýstek metni gönderilemedi"
 
-#: src/ne_request.c:692
+#: src/ne_request.c:703
 msgid "Could not read chunk size"
 msgstr "Parça boyutu öðrenilemedi"
 
-#: src/ne_request.c:699
+#: src/ne_request.c:710
 msgid "Could not parse chunk size"
 msgstr "Parça boyutu anlaþýlamadý"
 
-#: src/ne_request.c:736
+#: src/ne_request.c:747
 msgid "Could not read response body"
 msgstr "Yanýt metni okunamadý"
 
-#: src/ne_request.c:752
+#: src/ne_request.c:763
 #, fuzzy
 msgid "Could not read chunk delimiter"
 msgstr "Parça boyutu öðrenilemedi"
 
-#: src/ne_request.c:755
+#: src/ne_request.c:766
 msgid "Chunk delimiter was invalid"
 msgstr ""
 
-#: src/ne_request.c:861
+#: src/ne_request.c:872
 msgid "Could not read status line"
 msgstr "Durum satýrý okunamadý"
 
-#: src/ne_request.c:883
+#: src/ne_request.c:894
 #, fuzzy
 msgid "Could not parse response status line"
 msgstr "Durum satýrý anlaþýlamadý."
 
-#: src/ne_request.c:895
+#: src/ne_request.c:906
 #, fuzzy
 msgid "Could not read interim response headers"
 msgstr "Yanýt metni okunamadý"
 
-#: src/ne_request.c:929
+#: src/ne_request.c:940
 msgid "Could not send request"
 msgstr "Ýstek gönderilemedi"
 
-#: src/ne_request.c:977 src/ne_request.c:995 src/ne_request.c:1005
+#: src/ne_request.c:988 src/ne_request.c:1006 src/ne_request.c:1016
 msgid "Error reading response headers"
 msgstr "Yanýt baþlýklarý okunurken hata"
 
-#: src/ne_request.c:1023
+#: src/ne_request.c:1034
 #, c-format
 msgid "Response header too long"
 msgstr "Yanýt baþlýðý çok uzun"
 
-#: src/ne_request.c:1105
+#: src/ne_request.c:1116
 msgid "Response exceeded maximum number of header fields"
 msgstr ""
 
-#: src/ne_request.c:1122
+#: src/ne_request.c:1133
 #, fuzzy, c-format
 msgid "Could not resolve hostname `%s': %s"
 msgstr "%s: Hata: %s sunucusunun adresi bulunamadý.\n"
 
-#: src/ne_request.c:1233
+#: src/ne_request.c:1264
 msgid "Unknown transfer-coding in response"
 msgstr ""
 
-#: src/ne_request.c:1244
+#: src/ne_request.c:1275
 msgid "Invalid Content-Length in response"
 msgstr ""
 
-#: src/ne_request.c:1317
+#: src/ne_request.c:1348
 #, c-format
 msgid "Could not write to file: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_request.c:1390
+#: src/ne_request.c:1421
 #, fuzzy, c-format
 msgid "Could not create SSL connection through proxy server: %s"
 msgstr "Ara sunucu üzerinden SSL baðlantýsý kurulamadý"
 
-#: src/ne_request.c:1437
+#: src/ne_request.c:1468
 #, fuzzy, c-format
 msgid "Could not create socket"
 msgstr "SSL baðlantýsý kurulamadý"
 
-#: src/ne_request.c:1496
+#: src/ne_request.c:1530
 msgid "Could not connect to proxy server"
 msgstr "Ara sunucuyla baðlantý kurulamadý"
 
-#: src/ne_request.c:1497
+#: src/ne_request.c:1531
 msgid "Could not connect to server"
 msgstr "Sunucuyla baðlantý kurulamadý"
 
-#: src/ne_session.c:339 src/ne_session.c:350
+#: src/ne_session.c:361 src/ne_session.c:372
 msgid "[invalid date]"
 msgstr ""
 
-#: src/ne_session.c:363
+#: src/ne_session.c:385
 msgid "certificate is not yet valid"
 msgstr ""
 
-#: src/ne_session.c:364
+#: src/ne_session.c:386
 msgid "certificate has expired"
 msgstr ""
 
-#: src/ne_session.c:365
+#: src/ne_session.c:387
 msgid "certificate issued for a different hostname"
 msgstr ""
 
-#: src/ne_session.c:366
+#: src/ne_session.c:388
 msgid "issuer is not trusted"
 msgstr ""
 
-#: src/ne_session.c:371
+#: src/ne_session.c:393
 msgid "Server certificate verification failed: "
 msgstr ""
 
-#: src/ne_socket.c:507 src/ne_socket.c:561 src/ne_socket.c:664
+#: src/ne_socket.c:516 src/ne_socket.c:612 src/ne_socket.c:716
 #, fuzzy
 msgid "Connection closed"
 msgstr "Baðlantý sunucu tarafýndan kesildi"
 
-#: src/ne_socket.c:571 src/ne_socket.c:676
+#: src/ne_socket.c:622 src/ne_socket.c:728
 #, fuzzy
 msgid "Secure connection truncated"
 msgstr "Baðlantý süre sýnýrý aþýldý."
 
-#: src/ne_socket.c:583 src/ne_socket.c:688
+#: src/ne_socket.c:634 src/ne_socket.c:740
 #, fuzzy, c-format
 msgid "SSL error: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:586
+#: src/ne_socket.c:637
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:669
+#: src/ne_socket.c:721
 #, fuzzy, c-format
 msgid "SSL alert received: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:684
+#: src/ne_socket.c:736
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:783
+#: src/ne_socket.c:862
 msgid "Line too long"
 msgstr "Satýr çok uzun"
 
-#: src/ne_socket.c:923 src/ne_socket.c:929
+#: src/ne_socket.c:1007 src/ne_socket.c:1013
 msgid "Host not found"
 msgstr "Sunucu bulunamadý"
 
-#: src/ne_socket.c:1036
+#: src/ne_socket.c:1138
 #, fuzzy
 msgid "Connection timed out"
 msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
 
-#: src/ne_socket.c:1198
+#: src/ne_socket.c:1300
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1469
+#: src/ne_socket.c:1360
+msgid "Socket family not supported"
+msgstr ""
+
+#: src/ne_socket.c:1583
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1485
+#: src/ne_socket.c:1599
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1492
+#: src/ne_socket.c:1606
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1498
+#: src/ne_socket.c:1612
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "SSL baðlantýsý kurulamadý"
+
+#: src/ne_socks.c:65
+msgid "failure"
+msgstr ""
+
+#: src/ne_socks.c:68
+#, fuzzy
+msgid "connection not permitted"
+msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
+
+#: src/ne_socks.c:71
+msgid "network unreachable"
+msgstr ""
+
+#: src/ne_socks.c:74
+msgid "host unreachable"
+msgstr ""
+
+#: src/ne_socks.c:77
+msgid "TTL expired"
+msgstr ""
+
+#: src/ne_socks.c:80
+msgid "command not supported"
+msgstr ""
+
+#: src/ne_socks.c:83
+msgid "address type not supported"
+msgstr ""
+
+#: src/ne_socks.c:86
+#, c-format
+msgid "%s: unrecognized error (%u)"
+msgstr ""
+
+#: src/ne_socks.c:128 src/ne_socks.c:328
+#, fuzzy
+msgid "Could not send message to proxy"
+msgstr "Ýstek metni gönderilemedi"
+
+#: src/ne_socks.c:133
+#, fuzzy
+msgid "Could not read initial response from proxy"
+msgstr "Yanýt metni okunamadý"
+
+#: src/ne_socks.c:136
+msgid "Invalid version in proxy response"
+msgstr ""
+
+#: src/ne_socks.c:157
+#, fuzzy
+msgid "Could not send login message"
+msgstr "Ýstek gönderilemedi"
+
+#: src/ne_socks.c:162
+#, fuzzy
+msgid "Could not read login reply"
+msgstr "Durum satýrý okunamadý"
+
+#: src/ne_socks.c:165
+msgid "Invalid version in login reply"
+msgstr ""
+
+#: src/ne_socks.c:168
+#, fuzzy
+msgid "Authentication failed"
+msgstr "%s dosyasýna yazým yapýlamadý"
+
+#: src/ne_socks.c:172
+msgid "No acceptable authentication method"
+msgstr ""
+
+#: src/ne_socks.c:174
+msgid "Unexpected authentication method chosen"
+msgstr ""
+
+#: src/ne_socks.c:210
+#, fuzzy
+msgid "Could not send connect request"
+msgstr "Ýstek gönderilemedi"
+
+#: src/ne_socks.c:215
+#, fuzzy
+msgid "Could not read connect reply"
+msgstr "Sunucuyla baðlantý kurulamadý"
+
+#: src/ne_socks.c:218
+msgid "Invalid version in connect reply"
+msgstr ""
+
+#: src/ne_socks.c:221 src/ne_socks.c:337
+#, fuzzy
+msgid "Could not connect"
+msgstr "Sunucuyla baðlantý kurulamadý"
+
+#: src/ne_socks.c:235
+msgid "Could not read FQDN length in connect reply"
+msgstr ""
+
+#: src/ne_socks.c:240
+msgid "Unknown address type in connect reply"
+msgstr ""
+
+#: src/ne_socks.c:245
+#, fuzzy
+msgid "Could not read address in connect reply"
+msgstr "Yanýt metni okunamadý"
+
+#: src/ne_socks.c:266
+msgid "request rejected or failed"
+msgstr ""
+
+#: src/ne_socks.c:269
+#, fuzzy
+msgid "could not establish connection to identd"
+msgstr "Sunucuyla baðlantý kurulamadý"
+
+#: src/ne_socks.c:272
+msgid "rejected due to identd user mismatch"
+msgstr ""
+
+#: src/ne_socks.c:275
+#, c-format
+msgid "%s: unrecognized failure (%u)"
+msgstr ""
+
+#: src/ne_socks.c:333
+#, fuzzy
+msgid "Could not read response from proxy"
+msgstr "Yanýt metni okunamadý"
 
 #: src/ne_xml.c:280
 #, fuzzy, c-format
