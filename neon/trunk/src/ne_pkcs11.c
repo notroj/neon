@@ -182,7 +182,7 @@ static int pk11_find_x509(ne_ssl_pkcs11_provider *prov,
     a[1].value = &type;
     a[1].value_len = sizeof type;
 
-    rv = pakchois_find_objects_init(pks, a, 1);
+    rv = pakchois_find_objects_init(pks, a, 2);
     if (rv != CKR_OK) {
         NE_DEBUG(NE_DBG_SSL, "pk11: FindObjectsInit failed.\n");
         return 0;
