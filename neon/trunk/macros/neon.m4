@@ -1024,7 +1024,7 @@ esac
 
 case ${with_pakchois}X${ac_cv_func_gnutls_sign_callback_set}Y${ne_cv_lib_ssl097} in
 noX*Y*) ;;
-*X*Yyes|*XyesX*)
+*X*Yyes|*XyesY*)
     # PKCS#11... ho!
     NE_PKG_CONFIG(NE_PK11, pakchois,
       [AC_MSG_NOTICE(using pakchois for PKCS11 support)
