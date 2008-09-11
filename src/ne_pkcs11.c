@@ -150,10 +150,11 @@ static RSA_METHOD *pk11_rsa_method(ne_ssl_pkcs11_provider *prov)
     m->init = pk11_rsa_init;
     m->finish = pk11_rsa_finish;
     
-    /* This is hopefully under control of the RSA_METHOD. */
+    /* This is hopefully under complete control of the RSA_METHOD,
+     * otherwise there is nowhere to put this. */
     m->app_data = (char *)prov;
 
-    m->flags = RSA_METHOD_FLAG_NO_CHECK | RSA_FLAG_SIGN_VER;
+    m->flags = RSA_METHOD_FLAG_NO_CHECK;
     
     return m;    
 }
