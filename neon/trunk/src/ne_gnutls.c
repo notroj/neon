@@ -721,7 +721,9 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock,
 
         if (gnutls_x509_crt_init(&x5) ||
             gnutls_x509_crt_import(x5, &certs[n], GNUTLS_X509_FMT_DER)) {
-            ne_ssl_cert_free(top);
+            if (top) {
+                ne_ssl_cert_free(top);
+            }
             return NULL;
         }
 
