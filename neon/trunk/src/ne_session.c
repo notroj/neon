@@ -33,6 +33,10 @@
 #include <errno.h>
 #endif
 
+#ifdef HAVE_LIBPROXY
+#include <proxy.h>
+#endif
+
 #include "ne_session.h"
 #include "ne_alloc.h"
 #include "ne_utils.h"
@@ -209,6 +213,81 @@ void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
 
     if (username) sess->socks_user = ne_strdup(username);
     if (password) sess->socks_password = ne_strdup(password);
+}
+
+void ne_session_system_proxy(ne_session *sess, unsigned int flags)
+{
+#ifdef HAVE_LIBPROXY
+    pxProxyFactory *pxf = px_proxy_factory_new();
+    struct host_info *hi, **lasthi;
+    char *url, **proxies;
+    ne_uri uri;
+    unsigned n;
+
+    free_proxies(sess);
+
+    /* Create URI for session to pass off to libproxy */
+    memset(&uri, 0, sizeof uri);
+    ne_fill_server_uri(sess, &uri);
+
+    uri.path = "/";
+    url = ne_uri_unparse(&uri);
+    uri.path = NULL;
+
+    /* Get list of pseudo-URIs from libproxy: */
+    proxies = px_proxy_factory_get_proxies(pxf, url);
+    
+    for (n = 0, lasthi = &sess->proxies; proxies[n]; n++) {
+        enum proxy_type ptype;
+
+        ne_uri_free(&uri);
+
+        NE_DEBUG(NE_DBG_HTTP, "sess: libproxy #%u=%s\n", 
+                 n, proxies[n]);
+
+        if (ne_uri_parse(proxies[n], &uri))
+            continue;
+        
+        if (!uri.scheme) continue;
+
+        if (ne_strcasecmp(uri.scheme, "http") == 0)
+            ptype = PROXY_HTTP;
+        else if (ne_strcasecmp(uri.scheme, "socks") == 0)
+            ptype = PROXY_SOCKS;
+        else if (ne_strcasecmp(uri.scheme, "direct") == 0)
+            ptype = PROXY_NONE;
+        else
+            continue;
+
+        /* Hostname/port required for http/socks schemes. */
+        if (ptype != PROXY_NONE && !(uri.host && uri.port))
+            continue;
+        
+        /* Do nothing if libproxy returned only a single "direct://"
+         * entry -- a single "direct" (noop) proxy is equivalent to
+         * having none. */
+        if (n == 0 && proxies[n+1] == NULL && ptype == PROXY_NONE)
+            break;
+
+        NE_DEBUG(NE_DBG_HTTP, "sess: Got proxy %s://%s:%d\n",
+                 uri.scheme, uri.host ? uri.host : "(none)",
+                 uri.port);
+        
+        hi = *lasthi = ne_calloc(sizeof *hi);
+        set_hostinfo(hi, ptype, uri.host, uri.port);
+
+        if (ptype == PROXY_HTTP)
+            sess->any_proxy_http = 1;
+        else if (ptype == PROXY_SOCKS)
+            sess->socks_ver = NE_SOCK_SOCKSV5;
+
+        lasthi = &hi->next;
+    }
+
+    ne_free(url);
+    ne_uri_free(&uri);
+    px_proxy_factory_free(pxf);
+#endif
 }
 
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n)
