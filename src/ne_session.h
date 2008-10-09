@@ -47,7 +47,8 @@ void ne_session_destroy(ne_session *sess);
 void ne_close_connection(ne_session *sess);
 
 /* Set the proxy server to be used for the session.  This function
- * must only be called before any requests are created for the
+ * will override (remove) any proxy servers previously configured, and
+ * must be called before any requests are created using this
  * session. */
 void ne_session_proxy(ne_session *sess,
 		      const char *hostname, unsigned int port);
@@ -86,8 +87,11 @@ void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
 int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
 
 /* Bypass the normal name resolution; force the use of specific set of
- * addresses for this session, addrs[0]...addrs[n-1].  The addrs array
- * must remain valid until the session is destroyed. */
+ * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
+ * array and pointed-to objects must remain valid until the session is
+ * destroyed.  This function will override (remove) any proxy servers
+ * previously configured, and must be called before any requests are
+ * created using this session.  */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
 /* Bind connections to the specified local address.  If the address
@@ -274,9 +278,11 @@ const char *ne_get_scheme(ne_session *sess);
 void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
 
 /* If a proxy is configured, sets the host and port fields in the
- * given URI structure to that of the proxy.  The hostname is
- * malloc-allocated.  No other fields in the URI structure are
- * changed; if a proxy is not configured, no fields are changed. */
+ * given URI structure to that of the proxy.  If multiple proxies are
+ * configured, the active is used if any, otherwise the first.  The
+ * hostname is malloc-allocated.  No other fields in the URI structure
+ * are changed; if no proxy is configured or a non-HTTP proxy is in
+ * use, no fields are changed. */
 void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
 
 /* Set the error string for the session; takes printf-like format

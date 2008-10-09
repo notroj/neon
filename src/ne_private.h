@@ -30,12 +30,23 @@
 #include "ne_ssl.h"
 
 struct host_info {
-    char *hostname;
+    /* Type of host represented: */
+    enum proxy_type {
+        PROXY_NONE = 0,
+        PROXY_HTTP, /* an HTTP proxy */
+        PROXY_SOCKS /* a SOCKS proxy */
+    } proxy;
     unsigned int port;
-    ne_sock_addr *address; /* if non-NULL, result of resolving 'hostname'. */
-    /* current network address obtained from 'address' being used. */
+    /* If hostname is non-NULL, host is identified by this hostname. */
+    char *hostname, *hostport;
+    /* If address is non-NULL, the result of resolving ->hostname. */
+    ne_sock_addr *address;
+    /* If current non-NULL, current network address used in ->address. */
     const ne_inet_addr *current;
-    char *hostport; /* URI hostport segment */
+    /* If override is non-NULL, the host is identified by this network
+     * address. */
+    const ne_inet_addr *network;
+    struct host_info *next;
 };
 
 /* Store every registered callback in a generic container, and cast
@@ -65,20 +76,25 @@ struct ne_session_s {
 		    * HTTP/1.1 compliant. */
 
     char *scheme;
-    struct host_info server, proxy;
 
-    /* application-provided address list */
-    const ne_inet_addr **addrlist;
-    size_t numaddrs, curaddr;
+    /* Server host details. */
+    struct host_info server;
+    /* Proxy host details, or NULL if not using a proxy. */
+    struct host_info *proxies;
+    /* Most recently used proxy server. */
+    struct host_info *prev_proxy;
+
+    /* Pointer to the active .server or .proxies as appropriate: */
+    struct host_info *nexthop;
 
     /* Local address to which sockets should be bound. */
     const ne_inet_addr *local_addr;
 
     /* Settings */
-    int use_proxy; /* do we have a proxy server? */
     int use_ssl; /* whether a secure connection is required */
     int in_connect; /* doing a proxy CONNECT */
-
+    int any_proxy_http; /* whether any configured proxy is an HTTP proxy */
+    
     int flags[NE_SESSFLAG_LAST];
 
     ne_progress progress_cb;

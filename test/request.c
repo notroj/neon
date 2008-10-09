@@ -2154,6 +2154,28 @@ static int dereg_progress(void)
     return await_server();    
 }
 
+static int addrlist(void)
+{
+    ne_session *sess;
+    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    const ne_inet_addr *ial[1];
+
+    sess = ne_session_create("http", "www.example.com", 7777);
+
+    CALL(spawn_server(7777, single_serve_string, EMPTY_RESP));
+
+    ial[0] = ia;
+
+    ne_set_addrlist(sess, ial, 1);
+
+    CALL(any_2xx_request(sess, "/blah"));
+
+    ne_session_destroy(sess);
+    ne_iaddr_free(ia);
+    
+    return await_server();
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2244,5 +2266,6 @@ ne_test tests[] = {
     T(status_chunked),
     T(local_addr),
     T(dereg_progress),
+    T(addrlist),
     T(NULL)
 };
