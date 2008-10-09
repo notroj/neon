@@ -140,7 +140,7 @@ Makefile: $(srcdir)/Makefile.in
 makekeys: $(srcdir)/makekeys.sh
 	cd .. && ./config.status test/makekeys
 
-LIBOBJS = common/tests.lo common/child.lo utils.lo
+LIBOBJS = common/tests.lo common/child.lo utils.lo util-socks.lo
 
 $(LIBTEST): $(LIBOBJS)
 	$(LINK) -o $(LIBTEST) $(LIBOBJS) $(LIBNEON)
@@ -161,6 +161,7 @@ resolve: resolve.lo $(LIBNEON)
 common/tests.lo: $(srcdir)/common/tests.c $(OBJDEPS)
 common/child.lo: $(srcdir)/common/child.c $(OBJDEPS) 
 utils.lo: $(srcdir)/utils.c $(OBJDEPS)
+util-socks.lo: $(srcdir)/util-socks.c $(OBJDEPS)
 auth.lo: $(srcdir)/auth.c $(OBJDEPS)
 uri-tests.lo: $(srcdir)/uri-tests.c $(OBJDEPS)
 util-tests.lo: $(srcdir)/util-tests.c $(OBJDEPS)
