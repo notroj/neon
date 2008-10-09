@@ -95,6 +95,9 @@ struct ne_session_s {
     int in_connect; /* doing a proxy CONNECT */
     int any_proxy_http; /* whether any configured proxy is an HTTP proxy */
     
+    enum ne_sock_sversion socks_ver;
+    char *socks_user, *socks_password;
+
     int flags[NE_SESSFLAG_LAST];
 
     ne_progress progress_cb;

@@ -108,6 +108,8 @@ void ne_session_destroy(ne_session *sess)
     free_proxies(sess);
 
     if (sess->user_agent) ne_free(sess->user_agent);
+    if (sess->socks_user) ne_free(sess->socks_user);
+    if (sess->socks_password) ne_free(sess->socks_password);
 
 #ifdef NE_HAVE_SSL
     if (sess->ssl_context)
@@ -191,6 +193,22 @@ void ne_session_proxy(ne_session *sess, const char *hostname,
     sess->any_proxy_http = 1;
     
     set_hostinfo(sess->proxies, PROXY_HTTP, hostname, port);
+}
+
+void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers, 
+                            const char *hostname, unsigned int port,
+                            const char *username, const char *password)
+{
+    free_proxies(sess);
+
+    sess->proxies = ne_calloc(sizeof *sess->proxies);
+
+    set_hostinfo(sess->proxies, PROXY_SOCKS, hostname, port);
+
+    sess->socks_ver = vers;
+
+    if (username) sess->socks_user = ne_strdup(username);
+    if (password) sess->socks_password = ne_strdup(password);
 }
 
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n)

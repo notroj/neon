@@ -53,6 +53,21 @@ void ne_close_connection(ne_session *sess);
 void ne_session_proxy(ne_session *sess,
 		      const char *hostname, unsigned int port);
 
+/* Configure a SOCKS proxy server which will be used for the session.
+ * The SOCKS protocol version 'vers' will be used to contact the
+ * proxy at given 'hostname' and 'port'.
+ *
+ * If SOCKSv4 or v4a are used, username must be non-NULL.  For v5,
+ * username may be NULL, in which case, password is ignored.  If
+ * username is non-NULL, password must also be non-NULL.
+ *
+ * This function will override (remove) any proxy servers previously
+ * configured, and must be called before any requests are created
+ * using this session. */
+void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
+                            const char *hostname, unsigned int port,
+                            const char *username, const char *password);
+
 /* Defined session flags: */
 typedef enum ne_session_flag_e {
     NE_SESSFLAG_PERSIST = 0, /* disable this flag to prevent use of

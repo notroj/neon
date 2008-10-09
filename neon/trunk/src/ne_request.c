@@ -1518,6 +1518,10 @@ static int open_connection(ne_session *sess)
 
     if (!sess->proxies) {
         ret = do_connect(sess, &sess->server);
+        if (ret) {
+            sess->nexthop = NULL;
+            return ret;
+        }
     }
     else {
         struct host_info *hi;
@@ -1534,6 +1538,21 @@ static int open_connection(ne_session *sess)
         for (hi = sess->proxies; hi && ret; hi = hi->next) {
             if (hi != sess->prev_proxy)
                 ret = do_connect(sess, hi);
+        }
+
+        if (ret == NE_OK && sess->nexthop->proxy == PROXY_SOCKS) {
+            ret = ne_sock_proxy(sess->socket, sess->socks_ver, NULL, 
+                                sess->server.hostname, sess->server.port,
+                                sess->socks_user, sess->socks_password);
+            if (ret) {
+                ne_set_error(sess, 
+                             _("Could not establish connection from "
+                               "SOCKS proxy (%s:%u): %s"),
+                             sess->nexthop->hostname,
+                             sess->nexthop->port,
+                             ne_sock_error(sess->socket));
+                ne_close_connection(sess);
+            }
         }
 
         if (ret != NE_OK) {

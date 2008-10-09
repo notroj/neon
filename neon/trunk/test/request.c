@@ -2176,6 +2176,41 @@ static int addrlist(void)
     return await_server();
 }
 
+static int socks_session(ne_session **sess, struct socks_server *srv,
+                         const char *hostname, unsigned int port,
+                         server_fn server, void *userdata)
+{
+    srv->server = server;
+    srv->userdata = userdata;
+    CALL(spawn_server(7777, socks_server, srv));
+    *sess = ne_session_create("http", hostname, port);
+    ne_session_socks_proxy(*sess, srv->version, "localhost", 7777,
+                           srv->username, srv->password);
+    return OK;    
+}
+
+static int socks_proxy(void)
+{
+    ne_session *sess;
+    struct socks_server srv = {0};
+
+    srv.version = NE_SOCK_SOCKSV5;
+    srv.failure = fail_none;
+    srv.expect_port = 4242;
+    srv.expect_addr = NULL;
+    srv.expect_fqdn = "socks.example.com";
+    srv.username = "bloggs";
+    srv.password = "guessme";
+    
+    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                       single_serve_string, EMPTY_RESP));
+
+    CALL(any_2xx_request(sess, "/blee"));
+
+    ne_session_destroy(sess);
+    return await_server();
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2267,5 +2302,6 @@ ne_test tests[] = {
     T(local_addr),
     T(dereg_progress),
     T(addrlist),
+    T(socks_proxy),
     T(NULL)
 };
