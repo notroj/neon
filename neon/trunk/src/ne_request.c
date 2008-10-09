@@ -190,7 +190,7 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
 
     switch(code) {
     case NE_SOCK_CLOSED:
-	if (sess->use_proxy) {
+	if (sess->nexthop->proxy != PROXY_NONE) {
 	    ne_set_error(sess, _("%s: connection was closed by proxy server"),
 			 doing);
 	} else {
@@ -388,34 +388,36 @@ static int send_request_body(ne_request *req, int retry)
  * headers */
 static void add_fixed_headers(ne_request *req) 
 {
-    if (req->session->user_agent) {
-        ne_buffer_zappend(req->headers, req->session->user_agent);
+    ne_session *const sess = req->session;
+
+    if (sess->user_agent) {
+        ne_buffer_zappend(req->headers, sess->user_agent);
     }
 
     /* If persistent connections are disabled, just send Connection:
      * close; otherwise, send Connection: Keep-Alive to pre-1.1 origin
      * servers to try harder to get a persistent connection, except if
      * using a proxy as per 2068§19.7.1.  Always add TE: trailers. */
-    if (!req->session->flags[NE_SESSFLAG_PERSIST]) {
-       ne_buffer_czappend(req->headers,
-                          "Connection: TE, close" EOL
-                          "TE: trailers" EOL);
-    } else if (!req->session->is_http11 && !req->session->use_proxy) {
+    if (!sess->flags[NE_SESSFLAG_PERSIST]) {
+       ne_buffer_czappend(req->headers, "Connection: TE, close" EOL);
+    } 
+    else if (!sess->is_http11 && !sess->any_proxy_http) {
         ne_buffer_czappend(req->headers, 
-                          "Keep-Alive: " EOL
-                          "Connection: TE, Keep-Alive" EOL
-                          "TE: trailers" EOL);
-    } else if (!req->session->is_http11 && req->session->use_proxy) {
+                           "Keep-Alive: " EOL
+                          "Connection: TE, Keep-Alive" EOL);
+    } 
+    else if (!req->session->is_http11 && !sess->any_proxy_http) {
         ne_buffer_czappend(req->headers, 
                            "Keep-Alive: " EOL
                            "Proxy-Connection: Keep-Alive" EOL
-                           "Connection: TE" EOL
-                           "TE: trailers" EOL);
-    } else {
-        ne_buffer_czappend(req->headers, 
-                           "Connection: TE" EOL
-                           "TE: trailers" EOL);
+                           "Connection: TE" EOL);
+    } 
+    else {
+        ne_buffer_czappend(req->headers, "Connection: TE" EOL);
     }
+
+    ne_buffer_concat(req->headers, "TE: trailers" EOL "Host: ", 
+                     req->session->server.hostport, EOL, NULL);
 }
 
 int ne_accept_always(void *userdata, ne_request *req, const ne_status *st)
@@ -446,11 +448,11 @@ ne_request *ne_request_create(ne_session *sess,
     req->method = ne_strdup(method);
     req->method_is_head = (strcmp(method, "HEAD") == 0);
 
-    /* Only use an absoluteURI here when absolutely necessary: some
-     * servers can't parse them. */
-    if (req->session->use_proxy && !req->session->use_ssl && path[0] == '/')
+    /* Only use an absoluteURI here when we might be using an HTTP
+     * proxy, and SSL is in use: some servers can't parse them. */
+    if (sess->any_proxy_http && !req->session->use_ssl && path[0] == '/')
 	req->uri = ne_concat(req->session->scheme, "://", 
-			     req->session->server.hostport, path, NULL);
+                             req->session->server.hostport, path, NULL);
     else
 	req->uri = ne_strdup(path);
 
@@ -802,10 +804,9 @@ static ne_buffer *build_request(ne_request *req)
     struct hook *hk;
     ne_buffer *buf = ne_buffer_create();
 
-    /* Add Request-Line and Host header: */
-    ne_buffer_concat(buf, req->method, " ", req->uri, " HTTP/1.1" EOL,
-		     "Host: ", req->session->server.hostport, EOL, NULL);
-    
+    /* Add Request-Line and headers: */
+    ne_buffer_concat(buf, req->method, " ", req->uri, " HTTP/1.1" EOL, NULL);
+
     /* Add custom headers: */
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
 
@@ -1122,8 +1123,6 @@ static int read_response_headers(ne_request *req)
  * return NE_ code. */
 static int lookup_host(ne_session *sess, struct host_info *info)
 {
-    if (sess->addrlist) return NE_OK;
-
     NE_DEBUG(NE_DBG_HTTP, "Doing DNS lookup on %s...\n", info->hostname);
     sess->status.lu.hostname = info->hostname;
     notify_status(sess, ne_status_lookup);
@@ -1223,7 +1222,7 @@ int ne_begin_request(ne_request *req)
      * a) it is *necessary* to do so due to the use of a connection-auth
      * scheme, and
      * b) connection closure was not forced via "Connection: close".  */
-    if (req->session->use_proxy && !req->session->is_http11
+    if (req->session->nexthop->proxy == PROXY_HTTP && !req->session->is_http11
         && !forced_closure && req->session->flags[NE_SESSFLAG_CONNAUTH]) {
         value = get_response_header_hv(req, HH_HV_PROXY_CONNECTION,
                                        "proxy-connection");
@@ -1430,39 +1429,31 @@ static int proxy_tunnel(ne_session *sess)
 #endif
 
 /* Return the first resolved address for the given host. */
-static const ne_inet_addr *resolve_first(ne_session *sess, 
-                                         struct host_info *host)
+static const ne_inet_addr *resolve_first(struct host_info *host)
 {
-    if (sess->addrlist) {
-        sess->curaddr = 0;
-        return sess->addrlist[0];
-    } else {
-        return ne_addr_first(host->address);
-    }
+    return host->network ? host->network : ne_addr_first(host->address);
 }
 
 /* Return the next resolved address for the given host or NULL if
  * there are no more addresses. */
-static const ne_inet_addr *resolve_next(ne_session *sess,
-                                        struct host_info *host)
+static const ne_inet_addr *resolve_next(struct host_info *host)
 {
-    if (sess->addrlist) {
-        if (sess->curaddr++ < sess->numaddrs)
-            return sess->addrlist[sess->curaddr];
-        else
-            return NULL;
-    } else {
-        return ne_addr_next(host->address);
-    }
+    return host->network ? NULL : ne_addr_next(host->address);
 }
 
 /* Make new TCP connection to server at 'host' of type 'name'.  Note
  * that once a connection to a particular network address has
  * succeeded, that address will be used first for the next attempt to
  * connect. */
-static int do_connect(ne_session *sess, struct host_info *host, const char *err)
+static int do_connect(ne_session *sess, struct host_info *host)
 {
     int ret;
+
+    /* Resolve hostname if necessary. */
+    if (host->address == NULL && host->network == NULL) {
+        ret = lookup_host(sess, host);
+        if (ret) return ret;
+    }
 
     if ((sess->socket = ne_sock_create()) == NULL) {
         ne_set_error(sess, _("Could not create socket"));
@@ -1476,7 +1467,7 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
         ne_sock_prebind(sess->socket, sess->local_addr, 0);
 
     if (host->current == NULL)
-	host->current = resolve_first(sess, host);
+	host->current = resolve_first(host);
 
     sess->status.ci.hostname = host->hostname;
 
@@ -1492,18 +1483,26 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 #endif
 	ret = ne_sock_connect(sess->socket, host->current, host->port);
     } while (ret && /* try the next address... */
-	     (host->current = resolve_next(sess, host)) != NULL);
+	     (host->current = resolve_next(host)) != NULL);
 
     if (ret) {
-        ne_set_error(sess, "%s: %s", err, ne_sock_error(sess->socket));
+        const char *msg;
+
+        if (host->proxy == PROXY_NONE)
+            msg = _("Could not connect to server");
+        else
+            msg = _("Could not connect to proxy server");
+
+        ne_set_error(sess, "%s: %s", msg, ne_sock_error(sess->socket));
         ne_sock_close(sess->socket);
 	return ret == NE_SOCK_TIMEOUT ? NE_TIMEOUT : NE_CONNECT;
     }
 
-    notify_status(sess, ne_status_connected);
-    
     if (sess->rdtimeout)
 	ne_sock_read_timeout(sess->socket, sess->rdtimeout);
+
+    notify_status(sess, ne_status_connected);
+    sess->nexthop = host;
 
     sess->connected = 1;
     /* clear persistent connection flag. */
@@ -1514,28 +1513,44 @@ static int do_connect(ne_session *sess, struct host_info *host, const char *err)
 static int open_connection(ne_session *sess) 
 {
     int ret;
-    struct host_info *host;
     
     if (sess->connected) return NE_OK;
 
-    /* Resolve hostname if necessary. */
-    host = sess->use_proxy ? &sess->proxy : &sess->server;
-    if (host->address == NULL) {
-        ret = lookup_host(sess, host);
-        if (ret) return ret;
-    }    
-    
-    ret = do_connect(sess, host, 
-                     sess->use_proxy ? 
-                     _("Could not connect to proxy server")
-                     : _("Could not connect to server"));
-    if (ret != NE_OK) return ret;
+    if (!sess->proxies) {
+        ret = do_connect(sess, &sess->server);
+    }
+    else {
+        struct host_info *hi;
+
+        /* Attempt to re-use proxy to avoid iterating through
+         * unnecessarily. */
+        if (sess->prev_proxy) 
+            ret = do_connect(sess, sess->prev_proxy);
+        else
+            ret = NE_ERROR;
+
+        /* Otherwise, try everything - but omitting prev_proxy if that
+         * has already been tried. */
+        for (hi = sess->proxies; hi && ret; hi = hi->next) {
+            if (hi != sess->prev_proxy)
+                ret = do_connect(sess, hi);
+        }
+
+        if (ret != NE_OK) {
+            sess->nexthop = NULL;
+            sess->prev_proxy = NULL;
+            return ret;
+        }
+        
+        /* Success - make this proxy stick. */
+        sess->prev_proxy = hi;
+    }
 
 #ifdef NE_HAVE_SSL
     /* Negotiate SSL layer if required. */
     if (sess->use_ssl && !sess->in_connect) {
-        /* CONNECT tunnel */
-        if (sess->use_proxy)
+        /* Set up CONNECT tunnel if using an HTTP proxy. */
+        if (sess->nexthop->proxy == PROXY_HTTP)
             ret = proxy_tunnel(sess);
         
         if (ret == NE_OK) {

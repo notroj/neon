@@ -54,6 +54,27 @@ static void destroy_hooks(struct hook *hooks)
     }
 }
 
+static void free_hostinfo(struct host_info *hi)
+{
+    if (hi->hostname) ne_free(hi->hostname);
+    if (hi->hostport) ne_free(hi->hostport);
+    if (hi->address) ne_addr_destroy(hi->address);
+}
+
+/* Destroy the sess->proxies array. */
+static void free_proxies(ne_session *sess)
+{
+    struct host_info *hi, *nexthi;
+
+    for (hi = sess->proxies; hi; hi = nexthi) {
+        nexthi = hi->next;
+        free_hostinfo(hi);
+        ne_free(hi);
+    }
+
+    sess->any_proxy_http = 0;
+}
+
 void ne_session_destroy(ne_session *sess) 
 {
     struct hook *hk;
@@ -82,11 +103,10 @@ void ne_session_destroy(ne_session *sess)
     destroy_hooks(sess->private);
 
     ne_free(sess->scheme);
-    ne_free(sess->server.hostname);
-    ne_free(sess->server.hostport);
-    if (sess->server.address) ne_addr_destroy(sess->server.address);
-    if (sess->proxy.address) ne_addr_destroy(sess->proxy.address);
-    if (sess->proxy.hostname) ne_free(sess->proxy.hostname);
+
+    free_hostinfo(&sess->server);
+    free_proxies(sess);
+
     if (sess->user_agent) ne_free(sess->user_agent);
 
 #ifdef NE_HAVE_SSL
@@ -120,11 +140,12 @@ static void set_hostport(struct host_info *host, unsigned int defaultport)
 
 /* Stores the hostname/port in *info, setting up the "hostport"
  * segment correctly. */
-static void
-set_hostinfo(struct host_info *info, const char *hostname, unsigned int port)
+static void set_hostinfo(struct host_info *hi, enum proxy_type type, 
+                         const char *hostname, unsigned int port)
 {
-    info->hostname = ne_strdup(hostname);
-    info->port = port;
+    hi->hostname = ne_strdup(hostname);
+    hi->port = port;
+    hi->proxy = type;
 }
 
 ne_session *ne_session_create(const char *scheme,
@@ -141,7 +162,7 @@ ne_session *ne_session_create(const char *scheme,
     sess->use_ssl = !strcmp(scheme, "https");
     
     /* set the hostname/port */
-    set_hostinfo(&sess->server, hostname, port);
+    set_hostinfo(&sess->server, PROXY_NONE, hostname, port);
     set_hostport(&sess->server, sess->use_ssl?443:80);
 
 #ifdef NE_HAVE_SSL
@@ -163,15 +184,33 @@ ne_session *ne_session_create(const char *scheme,
 void ne_session_proxy(ne_session *sess, const char *hostname,
 		      unsigned int port)
 {
-    sess->use_proxy = 1;
-    if (sess->proxy.hostname) ne_free(sess->proxy.hostname);
-    set_hostinfo(&sess->proxy, hostname, port);
+    free_proxies(sess);
+
+    sess->proxies = ne_calloc(sizeof *sess->proxies);
+
+    sess->any_proxy_http = 1;
+    
+    set_hostinfo(sess->proxies, PROXY_HTTP, hostname, port);
 }
 
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n)
 {
-    sess->addrlist = addrs;
-    sess->numaddrs = n;
+    struct host_info *hi, **lasthi;
+    size_t i;
+
+    free_proxies(sess);
+
+    lasthi = &sess->proxies;
+
+    for (i = 0; i < n; i++) {
+        *lasthi = hi = ne_calloc(sizeof *hi);
+        
+        hi->proxy = PROXY_NONE;
+        hi->network = addrs[i];
+        hi->port = sess->server.port;
+
+        lasthi = &hi->next;
+    }
 }
 
 void ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr)
@@ -281,9 +320,13 @@ void ne_fill_server_uri(ne_session *sess, ne_uri *uri)
 
 void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri)
 {
-    if (sess->use_proxy) {
-        uri->host = ne_strdup(sess->proxy.hostname);
-        uri->port = sess->proxy.port;
+    if (sess->proxies) {
+        struct host_info *hi = sess->nexthop ? sess->nexthop : sess->proxies;
+
+        if (hi->proxy == PROXY_HTTP) {
+            uri->host = ne_strdup(hi->hostname);
+            uri->port = hi->port;
+        }
     }
 }
 
@@ -300,8 +343,7 @@ void ne_close_connection(ne_session *sess)
         NE_DEBUG(NE_DBG_SOCKET, "sess: Closing connection.\n");
 
         if (sess->notify_cb) {
-            sess->status.cd.hostname = 
-                sess->use_proxy ? sess->proxy.hostname : sess->server.hostname;
+            sess->status.cd.hostname = sess->nexthop->hostname;
             sess->notify_cb(sess->notify_ud, ne_status_disconnected, 
                             &sess->status);
         }
