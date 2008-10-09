@@ -721,6 +721,7 @@ fi
 NEON_SSL()
 NEON_SOCKS()
 NEON_GSSAPI()
+NEON_LIBPROXY()
 
 AC_SUBST(NEON_CFLAGS)
 AC_SUBST(NEON_LIBS)
@@ -855,19 +856,21 @@ good
 dnl Less noisy replacement for PKG_CHECK_MODULES
 AC_DEFUN([NE_PKG_CONFIG], [
 
+m4_define([ne_cvar], m4_translit(ne_cv_pkg_[$2], [.-], [__]))dnl
+
 AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 if test "$PKG_CONFIG" = "no"; then
    : Not using pkg-config
    $4
 else
-   AC_CACHE_CHECK([for $2 pkg-config data], ne_cv_pkg_$2,
+   AC_CACHE_CHECK([for $2 pkg-config data], ne_cvar,
      [if $PKG_CONFIG $2; then
-        ne_cv_pkg_$2=yes
+        ne_cvar=yes
       else
-        ne_cv_pkg_$2=no
+        ne_cvar=no
       fi])
 
-   if test "$ne_cv_pkg_$2" = "yes"; then
+   if test "$ne_cvar" = "yes"; then
       $1_CFLAGS=`$PKG_CONFIG --cflags $2`
       $1_LIBS=`$PKG_CONFIG --libs $2`
       : Using provided pkg-config data
@@ -876,7 +879,10 @@ else
       : No pkg-config for $2 provided
       $4
    fi
-fi])
+fi
+
+m4_undefine([ne_cvar])
+])
 
 dnl Check for an SSL library (GNU TLS or OpenSSL)
 AC_DEFUN([NEON_SSL], [
@@ -1071,6 +1077,18 @@ if test "x$KRB5_CONFIG" != "xnone"; then
    CPPFLAGS=$ne_save_CPPFLAGS
    NEON_LIBS=$ne_save_LIBS
 fi])
+
+AC_DEFUN([NEON_LIBPROXY], [
+AC_ARG_WITH(libproxy, AS_HELP_STRING(--without-libproxy, disable libproxy support))
+if test "x$with_proxy" != "no"; then
+   NE_PKG_CONFIG(NE_PXY, libproxy-1.0,
+     [AC_DEFINE(HAVE_LIBPROXY, 1, [Define if libproxy is supported])
+      CPPFLAGS="$CPPFLAGS $NE_PXY_CFLAGS"
+      NEON_LIBS="$NEON_LIBS ${NE_PXY_LIBS}"
+      NE_ENABLE_SUPPORT(LIBPXY, [libproxy support enabled])],
+     [NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])])
+fi
+])   
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
 dnl compiler warnings

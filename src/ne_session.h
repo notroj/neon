@@ -68,6 +68,13 @@ void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
                             const char *hostname, unsigned int port,
                             const char *username, const char *password);
 
+/* Configure use of proxy servers from any system-wide default sources
+ * which are configured at build time.  This function will override
+ * (remove) any proxy servers previously configured, and must be
+ * called before any requests are created using this session.  The
+ * 'flags' parameter must be zero.  */
+void ne_session_system_proxy(ne_session *sess, unsigned int flags);
+
 /* Defined session flags: */
 typedef enum ne_session_flag_e {
     NE_SESSFLAG_PERSIST = 0, /* disable this flag to prevent use of
