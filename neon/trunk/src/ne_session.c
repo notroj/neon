@@ -230,7 +230,7 @@ void ne_session_system_proxy(ne_session *sess, unsigned int flags)
     memset(&uri, 0, sizeof uri);
     ne_fill_server_uri(sess, &uri);
 
-    uri.path = "/";
+    uri.path = "/"; /* make valid URI structure. */
     url = ne_uri_unparse(&uri);
     uri.path = NULL;
 
@@ -266,7 +266,7 @@ void ne_session_system_proxy(ne_session *sess, unsigned int flags)
         /* Do nothing if libproxy returned only a single "direct://"
          * entry -- a single "direct" (noop) proxy is equivalent to
          * having none. */
-        if (n == 0 && proxies[n+1] == NULL && ptype == PROXY_NONE)
+        if (n == 0 && proxies[1] == NULL && ptype == PROXY_NONE)
             break;
 
         NE_DEBUG(NE_DBG_HTTP, "sess: Got proxy %s://%s:%d\n",
@@ -274,12 +274,22 @@ void ne_session_system_proxy(ne_session *sess, unsigned int flags)
                  uri.port);
         
         hi = *lasthi = ne_calloc(sizeof *hi);
-        set_hostinfo(hi, ptype, uri.host, uri.port);
+        
+        if (ptype == PROXY_NONE) {
+            /* A "direct" URI requires an attempt to connect directly to
+             * the origin server, so dup the server details. */
+            set_hostinfo(hi, ptype, sess->server.hostname,
+                         sess->server.port);
+        }
+        else {
+            /* SOCKS/HTTP proxy. */
+            set_hostinfo(hi, ptype, uri.host, uri.port);
 
-        if (ptype == PROXY_HTTP)
-            sess->any_proxy_http = 1;
-        else if (ptype == PROXY_SOCKS)
-            sess->socks_ver = NE_SOCK_SOCKSV5;
+            if (ptype == PROXY_HTTP)
+                sess->any_proxy_http = 1;
+            else if (ptype == PROXY_SOCKS)
+                sess->socks_ver = NE_SOCK_SOCKSV5;
+        }
 
         lasthi = &hi->next;
     }
