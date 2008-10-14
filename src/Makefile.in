@@ -161,6 +161,9 @@ ne_locks.@NEON_OBJEXT@: ne_locks.c $(top_builddir)/config.h ne_alloc.h ne_defs.h
 ne_xmlreq.@NEON_OBJEXT@: ne_xmlreq.c $(top_builddir)/config.h ne_internal.h ne_defs.h ne_xmlreq.h \
   ne_request.h ne_utils.h ne_string.h ne_alloc.h ne_session.h ne_ssl.h \
   ne_uri.h ne_socket.h ne_xml.h ne_basic.h
-ne_acl.@NEON_OBJEXT@: ne_acl.c $(top_builddir)/config.h ne_request.h ne_utils.h ne_defs.h \
+ne_oldacl.@NEON_OBJEXT@: ne_oldacl.c $(top_builddir)/config.h ne_request.h ne_utils.h ne_defs.h \
+  ne_string.h ne_alloc.h ne_session.h ne_ssl.h ne_uri.h ne_socket.h \
+  ne_locks.h ne_acl.h ne_xml.h
+ne_acl3744.@NEON_OBJEXT@: ne_acl3744.c $(top_builddir)/config.h ne_request.h ne_utils.h ne_defs.h \
   ne_string.h ne_alloc.h ne_session.h ne_ssl.h ne_uri.h ne_socket.h \
   ne_locks.h ne_acl.h ne_xml.h

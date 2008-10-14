@@ -1,6 +1,6 @@
 /*
    Access control
-   Copyright (C) 2001-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2006, 2008, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2001, Arun Garg <arung@pspl.co.in>
    Copyright (C) 2007 Henrik Holst <henrik.holst2@gmail.com>
 
@@ -41,7 +41,7 @@
 #include "ne_locks.h"
 #include "ne_alloc.h"
 #include "ne_string.h"
-#include "ne_acl.h"
+#include "ne_acl3744.h"
 #include "ne_uri.h"
 #include "ne_xml.h" /* for NE_XML_MEDIA_TYPE */
 
@@ -153,8 +153,8 @@ static ne_buffer *acl_body(const ne_acl_entry *right, int count)
     return body;
 }
 
-int ne_acl_set(ne_session *sess, const char *uri,
-	       const ne_acl_entry *entries, int numentries)
+int ne_acl3744_set(ne_session *sess, const char *uri,
+                   const ne_acl_entry *entries, int numentries)
 {
     int ret;
     ne_request *req = ne_request_create(sess, "ACL", uri);

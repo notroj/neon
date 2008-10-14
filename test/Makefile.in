@@ -24,7 +24,7 @@ BASIC_TESTS = uri-tests util-tests string-tests socket \
 ZLIB_TESTS = compress
 ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz \
 	corrupt1.gz corrupt2.gz empty.gz random.txt
-DAV_TESTS = xml xmlreq acl props lock
+DAV_TESTS = xml xmlreq oldacl acl3744 props lock
 SSL_TESTS = socket-ssl ssl
 SSL_HELPERS = ca-stamp
 TESTS = @TESTS@
@@ -171,7 +171,8 @@ server.lo: $(srcdir)/server.c $(OBJDEPS)
 request.lo: $(srcdir)/request.c $(OBJDEPS)
 regress.lo: $(srcdir)/regress.c $(OBJDEPS)
 compress.lo: $(srcdir)/compress.c $(OBJDEPS)
-acl.lo: $(srcdir)/acl.c $(OBJDEPS)
+oldacl.lo: $(srcdir)/oldacl.c $(OBJDEPS)
+acl3744.lo: $(srcdir)/acl3744.c $(OBJDEPS)
 utils.lo: $(srcdir)/utils.c $(OBJDEPS)
 stubs.lo: $(srcdir)/stubs.c $(OBJDEPS)
 props.lo: $(srcdir)/props.c $(OBJDEPS)
@@ -202,8 +203,10 @@ regress: regress.lo $(DEPS)
 	$(LINK) -o $@ regress.lo $(DEPS)
 compress: compress.lo $(DEPS)
 	$(LINK) -o $@ compress.lo $(DEPS)
-acl: acl.lo $(DEPS)
-	$(LINK) -o $@ acl.lo $(DEPS)
+oldacl: oldacl.lo $(DEPS)
+	$(LINK) -o $@ oldacl.lo $(DEPS)
+acl3744: acl3744.lo $(DEPS)
+	$(LINK) -o $@ acl3744.lo $(DEPS)
 utils: utils.lo $(DEPS)
 	$(LINK) -o $@ utils.lo $(DEPS)
 stubs: stubs.lo $(DEPS)
