@@ -715,7 +715,7 @@ if test "x$neon_no_acl" = "xyes"; then
     AC_MSG_RESULT(no)
 else
     AC_MSG_RESULT(yes)
-    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_acl"
+    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_oldacl ne_acl3744"
 fi
 
 NEON_SSL()
