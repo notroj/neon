@@ -440,6 +440,8 @@ ne_request *ne_request_create(ne_session *sess,
     
     /* Presume the method is idempotent by default. */
     req->flags[NE_REQFLAG_IDEMPOTENT] = 1;
+    /* Expect-100 default follows the corresponding session flag. */
+    req->flags[NE_REQFLAG_EXPECT100] = sess->flags[NE_SESSFLAG_EXPECT100];
 
     /* Add in the fixed headers */
     add_fixed_headers(req);
@@ -810,7 +812,7 @@ static ne_buffer *build_request(ne_request *req)
     /* Add custom headers: */
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
 
-    if (req->flags[NE_REQFLAG_EXPECT100]) {
+    if (req->body_length && req->flags[NE_REQFLAG_EXPECT100]) {
         ne_buffer_czappend(buf, "Expect: 100-continue\r\n");
     }
 

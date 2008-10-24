@@ -98,6 +98,9 @@ typedef enum ne_session_flag_e {
     NE_SESSFLAG_TLS_SNI, /* disable this flag to disable use of the
                           * TLS Server Name Indication extension. */
 
+    NE_SESSFLAG_EXPECT100, /* enable this flag to enable the flag
+                            * NE_REQFLAG_EXPECT100 for new requests. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 
