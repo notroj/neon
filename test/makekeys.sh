@@ -14,10 +14,15 @@ REQDN=reqDN
 STRMASK=default
 export REQDN STRMASK
 
+asn1date() {
+	date -d "$1" "+%y%m%d%H%M%SZ"
+}
+
 openssl version 1>&2
 
 set -ex
 
+rm -rf ca ca2
 mkdir ca
 touch ca/index.txt
 echo 01 > ca/serial
@@ -69,6 +74,9 @@ ${CA} -extensions caExt -days 3560 -in ca2.csr -out ca2/cert.pem
 
 csr_fields | ${REQ} -new -key ${srcdir}/server.key -out server.csr
 
+csr_fields | ${REQ} -new -key ${srcdir}/server.key -out expired.csr
+csr_fields | ${REQ} -new -key ${srcdir}/server.key -out notyet.csr
+
 csr_fields "Upper Case Dept" lOcALhost | \
 ${REQ} -new -key ${srcdir}/server.key -out caseless.csr
 
@@ -104,15 +112,15 @@ ${MKCERT} -key ${srcdir}/server.key -out ssigned.pem
 
 # default => T61String
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${MKCERT} -key ${srcdir}/server.key -out t61subj.cert
+${REQ} -new -key ${srcdir}/server.key -out t61subj.csr
 
 STRMASK=pkix # => BMPString
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${MKCERT} -key ${srcdir}/server.key -out bmpsubj.cert
+${REQ} -new -key ${srcdir}/server.key -out bmpsubj.csr
 
 STRMASK=utf8only # => UTF8String
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${MKCERT} -key ${srcdir}/server.key -out utf8subj.cert
+${REQ} -new -key ${srcdir}/server.key -out utf8subj.csr
 
 STRMASK=default
 
@@ -164,9 +172,14 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 ### don't put ${REQ} invocations after here
 
 for f in server client clientdsa twocn caseless cnfirst \
+    t61subj bmpsubj utf8subj \
     missingcn justmail twoou wildcard wrongcn; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
+
+${CA} -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` -in expired.csr -out expired.cert
+
+${CA} -startdate `asn1date "tomorrow"` -enddate `asn1date "2 days"` -in notyet.csr -out notyet.cert
 
 for n in 1 2 3 4 5 6 7 8; do
  ${CA} -extensions altExt${n} -days 900 \
