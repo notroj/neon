@@ -505,6 +505,20 @@ static int wildcard_match(void)
     return OK;
 }
 
+static int wildcard_match_altname(void)
+{
+    ne_session *sess;
+    struct ssl_server_args args = {"altname9.cert", 0};
+    
+    sess = ne_session_create("https", "anything.example.com", 443);
+    ne_session_proxy(sess, "localhost", 7777);
+
+    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
+    ne_session_destroy(sess);
+    
+    return OK;
+}
+
 /* Check that hostname comparisons are not cases-sensitive. */
 static int caseless_match(void)
 {
@@ -842,6 +856,12 @@ static int fail_bad_urialtname(void)
 {
     return fail_ssl_request("altname8.cert", CA_CERT, "localhost",
                             "bad URI altname cert", NE_SSL_IDMISMATCH);
+}
+
+static int fail_wildcard(void)
+{
+    return fail_ssl_request("altname9.cert", CA_CERT, "localhost",
+                            "subjaltname not honored", NE_SSL_IDMISMATCH);
 }
 
 /* Test that the SSL session is cached across connections. */
@@ -1695,6 +1715,7 @@ ne_test tests[] = {
     T(no_verify),
     T(cache_verify),
     T(wildcard_match),
+    T(wildcard_match_altname),
     T(caseless_match),
 
     T(subject_altname),
@@ -1716,6 +1737,7 @@ ne_test tests[] = {
     T(fail_host_ipaltname),
     T(fail_bad_ipaltname),
     T(fail_bad_urialtname),
+    T(fail_wildcard),
 
     T(session_cache),
 	
