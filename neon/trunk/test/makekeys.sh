@@ -104,6 +104,9 @@ ${REQ} -new -key ${srcdir}/server.key -out altname7.csr
 csr_fields "Bad ipAddress altname 3 Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname8.csr
 
+csr_fields "Wildcard Altname Dept 1" | \
+${REQ} -new -key ${srcdir}/server.key -out altname9.csr
+
 csr_fields "Bad Hostname Department" nohost.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out wrongcn.csr
 
@@ -181,7 +184,7 @@ ${CA} -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` -in exp
 
 ${CA} -startdate `asn1date "tomorrow"` -enddate `asn1date "2 days"` -in notyet.csr -out notyet.cert
 
-for n in 1 2 3 4 5 6 7 8; do
+for n in 1 2 3 4 5 6 7 8 9; do
  ${CA} -extensions altExt${n} -days 900 \
      -in altname${n}.csr -out altname${n}.cert
 done
