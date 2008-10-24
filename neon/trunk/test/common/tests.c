@@ -151,10 +151,31 @@ void in_child(void)
     flag_child = 1;
 }
 
+static const char dots[] = "......................";
+
+static void print_prefix(int n)
+{
+    if (quiet) {
+        printf("\r%s%.*s %2u/%2u ", test_suite, 
+               (int) (strlen(dots) - strlen(test_suite)), dots,
+               n + 1, count);
+    }
+    else {
+        if (warned) {
+	    printf("    %s ", dots);
+        }
+        else {
+            printf("%2d. %s%.*s ", n, test_name, 
+               (int) (strlen(dots) - strlen(test_name)), dots);
+        }
+    }
+    fflush(stdout);
+}
+
+
 int main(int argc, char *argv[])
 {
     int n;
-    static const char dots[] = "......................";
     char *tmp;
     
     /* get basename(argv[0]) */
@@ -239,15 +260,7 @@ int main(int argc, char *argv[])
 
 	test_name = tests[n].name;
 
-        if (!quiet)
-            printf("%2d. %s%.*s ", n, test_name, 
-                   (int) (strlen(dots) - strlen(test_name)), dots);
-        else {
-            printf("\r%s%.*s %2u/%2u ", test_suite, 
-                   (int) (strlen(dots) - strlen(test_suite)), dots,
-                   n + 1, count);
-            fflush(stdout);
-        }
+        print_prefix(n);
 
 	have_context = 0;
 	test_num = n;
@@ -289,10 +302,7 @@ int main(int argc, char *argv[])
             }
         }
 
-	/* align the result column if we've had warnings. */
-	if (warned && !quiet) {
-	    printf("    %s ", dots);
-	}
+        print_prefix(n);
 
 	switch (result) {
 	case OK:
@@ -365,10 +375,7 @@ int main(int argc, char *argv[])
 	reap_server();
             
         if (quiet) {
-            printf("\r%s%.*s %2u/%2u ", test_suite, 
-                   (int) (strlen(dots) - strlen(test_suite)), dots,
-                   n + 1, count);
-            fflush(stdout);
+            print_prefix(n);
         }
     }
 
@@ -402,7 +409,7 @@ int main(int argc, char *argv[])
             if (skipped)
                 printf("(%d skipped) ", skipped);
         }
-        else
+        else /* !quiet */
             printf("<- summary for `%s': "
                    "of %d tests run: %d passed, %d failed. %.1f%%\n",
                    test_suite, n, passes, fails, 100*(float)passes/n);
