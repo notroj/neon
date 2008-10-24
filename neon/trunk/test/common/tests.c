@@ -165,7 +165,7 @@ static void print_prefix(int n)
 	    printf("    %s ", dots);
         }
         else {
-            printf("%2d. %s%.*s ", n, test_name, 
+            printf("\r%2d. %s%.*s ", n, test_name, 
                (int) (strlen(dots) - strlen(test_name)), dots);
         }
     }
