@@ -294,6 +294,11 @@ void ne_session_system_proxy(ne_session *sess, unsigned int flags)
         lasthi = &hi->next;
     }
 
+    /* Free up the proxies array: */
+    for (n = 0; proxies[n]; n++)
+        ne_free(proxies[n]);
+    ne_free(proxies[n]);
+
     ne_free(url);
     ne_uri_free(&uri);
     px_proxy_factory_free(pxf);
