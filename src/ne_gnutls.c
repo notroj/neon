@@ -634,7 +634,9 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock)
 
         if (gnutls_x509_crt_init(&x5) ||
             gnutls_x509_crt_import(x5, &certs[n], GNUTLS_X509_FMT_DER)) {
-            ne_ssl_cert_free(top);
+            if (top) {
+                ne_ssl_cert_free(top);
+            }
             return NULL;
         }
 
@@ -854,6 +856,10 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
             switch (type) {
             case GNUTLS_BAG_PKCS8_KEY:
             case GNUTLS_BAG_PKCS8_ENCRYPTED_KEY:
+                /* Ignore any but the first key encountered; really
+                 * need to match up keyids. */
+                if (*pkey) break;
+
                 gnutls_x509_privkey_init(pkey);
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
@@ -866,6 +872,10 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
                 if (ret < 0) continue;
                 break;
             case GNUTLS_BAG_CERTIFICATE:
+                /* Ignore any but the first cert encountered; again,
+                 * really need to match up keyids. */
+                if (*x5) break;
+
                 gnutls_x509_crt_init(x5);
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
