@@ -999,6 +999,30 @@ static int client_cert_pkcs12(void)
     return OK;
 }
 
+/* Test use of a PKCS#12 cert with an embedded CA cert - fails with <=
+ * 0.28.3 in GnuTLS build. */
+static int client_cert_ca(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    ne_ssl_client_cert *cc;
+
+    args.require_cc = 1;
+
+    cc = ne_ssl_clicert_read("clientca.p12");
+    ONN("could not load clientca.p12", cc == NULL);
+    ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
+    ONN("could not decrypt clientca.p12", 
+        ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
+
+    ne_ssl_set_clicert(sess, cc);
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
+
+    ne_ssl_clicert_free(cc);
+
+    ne_session_destroy(sess);    
+    return OK;
+}
 
 /* Tests use of an unencrypted client certificate. */
 static int ccert_unencrypted(void)
@@ -1708,6 +1732,7 @@ ne_test tests[] = {
     T(client_cert_provided),
     T(cc_provided_dnames),
     T(no_client_cert),
+    T(client_cert_ca),
 
     T(parse_cert),
     T(parse_chain),
