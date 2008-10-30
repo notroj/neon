@@ -820,6 +820,48 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     }
 }
 
+#ifdef HAVE_PAKCHOIS
+ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
+                                                 size_t der_len,
+                                                 const RSA_METHOD *method)
+{
+    ne_ssl_client_cert *cc;
+    ne_d2i_uchar *p;
+    X509 *x5;
+    RSA *pk;    
+    EVP_PKEY *epk, *tpk;
+
+    p = der;
+    x5 = d2i_X509(NULL, &p, der_len); /* p is incremented */
+    if (x5 == NULL) {
+        ERR_clear_error();
+        return NULL;
+    }
+    
+    pk = RSA_new();
+    RSA_set_method(pk, method);
+    epk = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(epk, pk);
+    
+    /* It is necessary to initialize pk->n otherwise OpenSSL will barf
+     * later calling RSA_size() on this RSA structure.
+     * X509_get_pubkey() forces the relevant RSA parameters to be
+     * extracted from the certificate. */
+    tpk = X509_get_pubkey(x5);
+    pk->n = BN_dup(tpk->pkey.rsa->n);
+    EVP_PKEY_free(tpk);
+
+    cc = ne_calloc(sizeof *cc);
+    
+    cc->decrypted = 1;
+    cc->pkey = epk;
+
+    populate_cert(&cc->cert, x5);
+
+    return cc;    
+}
+#endif
+
 int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *cc)
 {
     return !cc->decrypted;
