@@ -1,3 +1,8 @@
+Changes in release 0.28.4:
+* GnuTLS: fixes for handling of PKCS#12 client certs with multiple
+  embedded certs or keys; fix crash with OpenPGP cert
+* Add PKCS#11 support for OpenSSL builds (where pakchois is available)
+
 Changes in release 0.28.3:
 * SECURITY (CVE-2008-3746): Fix potential NULL pointer dereference in
   Digest domain parameter support; could allow a DoS by a malicious server
