@@ -953,27 +953,37 @@ yes|openssl)
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
    ;;
 gnutls)
-   AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
+   NE_PKG_CONFIG(NE_SSL, gnutls,
+     [AC_MSG_NOTICE(using GnuTLS configuration from pkg-config)
+      CPPFLAGS="$CPPFLAGS ${NE_SSL_CFLAGS}"
+      NEON_LIBS="$NEON_LIBS ${NE_SSL_LIBS}"
 
-   if test "$GNUTLS_CONFIG" = "no"; then
-     AC_MSG_ERROR([could not find libgnutls-config in \$PATH])
-   fi
+      ne_gnutls_ver=`$PKG_CONFIG --modversion gnutls`
+     ], [
+      # Fall back on libgnutls-config script
+      AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
 
-   ne_gnutls_ver=`$GNUTLS_CONFIG --version`
+      if test "$GNUTLS_CONFIG" = "no"; then
+        AC_MSG_ERROR([could not find libgnutls-config in \$PATH])
+      fi
+
+      CPPFLAGS="$CPPFLAGS `$GNUTLS_CONFIG --cflags`"
+      NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
+
+      ne_gnutls_ver=`$GNUTLS_CONFIG --version`
+     ])
+
    case $ne_gnutls_ver in
    1.0.?|1.0.1?|1.0.20|1.0.21) 
       AC_MSG_ERROR([GNU TLS version $ne_gnutls_ver is too old -- 1.0.22 or later required]) 
       ;;
    esac
 
-   CPPFLAGS="$CPPFLAGS `$GNUTLS_CONFIG --cflags`"
-
    AC_CHECK_HEADER([gnutls/gnutls.h],,
       [AC_MSG_ERROR([could not find gnutls/gnutls.h in include path])])
 
    NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using GnuTLS $ne_gnutls_ver])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_gnutls"
-   NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
 
    # Check for functions in later releases
