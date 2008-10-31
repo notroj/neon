@@ -1,6 +1,8 @@
 Changes in release 0.28.4:
-* GnuTLS: fixes for handling of PKCS#12 client certs with multiple
-  embedded certs or keys; fix crash with OpenPGP cert
+* GnuTLS support fixes:
+ - fix handling of PKCS#12 client certs with multiple certs or keys
+ - fix crash with OpenPGP certificate
+ - use pkg-config data in configure, in preference to libgnutls-config
 * Add PKCS#11 support for OpenSSL builds (where pakchois is available)
 
 Changes in release 0.28.3:
