@@ -2051,6 +2051,8 @@ static int status(void)
                 "disconnected(localhost)-",
                 ne_iaddr_print(ne_addr_first(sa), addr, sizeof addr));
 
+    ne_addr_destroy(sa);
+
     CALL(make_session(&sess, single_serve_string, RESP200
                       "Content-Length: 5\r\n\r\n" "abcde"));
 
@@ -2095,6 +2097,8 @@ static int status_chunked(void)
                 "recv(5,-1)-"
                 "disconnected(localhost)-",
                 ne_iaddr_print(ne_addr_first(sa), addr, sizeof addr));
+
+    ne_addr_destroy(sa);
 
     CALL(make_session(&sess, single_serve_string, 
                       RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
