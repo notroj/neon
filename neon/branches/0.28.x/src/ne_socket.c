@@ -1191,6 +1191,11 @@ static int do_bind(int fd, int peer_family,
     }
 }
 
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#define USE_CLOEXEC
+#endif
+
 int ne_sock_connect(ne_socket *sock,
                     const ne_inet_addr *addr, unsigned int port)
 {
@@ -1198,7 +1203,7 @@ int ne_sock_connect(ne_socket *sock,
 
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
      * implementations do not set ai_socktype, e.g. RHL6.2. */
-    fd = socket(ia_family(addr), SOCK_STREAM, ia_proto(addr));
+    fd = socket(ia_family(addr), SOCK_STREAM | SOCK_CLOEXEC, ia_proto(addr));
     if (fd < 0) {
         set_strerror(sock, ne_errno);
 	return -1;
@@ -1213,7 +1218,7 @@ int ne_sock_connect(ne_socket *sock,
 #endif
    
 #if defined(HAVE_FCNTL) && defined(F_GETFD) && defined(F_SETFD) \
-    && defined(FD_CLOEXEC)
+  && defined(FD_CLOEXEC) && defined(USE_CLOEXEC)
     /* Set the FD_CLOEXEC bit for the new fd. */
     if ((ret = fcntl(fd, F_GETFD)) >= 0) {
         fcntl(fd, F_SETFD, ret | FD_CLOEXEC);
