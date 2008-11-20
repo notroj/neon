@@ -269,7 +269,6 @@ NEON_CHECK_VERSION([
     NEON_CHECK_SUPPORT([zlib], [ZLIB], [zlib])
     NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
     NEON_CHECK_SUPPORT([lfs], [LFS], [LFS])
-    NEON_CHECK_SUPPORT([socks], [SOCKS], [SOCKSv5])
     NEON_CHECK_SUPPORT([ts_ssl], [TS_SSL], [thread-safe SSL])
     neon_got_library=yes
     if test $NE_FLAG_LFS = yes; then
@@ -719,7 +718,6 @@ else
 fi
 
 NEON_SSL()
-NEON_SOCKS()
 NEON_GSSAPI()
 NEON_LIBPROXY()
 
@@ -1148,23 +1146,7 @@ esac])
 
 dnl Macro to optionally enable socks support
 AC_DEFUN([NEON_SOCKS], [
-
-AC_ARG_WITH([socks], AS_HELP_STRING([--with-socks],[use SOCKSv5 library]))
-
-if test "$with_socks" = "yes"; then
-  ne_save_LIBS=$LIBS
-
-  AC_CHECK_HEADERS(socks.h,
-    [AC_CHECK_LIB(socks5, connect, [:],
-      [AC_MSG_ERROR([could not find libsocks5 for SOCKS support])])],
-    [AC_MSG_ERROR([could not find socks.h for SOCKS support])])
-
-  NE_ENABLE_SUPPORT(SOCKS, [SOCKSv5 support is enabled])
-  NEON_LIBS="$NEON_LIBS -lsocks5"
-  LIBS=$ne_save_LIBS
-else
-  NE_DISABLE_SUPPORT(SOCKS, [SOCKSv5 support is not enabled])
-fi])
+])
 
 AC_DEFUN([NEON_WITH_LIBS], [
 AC_ARG_WITH([libs],
