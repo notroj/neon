@@ -153,6 +153,7 @@ NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 
 if test x${enable_shared}${pic_mode}z = xnodefaultz; then
    CFLAGS="$CFLAGS -prefer-pic"
+   AC_MSG_NOTICE([Using PIC for static library build])
 fi
 
 # Bundled language catalogs
