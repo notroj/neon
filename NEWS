@@ -2,10 +2,14 @@ Changes in release 0.29.0:
 * New interfaces:
  - ne_socket.h: ne_sock_writev() (Julien Reichel), ne_sock_set_error(),
    ne_iaddr_raw()
+ - added ne_acl3744.h, updated WebDAV ACL support (Henrik Holst)
  - added built-in SOCKS v4/v4a/v5 support: ne_socket.h:ne_sock_proxy(),       
    and ne_session.h:ne_session_socks_proxy()
  - added support for system-default proxies: ne_session_system_proxy(),
    implemented using libproxy where available.
+ - added NE_SESSFLAG_EXPECT100 session flag
+* Deprecated interfaces:
+ - ne_acl.h is obsoleted by ne_acl3744.h
 * Other changes:
  - PKCS#11 now supported with OpenSSL builds
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
