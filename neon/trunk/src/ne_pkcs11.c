@@ -511,6 +511,7 @@ static void pk11_provide(void *userdata, ne_session *sess,
                 NE_DEBUG(NE_DBG_SSL, "pk11: Setup complete.\n");
                 prov->session = pks;
                 ne_ssl_set_clicert(sess, prov->clicert);
+                ne_free(slots);
                 return;
             }
         }
