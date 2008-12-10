@@ -635,7 +635,8 @@ char *stpcpy(char *, const char *);
 
 # Unixware 7 can only link gethostbyname with -lnsl -lsocket
 # Pick up -lsocket first, then the gethostbyname check will work.
-NE_SEARCH_LIBS(socket, socket inet ws2_32)
+# Haiku requires -lnetwork for socket functions.
+NE_SEARCH_LIBS(socket, socket inet ws2_32 network)
 
 # Enable getaddrinfo support if it, gai_strerror and inet_ntop are
 # all available.
@@ -668,7 +669,8 @@ else
    # Checks for non-getaddrinfo() based resolver interfaces.
    # QNX has gethostbyname in -lsocket. BeOS only has it in -lbind.
    # CygWin/Winsock2 has it in -lws2_32, allegedly.
-   NE_SEARCH_LIBS(gethostbyname, socket nsl bind ws2_32)
+   # Haiku requires -lnetwork for socket functions.
+   NE_SEARCH_LIBS(gethostbyname, socket nsl bind ws2_32 network)
    NE_SEARCH_LIBS(hstrerror, resolv,,[:])
    NE_CHECK_FUNCS(hstrerror)
    # Older Unixes don't declare h_errno.
