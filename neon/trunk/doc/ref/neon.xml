@@ -186,6 +186,18 @@
         outside these prefixes.</simpara></listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term>pakchois_</term>
+        <listitem><simpara>Namespace used by the pakchois 
+         library.</simpara></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>px_</term>
+        <listitem><simpara>Namespace used by the libproxy
+         library.</simpara></listitem>
+      </varlistentry>
+
     </variablelist>
 
   </refsect2>
