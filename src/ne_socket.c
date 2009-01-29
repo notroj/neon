@@ -705,13 +705,18 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
 static ssize_t read_gnutls(ne_socket *sock, char *buffer, size_t len)
 {
     ssize_t ret;
+    unsigned reneg = 1; /* number of allowed rehandshakes */
 
     ret = readable_gnutls(sock, sock->rdtimeout);
     if (ret) return ret;
     
     do {
-        ret = gnutls_record_recv(sock->ssl, buffer, len);
-    } while (RETRY_GNUTLS(sock, ret));
+        do {
+            ret = gnutls_record_recv(sock->ssl, buffer, len);
+        } while (RETRY_GNUTLS(sock, ret));
+        
+    } while (ret == GNUTLS_E_REHANDSHAKE && reneg--
+             && (ret = gnutls_handshake(sock->ssl)) == GNUTLS_E_SUCCESS);
 
     if (ret <= 0)
 	ret = error_gnutls(sock, ret);
