@@ -1043,11 +1043,11 @@ noX*Y*) ;;
 *X*Yyes|*XyesY*)
     # PKCS#11... ho!
     NE_PKG_CONFIG(NE_PK11, pakchois,
-      [AC_MSG_NOTICE(using pakchois for PKCS11 support)
+      [AC_MSG_NOTICE([[using pakchois for PKCS#11 support]])
        AC_DEFINE(HAVE_PAKCHOIS, 1, [Define if pakchois library supported])
        CPPFLAGS="$CPPFLAGS ${NE_PK11_CFLAGS}"
        NEON_LIBS="${NEON_LIBS} ${NE_PK11_LIBS}"],
-      [AC_MSG_NOTICE(pakchois library not found; no PKCS11 support)])
+      [AC_MSG_NOTICE([[pakchois library not found; no PKCS#11 support]])])
    ;;
 esac
 ])
