@@ -116,7 +116,9 @@ typedef struct addrinfo ne_inet_addr;
 typedef struct in_addr ne_inet_addr;
 #endif
 
+#ifdef NE_HAVE_SSL
 #include "ne_privssl.h" /* MUST come after ne_inet_addr is defined */
+#endif
 
 /* To avoid doing AAAA queries unless absolutely necessary, either use
  * AI_ADDRCONFIG where available, or a run-time check for working IPv6
@@ -188,10 +190,6 @@ struct iofns {
     /* Wait up to 'n' seconds for socket to become readable.  Returns
      * 0 when readable, otherwise NE_SOCK_TIMEOUT or NE_SOCK_ERROR. */
     int (*readable)(ne_socket *s, int n);
-    /* Write up to 'count' blocks described by 'vector' to socket.
-     * Return number of bytes written on success, or <0 on error. */
-    ssize_t (*swritev)(ne_socket *s, const struct ne_iovec *vector, 
-                       int count);
 };
 
 static const ne_inet_addr dummy_laddr;
@@ -549,49 +547,7 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
     return ret;
 }
 
-static ssize_t writev_raw(ne_socket *sock, const struct ne_iovec *vector, int count) 
-{
-    ssize_t ret;
-#ifdef WIN32
-    LPWSABUF wasvector = (LPWSABUF)ne_malloc(count * sizeof(WSABUF));
-    DWORD total;
-    int i;
-
-    for (i = 0; i < count; i++){
-        wasvector[i].buf = vector[i].base;
-        wasvector[i].len = vector[i].len;
-    }
-        
-    ret = WSASend(sock->fd, wasvector, count, &total, 0, NULL, NULL);
-    if (ret == 0)
-        ret = total;
-    
-    ne_free(wasvector);
-#else
-    const struct iovec *vec = (const struct iovec *) vector;
-
-    do {
-	ret = writev(sock->fd, vec, count);
-    } while (ret == -1 && NE_ISINTR(ne_errno));
-#endif
-
-    if (ret < 0) {
-	int errnum = ne_errno;
-	set_strerror(sock, errnum);
-	return MAP_ERR(errnum);
-    }
-    
-    return ret;
-}
-
-#ifdef NE_HAVE_SSL
-static ssize_t writev_dummy(ne_socket *sock, const struct ne_iovec *vector, int count) 
-{
-    return sock->ops->swrite(sock, vector[0].base, vector[0].len);
-}
-#endif
-
-static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw, writev_raw };
+static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw };
 
 #ifdef HAVE_OPENSSL
 /* OpenSSL I/O function implementations. */
@@ -675,8 +631,7 @@ static ssize_t write_ossl(ne_socket *sock, const char *data, size_t len)
 static const struct iofns iofns_ssl = {
     read_ossl,
     write_ossl,
-    readable_ossl,
-    writev_dummy
+    readable_ossl
 };
 
 #elif defined(HAVE_GNUTLS)
@@ -786,8 +741,7 @@ static ssize_t write_gnutls(ne_socket *sock, const char *data, size_t len)
 static const struct iofns iofns_ssl = {
     read_gnutls,
     write_gnutls,
-    readable_gnutls,
-    writev_dummy
+    readable_gnutls
 };
 
 #endif
@@ -803,32 +757,6 @@ int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t len)
             len -= ret;
         }
     } while (ret > 0 && len > 0);
-
-    return ret < 0 ? ret : 0;
-}
-
-int ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector, int count)
-{
-    ssize_t ret;
-
-    do {
-        ret = sock->ops->swritev(sock, vector, count);
-        if (ret > 0) {
-            while (count && (size_t)ret >= vector[0].len) {
-                ret -= vector[0].len;
-                count--;
-                vector++;
-            }
-            
-            if (ret && count) {
-                /* Partial buffer sent; send the rest. */
-                ret = ne_sock_fullwrite(sock, (char *)vector[0].base + ret,
-                                        vector[0].len - ret);
-                count--;
-                vector++;
-            }
-        }
-    } while (count && ret >= 0);
 
     return ret < 0 ? ret : 0;
 }
@@ -1048,24 +976,6 @@ char *ne_iaddr_print(const ne_inet_addr *ia, char *buf, size_t bufsiz)
     ne_strnzcpy(buf, inet_ntoa(*ia), bufsiz);
 #endif
     return buf;
-}
-
-unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buf)
-{
-#ifdef USE_GETADDRINFO
-#ifdef AF_INET6
-    if (ia->ai_family == AF_INET6) {
-	struct sockaddr_in6 *in6 = SACAST(in6, ia->ai_addr);
-        return memcpy(buf, in6->sin6_addr.s6_addr, sizeof in6->sin6_addr.s6_addr);
-    } else
-#endif /* AF_INET6 */
-    {
-	struct sockaddr_in *in = SACAST(in, ia->ai_addr);
-        return memcpy(buf, &in->sin_addr.s_addr, sizeof in->sin_addr.s_addr);
-    }
-#else /* !USE_GETADDRINFO */
-    return memcpy(buf, &ia->s_addr, sizeof ia->s_addr);
-#endif
 }
 
 int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
@@ -1771,15 +1681,6 @@ char *ne_sock_cipher(ne_socket *sock)
 const char *ne_sock_error(const ne_socket *sock)
 {
     return sock->error;
-}
-
-void ne_sock_set_error(ne_socket *sock, const char *format, ...)
-{
-    va_list params;
-
-    va_start(params, format);
-    ne_vsnprintf(sock->error, sizeof sock->error, format, params);
-    va_end(params);
 }
 
 /* Closes given ne_socket */

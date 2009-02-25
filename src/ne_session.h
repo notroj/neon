@@ -47,33 +47,10 @@ void ne_session_destroy(ne_session *sess);
 void ne_close_connection(ne_session *sess);
 
 /* Set the proxy server to be used for the session.  This function
- * will override (remove) any proxy servers previously configured, and
- * must be called before any requests are created using this
+ * must only be called before any requests are created for the
  * session. */
 void ne_session_proxy(ne_session *sess,
 		      const char *hostname, unsigned int port);
-
-/* Configure a SOCKS proxy server which will be used for the session.
- * The SOCKS protocol version 'vers' will be used to contact the
- * proxy at given 'hostname' and 'port'.
- *
- * If SOCKSv4 or v4a are used, username must be non-NULL.  For v5,
- * username may be NULL, in which case, password is ignored.  If
- * username is non-NULL, password must also be non-NULL.
- *
- * This function will override (remove) any proxy servers previously
- * configured, and must be called before any requests are created
- * using this session. */
-void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
-                            const char *hostname, unsigned int port,
-                            const char *username, const char *password);
-
-/* Configure use of proxy servers from any system-wide default sources
- * which are configured at build time.  This function will override
- * (remove) any proxy servers previously configured, and must be
- * called before any requests are created using this session.  The
- * 'flags' parameter must be zero.  */
-void ne_session_system_proxy(ne_session *sess, unsigned int flags);
 
 /* Defined session flags: */
 typedef enum ne_session_flag_e {
@@ -98,9 +75,6 @@ typedef enum ne_session_flag_e {
     NE_SESSFLAG_TLS_SNI, /* disable this flag to disable use of the
                           * TLS Server Name Indication extension. */
 
-    NE_SESSFLAG_EXPECT100, /* enable this flag to enable the flag
-                            * NE_REQFLAG_EXPECT100 for new requests. */
-
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 
@@ -112,11 +86,8 @@ void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
 int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
 
 /* Bypass the normal name resolution; force the use of specific set of
- * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
- * array and pointed-to objects must remain valid until the session is
- * destroyed.  This function will override (remove) any proxy servers
- * previously configured, and must be called before any requests are
- * created using this session.  */
+ * addresses for this session, addrs[0]...addrs[n-1].  The addrs array
+ * must remain valid until the session is destroyed. */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
 /* Bind connections to the specified local address.  If the address
@@ -303,11 +274,9 @@ const char *ne_get_scheme(ne_session *sess);
 void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
 
 /* If a proxy is configured, sets the host and port fields in the
- * given URI structure to that of the proxy.  If multiple proxies are
- * configured, the active is used if any, otherwise the first.  The
- * hostname is malloc-allocated.  No other fields in the URI structure
- * are changed; if no proxy is configured or a non-HTTP proxy is in
- * use, no fields are changed. */
+ * given URI structure to that of the proxy.  The hostname is
+ * malloc-allocated.  No other fields in the URI structure are
+ * changed; if a proxy is not configured, no fields are changed. */
 void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
 
 /* Set the error string for the session; takes printf-like format

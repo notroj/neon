@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2007, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -469,7 +469,7 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
     ne_session *const sess = SSL_get_app_data(ssl);
 
     if (!sess->client_cert && sess->ssl_provide_fn) {
-	ne_ssl_dname **dnames = NULL, *dnarray = NULL;
+	ne_ssl_dname **dnames = NULL;
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
 
@@ -477,10 +477,9 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 
         if (count > 0) {
             dnames = ne_malloc(count * sizeof(ne_ssl_dname *));
-            dnarray = ne_malloc(count * sizeof(ne_ssl_dname));
             
             for (n = 0; n < count; n++) {
-                dnames[n] = &dnarray[n];
+                dnames[n] = ne_malloc(sizeof(ne_ssl_dname));
                 dnames[n]->dn = sk_X509_NAME_value(ca_list, n);
             }
         }
@@ -489,7 +488,8 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 	sess->ssl_provide_fn(sess->ssl_provide_ud, sess, 
                              (const ne_ssl_dname *const *)dnames, count);
         if (count) {
-            ne_free(dnarray);
+            for (n = 0; n < count; n++)
+                ne_free(dnames[n]);
             ne_free(dnames);
         }
     }
@@ -560,7 +560,7 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
 
     ret = SSL_CTX_use_PrivateKey_file(ctx->ctx, key, SSL_FILETYPE_PEM);
     if (ret == 1) {
-        ret = SSL_CTX_use_certificate_chain_file(ctx->ctx, cert);
+        ret = SSL_CTX_use_certificate_file(ctx->ctx, cert, SSL_FILETYPE_PEM);
     }
 
     return ret == 1 ? 0 : -1;
@@ -616,12 +616,12 @@ int ne__negotiate_ssl(ne_session *sess)
 	    ctx->sess = NULL;
 	}
         if (sess->ssl_cc_requested) {
-            ne_set_error(sess, _("SSL handshake failed, "
+            ne_set_error(sess, _("SSL negotiation failed, "
                                  "client certificate was requested: %s"),
                          ne_sock_error(sess->socket));
         }
         else {
-            ne_set_error(sess, _("SSL handshake failed: %s"),
+            ne_set_error(sess, _("SSL negotiation failed: %s"),
                          ne_sock_error(sess->socket));
         }
         return NE_ERROR;

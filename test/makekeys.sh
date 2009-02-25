@@ -14,29 +14,16 @@ REQDN=reqDN
 STRMASK=default
 export REQDN STRMASK
 
-asn1date() {
-	date -d "$1" "+%y%m%d%H%M%SZ"
-}
-
 openssl version 1>&2
 
 set -ex
 
-rm -rf ca ca2
 mkdir ca
 touch ca/index.txt
 echo 01 > ca/serial
 
-mkdir ca2
-touch ca2/index.txt
-echo 01 > ca2/serial
-
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > ca/key.pem
-${OPENSSL} genrsa -rand ${srcdir}/../configure > ca2/key.pem
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > client.key
-
-${OPENSSL} dsaparam -genkey -rand ${srcdir}/../configure 1024 > client.dsap
-${OPENSSL} gendsa client.dsap > clientdsa.key
 
 ${MKCERT} -key ca/key.pem -out ca/cert.pem <<EOF
 US
@@ -68,14 +55,7 @@ neon@webdav.org
 EOF
 }
 
-# Create intermediary CA
-csr_fields IntermediaryCA | ${REQ} -new -key ca2/key.pem -out ca2.csr
-${CA} -extensions caExt -days 3560 -in ca2.csr -out ca2/cert.pem
-
 csr_fields | ${REQ} -new -key ${srcdir}/server.key -out server.csr
-
-csr_fields | ${REQ} -new -key ${srcdir}/server.key -out expired.csr
-csr_fields | ${REQ} -new -key ${srcdir}/server.key -out notyet.csr
 
 csr_fields "Upper Case Dept" lOcALhost | \
 ${REQ} -new -key ${srcdir}/server.key -out caseless.csr
@@ -104,26 +84,23 @@ ${REQ} -new -key ${srcdir}/server.key -out altname7.csr
 csr_fields "Bad ipAddress altname 3 Dept" nowhere.example.com | \
 ${REQ} -new -key ${srcdir}/server.key -out altname8.csr
 
-csr_fields "Wildcard Altname Dept 1" | \
-${REQ} -new -key ${srcdir}/server.key -out altname9.csr
-
-csr_fields "Bad Hostname Department" nohost.example.com | \
-${REQ} -new -key ${srcdir}/server.key -out wrongcn.csr
-
 csr_fields "Self-Signed" | \
 ${MKCERT} -key ${srcdir}/server.key -out ssigned.pem
 
+csr_fields "Bad Hostname Department" nohost.example.com | \
+${MKCERT} -key ${srcdir}/server.key -out wrongcn.pem
+
 # default => T61String
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${REQ} -new -key ${srcdir}/server.key -out t61subj.csr
+${MKCERT} -key ${srcdir}/server.key -out t61subj.cert
 
 STRMASK=pkix # => BMPString
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${REQ} -new -key ${srcdir}/server.key -out bmpsubj.csr
+${MKCERT} -key ${srcdir}/server.key -out bmpsubj.cert
 
 STRMASK=utf8only # => UTF8String
 csr_fields "`echo -e 'H\0350llo World'`" localhost |
-${REQ} -new -key ${srcdir}/server.key -out utf8subj.csr
+${MKCERT} -key ${srcdir}/server.key -out utf8subj.cert
 
 STRMASK=default
 
@@ -149,9 +126,6 @@ ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
 csr_fields "Neon Client Cert" ignored.example.com | \
 ${REQ} -new -key client.key -out client.csr
 
-csr_fields "Neon Client Cert" ignored.example.com | \
-${REQ} -new -key clientdsa.key -out clientdsa.csr
-
 ### requests using special DN.
 
 REQDN=reqDN.doubleCN
@@ -174,26 +148,14 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 
 ### don't put ${REQ} invocations after here
 
-for f in server client clientdsa twocn caseless cnfirst \
-    t61subj bmpsubj utf8subj \
-    missingcn justmail twoou wildcard wrongcn; do
+for f in server client twocn caseless cnfirst missingcn justmail twoou wildcard; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
-${CA} -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` -in expired.csr -out expired.cert
-
-${CA} -startdate `asn1date "tomorrow"` -enddate `asn1date "2 days"` -in notyet.csr -out notyet.cert
-
-for n in 1 2 3 4 5 6 7 8 9; do
+for n in 1 2 3 4 5 6 7 8; do
  ${CA} -extensions altExt${n} -days 900 \
      -in altname${n}.csr -out altname${n}.cert
 done
-
-# Sign this CSR using the intermediary CA
-${CA} -name neonca2 -days 900 -in server.csr -out ca2server.cert
-# And create a file with the concatenation of both EE and intermediary
-# cert.
-cat ca2server.cert ca2/cert.pem > ca2server.pem
 
 MKPKCS12="${OPENSSL} pkcs12 -export -passout stdin -in client.cert -inkey client.key"
 
@@ -203,12 +165,6 @@ echo foobar | ${MKPKCS12} -name "Just A Neon Client Cert" -out client.p12
 
 # generate a PKCS#12 cert with no password and a friendly name
 echo | ${MKPKCS12} -name "An Unencrypted Neon Client Cert" -out unclient.p12
-
-# PKCS#12 cert with DSA key
-echo | ${OPENSSL} pkcs12 -name "An Unencrypted Neon DSA Client Cert" \
-    -export -passout stdin \
-    -in clientdsa.cert -inkey clientdsa.key \
-    -out dsaclient.p12
 
 # generate a PKCS#12 cert with no friendly name
 echo | ${MKPKCS12} -out noclient.p12
@@ -234,16 +190,11 @@ CERTUTIL=@CERTUTIL@
 PK12UTIL=@PK12UTIL@
 
 if [ ${CERTUTIL} != "notfound" -a ${PK12UTIL} != "notfound" ]; then
-  rm -rf nssdb nssdb-dsa
-  mkdir nssdb nssdb-dsa
-
+  rm -rf nssdb
   echo foobar > nssdb.pw
-
+  mkdir nssdb
   ${CERTUTIL} -d nssdb -N -f nssdb.pw
   ${PK12UTIL} -d nssdb -K foobar -W '' -i unclient.p12
-
-  ${CERTUTIL} -d nssdb-dsa -N -f nssdb.pw
-  ${PK12UTIL} -d nssdb-dsa -K foobar -W '' -i dsaclient.p12
-
+  ${CERTUTIL} -d nssdb -f nssdb.pw -n 'The CA Cert' -t T -A < ca/cert.pem
   rm -f nssdb.pw
 fi
