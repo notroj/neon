@@ -50,6 +50,8 @@
 #define SERVER_CERT "server.cert"
 #define CA_CERT "ca/cert.pem"
 
+#define P12_PASSPHRASE "foobar"
+
 #define SERVER_DNAME "Neon QA Dept, Neon Hackers Ltd, " \
                      "Cambridge, Cambridgeshire, GB"
 #define CACERT_DNAME "Random Dept, Neosign, Oakland, California, US"
@@ -249,13 +251,24 @@ static int init(void)
     
     /* tests for the encrypted client cert, client.p12 */
     def_cli_cert = ne_ssl_clicert_read("client.p12");
-    ONN("could not load client.p12", def_cli_cert == NULL);
+    if (def_cli_cert == NULL) {
+        t_context("could not load client.p12");
+        return FAILHARD;
+    }
 
-    ONN("client.p12 is not encrypted!?", 
-        !ne_ssl_clicert_encrypted(def_cli_cert));
-    
-    ONN("failed to decrypt client.p12",
-        ne_ssl_clicert_decrypt(def_cli_cert, "foobar"));
+    if (!ne_ssl_clicert_encrypted(def_cli_cert)) {
+        ne_ssl_clicert_free(def_cli_cert);
+        def_cli_cert = NULL;
+        t_context("client.p12 is not encrypted!?");
+        return FAIL;
+    }
+
+    if (ne_ssl_clicert_decrypt(def_cli_cert, P12_PASSPHRASE)) {
+        ne_ssl_clicert_free(def_cli_cert);
+        def_cli_cert = NULL;
+        t_context("failed to decrypt client.p12");
+        return FAIL;
+    }
 
     return OK;
 }
@@ -304,7 +317,7 @@ static int load_client_cert(void)
     } else {
         ONV(strcmp(name, CC_NAME), ("friendly name was %s not %s", name, CC_NAME));
     }
-    ONN("failed to decrypt", ne_ssl_clicert_decrypt(cc, "foobar"));
+    ONN("failed to decrypt", ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
     ne_ssl_clicert_free(cc);
 
     cc = ne_ssl_clicert_read("client.p12");
@@ -337,7 +350,8 @@ static int load_client_cert(void)
     cc = ne_ssl_clicert_read("clientca.p12");
     ONN("could not load clientca.p12", cc == NULL);
     ONN("encrypted cert marked unencrypted?", !ne_ssl_clicert_encrypted(cc));
-    ONN("could not decrypt clientca.p12", ne_ssl_clicert_decrypt(cc, "foobar"));
+    ONN("could not decrypt clientca.p12", 
+        ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
     ne_ssl_clicert_free(cc);
 
     /* test for ccert without a private key, nkclient.p12 */
@@ -865,7 +879,7 @@ static int client_cert_provided(void)
     cc = ne_ssl_clicert_read("client.p12");
     ONN("could not load client.p12", cc == NULL);
     ONN("could not decrypt client.p12", 
-        ne_ssl_clicert_decrypt(cc, "foobar"));
+        ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
     
     ne_ssl_provide_clicert(sess, ccert_provider, cc);
     CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT,
