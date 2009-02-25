@@ -1,4 +1,5 @@
 Changes in release 0.28.4:
+* Fix ne_forget_auth (Kai Sommerfeld)
 * GnuTLS support fixes:
  - fix handling of PKCS#12 client certs with multiple certs or keys
  - fix crash with OpenPGP certificate
