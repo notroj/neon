@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: neon 0.28.0+\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2008-10-30 20:29+0000\n"
+"POT-Creation-Date: 2009-02-25 13:57+0000\n"
 "PO-Revision-Date: 2008-03-03 11:20+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: neon@webdav.org\n"
@@ -36,97 +36,97 @@ msgstr "不能认证到服务器: %s"
 msgid "Could not authenticate to proxy server: %s"
 msgstr "不能认证到代理服务器: %s"
 
-#: src/ne_auth.c:358
+#: src/ne_auth.c:359
 #, c-format
 msgid "rejected %s challenge"
 msgstr "被拒绝的 %s 挑战"
 
-#: src/ne_auth.c:374
+#: src/ne_auth.c:375
 msgid "missing realm in Basic challenge"
 msgstr "在基本挑战中丢失了领域"
 
-#: src/ne_auth.c:469
+#: src/ne_auth.c:470
 msgid "invalid Negotiate token"
 msgstr "非法磋商令牌"
 
-#: src/ne_auth.c:492
+#: src/ne_auth.c:493
 msgid "GSSAPI authentication error: "
 msgstr "GSSAPI 认证错误: "
 
-#: src/ne_auth.c:505
+#: src/ne_auth.c:506
 #, c-format
 msgid "GSSAPI failure (code %u)"
 msgstr "GSSAPI 失败(代码 %u)"
 
-#: src/ne_auth.c:540
+#: src/ne_auth.c:541
 msgid "ignoring empty Negotiate continuation"
 msgstr "忽略后续的空磋商"
 
-#: src/ne_auth.c:555
+#: src/ne_auth.c:556
 #, c-format
 msgid "Negotiate response verification failed: invalid response header token"
 msgstr "校验协商响应失败：非法响应头令牌"
 
-#: src/ne_auth.c:577
+#: src/ne_auth.c:578
 #, c-format
 msgid "Negotiate response verification failure: %s"
 msgstr "磋商响应校验失败: %s"
 
-#: src/ne_auth.c:699
+#: src/ne_auth.c:700
 msgid "unknown algorithm in Digest challenge"
 msgstr "在摘要挑战中的算法不可识别"
 
-#: src/ne_auth.c:703
+#: src/ne_auth.c:704
 msgid "incompatible algorithm in Digest challenge"
 msgstr "在摘要挑战中的算法不兼容"
 
-#: src/ne_auth.c:707
+#: src/ne_auth.c:708
 msgid "missing parameter in Digest challenge"
 msgstr "在摘要挑战中的参数丢失"
 
-#: src/ne_auth.c:711
+#: src/ne_auth.c:712
 msgid "initial Digest challenge was stale"
 msgstr "陈旧的初始化摘要挑战"
 
-#: src/ne_auth.c:718
+#: src/ne_auth.c:719
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr "陈旧的摘要挑战用于新算法或新领域"
 
-#: src/ne_auth.c:730
+#: src/ne_auth.c:731
 msgid "could not parse domain in Digest challenge"
 msgstr "在摘要挑战中的不能解析域"
 
-#: src/ne_auth.c:1039
+#: src/ne_auth.c:1040
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr "摘要互相认证失败：参数遗漏"
 
-#: src/ne_auth.c:1044
+#: src/ne_auth.c:1045
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr "摘要互相认证失败：客户现时不匹配"
 
-#: src/ne_auth.c:1054
+#: src/ne_auth.c:1055
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr "摘要互相认证失败：不能解析现时计数"
 
-#: src/ne_auth.c:1059
+#: src/ne_auth.c:1060
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr "摘要互相认证失败：现时计算不匹配 (应该是 %u，不是 %u)"
 
-#: src/ne_auth.c:1102
+#: src/ne_auth.c:1103
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr "摘要互相认证失败：请求摘要不匹配"
 
-#: src/ne_auth.c:1228
+#: src/ne_auth.c:1229
 #, c-format
 msgid "ignored %s challenge"
 msgstr "被忽略的 %s 挑战"
 
-#: src/ne_auth.c:1307
+#: src/ne_auth.c:1308
 msgid "could not parse challenge"
 msgstr "不能解析挑战"
 
@@ -394,39 +394,39 @@ msgstr "收到 SSL 警报： %s"
 msgid "SSL socket read failed"
 msgstr "SSL 套接字读取失败"
 
-#: src/ne_socket.c:790
+#: src/ne_socket.c:795
 msgid "Line too long"
 msgstr "行太长"
 
-#: src/ne_socket.c:935 src/ne_socket.c:941
+#: src/ne_socket.c:940 src/ne_socket.c:946
 msgid "Host not found"
 msgstr "没有发现主机"
 
-#: src/ne_socket.c:1048
+#: src/ne_socket.c:1053
 msgid "Connection timed out"
 msgstr "连接超时"
 
-#: src/ne_socket.c:1210
+#: src/ne_socket.c:1220
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "套接字数量超过 FD_SETSIZE"
 
-#: src/ne_socket.c:1270
+#: src/ne_socket.c:1280
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1493
+#: src/ne_socket.c:1503
 msgid "Client certificate verification failed"
 msgstr "客户证书校验失败"
 
-#: src/ne_socket.c:1509
+#: src/ne_socket.c:1519
 msgid "SSL disabled due to lack of entropy"
 msgstr "由于缺少熵，SSL 已经禁用"
 
-#: src/ne_socket.c:1516
+#: src/ne_socket.c:1526
 msgid "SSL disabled due to library version mismatch"
 msgstr "由于库版本不匹配，SSL 已经禁用"
 
-#: src/ne_socket.c:1522
+#: src/ne_socket.c:1532
 msgid "Could not create SSL structure"
 msgstr "不能创建 SSL 结构"
 
