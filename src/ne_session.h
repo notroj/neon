@@ -205,32 +205,42 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
  * progress callback, and vice versa. */
 void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
 
-/* Certificate verification failures.
- * The certificate is not yet valid: */
+/* Certificate verification failures. */
+
+/* NE_SSL_NOTYETVALID: the certificate is not yet valid. */
 #define NE_SSL_NOTYETVALID (0x01)
-/* The certificate has expired: */
+
+/* NE_SSL_EXPIRED: the certificate has expired. */
 #define NE_SSL_EXPIRED (0x02)
-/* The hostname for which the certificate was issued does not
- * match the hostname of the server; this could mean that the
- * connection is being intercepted: */
+
+/* NE_SSL_IDMISMATCH: the hostname for which the certificate was
+ * issued does not match the hostname of the server; this could mean
+ * that the connection is being intercepted. */
 #define NE_SSL_IDMISMATCH (0x04)
-/* The certificate authority which signed the server certificate is
- * not trusted: there is no indicatation the server is who they claim
- * to be: */
+
+/* NE_SSL_UNTRUSTED: the certificate authority which signed the server
+ * certificate is not trusted: there is no indicatation the server is
+ * who they claim to be: */
 #define NE_SSL_UNTRUSTED (0x08)
-/* The certificate chain contained a certificate other than the server
- * cert which failed verification for a reason other than lack of
- * trust; for example, due to a CA cert being outside its validity
- * period: */
+
+/* NE_SSL_BADCHAIN: the certificate chain contained a certificate
+ * other than the server cert which failed verification for a reason
+ * other than lack of trust; for example, due to a CA cert being
+ * outside its validity period. */
 #define NE_SSL_BADCHAIN (0x10)
+
 /* N.B.: 0x20 is reserved. */
 
+/* NE_SSL_REVOKED: the server certificate has been revoked by the
+ * issuing authority. */
+#define NE_SSL_REVOKED (0x40)
+
 /* For purposes of forwards-compatibility, the bitmask of all
- * currently defined failure bits is given as NE_SSL_FAILMASK.  If the
+ * currently exposed failure bits is given as NE_SSL_FAILMASK.  If the
  * expression (failures & ~NE_SSL_FAILMASK) is non-zero a failure type
  * is present which the application does not recognize but must treat
  * as a verification failure nonetheless. */
-#define NE_SSL_FAILMASK (0x1f)
+#define NE_SSL_FAILMASK (0x5f)
 
 /* A callback which is used when server certificate verification is
  * needed.  The reasons for verification failure are given in the
