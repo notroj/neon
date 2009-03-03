@@ -6,6 +6,7 @@ Changes in release 0.28.4:
  - use pkg-config data in configure, in preference to libgnutls-config
 * Add PKCS#11 support for OpenSSL builds (where pakchois is available)
 * Fix small memory leak in PKCS#11 code.
+* Fix build on Haiku (scott mc)
 
 Changes in release 0.28.3:
 * SECURITY (CVE-2008-3746): Fix potential NULL pointer dereference in
