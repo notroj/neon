@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -218,11 +218,19 @@ void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
  * not trusted: there is no indicatation the server is who they claim
  * to be: */
 #define NE_SSL_UNTRUSTED (0x08)
+/* The certificate chain contained a certificate other than the server
+ * cert which failed verification for a reason other than lack of
+ * trust; for example, due to a CA cert being outside its validity
+ * period: */
+#define NE_SSL_BADCHAIN (0x10)
+/* N.B.: 0x20 is reserved. */
 
-/* The bitmask of known failure bits: if (failures & ~NE_SSL_FAILMASK)
- * is non-zero, an unrecognized failure is given, and the verification
- * should be failed. */
-#define NE_SSL_FAILMASK (0x0f)
+/* For purposes of forwards-compatibility, the bitmask of all
+ * currently defined failure bits is given as NE_SSL_FAILMASK.  If the
+ * expression (failures & ~NE_SSL_FAILMASK) is non-zero a failure type
+ * is present which the application does not recognize but must treat
+ * as a verification failure nonetheless. */
+#define NE_SSL_FAILMASK (0x1f)
 
 /* A callback which is used when server certificate verification is
  * needed.  The reasons for verification failure are given in the
