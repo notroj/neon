@@ -11,8 +11,17 @@ Changes in release 0.29.0:
 * Deprecated interfaces:
  - ne_acl.h is obsoleted by ne_acl3744.h
 * Other changes:
- - PKCS#11 now supported with OpenSSL builds
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
+
+Changes in release 0.28.4:
+* Fix ne_forget_auth (Kai Sommerfeld)
+* GnuTLS support fixes:
+ - fix handling of PKCS#12 client certs with multiple certs or keys
+ - fix crash with OpenPGP certificate
+ - use pkg-config data in configure, in preference to libgnutls-config
+* Add PKCS#11 support for OpenSSL builds (where pakchois is available)
+* Fix small memory leak in PKCS#11 code.
+* Fix build on Haiku (scott mc)
 
 Changes in release 0.28.3:
 * SECURITY (CVE-2008-3746): Fix potential NULL pointer dereference in
