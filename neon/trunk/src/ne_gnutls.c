@@ -456,7 +456,9 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
     return match ? 0 : 1;
 }
 
-/* Populate an ne_ssl_certificate structure from an X509 object. */
+/* Populate an ne_ssl_certificate structure from an X509 object.  Note
+ * that x5 is owned by returned cert object and must not be otherwise
+ * freed by the caller.  */
 static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
                                          gnutls_x509_crt x5)
 {
@@ -778,14 +780,21 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
     time_t before, after, now = time(NULL);
     int ret, failures = 0;
     ne_uri server;
+    ne_ssl_certificate *cert;
 
-    before = gnutls_x509_crt_get_activation_time(chain->subject);
-    after = gnutls_x509_crt_get_expiration_time(chain->subject);
-
-    if (now < before)
-        failures |= NE_SSL_NOTYETVALID;
-    else if (now > after)
-        failures |= NE_SSL_EXPIRED;
+    /* Check that all certs within the chain are inside their defined
+     * validity period.  Note that the errors flagged for the server
+     * cert are different from the generic error for issues higher up
+     * the chain. */
+    for (cert = chain; cert; cert = cert->issuer) {
+        before = gnutls_x509_crt_get_activation_time(chain->subject);
+        after = gnutls_x509_crt_get_expiration_time(chain->subject);
+        
+        if (now < before)
+            failures |= (cert == chain) ? NE_SSL_NOTYETVALID : NE_SSL_BADCHAIN;
+        else if (now > after)
+            failures |= (cert == chain) ? NE_SSL_EXPIRED : NE_SSL_BADCHAIN;
+    }        
 
     memset(&server, 0, sizeof server);
     ne_fill_server_uri(sess, &server);

@@ -12,7 +12,8 @@ MKCERT="${REQ} -x509 -new -days 900"
 
 REQDN=reqDN
 STRMASK=default
-export REQDN STRMASK
+CADIR=./ca
+export REQDN STRMASK CADIR
 
 asn1date() {
 	date -d "$1" "+%y%m%d%H%M%SZ"
@@ -22,17 +23,14 @@ openssl version 1>&2
 
 set -ex
 
-rm -rf ca ca2
-mkdir ca
-touch ca/index.txt
-echo 01 > ca/serial
+for i in ca ca1 ca2 ca3; do
+    rm -rf $i
+    mkdir $i
+    touch $i/index.txt
+    echo 01 > $i/serial
+    ${OPENSSL} genrsa -rand ${srcdir}/../configure > $i/key.pem
+done
 
-mkdir ca2
-touch ca2/index.txt
-echo 01 > ca2/serial
-
-${OPENSSL} genrsa -rand ${srcdir}/../configure > ca/key.pem
-${OPENSSL} genrsa -rand ${srcdir}/../configure > ca2/key.pem
 ${OPENSSL} genrsa -rand ${srcdir}/../configure > client.key
 
 ${OPENSSL} dsaparam -genkey -rand ${srcdir}/../configure 1024 > client.dsap
@@ -71,6 +69,16 @@ EOF
 # Create intermediary CA
 csr_fields IntermediaryCA | ${REQ} -new -key ca2/key.pem -out ca2.csr
 ${CA} -extensions caExt -days 3560 -in ca2.csr -out ca2/cert.pem
+
+csr_fields ExpiredCA | ${REQ} -new -key ca1/key.pem -out ca1/cert.csr
+
+csr_fields NotYetValidCA | ${REQ} -new -key ca3/key.pem -out ca3/cert.csr
+
+CADIR=./ca1 ${CA} -name neoncainit -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` \
+  -in ca1/cert.csr -keyfile ca1/key.pem -out ca1/cert.pem -selfsign
+
+CADIR=./ca3 ${CA} -name neoncainit -startdate `asn1date "1 year"` -enddate `asn1date "2 years"` \
+  -in ca3/cert.csr -keyfile ca3/key.pem -out ca3/cert.pem -selfsign
 
 csr_fields | ${REQ} -new -key ${srcdir}/server.key -out server.csr
 
@@ -190,10 +198,16 @@ for n in 1 2 3 4 5 6 7 8 9; do
 done
 
 # Sign this CSR using the intermediary CA
-${CA} -name neonca2 -days 900 -in server.csr -out ca2server.cert
+CADIR=./ca2 ${CA} -days 900 -in server.csr -out ca2server.cert
 # And create a file with the concatenation of both EE and intermediary
 # cert.
 cat ca2server.cert ca2/cert.pem > ca2server.pem
+ 
+# sign with expired CA
+CADIR=./ca1 ${CA} -days 3 -in server.csr -out ca1server.cert
+
+# sign with not yet valid CA
+CADIR=./ca3 ${CA} -days 3 -in server.csr -out ca3server.cert
 
 MKPKCS12="${OPENSSL} pkcs12 -export -passout stdin -in client.cert -inkey client.key"
 

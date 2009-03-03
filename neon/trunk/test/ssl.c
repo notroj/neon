@@ -864,6 +864,18 @@ static int fail_wildcard(void)
                             "subjaltname not honored", NE_SSL_IDMISMATCH);
 }
 
+static int fail_ca_expired(void)
+{
+    return fail_ssl_request("ca1server.cert", "ca1/cert.pem", "localhost",
+                            "isser ca expired", NE_SSL_BADCHAIN);
+}
+
+static int fail_ca_notyetvalid(void)
+{
+    return fail_ssl_request("ca3server.cert", "ca3/cert.pem", "localhost",
+                            "isser ca not yet valid", NE_SSL_BADCHAIN);
+}
+
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
 {
@@ -1763,6 +1775,8 @@ ne_test tests[] = {
     T(fail_bad_ipaltname),
     T(fail_bad_urialtname),
     T(fail_wildcard),
+    T(fail_ca_notyetvalid),
+    T(fail_ca_expired),
 
     T(session_cache),
 	
