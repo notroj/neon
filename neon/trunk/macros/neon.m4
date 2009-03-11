@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2008 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2009 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -1097,6 +1097,8 @@ if test "x$with_proxy" != "no"; then
       NEON_LIBS="$NEON_LIBS ${NE_PXY_LIBS}"
       NE_ENABLE_SUPPORT(LIBPXY, [libproxy support enabled])],
      [NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])])
+else
+   NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])
 fi
 ])   
 
