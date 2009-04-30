@@ -74,10 +74,10 @@ csr_fields ExpiredCA | ${REQ} -new -key ca1/key.pem -out ca1/cert.csr
 
 csr_fields NotYetValidCA | ${REQ} -new -key ca3/key.pem -out ca3/cert.csr
 
-CADIR=./ca1 ${CA} -name neoncainit -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` \
+CADIR=./ca1 ${CA} -name neoncainit -extensions caExt -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` \
   -in ca1/cert.csr -keyfile ca1/key.pem -out ca1/cert.pem -selfsign
 
-CADIR=./ca3 ${CA} -name neoncainit -startdate `asn1date "1 year"` -enddate `asn1date "2 years"` \
+CADIR=./ca3 ${CA} -name neoncainit -extensions caExt -startdate `asn1date "1 year"` -enddate `asn1date "2 years"` \
   -in ca3/cert.csr -keyfile ca3/key.pem -out ca3/cert.pem -selfsign
 
 csr_fields | ${REQ} -new -key ${srcdir}/server.key -out server.csr
