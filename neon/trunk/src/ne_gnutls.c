@@ -787,8 +787,8 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
      * cert are different from the generic error for issues higher up
      * the chain. */
     for (cert = chain; cert; cert = cert->issuer) {
-        before = gnutls_x509_crt_get_activation_time(chain->subject);
-        after = gnutls_x509_crt_get_expiration_time(chain->subject);
+        before = gnutls_x509_crt_get_activation_time(cert->subject);
+        after = gnutls_x509_crt_get_expiration_time(cert->subject);
         
         if (now < before)
             failures |= (cert == chain) ? NE_SSL_NOTYETVALID : NE_SSL_BADCHAIN;
