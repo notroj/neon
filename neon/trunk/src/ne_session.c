@@ -1,6 +1,6 @@
 /* 
    HTTP session handling
-   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
    Portions are:
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
@@ -540,6 +540,8 @@ void ne__ssl_set_verify_err(ne_session *sess, int failures)
 	{ NE_SSL_EXPIRED, N_("certificate has expired") },
 	{ NE_SSL_IDMISMATCH, N_("certificate issued for a different hostname") },
 	{ NE_SSL_UNTRUSTED, N_("issuer is not trusted") },
+        { NE_SSL_BADCHAIN, N_("bad certificate chain") },
+        { NE_SSL_REVOKED, N_("certificate has been revoked") },
 	{ 0, NULL }
     };
     int n, flag = 0;
