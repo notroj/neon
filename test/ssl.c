@@ -1,6 +1,6 @@
 /* 
    neon test suite
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -746,8 +746,9 @@ static int get_failures(void *userdata, int fs, const ne_ssl_certificate *c)
 /* Helper function: run a request using the given self-signed server
  * certificate, and expect the request to fail with the given
  * verification failure flags. */
-static int fail_ssl_request(char *cert, char *cacert, const char *host,
-			    const char *msg, int failures)
+static int fail_ssl_request_with_error(char *cert, char *cacert, const char *host,
+                                       const char *msg, int failures,
+                                       const char *errstr)
 {
     ne_session *sess = ne_session_create("https", host, 7777);
     int gotf = 0, ret;
@@ -769,10 +770,24 @@ static int fail_ssl_request(char *cert, char *cacert, const char *host,
     /* and check that the request was failed too. */
     ONV(ret == NE_OK, ("%s", msg));
 
+    ONV(errstr && strstr(ne_get_error(sess), errstr) == NULL,
+        ("unexpected failure message '%s', wanted '%s'",
+         ne_get_error(sess), errstr));
+        
     ne_session_destroy(sess);
 
     return OK;
 }
+
+/* Helper function: run a request using the given self-signed server
+ * certificate, and expect the request to fail with the given
+ * verification failure flags. */
+static int fail_ssl_request(char *cert, char *cacert, const char *host,
+			    const char *msg, int failures)
+{
+    return fail_ssl_request_with_error(cert, cacert, host, msg, failures,
+                                       NULL);
+}        
 
 /* Note that the certs used for fail_* are mostly self-signed, so the
  * cert is passed as CA cert and server cert to fail_ssl_request. */
@@ -781,17 +796,21 @@ static int fail_ssl_request(char *cert, char *cacert, const char *host,
  * flagged as such. */
 static int fail_wrongCN(void)
 {
-    return fail_ssl_request("wrongcn.cert", "ca/cert.pem", "localhost",
-			    "certificate with incorrect CN was accepted",
-			    NE_SSL_IDMISMATCH);
+    return fail_ssl_request_with_error("wrongcn.cert", "ca/cert.pem", "localhost",
+                                       "certificate with incorrect CN was accepted",
+                                       NE_SSL_IDMISMATCH,
+                                       "certificate issued for a different hostname");
+                            
 }
 
 /* Check that an expired certificate is flagged as such. */
 static int fail_expired(void)
 {
     char *c = ne_concat(srcdir, "/expired.pem", NULL);
-    CALL(fail_ssl_request(c, c,  "localhost",
-                          "expired certificate was accepted", NE_SSL_EXPIRED));
+    CALL(fail_ssl_request_with_error(c, c,  "localhost",
+                                     "expired certificate was accepted", 
+                                     NE_SSL_EXPIRED,
+                                     "certificate has expired"));
     ne_free(c);
     return OK;
 }
@@ -799,9 +818,10 @@ static int fail_expired(void)
 static int fail_notvalid(void)
 {
     char *c = ne_concat(srcdir, "/notvalid.pem", NULL);
-    CALL(fail_ssl_request(c, c,  "localhost",
-                          "not yet valid certificate was accepted",
-                          NE_SSL_NOTYETVALID));
+    CALL(fail_ssl_request_with_error(c, c,  "localhost",
+                                     "not yet valid certificate was accepted",
+                                     NE_SSL_NOTYETVALID,
+                                     "certificate is not yet valid"));
     ne_free(c);
     return OK;    
 }
@@ -810,8 +830,9 @@ static int fail_notvalid(void)
  * fail with UNTRUSTED. */
 static int fail_untrusted_ca(void)
 {
-    return fail_ssl_request("server.cert", NULL, "localhost",
-                            "untrusted CA.", NE_SSL_UNTRUSTED);
+    return fail_ssl_request_with_error("server.cert", NULL, "localhost",
+                                       "untrusted CA.", NE_SSL_UNTRUSTED,
+                                       "issuer is not trusted");
 }
 
 static int fail_self_signed(void)
@@ -866,8 +887,10 @@ static int fail_wildcard(void)
 
 static int fail_ca_expired(void)
 {
-    return fail_ssl_request("ca1server.cert", "ca1/cert.pem", "localhost",
-                            "issuer ca expired", NE_SSL_BADCHAIN);
+    return fail_ssl_request_with_error("ca1server.cert", "ca1/cert.pem", 
+                                       "localhost", "issuer ca expired", 
+                                       NE_SSL_BADCHAIN,
+                                       "bad certificate chain");
 }
 
 static int fail_ca_notyetvalid(void)
