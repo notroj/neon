@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1998-2009, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -1286,19 +1286,31 @@ static int do_bind(int fd, int peer_family,
     }
 }
 
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#define USE_CLOEXEC
+#ifdef SOCK_CLOEXEC
+/* sock_cloexec is initialized to SOCK_CLOEXEC and cleared to zero if
+ * a socket() call ever fails with EINVAL. */
+static int sock_cloexec = SOCK_CLOEXEC;
+#else
+#define sock_cloexec 0
 #endif
 
 int ne_sock_connect(ne_socket *sock,
                     const ne_inet_addr *addr, unsigned int port)
 {
     int fd, ret;
+    int type = SOCK_STREAM | sock_cloexec;
 
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
      * implementations do not set ai_socktype, e.g. RHL6.2. */
-    fd = socket(ia_family(addr), SOCK_STREAM | SOCK_CLOEXEC, ia_proto(addr));
+    fd = socket(ia_family(addr), type, ia_proto(addr));
+#ifdef SOCK_CLOEXEC
+    /* Handle forwards compat for new glibc on an older kernels; clear
+     * the sock_cloexec flag and retry the call: */
+    if (fd < 0 && sock_cloexec && errno == EINVAL) {
+        sock_cloexec = 0;
+        fd = socket(ia_family(addr), SOCK_STREAM, ia_proto(addr));
+    }
+#endif
     if (fd < 0) {
         set_strerror(sock, ne_errno);
 	return -1;
@@ -1313,9 +1325,10 @@ int ne_sock_connect(ne_socket *sock,
 #endif
    
 #if defined(HAVE_FCNTL) && defined(F_GETFD) && defined(F_SETFD) \
-  && defined(FD_CLOEXEC) && defined(USE_CLOEXEC)
-    /* Set the FD_CLOEXEC bit for the new fd. */
-    if ((ret = fcntl(fd, F_GETFD)) >= 0) {
+  && defined(FD_CLOEXEC) && defined(SOCK_CLOEXEC)
+    /* Set the FD_CLOEXEC bit for the new fd, if the socket was not
+     * created with the CLOEXEC bit already set. */
+    if (!sock_cloexec && (ret = fcntl(fd, F_GETFD)) >= 0) {
         fcntl(fd, F_SETFD, ret | FD_CLOEXEC);
         /* ignore failure; not a critical error. */
     }
