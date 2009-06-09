@@ -574,6 +574,8 @@ ne_ssl_context *ne_ssl_context_create(int flags)
         gnutls_certificate_client_set_retrieve_function(ctx->cred,
                                                         provide_client_cert);
     }
+    gnutls_certificate_set_verify_flags(ctx->cred, 
+                                        GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT);
     return ctx;
 }
 

@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -227,7 +227,7 @@ static int single_get_clength(void)
 {
     return expect_response("a", single_serve_string,
 			   RESP200
-			   "Content-Length: 1\r\n"
+			   "Content-Length: \t\t 1 \t\t\r\n"
 			   "\r\n"
 			   "a"
 			   "bbbbbbbbasdasd");
@@ -260,18 +260,6 @@ static int no_body_HEAD(void)
 {
     return expect_no_body("HEAD", "HTTP/1.1 200 OK\r\n"
 			  "Content-Length: 5\r\n\r\n");
-}
-
-static int no_body_empty_clength(void)
-{
-    return expect_no_body("GET", "HTTP/1.1 200 OK\r\n"
-			  "Content-Length:\r\n\r\n");
-}
-
-static int no_body_bad_clength(void)
-{
-    return expect_no_body("GET", "HTTP/1.1 200 OK\r\n"
-			  "Content-Length: foobar\r\n\r\n");
 }
 
 static int no_headers(void)
@@ -1599,6 +1587,15 @@ static int fail_on_invalid(void)
         /* negative C-L */
         { RESP200 "Content-Length: -1\r\n" "\r\n" "abcde",
           "Invalid Content-Length" },
+
+        /* invalid C-Ls */
+        { RESP200 "Content-Length: 5, 3\r\n" "\r\n" "abcde",
+          "Invalid Content-Length" },
+        { RESP200 "Content-Length: 5z\r\n" "\r\n" "abcde",
+          "Invalid Content-Length" },
+        { RESP200 "Content-Length: z5\r\n" "\r\n" "abcde",
+          "Invalid Content-Length" },
+
         /* stupidly-large C-L */
         { RESP200 "Content-Length: 99999999999999999999999999\r\n" 
           "\r\n" "abcde",
@@ -2167,8 +2164,6 @@ ne_test tests[] = {
     T(no_body_204),
     T(no_body_304),
     T(no_body_HEAD),
-    T(no_body_empty_clength),
-    T(no_body_bad_clength),
     T(no_headers),
     T(chunks),
     T(te_header),
