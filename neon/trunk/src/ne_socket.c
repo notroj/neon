@@ -1097,6 +1097,20 @@ void ne_addr_destroy(ne_sock_addr *addr)
     ne_free(addr);
 }
 
+/* Perform a connect() for given fd, handling EINTR retries.  Returns
+ * zero on success or -1 on failure, in which case, ne_errno is set
+ * appropriately. */
+static int raw_connect(int fd, const struct sockaddr *sa, size_t salen)
+{
+    int ret;
+
+    do {
+        ret = connect(fd, sa, salen);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+
+    return ret;
+}
+
 /* Perform a connect() for fd to address sa of length salen, with a
  * timeout if supported on this platform.  Returns zero on success or
  * NE_SOCK_* on failure, with sock->error set appropriately. */
@@ -1116,7 +1130,7 @@ static int timed_connect(ne_socket *sock, int fd,
             return NE_SOCK_ERROR;
         }
         
-        ret = connect(fd, sa, salen);
+        ret = raw_connect(fd, sa, salen);
         if (ret == -1) {
             errnum = ne_errno;
             if (NE_ISINPROGRESS(errnum)) {
@@ -1160,7 +1174,7 @@ static int timed_connect(ne_socket *sock, int fd,
     } else 
 #endif /* USE_NONBLOCKING_CONNECT */
     {
-        ret = connect(fd, sa, salen);
+        ret = raw_connect(fd, sa, salen);
         
         if (ret < 0) {
             set_strerror(sock, errno);
