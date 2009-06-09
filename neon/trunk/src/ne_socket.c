@@ -1125,7 +1125,12 @@ static int timed_connect(ne_socket *sock, int fd,
 
         /* Get flags and then set O_NONBLOCK. */
         flags = fcntl(fd, F_GETFL);
-        if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        if (flags & O_NONBLOCK) {
+            /* This socket was created using SOCK_NONBLOCK... flip the
+             * bit for restoring flags later. */
+            flags &= ~O_NONBLOCK;
+        }
+        else if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
             set_strerror(sock, errno);
             return NE_SOCK_ERROR;
         }
@@ -1304,6 +1309,7 @@ static int do_bind(int fd, int peer_family,
 /* sock_cloexec is initialized to SOCK_CLOEXEC and cleared to zero if
  * a socket() call ever fails with EINVAL. */
 static int sock_cloexec = SOCK_CLOEXEC;
+#define RETRY_ON_EINVAL
 #else
 #define sock_cloexec 0
 #endif
@@ -1314,10 +1320,21 @@ int ne_sock_connect(ne_socket *sock,
     int fd, ret;
     int type = SOCK_STREAM | sock_cloexec;
 
+#if defined(RETRY_ON_EINVAL) && defined(SOCK_NONBLOCK) \
+    && defined(USE_NONBLOCKING_CONNECT)
+    /* If the SOCK_NONBLOCK flag is defined, and the retry-on-EINVAL
+     * logic is enabled, and the socket has a configured timeout, then
+     * also use the SOCK_NONBLOCK flag to save enabling O_NONBLOCK
+     * later. */
+    if (sock->cotimeout && sock_cloexec) {
+        type |= SOCK_NONBLOCK;
+    }
+#endif
+
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
      * implementations do not set ai_socktype, e.g. RHL6.2. */
     fd = socket(ia_family(addr), type, ia_proto(addr));
-#ifdef SOCK_CLOEXEC
+#ifdef RETRY_ON_EINVAL
     /* Handle forwards compat for new glibc on an older kernels; clear
      * the sock_cloexec flag and retry the call: */
     if (fd < 0 && sock_cloexec && errno == EINVAL) {
