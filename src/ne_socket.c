@@ -1325,7 +1325,7 @@ int ne_sock_connect(ne_socket *sock,
 #endif
    
 #if defined(HAVE_FCNTL) && defined(F_GETFD) && defined(F_SETFD) \
-  && defined(FD_CLOEXEC) && defined(SOCK_CLOEXEC)
+  && defined(FD_CLOEXEC)
     /* Set the FD_CLOEXEC bit for the new fd, if the socket was not
      * created with the CLOEXEC bit already set. */
     if (!sock_cloexec && (ret = fcntl(fd, F_GETFD)) >= 0) {
