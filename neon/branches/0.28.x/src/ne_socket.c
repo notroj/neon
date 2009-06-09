@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1998-2009, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
@@ -1007,6 +1007,20 @@ void ne_addr_destroy(ne_sock_addr *addr)
     ne_free(addr);
 }
 
+/* Perform a connect() for given fd, handling EINTR retries.  Returns
+ * zero on success or -1 on failure, in which case, ne_errno is set
+ * appropriately. */
+static int raw_connect(int fd, const struct sockaddr *sa, size_t salen)
+{
+    int ret;
+
+    do {
+        ret = connect(fd, sa, salen);
+    } while (ret < 0 && NE_ISINTR(ne_errno));
+
+    return ret;
+}
+
 /* Perform a connect() for fd to address sa of length salen, with a
  * timeout if supported on this platform.  Returns zero on success or
  * NE_SOCK_* on failure, with sock->error set appropriately. */
@@ -1026,7 +1040,7 @@ static int timed_connect(ne_socket *sock, int fd,
             return NE_SOCK_ERROR;
         }
         
-        ret = connect(fd, sa, salen);
+        ret = raw_connect(fd, sa, salen);
         if (ret == -1) {
             errnum = ne_errno;
             if (NE_ISINPROGRESS(errnum)) {
@@ -1070,7 +1084,7 @@ static int timed_connect(ne_socket *sock, int fd,
     } else 
 #endif /* USE_NONBLOCKING_CONNECT */
     {
-        ret = connect(fd, sa, salen);
+        ret = raw_connect(fd, sa, salen);
         
         if (ret < 0) {
             set_strerror(sock, errno);
@@ -1196,19 +1210,31 @@ static int do_bind(int fd, int peer_family,
     }
 }
 
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#define USE_CLOEXEC
+#ifdef SOCK_CLOEXEC
+/* sock_cloexec is initialized to SOCK_CLOEXEC and cleared to zero if
+ * a socket() call ever fails with EINVAL. */
+static int sock_cloexec = SOCK_CLOEXEC;
+#else
+#define sock_cloexec 0
 #endif
 
 int ne_sock_connect(ne_socket *sock,
                     const ne_inet_addr *addr, unsigned int port)
 {
     int fd, ret;
+    int type = SOCK_STREAM | sock_cloexec;
 
     /* use SOCK_STREAM rather than ai_socktype: some getaddrinfo
      * implementations do not set ai_socktype, e.g. RHL6.2. */
-    fd = socket(ia_family(addr), SOCK_STREAM | SOCK_CLOEXEC, ia_proto(addr));
+    fd = socket(ia_family(addr), type, ia_proto(addr));
+#ifdef SOCK_CLOEXEC
+    /* Handle forwards compat for new glibc on an older kernels; clear
+     * the sock_cloexec flag and retry the call: */
+    if (fd < 0 && sock_cloexec && errno == EINVAL) {
+        sock_cloexec = 0;
+        fd = socket(ia_family(addr), SOCK_STREAM, ia_proto(addr));
+    }
+#endif
     if (fd < 0) {
         set_strerror(sock, ne_errno);
 	return -1;
@@ -1223,9 +1249,10 @@ int ne_sock_connect(ne_socket *sock,
 #endif
    
 #if defined(HAVE_FCNTL) && defined(F_GETFD) && defined(F_SETFD) \
-  && defined(FD_CLOEXEC) && defined(USE_CLOEXEC)
-    /* Set the FD_CLOEXEC bit for the new fd. */
-    if ((ret = fcntl(fd, F_GETFD)) >= 0) {
+  && defined(FD_CLOEXEC)
+    /* Set the FD_CLOEXEC bit for the new fd, if the socket was not
+     * created with the CLOEXEC bit already set. */
+    if (!sock_cloexec && (ret = fcntl(fd, F_GETFD)) >= 0) {
         fcntl(fd, F_SETFD, ret | FD_CLOEXEC);
         /* ignore failure; not a critical error. */
     }
