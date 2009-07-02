@@ -1,7 +1,6 @@
 /* 
    Socket handling routines
    Copyright (C) 1998-2009, Joe Orton <joe@manyfish.co.uk>
-   Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
