@@ -1,8 +1,6 @@
 /* 
    HTTP session handling
    Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
-   Portions are:
-   Copyright (C) 1999-2000 Tommi Komulainen <Tommi.Komulainen@iki.fi>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
