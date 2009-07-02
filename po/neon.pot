@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-02-25 13:57+0000\n"
+"POT-Creation-Date: 2009-07-02 08:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -169,22 +169,22 @@ msgstr ""
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:678 src/ne_openssl.c:396
+#: src/ne_gnutls.c:680 src/ne_openssl.c:396
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:719 src/ne_openssl.c:619
+#: src/ne_gnutls.c:721 src/ne_openssl.c:619
 #, c-format
 msgid "SSL negotiation failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:724 src/ne_openssl.c:624
+#: src/ne_gnutls.c:726 src/ne_openssl.c:624
 #, c-format
 msgid "SSL negotiation failed: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:734
+#: src/ne_gnutls.c:736
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -313,30 +313,30 @@ msgstr ""
 msgid "Unknown transfer-coding in response"
 msgstr ""
 
-#: src/ne_request.c:1275
+#: src/ne_request.c:1277
 msgid "Invalid Content-Length in response"
 msgstr ""
 
-#: src/ne_request.c:1348
+#: src/ne_request.c:1350
 #, c-format
 msgid "Could not write to file: %s"
 msgstr ""
 
-#: src/ne_request.c:1421
+#: src/ne_request.c:1423
 #, c-format
 msgid "Could not create SSL connection through proxy server: %s"
 msgstr ""
 
-#: src/ne_request.c:1468
+#: src/ne_request.c:1470
 #, c-format
 msgid "Could not create socket"
 msgstr ""
 
-#: src/ne_request.c:1530
+#: src/ne_request.c:1532
 msgid "Could not connect to proxy server"
 msgstr ""
 
-#: src/ne_request.c:1531
+#: src/ne_request.c:1533
 msgid "Could not connect to server"
 msgstr ""
 
@@ -399,31 +399,31 @@ msgstr ""
 msgid "Host not found"
 msgstr ""
 
-#: src/ne_socket.c:1053
+#: src/ne_socket.c:1072
 msgid "Connection timed out"
 msgstr ""
 
-#: src/ne_socket.c:1220
+#: src/ne_socket.c:1263
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1280
+#: src/ne_socket.c:1324
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1503
+#: src/ne_socket.c:1547
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1519
+#: src/ne_socket.c:1563
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1526
+#: src/ne_socket.c:1570
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1532
+#: src/ne_socket.c:1576
 msgid "Could not create SSL structure"
 msgstr ""
 
