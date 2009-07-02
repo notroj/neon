@@ -1092,7 +1092,7 @@ fi])
 
 AC_DEFUN([NEON_LIBPROXY], [
 AC_ARG_WITH(libproxy, AS_HELP_STRING(--without-libproxy, disable libproxy support))
-if test "x$with_proxy" != "no"; then
+if test "x$with_libproxy" != "xno"; then
    NE_PKG_CONFIG(NE_PXY, libproxy-1.0,
      [AC_DEFINE(HAVE_LIBPROXY, 1, [Define if libproxy is supported])
       CPPFLAGS="$CPPFLAGS $NE_PXY_CFLAGS"
