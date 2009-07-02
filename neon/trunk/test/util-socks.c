@@ -1,6 +1,6 @@
 /* 
    SOCKS server utils.
-   Copyright (C) 2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2008, 2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <sys/types.h>
-#include <sys/socket.h> /* for AF_INET6 */
 
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
