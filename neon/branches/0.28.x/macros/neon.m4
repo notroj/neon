@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2008 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2009 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -430,8 +430,10 @@ AC_DEFUN([NEON_COMMON_CHECKS], [
 # These checks are done whether or not the bundled neon build
 # is used.
 
+ifdef([AC_USE_SYSTEM_EXTENSIONS], 
+[AC_USE_SYSTEM_EXTENSIONS],
+[AC_ISC_POSIX])
 AC_REQUIRE([AC_PROG_CC])
-AC_REQUIRE([AC_ISC_POSIX])
 AC_REQUIRE([AC_C_INLINE])
 AC_REQUIRE([AC_C_CONST])
 AC_REQUIRE([AC_TYPE_SIZE_T])
