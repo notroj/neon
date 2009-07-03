@@ -1,6 +1,6 @@
 /* 
    SSL interface definitions internal to neon.
-   Copyright (C) 2003-2005, 2008, 2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2003-2005, 2008, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -40,7 +40,6 @@ struct ne_ssl_context_s {
     SSL_CTX *ctx;
     SSL_SESSION *sess;
     const char *hostname; /* for SNI */
-    int failures; /* bitmask of exposed failure bits. */
 };
 
 typedef SSL *ne_ssl_socket;
@@ -91,7 +90,6 @@ ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
 
 #endif /* HAVE_GNUTLS */
 
-#ifdef NE_HAVE_SSL
 ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
 
 /* Process-global initialization of the SSL library; returns non-zero
@@ -100,6 +98,5 @@ int ne__ssl_init(void);
 
 /* Process-global de-initialization of the SSL library. */
 void ne__ssl_exit(void);
-#endif
 
 #endif /* NE_PRIVSSL_H */
