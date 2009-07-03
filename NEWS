@@ -1,3 +1,8 @@
+Changes in release 0.28.5:
+* Enable support for X.509v1 CA certificates in GnuTLS.
+* Fix handling of EINTR in connect() calls.
+* Fix use of builds with SOCK_CLOEXEC support on older Linux kernels.
+
 Changes in release 0.28.4:
 * Fix ne_forget_auth (Kai Sommerfeld)
 * GnuTLS support fixes:
