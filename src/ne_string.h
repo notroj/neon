@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -89,6 +89,11 @@ void ne_buffer_zappend(ne_buffer *buf, const char *str);
 /* Append 'len' bytes of 'data' to buf, where 'data' does not contain
  * a NUL terminator.  (A NUL terminator is appended to buf) */
 void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
+
+/* Append 'len' bytes of 'data' to buf.  All non-ASCII bytes, and
+ * ASCII control characters, are escaped.  (Note that this includes
+ * the NUL byte). */
+void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len);
 
 /* Print a string to the end of the buffer using printf-style format
  * string 'format' and subsqeuent arguments.  At most 'max' characters
