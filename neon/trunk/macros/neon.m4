@@ -975,12 +975,6 @@ gnutls)
       ne_gnutls_ver=`$GNUTLS_CONFIG --version`
      ])
 
-   case $ne_gnutls_ver in
-   1.0.?|1.0.1?|1.0.20|1.0.21) 
-      AC_MSG_ERROR([GNU TLS version $ne_gnutls_ver is too old -- 1.0.22 or later required]) 
-      ;;
-   esac
-
    AC_CHECK_HEADER([gnutls/gnutls.h],,
       [AC_MSG_ERROR([could not find gnutls/gnutls.h in include path])])
 
@@ -989,10 +983,16 @@ gnutls)
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
 
    # Check for functions in later releases
-   NE_CHECK_FUNCS(gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \ 
+   NE_CHECK_FUNCS([gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \
                   gnutls_sign_callback_set \
-                  gnutls_certificate_get_x509_cas)
+                  gnutls_certificate_get_x509_cas \
+                  gnutls_certificate_verify_peers2])
 
+   # fail if gnutls_certificate_verify_peers2 is not found
+   if test x${ac_cv_func_gnutls_certificate_verify_peers2} != xyes; then
+       AC_MSG_ERROR([GnuTLS version predates gnutls_certificate_verify_peers2, newer version required])
+   fi
+                  
    # Check for iconv support if using the new RDN access functions:
    if test ${ac_cv_func_gnutls_x509_dn_get_rdn_ava}X${ac_cv_header_iconv_h} = yesXyes; then
       AC_CHECK_FUNCS(iconv)
