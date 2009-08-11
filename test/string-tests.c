@@ -628,8 +628,10 @@ static int qappend(void)
 
     for (n = 0; ts[n].in; n++) {
         ne_buffer *buf = ne_buffer_create();
+        char *s;
+        const unsigned char *in = (const unsigned char *)ts[n].in;
 
-        ne_buffer_qappend(buf, (const unsigned char *)ts[n].in, ts[n].inlen);
+        ne_buffer_qappend(buf, in, ts[n].inlen);
 
         ONCMP(buf->data, ts[n].out);
 
@@ -637,6 +639,11 @@ static int qappend(void)
             ("bad buffer length for '%s': %" NE_FMT_SIZE_T, 
              ts[n].out, buf->used));
         
+        s = ne_strnqdup(in, ts[n].inlen);
+        
+        ONCMP(s, ts[n].out);
+
+        ne_free(s);
         ne_buffer_destroy(buf);
     }
 

@@ -139,6 +139,11 @@ char *ne_strerror(int errnum, char *buffer, size_t buflen);
 #define ne_strnzcpy(dest, src, n) do { size_t ne__nm1 = (n) - 1;      \
 strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 
+/* Return a malloc-allocated copy of 'data', of length 'len', with all
+ * non-ASCII bytes, and ASCII control characters escaped.  (Note that
+ * the escaping includes the NUL byte). */
+char *ne_strnqdup(const unsigned char *data, size_t len);
+
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL pointer. */
 char *ne_concat(const char *str, ...)
