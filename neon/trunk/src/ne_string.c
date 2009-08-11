@@ -276,25 +276,30 @@ static const unsigned char ascii_quote[256] = {
 
 static const char hex_chars[16] = "0123456789ABCDEF";
 
-void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len)
+/* Return the expected number of bytes needed to append the string
+ * beginning at byte 's', where 'send' points to the last byte after
+ * 's'. */ 
+static size_t qappend_count(const unsigned char *s, const unsigned char *send)
 {
-    const unsigned char *p, *dend = data + len;
-    size_t needed;
-    char *q, *qs;
-
-    /* Determine the expected number of bytes needed to append the
-     * string. */ 
-    for (p = data, needed = 0; p < dend; p++) {
-        needed += ascii_quote[*p];
+    const unsigned char *p;
+    size_t ret;
+    
+    for (p = s, ret = 0; p < send; p++) {
+        ret += ascii_quote[*p];
     }
 
-    ne_buffer_grow(buf, buf->used + needed);
+    return ret;
+}       
 
-    /* buf->used >= 1, so this is safe. */
-    qs = q = buf->data + buf->used - 1;
+/* Append the string 's', up to but not including 'send', to string
+ * 'dest', quoting along the way.  Returns pointer to NUL. */
+static char *quoted_append(char *dest, const unsigned char *s, 
+                           const unsigned char *send)
+{
+    const unsigned char *p;
+    char *q = dest;
 
-    /* Append the string, quoting along the way. */
-    for (p = data; p < dend; p++) {
+    for (p = s; p < send; p++) {
         if (ascii_quote[*p] == 1) {
             *q++ = *p;
         }
@@ -309,9 +314,34 @@ void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len)
     /* NUL terminate after the last character */
     *q = '\0';
     
+    return q;
+}
+
+void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len)
+{
+    const unsigned char *dend = data + len;
+    char *q, *qs;
+
+    ne_buffer_grow(buf, buf->used + qappend_count(data, dend));
+
+    /* buf->used >= 1, so this is safe. */
+    qs = buf->data + buf->used - 1;
+
+    q = quoted_append(qs, data, dend);
+    
     /* used already accounts for a NUL, so increment by number of
      * characters appended, *before* the NUL. */
     buf->used += q - qs;
+}
+
+char *ne_strnqdup(const unsigned char *data, size_t len)
+{
+    const unsigned char *dend = data + len;
+    char *dest = malloc(qappend_count(data, dend) + 1);
+
+    quoted_append(dest, data, dend);
+
+    return dest;
 }
 
 static const char b64_alphabet[] =  
