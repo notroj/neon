@@ -1,6 +1,6 @@
 /*
    neon SSL/TLS support using GNU TLS
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -775,15 +775,60 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock,
     return top;
 }
 
-/* Verifies an SSL server certificate. */
-static int check_certificate(ne_session *sess, gnutls_session sock,
-                             ne_ssl_certificate *chain)
+/* Map from GnuTLS verify failure mask *status to NE_SSL_* failure
+ * bitmask, which is returned.  *status is modified, removing all
+ * mapped bits. */
+static int map_verify_failures(unsigned int *status)
+{
+    static const struct {
+        gnutls_certificate_status_t from;
+        int to;
+    } map[] = {
+        { GNUTLS_CERT_REVOKED, NE_SSL_REVOKED },
+        { GNUTLS_CERT_NOT_ACTIVATED, NE_SSL_NOTYETVALID },
+        { GNUTLS_CERT_EXPIRED, NE_SSL_EXPIRED },
+        { GNUTLS_CERT_INVALID|GNUTLS_CERT_SIGNER_NOT_FOUND, NE_SSL_UNTRUSTED },
+        { GNUTLS_CERT_INVALID|GNUTLS_CERT_SIGNER_NOT_CA, NE_SSL_UNTRUSTED }
+    };
+    size_t n;
+    int ret = 0;
+
+    for (n = 0; n < sizeof(map)/sizeof(map[0]); n++) {
+        if ((*status & map[n].from) == map[n].from) {
+            *status &= ~map[n].from;
+            ret |= map[n].to;
+        }
+    }
+
+    return ret;
+}
+
+/* Return a malloc-allocated human-readable error string describing
+ * GnuTLS verification error bitmask 'status'; return value must be
+ * freed by the caller. */
+static char *verify_error_string(unsigned int status)
+{
+    ne_buffer *buf = ne_buffer_create();
+
+    /* sorry, i18n-ers */
+    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+        ne_buffer_zappend(buf, _("signed using insecure algorithm"));
+    }
+    else {
+        ne_buffer_snprintf(buf, 64, _("unrecognized errors (%u)"),
+                           status);
+    }
+    
+    return ne_buffer_finish(buf);
+}
+
+/* Return NE_SSL_* failure bits after checking chain expiry. */
+static int check_chain_expiry(ne_ssl_certificate *chain)
 {
     time_t before, after, now = time(NULL);
-    int ret, failures = 0;
-    ne_uri server;
     ne_ssl_certificate *cert;
-
+    int failures = 0;
+    
     /* Check that all certs within the chain are inside their defined
      * validity period.  Note that the errors flagged for the server
      * cert are different from the generic error for issues higher up
@@ -796,7 +841,18 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
             failures |= (cert == chain) ? NE_SSL_NOTYETVALID : NE_SSL_BADCHAIN;
         else if (now > after)
             failures |= (cert == chain) ? NE_SSL_EXPIRED : NE_SSL_BADCHAIN;
-    }        
+    }
+
+    return failures;
+}
+
+/* Verifies an SSL server certificate. */
+static int check_certificate(ne_session *sess, gnutls_session sock,
+                             ne_ssl_certificate *chain)
+{
+    int ret, failures;
+    ne_uri server;
+    unsigned int status;
 
     memset(&server, 0, sizeof server);
     ne_fill_server_uri(sess, &server);
@@ -807,15 +863,33 @@ static int check_certificate(ne_session *sess, gnutls_session sock,
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));
         return NE_ERROR;
-    } else if (ret > 0) {
+    } 
+    else if (ret > 0) {
         failures |= NE_SSL_IDMISMATCH;
     }
+    
+    failures |= check_chain_expiry(chain);
 
-    if (gnutls_certificate_verify_peers(sock)) {
-        failures |= NE_SSL_UNTRUSTED;
+    ret = gnutls_certificate_verify_peers2(sock, &status);
+    NE_DEBUG(NE_DBG_SSL, "ssl: Verify peers returned %d, status=%u\n", 
+             ret, status);
+    if (ret != GNUTLS_E_SUCCESS) {
+        ne_set_error(sess, _("Could not verify server certificate: %s"),
+                     gnutls_strerror(ret));
+        return NE_ERROR;
     }
 
-    NE_DEBUG(NE_DBG_SSL, "Failures = %d\n", failures);
+    failures |= map_verify_failures(&status);
+
+    NE_DEBUG(NE_DBG_SSL, "ssl: Verification failures = %d (status = %u).\n", 
+             failures, status);
+    
+    if (status && status != GNUTLS_CERT_INVALID) {
+        char *errstr = verify_error_string(status);
+        ne_set_error(sess, _("Certificate verification error: %s"), errstr);
+        ne_free(errstr);       
+        return NE_ERROR;
+    }
 
     if (failures == 0) {
         ret = NE_OK;
