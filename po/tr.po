@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy-0.10.10\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-07-02 08:45+0100\n"
+"POT-Creation-Date: 2009-08-18 15:52+0100\n"
 "PO-Revision-Date: 2001-01-03 HO:MI+ZONE\n"
 "Last-Translator: A. Sinan Unur <sinan@unur.com>\n"
 "Language-Team: tr\n"
@@ -174,17 +174,17 @@ msgstr ""
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:680 src/ne_openssl.c:396
+#: src/ne_gnutls.c:680 src/ne_openssl.c:407
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:721 src/ne_openssl.c:619
+#: src/ne_gnutls.c:721 src/ne_openssl.c:630
 #, fuzzy, c-format
 msgid "SSL negotiation failed, client certificate was requested: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_gnutls.c:726 src/ne_openssl.c:624
+#: src/ne_gnutls.c:726 src/ne_openssl.c:635
 #, fuzzy, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
@@ -208,17 +208,17 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:428
+#: src/ne_openssl.c:439
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_openssl.c:644
+#: src/ne_openssl.c:655
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:653
+#: src/ne_openssl.c:664
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr ""
@@ -418,23 +418,23 @@ msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1324
+#: src/ne_socket.c:1325
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1547
+#: src/ne_socket.c:1548
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1563
+#: src/ne_socket.c:1564
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1570
+#: src/ne_socket.c:1571
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1576
+#: src/ne_socket.c:1577
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "SSL baðlantýsý kurulamadý"
@@ -446,16 +446,16 @@ msgstr ""
 "%s: kurulum dosyasýnda bozukluk var. satýr %d:\n"
 "%s\n"
 
-#: src/ne_xml.c:452
+#: src/ne_xml.c:474
 #, fuzzy
 msgid "Unknown error"
 msgstr "Bilinmeyen sistem hatasý"
 
-#: src/ne_xml.c:537
+#: src/ne_xml.c:579
 msgid "Invalid Byte Order Mark"
 msgstr ""
 
-#: src/ne_xml.c:625
+#: src/ne_xml.c:667
 #, fuzzy, c-format
 msgid "XML parse error at line %d: %s"
 msgstr ""
