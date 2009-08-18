@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: neon 0.28.0+\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-07-02 08:45+0100\n"
+"POT-Creation-Date: 2009-08-18 15:52+0100\n"
 "PO-Revision-Date: 2008-03-03 11:20+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: neon@webdav.org\n"
@@ -172,17 +172,17 @@ msgstr "[非打印字符:#%lu]"
 msgid "[unprintable]"
 msgstr "[非打印字符]"
 
-#: src/ne_gnutls.c:680 src/ne_openssl.c:396
+#: src/ne_gnutls.c:680 src/ne_openssl.c:407
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "服务器证书在主题名称遗漏了属性 commonName"
 
-#: src/ne_gnutls.c:721 src/ne_openssl.c:619
+#: src/ne_gnutls.c:721 src/ne_openssl.c:630
 #, fuzzy, c-format
 msgid "SSL negotiation failed, client certificate was requested: %s"
 msgstr "SSL 协商失败：%s"
 
-#: src/ne_gnutls.c:726 src/ne_openssl.c:624
+#: src/ne_gnutls.c:726 src/ne_openssl.c:635
 #, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "SSL 协商失败：%s"
@@ -206,17 +206,17 @@ msgstr "锁定 %s 的响应遗漏了主动锁"
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr "刷新锁定 %s 的响应没有返回主动锁"
 
-#: src/ne_openssl.c:428
+#: src/ne_openssl.c:439
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "证书校验失败：%s"
 
-#: src/ne_openssl.c:644
+#: src/ne_openssl.c:655
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "SSL 服务器不能呈现证书"
 
-#: src/ne_openssl.c:653
+#: src/ne_openssl.c:664
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "服务器证书改变：是否被拦截攻击？"
@@ -410,23 +410,23 @@ msgstr "连接超时"
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "套接字数量超过 FD_SETSIZE"
 
-#: src/ne_socket.c:1324
+#: src/ne_socket.c:1325
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1547
+#: src/ne_socket.c:1548
 msgid "Client certificate verification failed"
 msgstr "客户证书校验失败"
 
-#: src/ne_socket.c:1563
+#: src/ne_socket.c:1564
 msgid "SSL disabled due to lack of entropy"
 msgstr "由于缺少熵，SSL 已经禁用"
 
-#: src/ne_socket.c:1570
+#: src/ne_socket.c:1571
 msgid "SSL disabled due to library version mismatch"
 msgstr "由于库版本不匹配，SSL 已经禁用"
 
-#: src/ne_socket.c:1576
+#: src/ne_socket.c:1577
 msgid "Could not create SSL structure"
 msgstr "不能创建 SSL 结构"
 
@@ -435,15 +435,15 @@ msgstr "不能创建 SSL 结构"
 msgid "XML parse error at line %d: invalid element name"
 msgstr "在 %d 行解析 XML 错误：非法元素名称"
 
-#: src/ne_xml.c:452
+#: src/ne_xml.c:474
 msgid "Unknown error"
 msgstr "未知错误"
 
-#: src/ne_xml.c:537
+#: src/ne_xml.c:579
 msgid "Invalid Byte Order Mark"
 msgstr "非法字节顺序标记(BOM)"
 
-#: src/ne_xml.c:625
+#: src/ne_xml.c:667
 #, c-format
 msgid "XML parse error at line %d: %s"
 msgstr "在 %d 行解析 XML 错误: %s"

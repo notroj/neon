@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.28.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-07-02 08:45+0100\n"
+"POT-Creation-Date: 2009-08-18 15:52+0100\n"
 "PO-Revision-Date: 2007-11-24 14:00+0100\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -181,17 +181,17 @@ msgstr "[niedrukowalne:#%lu]"
 msgid "[unprintable]"
 msgstr "[niedrukowalne]"
 
-#: src/ne_gnutls.c:680 src/ne_openssl.c:396
+#: src/ne_gnutls.c:680 src/ne_openssl.c:407
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
-#: src/ne_gnutls.c:721 src/ne_openssl.c:619
+#: src/ne_gnutls.c:721 src/ne_openssl.c:630
 #, fuzzy, c-format
 msgid "SSL negotiation failed, client certificate was requested: %s"
 msgstr "Negocjacja SSL nie udała się: %s"
 
-#: src/ne_gnutls.c:726 src/ne_openssl.c:624
+#: src/ne_gnutls.c:726 src/ne_openssl.c:635
 #, c-format
 msgid "SSL negotiation failed: %s"
 msgstr "Negocjacja SSL nie udała się: %s"
@@ -216,17 +216,17 @@ msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 "Nie zwrócono żadnej aktywnej blokady dla <%s> w odpowiedzi LOCK refresh"
 
-#: src/ne_openssl.c:428
+#: src/ne_openssl.c:439
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_openssl.c:644
+#: src/ne_openssl.c:655
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
 
-#: src/ne_openssl.c:653
+#: src/ne_openssl.c:664
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
@@ -420,23 +420,23 @@ msgstr "Czas połączenia się skończył"
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 
-#: src/ne_socket.c:1324
+#: src/ne_socket.c:1325
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1547
+#: src/ne_socket.c:1548
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1563
+#: src/ne_socket.c:1564
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1570
+#: src/ne_socket.c:1571
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
 
-#: src/ne_socket.c:1576
+#: src/ne_socket.c:1577
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 
@@ -445,15 +445,15 @@ msgstr "Nie można utworzyć struktury SSL"
 msgid "XML parse error at line %d: invalid element name"
 msgstr "Błąd podczas parsowania XML w linii %d: nieprawidłowa nazwa elementu"
 
-#: src/ne_xml.c:452
+#: src/ne_xml.c:474
 msgid "Unknown error"
 msgstr "Nieznany błąd"
 
-#: src/ne_xml.c:537
+#: src/ne_xml.c:579
 msgid "Invalid Byte Order Mark"
 msgstr "Nieprawidłowy Znacznik Kolejności Bajtów"
 
-#: src/ne_xml.c:625
+#: src/ne_xml.c:667
 #, c-format
 msgid "XML parse error at line %d: %s"
 msgstr "Błąd podczas parsowania XML w linii %d: %s"
