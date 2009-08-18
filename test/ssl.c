@@ -63,6 +63,8 @@ static char *server_key = NULL;
 static ne_ssl_certificate *def_ca_cert = NULL, *def_server_cert;
 static ne_ssl_client_cert *def_cli_cert;
 
+static char *nul_cn_fn;
+
 static int check_dname(const ne_ssl_dname *dn, const char *expected,
                        const char *which);
 
@@ -274,6 +276,8 @@ static int init(void)
         t_context("failed to decrypt client.p12");
         return FAIL;
     }
+
+    nul_cn_fn = ne_concat(srcdir, "/nulcn.pem", NULL);
 
     return OK;
 }
@@ -839,22 +843,34 @@ static int fail_wrongCN(void)
                             
 }
 
+#define SRCDIR(s) ne_concat(srcdir, "/" s, NULL)
+
 static int fail_nul_cn(void)
 {
-    return fail_ssl_request_with_error2("nulcn.pem", "nulsrv.key", "nulca.pem", 
-                                        "www.bank.com", "localhost",
-                                        "certificate with incorrect CN was accepted",
-                                        NE_SSL_IDMISMATCH,
-                                        "certificate issued for a different hostname");
+    char *key = SRCDIR("nulsrv.key"), *ca = SRCDIR("nulca.pem");
+    CALL(fail_ssl_request_with_error2(nul_cn_fn, key, ca,
+                                      "www.bank.com", "localhost",
+                                      "certificate with incorrect CN was accepted",
+                                      NE_SSL_IDMISMATCH,
+                                      "certificate issued for a different hostname"));
+    ne_free(key);
+    ne_free(ca);
+    return OK;
 }
 
 static int fail_nul_san(void)
 {
-    return fail_ssl_request_with_error2("nulsan.pem", "nulsrv.key", "nulca.pem", 
-                                        "www.bank.com", "localhost",
-                                        "certificate with incorrect CN was accepted",
-                                        NE_SSL_IDMISMATCH,
-                                        "certificate issued for a different hostname");
+    char *cert = SRCDIR("nulsan.pem"), *key = SRCDIR("nulsrv.key"),
+        *ca = SRCDIR("nulca.pem");
+    CALL(fail_ssl_request_with_error2(cert, key, ca, 
+                                      "www.bank.com", "localhost",
+                                      "certificate with incorrect CN was accepted",
+                                      NE_SSL_IDMISMATCH,
+                                      "certificate issued for a different hostname"));
+    ne_free(cert);
+    ne_free(key);
+    ne_free(ca);
+    return OK;
 }
 
 /* Check that an expired certificate is flagged as such. */
@@ -1415,7 +1431,7 @@ static int cert_identities(void)
 
 static int nulcn_identity(void)
 {
-    ne_ssl_certificate *cert = ne_ssl_cert_read("nulcn.pem");
+    ne_ssl_certificate *cert = ne_ssl_cert_read(nul_cn_fn);
     const char *id, *expected = "www.bank.com\\x00.badguy.com";
 
     ONN("could not read nulcn.pem", cert == NULL);
