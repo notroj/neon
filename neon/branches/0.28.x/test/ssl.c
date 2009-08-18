@@ -74,7 +74,6 @@ struct ssl_server_args {
     /* client cert handling: */
     int require_cc; /* require a client cert if non-NULL */
     const char *ca_list; /* file of CA certs to verify client cert against */
-    const char *send_ca; /* file of CA certs to send in client cert request */
     int fail_silently; /* exit with success if handshake fails */
     
     /* session caching: */
@@ -120,8 +119,8 @@ static int ssl_server(ne_socket *sock, void *userdata)
         args->ca_list = CA_CERT;
     }
 
-    ne_ssl_context_set_verify(ctx, args->require_cc, args->send_ca,
-                              args->ca_list);
+    ne_ssl_context_set_verify(ctx, args->require_cc, 
+                              args->ca_list, args->ca_list);
 
     ret = ne_sock_accept_ssl(sock, ctx);
     if (ret && args->fail_silently) {
@@ -619,12 +618,15 @@ static int parse_cert(void)
     return OK;
 }
 
+#define WRONGCN_DNAME "Bad Hostname Department, Neon Hackers Ltd, " \
+    "Cambridge, Cambridgeshire, GB"
+
 /* Check the certificate chain presented against known dnames. */
 static int check_chain(void *userdata, int fs, const ne_ssl_certificate *cert)
 {
     int *ret = userdata;
 
-    if (check_cert_dnames(cert, SERVER_DNAME, CACERT_DNAME) == FAIL) {
+    if (check_cert_dnames(cert, WRONGCN_DNAME, CACERT_DNAME) == FAIL) {
         *ret = -1;
         return 0;
     }
@@ -650,13 +652,13 @@ static int parse_chain(void)
 {
     ne_session *sess = DEFSESS;
     int ret = 0;
-    struct ssl_server_args args = {SERVER_CERT, 0};
+    struct ssl_server_args args = {"wrongcn.cert", 0};
 
     args.ca_list = "ca/cert.pem";    
 
-    /* don't give a CA cert; should force the verify callback to be
-     * used. */
-    CALL(any_ssl_request(sess, ssl_server, &args, NULL, 
+    /* The cert is signed by the CA but has a CN mismatch, so will
+     * force the verification callback to be invoked. */
+    CALL(any_ssl_request(sess, ssl_server, &args, "ca/cert.pem", 
 			 check_chain, &ret));
     ne_session_destroy(sess);
 
@@ -779,7 +781,7 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
 static int fail_ssl_request(char *cert, char *cacert, const char *host,
 			    const char *msg, int failures)
 {
-    return fail_ssl_request_with_error2(cert, cacert, NULL, host, NULL,
+    return fail_ssl_request_with_error2(cert, NULL, cacert, host, NULL,
                                         msg, failures, NULL);
 }        
 
@@ -790,7 +792,7 @@ static int fail_ssl_request(char *cert, char *cacert, const char *host,
  * flagged as such. */
 static int fail_wrongCN(void)
 {
-    return fail_ssl_request("wrongcn.pem", "wrongcn.pem", "localhost",
+    return fail_ssl_request("wrongcn.cert", "ca/cert.pem", "localhost",
 			    "certificate with incorrect CN was accepted",
 			    NE_SSL_IDMISMATCH);
 }
@@ -988,7 +990,7 @@ static int cc_provided_dnames(void)
     struct ssl_server_args args = {SERVER_CERT, NULL};
 
     args.require_cc = 1;
-    args.send_ca = "calist.pem";
+    args.ca_list = "calist.pem";
 
     PRECOND(def_cli_cert);
 
