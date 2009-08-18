@@ -121,7 +121,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_request.obj" \
 	"$(INTDIR)\ne_session.obj" \
 	"$(INTDIR)\ne_socket.obj" \
-	"$(INTDIR)\ne_socks.obj" \
 	"$(INTDIR)\ne_sspi.obj" \
 	"$(INTDIR)\ne_string.obj" \
 	"$(INTDIR)\ne_uri.obj" \
@@ -133,8 +132,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_207.obj" \
 	"$(INTDIR)\ne_xml.obj" \
 	"$(INTDIR)\ne_xmlreq.obj" \
-	"$(INTDIR)\ne_oldacl.obj" \
-	"$(INTDIR)\ne_acl3744.obj" \
+	"$(INTDIR)\ne_acl.obj" \
 	"$(INTDIR)\ne_props.obj" \
 	"$(INTDIR)\ne_locks.obj" 
 !ENDIF
@@ -163,8 +161,7 @@ ALL: ".\src\config.h" "$(TARGET)"
 CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_207.obj"
 	-@erase "$(INTDIR)\ne_alloc.obj"
-	-@erase "$(INTDIR)\ne_oldacl.obj"
-	-@erase "$(INTDIR)\ne_acl3744.obj"
+	-@erase "$(INTDIR)\ne_acl.obj"
 	-@erase "$(INTDIR)\ne_auth.obj"
 	-@erase "$(INTDIR)\ne_basic.obj"
 	-@erase "$(INTDIR)\ne_compress.obj"
@@ -180,7 +177,6 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_stubssl.obj"
 	-@erase "$(INTDIR)\ne_pkcs11.obj"
 	-@erase "$(INTDIR)\ne_socket.obj"
-	-@erase "$(INTDIR)\ne_socks.obj"
 	-@erase "$(INTDIR)\ne_sspi.obj"
 	-@erase "$(INTDIR)\ne_string.obj"
 	-@erase "$(INTDIR)\ne_uri.obj"
@@ -212,8 +208,7 @@ CLEAN: $(ZLIB_CLEAN)
 
 "$(INTDIR)\ne_207.obj":      .\src\ne_207.c
 "$(INTDIR)\ne_alloc.obj":    .\src\ne_alloc.c
-"$(INTDIR)\ne_acl3744.obj":  .\src\ne_acl3744.c
-"$(INTDIR)\ne_oldacl.obj":   .\src\ne_oldacl.c
+"$(INTDIR)\ne_acl.obj":      .\src\ne_acl.c
 "$(INTDIR)\ne_auth.obj":     .\src\ne_auth.c
 "$(INTDIR)\ne_basic.obj":    .\src\ne_basic.c
 "$(INTDIR)\ne_compress.obj": .\src\ne_compress.c
@@ -229,7 +224,6 @@ CLEAN: $(ZLIB_CLEAN)
 "$(INTDIR)\ne_stubssl.obj":  .\src\ne_stubssl.c
 "$(INTDIR)\ne_pkcs11.obj":   .\src\ne_pkcs11.c
 "$(INTDIR)\ne_socket.obj":   .\src\ne_socket.c
-"$(INTDIR)\ne_socks.obj":    .\src\ne_socks.c
 "$(INTDIR)\ne_sspi.obj":     .\src\ne_sspi.c
 "$(INTDIR)\ne_string.obj":   .\src\ne_string.c
 "$(INTDIR)\ne_uri.obj":      .\src\ne_uri.c
