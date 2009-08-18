@@ -373,7 +373,7 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
         case GNUTLS_SAN_DNSNAME:
             name[len] = '\0';
             if (identity && !found) *identity = ne_strdup(name);
-            match = ne__ssl_match_hostname(name, hostname);
+            match = ne__ssl_match_hostname(name, len, hostname);
             found = 1;
             break;
         case GNUTLS_SAN_IPADDRESS: {
@@ -442,7 +442,7 @@ static int check_identity(const ne_uri *server, gnutls_x509_crt cert,
                                                 seq, 0, name, &len);
             if (ret == 0) {
                 if (identity) *identity = ne_strdup(name);
-                match = ne__ssl_match_hostname(name, hostname);
+                match = ne__ssl_match_hostname(name, len, hostname);
             }
         } else {
             return -1;
