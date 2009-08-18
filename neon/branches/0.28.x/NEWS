@@ -1,3 +1,10 @@
+Changes in release 0.28.6:
+* SECURITY (CVE-2009-2473): Fix "billion laughs" attack against expat;
+  could allow a Denial of Service attack by a malicious server.
+* SECURITY (CVE-2009-2474): Fix handling of an embedded NUL byte in
+  a certificate subject name with OpenSSL; could allow an undetected
+  MITM attack against an SSL server if a trusted CA issues such a cert.
+
 Changes in release 0.28.5:
 * Enable support for X.509v1 CA certificates in GnuTLS.
 * Fix handling of EINTR in connect() calls.
