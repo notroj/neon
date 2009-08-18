@@ -86,6 +86,8 @@ struct ssl_server_args {
     int count; /* internal use. */
 
     int use_ssl2; /* force use of SSLv2 only */
+
+    const char *key;
 };
 
 /* default response string if args->response is NULL */
@@ -97,6 +99,7 @@ static int ssl_server(ne_socket *sock, void *userdata)
     struct ssl_server_args *args = userdata;
     int ret;
     char buf[BUFSIZ];
+    const char *key;
     static ne_ssl_context *ctx = NULL;
 
     if (ctx == NULL) {
@@ -106,10 +109,12 @@ static int ssl_server(ne_socket *sock, void *userdata)
 
     ONV(ctx == NULL, ("could not create SSL context"));
 
-    ONV(ne_ssl_context_keypair(ctx, args->cert, server_key),
+    key = args->key ? args->key : server_key;
+    NE_DEBUG(NE_DBG_HTTP, "SSL server init with keypair (%s, %s).\n",
+             args->cert, key);
+             
+    ONV(ne_ssl_context_keypair(ctx, args->cert, key),
         ("failed to load server keypair: ..."));
-
-    NE_DEBUG(NE_DBG_HTTP, "using server cert %s\n", args->cert);
 
     if (args->require_cc && !args->ca_list) {
         args->ca_list = CA_CERT;
@@ -746,18 +751,37 @@ static int get_failures(void *userdata, int fs, const ne_ssl_certificate *c)
 /* Helper function: run a request using the given self-signed server
  * certificate, and expect the request to fail with the given
  * verification failure flags. */
-static int fail_ssl_request_with_error(char *cert, char *cacert, const char *host,
-                                       const char *msg, int failures,
-                                       const char *errstr)
+static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert, 
+                                        const char *host, const char *fakehost,
+                                        const char *msg, int failures,
+                                        const char *errstr)
 {
     ne_session *sess = ne_session_create("https", host, 7777);
     int gotf = 0, ret;
+    struct ssl_server_args args = {0};
+    ne_sock_addr *addr;
+    const ne_inet_addr *list[1];
 
-    ret = any_ssl_request(sess, fail_serve, cert, cacert,
+    if (fakehost) {
+        addr = ne_addr_resolve(fakehost, 0);
+
+        ONV(ne_addr_result(addr),
+            ("fake hostname lookup failed for %s", fakehost));
+        
+        list[0] = ne_addr_first(addr);
+        
+        ne_set_addrlist(sess, list, 1);
+    }
+
+    args.cert = cert;
+    args.key = key;
+    args.fail_silently = 1;
+    
+    ret = any_ssl_request(sess, ssl_server, &args, cacert,
 			  get_failures, &gotf);
 
     ONV(gotf == 0,
-	("no error in verification callback; request failed: %s",
+	("no error in verification callback; error string: %s",
 	 ne_get_error(sess)));
 
     ONV(gotf & ~NE_SSL_FAILMASK,
@@ -782,6 +806,18 @@ static int fail_ssl_request_with_error(char *cert, char *cacert, const char *hos
 /* Helper function: run a request using the given self-signed server
  * certificate, and expect the request to fail with the given
  * verification failure flags. */
+static int fail_ssl_request_with_error(char *cert, char *cacert, const char *host,
+                                       const char *msg, int failures,
+                                       const char *errstr)
+{
+    return fail_ssl_request_with_error2(cert, NULL, cacert, host, NULL,
+                                        msg, failures, errstr);
+}
+
+
+/* Helper function: run a request using the given self-signed server
+ * certificate, and expect the request to fail with the given
+ * verification failure flags. */
 static int fail_ssl_request(char *cert, char *cacert, const char *host,
 			    const char *msg, int failures)
 {
@@ -801,6 +837,24 @@ static int fail_wrongCN(void)
                                        NE_SSL_IDMISMATCH,
                                        "certificate issued for a different hostname");
                             
+}
+
+static int fail_nul_cn(void)
+{
+    return fail_ssl_request_with_error2("nulcn.pem", "nulsrv.key", "nulca.pem", 
+                                        "www.bank.com", "localhost",
+                                        "certificate with incorrect CN was accepted",
+                                        NE_SSL_IDMISMATCH,
+                                        "certificate issued for a different hostname");
+}
+
+static int fail_nul_san(void)
+{
+    return fail_ssl_request_with_error2("nulsan.pem", "nulsrv.key", "nulca.pem", 
+                                        "www.bank.com", "localhost",
+                                        "certificate with incorrect CN was accepted",
+                                        NE_SSL_IDMISMATCH,
+                                        "certificate issued for a different hostname");
 }
 
 /* Check that an expired certificate is flagged as such. */
@@ -1359,6 +1413,24 @@ static int cert_identities(void)
     return OK;
 }
 
+static int nulcn_identity(void)
+{
+    ne_ssl_certificate *cert = ne_ssl_cert_read("nulcn.pem");
+    const char *id, *expected = "www.bank.com\\x00.badguy.com";
+
+    ONN("could not read nulcn.pem", cert == NULL);
+
+    id = ne_ssl_cert_identity(cert);
+
+    ONV(id != NULL
+        && strcmp(id, expected) != 0,
+        ("certificate `nulcn.pem' had identity `%s' not `%s'", 
+         id, expected));
+    
+    ne_ssl_cert_free(cert);
+    return OK;
+}
+
 static int check_validity(const char *fname,
                           const char *from, const char *until)
 {
@@ -1801,6 +1873,10 @@ ne_test tests[] = {
     T(fail_ca_notyetvalid),
     T(fail_ca_expired),
 
+    T(nulcn_identity),
+    T(fail_nul_cn),
+    T(fail_nul_san),
+    
     T(session_cache),
 	
     T(fail_tunnel),
