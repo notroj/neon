@@ -1305,6 +1305,7 @@ int ne_sock_connect(ne_socket *sock,
 ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
 {
     union saun {
+        struct sockaddr sa;
         struct sockaddr_in sin;
 #if defined(USE_GETADDRINFO) && defined(AF_INET6)
         struct sockaddr_in6 sin6;
@@ -1331,13 +1332,13 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
     ia->ai_addr = ne_malloc(sizeof *ia);
     ia->ai_addrlen = len;
     memcpy(ia->ai_addr, sad, len);
-    ia->ai_family = sad->sa_family;
+    ia->ai_family = saun.sa.sa_family;
 #else
     memcpy(ia, &saun.sin.sin_addr.s_addr, sizeof *ia);
 #endif    
 
 #if defined(USE_GETADDRINFO) && defined(AF_INET6)
-    *port = ntohs(sad->sa_family == AF_INET ? 
+    *port = ntohs(saun.sa.sa_family == AF_INET ? 
                   saun.sin.sin_port : saun.sin6.sin6_port);
 #else
     *port = ntohs(saun.sin.sin_port);
