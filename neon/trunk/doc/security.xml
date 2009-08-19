@@ -104,10 +104,10 @@
   <sect2>
     <title>Control character insertion in error messages</title>
     
-    <para>Where error messages (as returned by (<xref
-    linkend="ne_get_error"/>) contain data supplied by the server, the
-    untrusted data is sanitised to prevent both control characters and
-    non-ASCII characters from being used.  This prevents any attacks
+    <para>Where error messages (as returned by
+    (<xref linkend="ne_get_error"/>) contain data supplied by the
+    server, the untrusted data is sanitised to remove both control
+    characters and non-ASCII characters.  This prevents any attacks
     where such error messages are exposed to the user and can
     potentially distort the presentation of the interface (for
     example, through the use of a carriage return character in a text
