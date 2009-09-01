@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -776,7 +776,7 @@ static int digest_challenge(auth_session *sess, int attempt,
         challenge_error(errmsg, _("missing parameter in Digest challenge"));
 	return -1;
     }
-    else if (parms->stale && sess->nonce_count == 0) {
+    else if (parms->stale && (sess->realm == NULL || sess->nonce_count == 0)) {
         challenge_error(errmsg, _("initial Digest challenge was stale"));
         return -1;
     }
