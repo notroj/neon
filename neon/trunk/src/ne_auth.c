@@ -707,7 +707,7 @@ static char *request_ntlm(auth_session *sess, struct auth_request *request)
 {
     char *token = ne_ntlm_getRequestToken(sess->ntlm_context);
     if (token) {
-        char * req = ne_concat(sess->protocol->name, " ", token, "\r\n", NULL);
+        char *req = ne_concat(sess->protocol->name, " ", token, "\r\n", NULL);
         ne_free(token);
         return req;
     } else {
@@ -727,16 +727,16 @@ static int ntlm_challenge(auth_session *sess, int attempt,
         char password[NE_ABUFSIZ];
 
         if (get_credentials(sess, errmsg, attempt, parms, password)) {
-           /* Failed to get credentials */
-           return -1;
+            /* Failed to get credentials */
+            return -1;
         }
 
         if (sess->ntlm_context) {
-           status = ne_ntlm_destroy_context(sess->ntlm_context);
-           sess->ntlm_context = NULL;
-           if (status) {
-               return status;
-           }
+            status = ne_ntlm_destroy_context(sess->ntlm_context);
+            sess->ntlm_context = NULL;
+            if (status) {
+                return status;
+            }
         }
 
         status = ne_ntlm_create_context(&sess->ntlm_context,
