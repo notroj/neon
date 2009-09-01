@@ -43,7 +43,8 @@ NEON_BASEOBJS = ne_request.@NEON_OBJEXT@ ne_session.@NEON_OBJEXT@	\
 	ne_utils.@NEON_OBJEXT@ ne_socket.@NEON_OBJEXT@			\
 	ne_auth.@NEON_OBJEXT@ ne_redirect.@NEON_OBJEXT@			\
 	ne_compress.@NEON_OBJEXT@ ne_i18n.@NEON_OBJEXT@			\
-	ne_pkcs11.@NEON_OBJEXT@ ne_socks.@NEON_OBJEXT@
+	ne_pkcs11.@NEON_OBJEXT@ ne_socks.@NEON_OBJEXT@			\
+	ne_ntlm.@NEON_OBJEXT@
 
 NEON_DAVOBJS = $(NEON_BASEOBJS) \
 	ne_207.@NEON_OBJEXT@ ne_xml.@NEON_OBJEXT@ \
