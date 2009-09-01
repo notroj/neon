@@ -29,15 +29,15 @@
 
 typedef struct ne_ntlm_context_s ne_ntlm_context;
 
-int ne_ntlm_create_context(ne_ntlm_context **context, const char *userName, const char *password);
+ne_ntlm_context *ne__ntlm_create_context(const char *userName, const char *password);
 
-int ne_ntlm_destroy_context(ne_ntlm_context *context);
+int ne__ntlm_clear_context(ne_ntlm_context *context);
 
-int ne_ntlm_clear_context(ne_ntlm_context *context);
+void ne__ntlm_destroy_context(ne_ntlm_context *context);
 
-int ne_ntlm_authenticate(ne_ntlm_context *context, const char *responseToken);
+int ne__ntlm_authenticate(ne_ntlm_context *context, const char *responseToken);
 
-char *ne_ntlm_getRequestToken(ne_ntlm_context *context);
+char *ne__ntlm_getRequestToken(ne_ntlm_context *context);
 
 #endif /* HAVE_NTLM */
 
