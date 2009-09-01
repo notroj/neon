@@ -776,7 +776,7 @@ static int digest_challenge(auth_session *sess, int attempt,
         challenge_error(errmsg, _("missing parameter in Digest challenge"));
 	return -1;
     }
-    else if (parms->stale && (sess->realm == NULL || sess->nonce_count == 0)) {
+    else if (parms->stale && sess->realm == NULL) {
         challenge_error(errmsg, _("initial Digest challenge was stale"));
         return -1;
     }
