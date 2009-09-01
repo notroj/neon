@@ -953,6 +953,8 @@ yes|openssl)
 
    AC_DEFINE([HAVE_OPENSSL], 1, [Define if OpenSSL support is enabled])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
+
+   AC_DEFINE([HAVE_NTLM], 1, [Define if NTLM is supported])
    ;;
 gnutls)
    NE_PKG_CONFIG(NE_SSL, gnutls,
@@ -1052,7 +1054,7 @@ noX*Y*) ;;
       [AC_MSG_NOTICE([[pakchois library not found; no PKCS#11 support]])])
    ;;
 esac
-])
+]) dnl -- end defun NEON_SSL
 
 dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
