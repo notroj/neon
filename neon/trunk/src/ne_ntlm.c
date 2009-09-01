@@ -310,7 +310,7 @@ static void mkhash(char *password,
   int len = strlen(password);
 
   /* make it fit at least 14 bytes */
-  pw = malloc(len<7?14:len*2);
+  pw = ne_malloc(len<7?14:len*2);
   if(!pw)
     return; /* this will lead to a badly generated package */
 
@@ -343,7 +343,7 @@ static void mkhash(char *password,
 #ifdef USE_NTRESPONSES
   {
     /* create NT hashed password */
-    MD4_CTX MD4;
+    MD4_CTX md4;
 
     len = strlen(password);
 
@@ -352,9 +352,9 @@ static void mkhash(char *password,
       pw[2*i+1] = 0;
     }
 
-    MD4_Init(&MD4);
-    MD4_Update(&MD4, pw, 2*len);
-    MD4_Final(ntbuffer, &MD4);
+    MD4_Init(&md4);
+    MD4_Update(&md4, pw, 2*len);
+    MD4_Final(ntbuffer, &md4);
 
     memset(ntbuffer+16, 0, 8);
   }
@@ -362,7 +362,7 @@ static void mkhash(char *password,
   calc_resp(ntbuffer, nonce, ntresp);
 #endif
 
-  free(pw);
+  ne_free(pw);
 }
 
 #define SHORTPAIR(x) ((x) & 0xff), ((x) >> 8)
@@ -404,7 +404,7 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
 
     */
 
-    snprintf((char *)ntlmbuf, sizeof(ntlmbuf), "NTLMSSP%c"
+    ne_snprintf((char *)ntlmbuf, sizeof(ntlmbuf), "NTLMSSP%c"
              "\x01%c%c%c" /* 32-bit type = 1 */
              "%c%c%c%c"   /* 32-bit NTLM flag field */
              "%c%c"  /* domain length */
@@ -499,7 +499,7 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
     ntrespoff = lmrespoff + 0x18;
 
     /* Create the big type-3 message binary blob */
-    size = snprintf((char *)ntlmbuf, sizeof(ntlmbuf),
+    size = ne_snprintf((char *)ntlmbuf, sizeof(ntlmbuf),
                     "NTLMSSP%c"
                     "\x03%c%c%c" /* type-3, 32 bits */
 
@@ -582,7 +582,7 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
 
     /* Make sure that the user and domain strings fit in the target buffer
        before we copy them there. */
-    if(size + userlen + domlen >= sizeof(ntlmbuf)) {
+    if((size_t)size + userlen + domlen >= sizeof(ntlmbuf)) {
       return -1;
     }
 
@@ -626,45 +626,32 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
   return 0; /* OK */
 }
 
-int ne_ntlm_create_context(ne_ntlm_context **context, const char *userName, const char *password)
+ne_ntlm_context *ne__ntlm_create_context(const char *userName, const char *password)
 {
-    if (context == NULL) {
-	return -1;
-    } else {
-        ne_ntlm_context *ctx = ne_calloc(sizeof(ne_ntlm_context));
+    ne_ntlm_context *ctx = ne_calloc(sizeof(ne_ntlm_context));
 
-	ctx->state = NTLMSTATE_NONE;
-	ctx->user = ne_strdup(userName);
-	ctx->passwd = ne_strdup(password);
-
-	*context = ctx;
-	return 0;
-    }
+    ctx->state = NTLMSTATE_NONE;
+    ctx->user = ne_strdup(userName);
+    ctx->passwd = ne_strdup(password);
+    
+    return ctx;
 }
 
-int ne_ntlm_destroy_context(ne_ntlm_context *context)
+void ne__ntlm_destroy_context(ne_ntlm_context *context)
 {
-    if (context != NULL)  {
-        if (context->user)
-	    ne_free(context->user);
-
-	if (context->passwd)
-	    ne_free(context->passwd);
-
-	if (context->requestToken)
-	    ne_free(context->requestToken);
-
-	ne_free(context);
-    }
-    return 0;
+    if (context->user)
+        ne_free(context->user);
+    
+    if (context->passwd)
+        ne_free(context->passwd);
+    
+    if (context->requestToken)
+        ne_free(context->requestToken);
+    
+    ne_free(context);
 }
 
-int ne_ntlm_clear_context(ne_ntlm_context *context)
-{
-    return 0;
-}
-
-int ne_ntlm_authenticate(ne_ntlm_context *context, const char *responseToken)
+int ne__ntlm_authenticate(ne_ntlm_context *context, const char *responseToken)
 {
     if (context == NULL) {
 	return -1;
@@ -680,20 +667,18 @@ int ne_ntlm_authenticate(ne_ntlm_context *context, const char *responseToken)
     return ne_output_ntlm(context);
 }
 
-char *ne_ntlm_getRequestToken(ne_ntlm_context *context)
+char *ne__ntlm_getRequestToken(ne_ntlm_context *context)
 {
-    if (context == NULL) {
+    char *ret;
+
+    if (context == NULL || !context->requestToken) {
 	return NULL;
-    } else {
-        if (context->requestToken) {
-	    char *ret = ne_strdup(context->requestToken);
-	    ne_free(context->requestToken);
-	    context->requestToken = NULL;
-	    return ret;
-	} else  {
-	  return NULL;
-	}
     }
+
+    ret = ne_strdup(context->requestToken);
+    ne_free(context->requestToken);
+    context->requestToken = NULL;
+    return ret;
 }
 
 #endif /* HAVE_OPENSSL */

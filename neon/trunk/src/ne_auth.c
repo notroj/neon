@@ -296,8 +296,10 @@ static void clean_session(auth_session *sess)
     sess->sspi_context = NULL;
 #endif
 #ifdef HAVE_NTLM
-    ne_ntlm_destroy_context(sess->ntlm_context);
-    sess->ntlm_context = NULL;
+    if (sess->ntlm_context) {
+        ne__ntlm_destroy_context(sess->ntlm_context);
+        sess->ntlm_context = NULL;
+    }
 #endif
 
     sess->protocol = NULL;
@@ -705,7 +707,7 @@ static int parse_domain(auth_session *sess, const char *domain)
 
 static char *request_ntlm(auth_session *sess, struct auth_request *request) 
 {
-    char *token = ne_ntlm_getRequestToken(sess->ntlm_context);
+    char *token = ne__ntlm_getRequestToken(sess->ntlm_context);
     if (token) {
         char *req = ne_concat(sess->protocol->name, " ", token, "\r\n", NULL);
         ne_free(token);
@@ -732,22 +734,14 @@ static int ntlm_challenge(auth_session *sess, int attempt,
         }
 
         if (sess->ntlm_context) {
-            status = ne_ntlm_destroy_context(sess->ntlm_context);
+            ne__ntlm_destroy_context(sess->ntlm_context);
             sess->ntlm_context = NULL;
-            if (status) {
-                return status;
-            }
         }
 
-        status = ne_ntlm_create_context(&sess->ntlm_context,
-                                        sess->username, 
-                                        password);
-        if (status) {
-            return status;
-        }
+        sess->ntlm_context = ne__ntlm_create_context(sess->username, password);
     }
 
-    status = ne_ntlm_authenticate(sess->ntlm_context, parms->opaque);
+    status = ne__ntlm_authenticate(sess->ntlm_context, parms->opaque);
     if (status) {
         return status;
     }
@@ -1506,11 +1500,6 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 #ifdef HAVE_SSPI
     else if (sess->sspi_context) {
         ne_sspi_clear_context(sess->sspi_context);
-    }
-#endif
-#ifdef HAVE_NTLM
-    if (sess->ntlm_context) {
-        ne_ntlm_clear_context(sess->ntlm_context);
     }
 #endif
 
