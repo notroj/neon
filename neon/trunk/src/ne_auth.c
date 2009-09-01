@@ -1194,20 +1194,20 @@ static const struct auth_protocol protocols[] = {
       digest_challenge, request_digest, verify_digest_response,
       0 },
 #ifdef HAVE_GSSAPI
-    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
+    { NE_AUTH_GSSAPI, 30, "Negotiate",
       negotiate_challenge, request_negotiate, verify_negotiate_response,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
 #ifdef HAVE_SSPI
-    { NE_AUTH_NEGOTIATE, 30, "NTLM",
+    { NE_AUTH_NTLM, 30, "NTLM",
       sspi_challenge, request_sspi, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
-    { NE_AUTH_NEGOTIATE, 30, "Negotiate",
+    { NE_AUTH_GSSAPI, 30, "Negotiate",
       sspi_challenge, request_sspi, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
 #ifdef HAVE_NTLM
-    { NE_AUTH_NEGOTIATE, 30, "NTLM",
+    { NE_AUTH_NTLM, 30, "NTLM",
       ntlm_challenge, request_ntlm, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
@@ -1567,6 +1567,11 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         }
     }
 
+    if ((protomask & NE_AUTH_NEGOTIATE) == NE_AUTH_NEGOTIATE) {
+        /* Map NEGOTIATE to NTLM | GSSAPI. */
+        protomask |= NE_AUTH_GSSAPI | NE_AUTH_NTLM;
+    }
+
     ahs = ne_get_session_private(sess, id);
     if (ahs == NULL) {
         ahs = ne_calloc(sizeof *ahs);
@@ -1591,7 +1596,7 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     }
 
 #ifdef HAVE_GSSAPI
-    if (protomask & NE_AUTH_NEGOTIATE && ahs->gssname == GSS_C_NO_NAME) {
+    if ((protomask & NE_AUTH_GSSAPI) && ahs->gssname == GSS_C_NO_NAME) {
         ne_uri uri = {0};
         
         if (isproxy)
