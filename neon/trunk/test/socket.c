@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -318,6 +318,7 @@ static int addr_make_v6(void)
     /* should fail when lacking IPv6 support. */
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv6, raw6_nuls);
     ONN("ne_iaddr_make did not return NULL", ia != NULL);
+    ONN("ne_iaddr_parse did not return NULL", ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv6));
 #endif
     return OK;
 }

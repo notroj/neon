@@ -1081,6 +1081,10 @@ ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type)
 #else
     struct in_addr a;
     
+    if (type == ne_iaddr_ipv6) {
+        return NULL;
+    }
+
     if (inet_aton(addr, &a) == 0) {
         return NULL;
     }
