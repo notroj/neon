@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -222,11 +222,24 @@ raw6_cafe[16] = /* feed::cafe */ "\xfe\xed\0\0\0\0\0\0\0\0\0\0\0\0\xca\xfe",
 raw6_babe[16] = /* cafe:babe:: */ "\xca\xfe\xba\xbe\0\0\0\0\0\0\0\0\0\0\0\0";
 #endif
 
+/* Check the given inet addr is 127.0.0.1. */
+static int check_is_raw127(const ne_inet_addr *ia)
+{
+    unsigned char raw[5];
+
+    raw[4] = 'Z';
+    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv4);
+    ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
+    ONN("raw address mismatch", memcmp(raw, raw_127, 4) != 0);
+    ONN("ne_iaddr_raw buffer overflow", raw[4] != 'Z');
+
+    return OK;
+}
+
 static int addr_make_v4(void)
 {
     ne_inet_addr *ia;
     char pr[50];
-    unsigned char raw[5];
     
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
@@ -234,14 +247,24 @@ static int addr_make_v4(void)
     ne_iaddr_print(ia, pr, sizeof pr);
     ONV(strcmp(pr, "127.0.0.1"), ("address was %s not 127.0.0.1", pr));
 
-    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv4);
+    CALL(check_is_raw127(ia));
+    
+    ne_iaddr_free(ia);
 
-    raw[4] = 'Z';
-    ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
-    ONN("raw address mismatch", memcmp(raw, raw_127, 4) != 0);
-    ONN("ne_iaddr_raw buffer overflow", raw[4] != 'Z');
+    return OK;
+}
+
+static int parse_v4(void)
+{
+    ne_inet_addr *ia;
+
+    ia = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+    ONN("parse failed", ia == NULL);
+
+    CALL(check_is_raw127(ia));
 
     ne_iaddr_free(ia);
+
     return OK;
 }
 
@@ -277,15 +300,25 @@ static int addr_make_v6(void)
         ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
         ONN("raw address mismatch", memcmp(raw, as[n].addr, 4) != 0);
         ONN("ne_iaddr_raw buffer overflow", raw[16] != 'Z');
-
+        
 	ne_iaddr_free(ia);
-    }
+        
+        ia = ne_iaddr_parse(as[n].rep, ne_iaddr_ipv6);
+        ONV(ia == NULL, ("ne_iaddr_parse failed for %s", as[n].rep));
+        ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv6);
+        ONN("ne_iaddr_raw gave bad retval", ne_iaddr_raw(ia, raw) != raw);
+        ONN("raw address mismatch", memcmp(raw, as[n].addr, 4) != 0);
+        ONN("ne_iaddr_raw buffer overflow", raw[16] != 'Z');
+
+        ne_iaddr_free(ia);
+   }
 
     return OK;
 #else
     /* should fail when lacking IPv6 support. */
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv6, raw6_nuls);
     ONN("ne_iaddr_make did not return NULL", ia != NULL);
+    ONN("ne_iaddr_parse did not return NULL", ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv6));
 #endif
     return OK;
 }
@@ -1279,7 +1312,9 @@ static int socks_proxy(void)
         { NE_SOCK_SOCKSV4A, 0, "www.example.com", 55555, NULL, NULL },
         { NE_SOCK_SOCKSV5, 0, "www.example.com", 55555, NULL, NULL },
         { NE_SOCK_SOCKSV5, 4, NULL, 55555, NULL, NULL },
+#ifdef TEST_IPV6
         { NE_SOCK_SOCKSV5, 6, NULL, 55555, NULL, NULL },
+#endif
         { NE_SOCK_SOCKSV5, 0, "www.example.com", 55555, "norman", "foobar" }
     };
     unsigned n;
@@ -1293,8 +1328,10 @@ static int socks_proxy(void)
         arg.expect_port = ts[n].port;
         if (ts[n].addr == 4)
             arg.expect_addr = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+#ifdef TEST_IPV6
         else if (ts[n].addr == 6)
             arg.expect_addr = ne_iaddr_make(ne_iaddr_ipv4, raw6_cafe);
+#endif
         else
             arg.expect_fqdn = ts[n].fqdn;
         arg.username = ts[n].username;
@@ -1392,6 +1429,7 @@ ne_test tests[] = {
     T_LEAKY(init_ssl),
 #endif
     T(addr_make_v4),
+    T(parse_v4),
     T(addr_make_v6),
     T(addr_compare),
     T(addr_reverse),
