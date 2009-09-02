@@ -27,17 +27,19 @@
 
 #ifdef HAVE_NTLM
 
+#include "ne_defs.h"
+
 typedef struct ne_ntlm_context_s ne_ntlm_context;
 
-ne_ntlm_context *ne__ntlm_create_context(const char *userName, const char *password);
+NE_PRIVATE ne_ntlm_context *ne__ntlm_create_context(const char *userName, const char *password);
 
-int ne__ntlm_clear_context(ne_ntlm_context *context);
+NE_PRIVATE int ne__ntlm_clear_context(ne_ntlm_context *context);
 
-void ne__ntlm_destroy_context(ne_ntlm_context *context);
+NE_PRIVATE void ne__ntlm_destroy_context(ne_ntlm_context *context);
 
-int ne__ntlm_authenticate(ne_ntlm_context *context, const char *responseToken);
+NE_PRIVATE int ne__ntlm_authenticate(ne_ntlm_context *context, const char *responseToken);
 
-char *ne__ntlm_getRequestToken(ne_ntlm_context *context);
+NE_PRIVATE char *ne__ntlm_getRequestToken(ne_ntlm_context *context);
 
 #endif /* HAVE_NTLM */
 

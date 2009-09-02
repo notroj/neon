@@ -47,9 +47,10 @@ typedef SSL *ne_ssl_socket;
 
 /* Create a clicert object from cert DER {der, der_len}, using given
  * RSA_METHOD for the RSA object. */
-ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
-                                                 size_t der_len,
-                                                 const RSA_METHOD *method);
+NE_PRIVATE ne_ssl_client_cert *
+ne__ssl_clicert_exkey_import(const unsigned char *der,
+                             size_t der_len,
+                             const RSA_METHOD *method);
 
 #endif /* HAVE_OPENSSL */
 
@@ -86,20 +87,20 @@ struct ne_ssl_context_s {
 
 typedef gnutls_session ne_ssl_socket;
 
-ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
-                                                 size_t der_len);
+NE_PRIVATE ne_ssl_client_cert *
+ne__ssl_clicert_exkey_import(const unsigned char *der, size_t der_len);
 
 #endif /* HAVE_GNUTLS */
 
 #ifdef NE_HAVE_SSL
-ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
+NE_PRIVATE ne_ssl_socket ne__sock_sslsock(ne_socket *sock);
 
 /* Process-global initialization of the SSL library; returns non-zero
  * on error. */
-int ne__ssl_init(void);
+NE_PRIVATE int ne__ssl_init(void);
 
 /* Process-global de-initialization of the SSL library. */
-void ne__ssl_exit(void);
+NE_PRIVATE void ne__ssl_exit(void);
 #endif
 
 #endif /* NE_PRIVSSL_H */
