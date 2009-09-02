@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.4\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-02 15:50+0100\n"
+"POT-Creation-Date: 2009-09-02 21:44+0100\n"
 "PO-Revision-Date: 2002-04-09 11:12+0100\n"
 "Last-Translator: Petr Prazak <prazak@grisoft.cz>\n"
 "Language-Team: cz\n"
@@ -376,7 +376,12 @@ msgstr "Nelze se pøipojit k serveru"
 msgid "Could not connect to proxy server"
 msgstr "Nelze se pøipojit k proxy serveru"
 
-#: src/ne_request.c:1553
+#: src/ne_request.c:1541
+#, c-format
+msgid "Could not find IPv4 address of hostname %s for SOCKS v4 proxy"
+msgstr ""
+
+#: src/ne_request.c:1599
 #, fuzzy, c-format
 msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
 msgstr "Nelze navázat SSL spojení pøes proxy server."
@@ -450,32 +455,32 @@ msgstr "Øádek je pøíli¹ dlouhý"
 msgid "Host not found"
 msgstr "Poèítaè nenalezen"
 
-#: src/ne_socket.c:1161
+#: src/ne_socket.c:1187
 #, fuzzy
 msgid "Connection timed out"
 msgstr "%s: spojení vypr¹elo."
 
-#: src/ne_socket.c:1352
+#: src/ne_socket.c:1378
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1414
+#: src/ne_socket.c:1440
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1637
+#: src/ne_socket.c:1663
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1653
+#: src/ne_socket.c:1679
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1660
+#: src/ne_socket.c:1686
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1666
+#: src/ne_socket.c:1692
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "Nelze navázat SSL spojení"

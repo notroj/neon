@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.28.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-02 15:50+0100\n"
+"POT-Creation-Date: 2009-09-02 21:44+0100\n"
 "PO-Revision-Date: 2008-08-21 22:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -367,7 +367,12 @@ msgstr "Nie można połączyć się z serwerem"
 msgid "Could not connect to proxy server"
 msgstr "Nie można połączyć się z serwerem proxy"
 
-#: src/ne_request.c:1553
+#: src/ne_request.c:1541
+#, c-format
+msgid "Could not find IPv4 address of hostname %s for SOCKS v4 proxy"
+msgstr ""
+
+#: src/ne_request.c:1599
 #, fuzzy, c-format
 msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
 msgstr "Nie można utworzyć połączenia SSL przez serwer proxy: %s"
@@ -441,31 +446,31 @@ msgstr "Linia zbyt długa"
 msgid "Host not found"
 msgstr "Host nieznaleziony"
 
-#: src/ne_socket.c:1161
+#: src/ne_socket.c:1187
 msgid "Connection timed out"
 msgstr "Czas połączenia się skończył"
 
-#: src/ne_socket.c:1352
+#: src/ne_socket.c:1378
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 
-#: src/ne_socket.c:1414
+#: src/ne_socket.c:1440
 msgid "Socket family not supported"
 msgstr "Rodzina gniazda niewspierana"
 
-#: src/ne_socket.c:1637
+#: src/ne_socket.c:1663
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1653
+#: src/ne_socket.c:1679
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1660
+#: src/ne_socket.c:1686
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
 
-#: src/ne_socket.c:1666
+#: src/ne_socket.c:1692
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 
