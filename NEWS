@@ -1,23 +1,25 @@
 Changes in release 0.29.0:
 * Interface changes:
  - none, API and ABI backwards-compatible with 0.28.x and 0.27.x
-* New interfaces:
+* New interfaces and features:
+ - added NTLM auth support for Unix builds (Kai Sommerfeld, Daniel Stenberg)
+ - ne_auth.h: added NE_AUTH_GSSAPI and NE_AUTH_NTLM auth protocol codes
  - added ne_acl3744.h, updated WebDAV ACL support (Henrik Holst)
  - added built-in SOCKS v4/v4a/v5 support: ne_socket.h:ne_sock_proxy(),       
    and ne_session.h:ne_session_socks_proxy()
  - added support for system-default proxies: ne_session_system_proxy(),
    implemented using libproxy where available
- - added NE_SESSFLAG_EXPECT100 session flag
- - SSL verification failure bits extended by NE_SSL_BADCHAIN and
-   NE_SSL_REVOKED
- - added feature code NE_FEATURE_SYSPROXY
+ - ne_session.h: added NE_SESSFLAG_EXPECT100 session flag, SSL verification
+   failure bits extended by NE_SSL_BADCHAIN and NE_SSL_REVOKED
+ - ne_utils.h: added feature code NE_FEATURE_SYSPROXY
  - ne_socket.h: ne_sock_writev() (Julien Reichel), ne_sock_set_error(),
-   ne_iaddr_raw()
+   ne_iaddr_raw(), ne_iaddr_parse()
  - ne_string.h: ne_buffer_qappend(), ne_strnqdup()
 * Deprecated interfaces:
  - ne_acl.h is obsoleted by ne_acl3744.h (but is still present)
  - obsolete feature "NE_FEATURE_SOCKS" now never marked present
 * Other changes:
+ - fix handling of "stale" flag in RFC2069-style Digest auth challenge
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
  - test suite output now compacted
 
