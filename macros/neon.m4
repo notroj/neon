@@ -140,14 +140,8 @@ NE_VERSION_MINOR=29
 NE_VERSION_PATCH=0
 NE_VERSION_TAG=-dev
 
-# libtool library interface versioning.  Release policy dictates that
-# for neon 0.x.y, each x brings an incompatible interface change, and
-# each y brings no interface change, and since this policy has been
-# followed since 0.1, x == CURRENT, y == RELEASE, 0 == AGE.  For
-# 1.x.y, this will become N + x == CURRENT, y == RELEASE, x == AGE,
-# where N is constant (and equal to CURRENT + 1 from the final 0.x
-# release)
-NE_LIBTOOL_VERSINFO="${NE_VERSION_MINOR}:${NE_VERSION_PATCH}:0"
+# 0.29.x is backwards-compatible to 0.27.x, so AGE=2
+NE_LIBTOOL_VERSINFO="29:${NE_VERSION_PATCH}:2"
 
 NE_DEFINE_VERSIONS
 
