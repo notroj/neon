@@ -1122,7 +1122,7 @@ static int read_response_headers(ne_request *req)
 }
 
 /* Perform any necessary DNS lookup for the host given by *info;
- * return NE_ code. */
+ * returns NE_ code with error string set on error. */
 static int lookup_host(ne_session *sess, struct host_info *info)
 {
     NE_DEBUG(NE_DBG_HTTP, "Doing DNS lookup on %s...\n", info->hostname);
@@ -1514,6 +1514,42 @@ static int do_connect(ne_session *sess, struct host_info *host)
     return NE_OK;
 }
 
+/* For a SOCKSv4 proxy only, the IP address of the origin server (in
+ * addition to the proxy) must be known, and must be an IPv4 address.
+ * Returns NE_*; connection closed and error string set on error. */
+static int socks_origin_lookup(ne_session *sess)
+{
+    const ne_inet_addr *ia;
+    int ret;
+
+    ret = lookup_host(sess, &sess->server);
+    if (ret) {
+        /* lookup_host already set the error string. */
+        ne_close_connection(sess);
+        return ret;
+    }
+    
+    /* Find the first IPv4 address available for the server. */
+    for (ia = ne_addr_first(sess->server.address);
+         ia && ne_iaddr_typeof(ia) == ne_iaddr_ipv6;
+         ia = ne_addr_next(sess->server.address)) {
+        /* noop */
+    }
+
+    /* ... if any */
+    if (ia == NULL) {
+        ne_set_error(sess, _("Could not find IPv4 address of "
+                             "hostname %s for SOCKS v4 proxy"), 
+                     sess->server.hostname);
+        ne_close_connection(sess);
+        return NE_LOOKUP;
+    }
+
+    sess->server.current = ia;
+    
+    return ret;
+}
+
 static int open_connection(ne_session *sess) 
 {
     int ret;
@@ -1545,17 +1581,28 @@ static int open_connection(ne_session *sess)
         }
 
         if (ret == NE_OK && sess->nexthop->proxy == PROXY_SOCKS) {
-            ret = ne_sock_proxy(sess->socket, sess->socks_ver, NULL, 
-                                sess->server.hostname, sess->server.port,
-                                sess->socks_user, sess->socks_password);
-            if (ret) {
-                ne_set_error(sess, 
-                             _("Could not establish connection from "
-                               "SOCKS proxy (%s:%u): %s"),
-                             sess->nexthop->hostname,
-                             sess->nexthop->port,
-                             ne_sock_error(sess->socket));
-                ne_close_connection(sess);
+            /* Special-case for SOCKS v4 proxies, which require the
+             * client to resolve the origin server IP address. */
+            if (sess->socks_ver == NE_SOCK_SOCKSV4) {
+                ret = socks_origin_lookup(sess);
+            }
+            
+            if (ret == NE_OK) {
+                /* Perform the SOCKS handshake, instructing the proxy
+                 * to set up the connection to the origin server. */
+                ret = ne_sock_proxy(sess->socket, sess->socks_ver, 
+                                    sess->server.current,
+                                    sess->server.hostname, sess->server.port,
+                                    sess->socks_user, sess->socks_password);
+                if (ret) {
+                    ne_set_error(sess, 
+                                 _("Could not establish connection from "
+                                   "SOCKS proxy (%s:%u): %s"),
+                                 sess->nexthop->hostname,
+                                 sess->nexthop->port,
+                                 ne_sock_error(sess->socket));
+                    ne_close_connection(sess);
+                }
             }
         }
 
