@@ -141,13 +141,14 @@ struct ne_session_s {
 typedef int (*ne_push_fn)(void *userdata, const char *buf, size_t count);
 
 /* Do the SSL negotiation. */
-int ne__negotiate_ssl(ne_session *sess);
+NE_PRIVATE int ne__negotiate_ssl(ne_session *sess);
 
 /* Set the session error appropriate for SSL verification failures. */
-void ne__ssl_set_verify_err(ne_session *sess, int failures);
+NE_PRIVATE void ne__ssl_set_verify_err(ne_session *sess, int failures);
 
 /* Return non-zero if hostname from certificate (cn) matches hostname
  * used for session (hostname); follows RFC2818 logic. */
-int ne__ssl_match_hostname(const char *cn, size_t cnlen, const char *hostname);
+NE_PRIVATE int ne__ssl_match_hostname(const char *cn, size_t cnlen, 
+                                      const char *hostname);
 
 #endif /* HTTP_PRIVATE_H */
