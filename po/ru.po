@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.5\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2008-08-22 12:42+0100\n"
+"POT-Creation-Date: 2009-09-02 15:50+0100\n"
 "PO-Revision-Date: 2002-11-11 14:28+0000\n"
 "Last-Translator: Michael Sobolev <neon@webdav.org>\n"
 "Language-Team: ru\n"
@@ -21,108 +21,108 @@ msgid ""
 "Status line was: %s"
 msgstr ""
 
-#: src/ne_auth.c:130
+#: src/ne_auth.c:134
 #, fuzzy, c-format
 msgid "Could not authenticate to server: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_auth.c:135
+#: src/ne_auth.c:139
 #, fuzzy, c-format
 msgid "Could not authenticate to proxy server: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_auth.c:358
+#: src/ne_auth.c:374
 #, c-format
 msgid "rejected %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:374
+#: src/ne_auth.c:390
 msgid "missing realm in Basic challenge"
 msgstr ""
 
-#: src/ne_auth.c:469
+#: src/ne_auth.c:485
 msgid "invalid Negotiate token"
 msgstr ""
 
-#: src/ne_auth.c:492
+#: src/ne_auth.c:508
 msgid "GSSAPI authentication error: "
 msgstr ""
 
-#: src/ne_auth.c:505
+#: src/ne_auth.c:521
 #, c-format
 msgid "GSSAPI failure (code %u)"
 msgstr ""
 
-#: src/ne_auth.c:540
+#: src/ne_auth.c:556
 msgid "ignoring empty Negotiate continuation"
 msgstr ""
 
-#: src/ne_auth.c:555
+#: src/ne_auth.c:571
 #, c-format
 msgid "Negotiate response verification failed: invalid response header token"
 msgstr ""
 
-#: src/ne_auth.c:577
+#: src/ne_auth.c:593
 #, c-format
 msgid "Negotiate response verification failure: %s"
 msgstr ""
 
-#: src/ne_auth.c:699
+#: src/ne_auth.c:762
 msgid "unknown algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:703
+#: src/ne_auth.c:766
 msgid "incompatible algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:707
+#: src/ne_auth.c:770
 msgid "missing parameter in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:711
+#: src/ne_auth.c:774
 msgid "initial Digest challenge was stale"
 msgstr ""
 
-#: src/ne_auth.c:718
+#: src/ne_auth.c:781
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr ""
 
-#: src/ne_auth.c:730
+#: src/ne_auth.c:793
 #, fuzzy
 msgid "could not parse domain in Digest challenge"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_auth.c:1039
+#: src/ne_auth.c:1102
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:1044
+#: src/ne_auth.c:1107
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1054
+#: src/ne_auth.c:1117
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 
-#: src/ne_auth.c:1059
+#: src/ne_auth.c:1122
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:1102
+#: src/ne_auth.c:1165
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1228
+#: src/ne_auth.c:1296
 #, c-format
 msgid "ignored %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:1307
+#: src/ne_auth.c:1375
 #, fuzzy
 msgid "could not parse challenge"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
@@ -171,22 +171,41 @@ msgstr ""
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:799 src/ne_openssl.c:396
+#: src/ne_gnutls.c:815
+msgid "signed using insecure algorithm"
+msgstr ""
+
+#: src/ne_gnutls.c:818
+#, c-format
+msgid "unrecognized errors (%u)"
+msgstr ""
+
+#: src/ne_gnutls.c:863 src/ne_openssl.c:466
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:840 src/ne_openssl.c:633
+#: src/ne_gnutls.c:877
+#, fuzzy, c-format
+msgid "Could not verify server certificate: %s"
+msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
+
+#: src/ne_gnutls.c:889 src/ne_openssl.c:453
+#, c-format
+msgid "Certificate verification error: %s"
+msgstr ""
+
+#: src/ne_gnutls.c:922 src/ne_openssl.c:659
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:845 src/ne_openssl.c:638
+#: src/ne_gnutls.c:927 src/ne_openssl.c:664
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_gnutls.c:855
+#: src/ne_gnutls.c:937
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -205,17 +224,12 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:428
-#, c-format
-msgid "Certificate verification error: %s"
-msgstr ""
-
-#: src/ne_openssl.c:658
+#: src/ne_openssl.c:684
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:667
+#: src/ne_openssl.c:693
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr ""
@@ -257,179 +271,192 @@ msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 msgid "Could not send request body"
 msgstr ""
 
-#: src/ne_request.c:703
+#: src/ne_request.c:707
 msgid "Could not read chunk size"
 msgstr ""
 
-#: src/ne_request.c:710
+#: src/ne_request.c:714
 #, fuzzy
 msgid "Could not parse chunk size"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:747
+#: src/ne_request.c:751
 msgid "Could not read response body"
 msgstr ""
 
-#: src/ne_request.c:763
+#: src/ne_request.c:767
 #, fuzzy
 msgid "Could not read chunk delimiter"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:766
+#: src/ne_request.c:770
 msgid "Chunk delimiter was invalid"
 msgstr ""
 
-#: src/ne_request.c:872
+#: src/ne_request.c:875
 msgid "Could not read status line"
 msgstr ""
 
-#: src/ne_request.c:894
+#: src/ne_request.c:897
 #, fuzzy
 msgid "Could not parse response status line"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:906
+#: src/ne_request.c:909
 #, fuzzy
 msgid "Could not read interim response headers"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:940
+#: src/ne_request.c:943
 msgid "Could not send request"
 msgstr ""
 
-#: src/ne_request.c:988 src/ne_request.c:1006 src/ne_request.c:1016
+#: src/ne_request.c:991 src/ne_request.c:1009 src/ne_request.c:1019
 msgid "Error reading response headers"
 msgstr ""
 
-#: src/ne_request.c:1034
+#: src/ne_request.c:1037
 #, c-format
 msgid "Response header too long"
 msgstr ""
 
-#: src/ne_request.c:1116
+#: src/ne_request.c:1119
 msgid "Response exceeded maximum number of header fields"
 msgstr ""
 
-#: src/ne_request.c:1133
+#: src/ne_request.c:1134
 #, fuzzy, c-format
 msgid "Could not resolve hostname `%s': %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s.\n"
 
-#: src/ne_request.c:1264
+#: src/ne_request.c:1265
 msgid "Unknown transfer-coding in response"
 msgstr ""
 
-#: src/ne_request.c:1275
+#: src/ne_request.c:1278
 msgid "Invalid Content-Length in response"
 msgstr ""
 
-#: src/ne_request.c:1348
+#: src/ne_request.c:1351
 #, fuzzy, c-format
 msgid "Could not write to file: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:1421
+#: src/ne_request.c:1424
 #, c-format
 msgid "Could not create SSL connection through proxy server: %s"
 msgstr ""
 
-#: src/ne_request.c:1468
+#: src/ne_request.c:1463
 #, fuzzy, c-format
 msgid "Could not create socket"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_request.c:1530
-msgid "Could not connect to proxy server"
-msgstr ""
-
-#: src/ne_request.c:1531
+#: src/ne_request.c:1496
 msgid "Could not connect to server"
 msgstr ""
 
-#: src/ne_session.c:361 src/ne_session.c:372
+#: src/ne_request.c:1498
+msgid "Could not connect to proxy server"
+msgstr ""
+
+#: src/ne_request.c:1553
+#, c-format
+msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
+msgstr ""
+
+#: src/ne_session.c:513 src/ne_session.c:524
 msgid "[invalid date]"
 msgstr ""
 
-#: src/ne_session.c:385
+#: src/ne_session.c:537
 msgid "certificate is not yet valid"
 msgstr ""
 
-#: src/ne_session.c:386
+#: src/ne_session.c:538
 msgid "certificate has expired"
 msgstr ""
 
-#: src/ne_session.c:387
+#: src/ne_session.c:539
 msgid "certificate issued for a different hostname"
 msgstr ""
 
-#: src/ne_session.c:388
+#: src/ne_session.c:540
 msgid "issuer is not trusted"
 msgstr ""
 
-#: src/ne_session.c:393
+#: src/ne_session.c:541
+msgid "bad certificate chain"
+msgstr ""
+
+#: src/ne_session.c:542
+msgid "certificate has been revoked"
+msgstr ""
+
+#: src/ne_session.c:547
 msgid "Server certificate verification failed: "
 msgstr ""
 
-#: src/ne_socket.c:516 src/ne_socket.c:612 src/ne_socket.c:716
+#: src/ne_socket.c:515 src/ne_socket.c:611 src/ne_socket.c:715
 msgid "Connection closed"
 msgstr ""
 
-#: src/ne_socket.c:622 src/ne_socket.c:728
+#: src/ne_socket.c:621 src/ne_socket.c:727
 msgid "Secure connection truncated"
 msgstr ""
 
-#: src/ne_socket.c:634 src/ne_socket.c:740
+#: src/ne_socket.c:633 src/ne_socket.c:739
 #, c-format
 msgid "SSL error: %s"
 msgstr ""
 
-#: src/ne_socket.c:637
+#: src/ne_socket.c:636
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:721
+#: src/ne_socket.c:720
 #, c-format
 msgid "SSL alert received: %s"
 msgstr ""
 
-#: src/ne_socket.c:736
+#: src/ne_socket.c:735
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:862
+#: src/ne_socket.c:866
 msgid "Line too long"
 msgstr ""
 
-#: src/ne_socket.c:1007 src/ne_socket.c:1013
+#: src/ne_socket.c:1011 src/ne_socket.c:1017
 msgid "Host not found"
 msgstr ""
 
-#: src/ne_socket.c:1138
+#: src/ne_socket.c:1161
 msgid "Connection timed out"
 msgstr ""
 
-#: src/ne_socket.c:1300
+#: src/ne_socket.c:1352
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1360
+#: src/ne_socket.c:1414
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1583
+#: src/ne_socket.c:1637
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1599
+#: src/ne_socket.c:1653
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1606
+#: src/ne_socket.c:1660
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1612
+#: src/ne_socket.c:1666
 msgid "Could not create SSL structure"
 msgstr ""
 
@@ -565,16 +592,16 @@ msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 msgid "XML parse error at line %d: invalid element name"
 msgstr ""
 
-#: src/ne_xml.c:452
+#: src/ne_xml.c:474
 #, fuzzy
 msgid "Unknown error"
 msgstr "Неизвестная системная ошибка"
 
-#: src/ne_xml.c:537
+#: src/ne_xml.c:579
 msgid "Invalid Byte Order Mark"
 msgstr ""
 
-#: src/ne_xml.c:625
+#: src/ne_xml.c:667
 #, c-format
 msgid "XML parse error at line %d: %s"
 msgstr ""
