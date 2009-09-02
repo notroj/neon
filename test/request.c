@@ -2212,6 +2212,30 @@ static int socks_proxy(void)
     return await_server();
 }
 
+static int socks_v4_proxy(void)
+{
+    ne_session *sess;
+    struct socks_server srv = {0};
+
+    srv.version = NE_SOCK_SOCKSV4;
+    srv.failure = fail_none;
+    srv.expect_port = 4242;
+    srv.expect_addr = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+    srv.expect_fqdn = "localhost";
+    srv.username = "bloggs";
+    srv.password = "guessme";
+    
+    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                       single_serve_string, EMPTY_RESP));
+
+    CALL(any_2xx_request(sess, "/blee"));
+
+    ne_iaddr_free(srv.expect_addr);
+
+    ne_session_destroy(sess);
+    return await_server();
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2302,5 +2326,6 @@ ne_test tests[] = {
     T(dereg_progress),
     T(addrlist),
     T(socks_proxy),
+    T(socks_v4_proxy),
     T(NULL)
 };
