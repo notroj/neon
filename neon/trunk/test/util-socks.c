@@ -90,7 +90,7 @@ static int read_socks_0string(ne_socket *sock, const char *ctx,
     unsigned char *end = buf + *len, *p = buf;
 
     while (p < end) {
-        CALL(read_socks_byte(sock, "NUL-terminated string read", p));
+        CALL(read_socks_byte(sock, ctx, p));
 
         if (*p == '\0')
             break;
@@ -131,6 +131,9 @@ int socks_server(ne_socket *sock, void *userdata)
             srv->version == NE_SOCK_SOCKSV4A && srv->expect_addr == NULL
             && memcmp(buf + 2, "\0\0\0", 3) != 0 && buf[6] != 0);
 
+        ONN("v4 server with no expected address! fail",
+            srv->version == NE_SOCK_SOCKSV4 && srv->expect_addr == NULL);
+
         if (srv->expect_addr) {
             ONN("v4 address mismatch", 
                 memcmp(ne_iaddr_raw(srv->expect_addr, raw), buf + 2, 4) != 0);        
@@ -156,9 +159,16 @@ int socks_server(ne_socket *sock, void *userdata)
                 ("bad v4A hostname: %s not %s", buf, srv->expect_fqdn));
         }
 
-        CALL(full_write(sock, "\x00\x5A"
-                        "\x00\x00" "\x00\x00\x00\x00"
-                        "ok!\n", 12));
+        { 
+            static const char msg[] = "\x00\x5A"
+                "\x00\x00" "\x00\x00\x00\x00"
+                "ok!\n";
+        
+            if (srv->say_hello)
+                CALL(full_write(sock, msg, 12));
+            else
+                CALL(full_write(sock, msg, 8));
+        }
     
         return srv->server(sock, srv->userdata);
     }
