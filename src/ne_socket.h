@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -125,7 +125,13 @@ unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
  * successful.  Returns zero on success, or non-zero on error. */
 int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz);
 
-/* Destroy a network address object created using ne_iaddr_make. */
+/* Convert network address string 'addr' (for example, "127.0.0.1")
+ * into a network address object.  Returns NULL on parse error.  If
+ * non-NULL, return value must be freed using ne_iaddr_free. */
+ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type);
+
+/* Destroy a network address object created using ne_iaddr_make or
+ * ne_iaddr_parse. */
 void ne_iaddr_free(ne_inet_addr *addr);
 
 /* Create a socket object; returns NULL on error. */

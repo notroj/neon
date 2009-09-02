@@ -1067,6 +1067,28 @@ unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buf)
 #endif
 }
 
+ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type)
+{
+#if defined(USE_GETADDRINFO)
+    char dst[sizeof(struct in6_addr)];
+    int af = type == ne_iaddr_ipv6 ? AF_INET6 : AF_INET;
+
+    if (inet_pton(af, addr, dst) != 1) {
+        return NULL;
+    }
+    
+    return ne_iaddr_make(type, (unsigned char *)dst);
+#else
+    struct in_addr a;
+    
+    if (inet_aton(addr, &a) == 0) {
+        return NULL;
+    }
+    
+    return ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&a.s_addr);
+#endif
+}
+
 int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
 {
 #ifdef USE_GETADDRINFO
