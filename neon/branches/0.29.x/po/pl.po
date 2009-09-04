@@ -1,14 +1,14 @@
 # The Polish translation for Neon.
-# Copyright (C) 2007 Arfrever Frehtes Taifersar Arahesis
+# Copyright (C) 2007-2009 Arfrever Frehtes Taifersar Arahesis
 # This file is distributed under the same license as the Neon package.
-# Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail.com>, 2007.
+# Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail.com>, 2007-2009.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Neon 0.28.0\n"
+"Project-Id-Version: Neon 0.29.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-02 21:44+0100\n"
-"PO-Revision-Date: 2008-08-21 22:00+0200\n"
+"POT-Creation-Date: 2009-09-04 02:00+0200\n"
+"PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
 "Language-Team: Polish Neon Translator Arfrever Frehtes Taifersar Arahesis "
@@ -183,12 +183,12 @@ msgstr "[niedrukowalne]"
 
 #: src/ne_gnutls.c:815
 msgid "signed using insecure algorithm"
-msgstr ""
+msgstr "podpisane przy użyciu niebezpiecznego algorytmu"
 
 #: src/ne_gnutls.c:818
-#, fuzzy, c-format
+#, c-format
 msgid "unrecognized errors (%u)"
-msgstr "%s: nierozpoznany błąd (%u)"
+msgstr "nierozpoznane błędy (%u)"
 
 #: src/ne_gnutls.c:863 src/ne_openssl.c:466
 #, c-format
@@ -196,9 +196,9 @@ msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
 #: src/ne_gnutls.c:877
-#, fuzzy, c-format
+#, c-format
 msgid "Could not verify server certificate: %s"
-msgstr "Nie można pisać do pliku: %s"
+msgstr "Nie można zweryfikować certyfikatu serwera: %s"
 
 #: src/ne_gnutls.c:889 src/ne_openssl.c:453
 #, c-format
@@ -370,12 +370,12 @@ msgstr "Nie można połączyć się z serwerem proxy"
 #: src/ne_request.c:1541
 #, c-format
 msgid "Could not find IPv4 address of hostname %s for SOCKS v4 proxy"
-msgstr ""
+msgstr "Nie można znaleźć adresu IPv4 nazwy hosta %s dla proxy SOCKS v4"
 
 #: src/ne_request.c:1599
-#, fuzzy, c-format
+#, c-format
 msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
-msgstr "Nie można utworzyć połączenia SSL przez serwer proxy: %s"
+msgstr "Nie można nawiązać połączenia z proxy SOCKS (%s:%u): %s"
 
 #: src/ne_session.c:513 src/ne_session.c:524
 msgid "[invalid date]"
@@ -398,14 +398,12 @@ msgid "issuer is not trusted"
 msgstr "wydawca nie jest zaufany"
 
 #: src/ne_session.c:541
-#, fuzzy
 msgid "bad certificate chain"
-msgstr "certyfikat wygasł"
+msgstr "zły łańcuch certyfikatu"
 
 #: src/ne_session.c:542
-#, fuzzy
 msgid "certificate has been revoked"
-msgstr "certyfikat wygasł"
+msgstr "certyfikat został unieważniony"
 
 #: src/ne_session.c:547
 msgid "Server certificate verification failed: "

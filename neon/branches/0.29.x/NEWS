@@ -24,6 +24,7 @@ Changes in release 0.29.0:
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
  - symbol versioning used for new symbols, where supported
  - test suite output now compacted
+ - updated Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
 
 Changes in release 0.28.6:
 * SECURITY (CVE-2009-2473): Fix "billion laughs" attack against expat;
