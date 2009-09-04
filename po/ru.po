@@ -1,5 +1,5 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) Michael Sobolev, 1999
+# Copyright (C) 1999 Michael Sobolev
 #
 #, fuzzy
 msgid ""
