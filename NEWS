@@ -10,7 +10,8 @@ Changes in release 0.29.0:
  - added support for system-default proxies: ne_session_system_proxy(),
    implemented using libproxy where available
  - ne_session.h: added NE_SESSFLAG_EXPECT100 session flag, SSL verification
-   failure bits extended by NE_SSL_BADCHAIN and NE_SSL_REVOKED
+   failure bits extended by NE_SSL_BADCHAIN and NE_SSL_REVOKED, better 
+   handling of cert chain failures (thanks to Ludwig Nussel)
  - ne_utils.h: added feature code NE_FEATURE_SYSPROXY
  - ne_socket.h: ne_sock_writev() (Julien Reichel), ne_sock_set_error(),
    ne_iaddr_raw(), ne_iaddr_parse()
@@ -21,6 +22,7 @@ Changes in release 0.29.0:
 * Other changes:
  - fix handling of "stale" flag in RFC2069-style Digest auth challenge
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
+ - symbol versioning used for new symbols, where supported
  - test suite output now compacted
 
 Changes in release 0.28.6:
