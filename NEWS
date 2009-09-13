@@ -23,7 +23,7 @@ Changes in release 0.29.0:
  - fix handling of "stale" flag in RFC2069-style Digest auth challenge
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
  - symbol versioning used for new symbols, where supported
- - test suite output now compacted
+ - ensure SSL connections are closed cleanly with OpenSSL
  - updated Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
 
 Changes in release 0.28.6:
