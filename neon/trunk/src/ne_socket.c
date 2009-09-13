@@ -1863,7 +1863,12 @@ int ne_sock_close(ne_socket *sock)
 
 #if defined(HAVE_OPENSSL)
     if (sock->ssl) {
-	SSL_shutdown(sock->ssl);
+        /* Correct SSL shutdown procedure: call once... */
+        if (SSL_shutdown(sock->ssl) == 0) {
+            /* close_notify sent but not received; wait for peer to
+             * send close_notify... */
+            SSL_shutdown(sock->ssl);
+        }
 	SSL_free(sock->ssl);
     }
 #elif defined(HAVE_GNUTLS)
