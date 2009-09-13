@@ -408,18 +408,18 @@ static int simple(void)
 /* Test for SSL operation when server uses SSLv2 */
 static int simple_sslv2(void)
 {
+#ifdef HAVE_OPENSSL
+    return SKIP; /* this is breaking with current SSL. */
+#else
     ne_session *sess = ne_session_create("https", "localhost", 7777);
     struct ssl_server_args args = {SERVER_CERT, 0};
     args.use_ssl2 = 1;
     
-#ifdef HAVE_OPENSSL
-    return SKIP; /* this is breaking with current SSL. */
-#else
     ne_set_session_flag(sess, NE_SESSFLAG_SSLv2, 1);
     CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-#endif
     ne_session_destroy(sess);
     return OK;
+#endif
 }
 
 /* Serves using HTTP/1.0 get-till-EOF semantics. */
