@@ -11,7 +11,7 @@ Changes in release 0.29.0:
    implemented using libproxy where available
  - ne_session.h: added NE_SESSFLAG_EXPECT100 session flag, SSL verification
    failure bits extended by NE_SSL_BADCHAIN and NE_SSL_REVOKED, better 
-   handling of cert chain failures (thanks to Ludwig Nussel)
+   handling of failures within the cert chain (thanks to Ludwig Nussel)
  - ne_utils.h: added feature code NE_FEATURE_SYSPROXY
  - ne_socket.h: ne_sock_writev() (Julien Reichel), ne_sock_set_error(),
    ne_iaddr_raw(), ne_iaddr_parse()
