@@ -1639,6 +1639,10 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     if (ret != 1) {
         return error_ossl(sock, ret);
     }
+
+    if (SSL_session_reused(ssl)) {
+        NE_DEBUG(NE_DBG_SSL, "ssl: Server reused session.\n");
+    }
 #elif defined(HAVE_GNUTLS)
     gnutls_init(&ssl, GNUTLS_SERVER);
     gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
