@@ -510,7 +510,6 @@ fi
 if test "$NE_FLAG_LFS" = "yes"; then
    AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF64_T], 
                       [Define to be printf format string for ne_off_t])
-   NE_ADD_ABITAG(LFS)
 else
    AC_DEFINE_UNQUOTED([NE_FMT_NE_OFF_T], [NE_FMT_OFF_T])
 fi
