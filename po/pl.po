@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.29.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-04 02:00+0200\n"
+"POT-Creation-Date: 2009-09-13 12:56+0100\n"
 "PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -190,7 +190,7 @@ msgstr "podpisane przy użyciu niebezpiecznego algorytmu"
 msgid "unrecognized errors (%u)"
 msgstr "nierozpoznane błędy (%u)"
 
-#: src/ne_gnutls.c:863 src/ne_openssl.c:466
+#: src/ne_gnutls.c:863 src/ne_openssl.c:467
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
@@ -200,17 +200,17 @@ msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 msgid "Could not verify server certificate: %s"
 msgstr "Nie można zweryfikować certyfikatu serwera: %s"
 
-#: src/ne_gnutls.c:889 src/ne_openssl.c:453
+#: src/ne_gnutls.c:889 src/ne_openssl.c:454
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_gnutls.c:922 src/ne_openssl.c:659
+#: src/ne_gnutls.c:922 src/ne_openssl.c:673
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
 
-#: src/ne_gnutls.c:927 src/ne_openssl.c:664
+#: src/ne_gnutls.c:927 src/ne_openssl.c:678
 #, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Uzgodnienie SSL nie udało się: %s"
@@ -235,12 +235,12 @@ msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 "Nie zwrócono żadnej aktywnej blokady dla <%s> w odpowiedzi LOCK refresh"
 
-#: src/ne_openssl.c:684
+#: src/ne_openssl.c:698
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
 
-#: src/ne_openssl.c:693
+#: src/ne_openssl.c:707
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
@@ -456,19 +456,19 @@ msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 msgid "Socket family not supported"
 msgstr "Rodzina gniazda niewspierana"
 
-#: src/ne_socket.c:1663
+#: src/ne_socket.c:1667
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1679
+#: src/ne_socket.c:1683
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1686
+#: src/ne_socket.c:1690
 msgid "SSL disabled due to library version mismatch"
 msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
 
-#: src/ne_socket.c:1692
+#: src/ne_socket.c:1696
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 

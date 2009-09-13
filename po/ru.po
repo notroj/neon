@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.5\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-02 21:44+0100\n"
+"POT-Creation-Date: 2009-09-13 12:56+0100\n"
 "PO-Revision-Date: 2002-11-11 14:28+0000\n"
 "Last-Translator: Michael Sobolev <neon@webdav.org>\n"
 "Language-Team: ru\n"
@@ -180,7 +180,7 @@ msgstr ""
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:863 src/ne_openssl.c:466
+#: src/ne_gnutls.c:863 src/ne_openssl.c:467
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
@@ -190,17 +190,17 @@ msgstr ""
 msgid "Could not verify server certificate: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
 
-#: src/ne_gnutls.c:889 src/ne_openssl.c:453
+#: src/ne_gnutls.c:889 src/ne_openssl.c:454
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:922 src/ne_openssl.c:659
+#: src/ne_gnutls.c:922 src/ne_openssl.c:673
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:927 src/ne_openssl.c:664
+#: src/ne_gnutls.c:927 src/ne_openssl.c:678
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "%s: Ошибка: Не удалось открыть конфигурационный файл: %s\n"
@@ -224,12 +224,12 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:684
+#: src/ne_openssl.c:698
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:693
+#: src/ne_openssl.c:707
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr ""
@@ -449,19 +449,19 @@ msgstr ""
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1663
+#: src/ne_socket.c:1667
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1679
+#: src/ne_socket.c:1683
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1686
+#: src/ne_socket.c:1690
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1692
+#: src/ne_socket.c:1696
 msgid "Could not create SSL structure"
 msgstr ""
 
