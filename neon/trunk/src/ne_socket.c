@@ -1069,7 +1069,7 @@ unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buf)
 
 ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type)
 {
-#if defined(USE_GETADDRINFO)
+#if defined(USE_GETADDRINFO) && defined(HAVE_INET_PTON)
     char dst[sizeof(struct in6_addr)];
     int af = type == ne_iaddr_ipv6 ? AF_INET6 : AF_INET;
 
@@ -1078,19 +1078,52 @@ ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type)
     }
     
     return ne_iaddr_make(type, (unsigned char *)dst);
-#else
+#elif defined(USE_GETADDRINFO) && !defined(HAVE_INET_PTON)
+    /* For Windows, which lacks inet_pton(). */
+    struct addrinfo *ai, *rv, hints;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NUMERICHOST;
+    hints.ai_family = type == ne_iaddr_ipv6 ? AF_INET6 : AF_INET;
+    
+    if (getaddrinfo(addr, NULL, &hints, &ai)) {
+        return NULL;
+    }
+    
+    /* Copy the returned addrinfo, since it needs to be ne_free()-able
+     * later; must only call freeaddrinfo() on ai. */
+    rv = ne_calloc(sizeof *rv);
+    memcpy(rv, ai, sizeof *rv);
+    rv->ai_next = NULL;
+    rv->ai_canonname = NULL;
+    rv->ai_addr = ne_calloc(ai->ai_addrlen);
+    memcpy(rv->ai_addr, ai->ai_addr, ai->ai_addrlen);
+    freeaddrinfo(ai);
+    
+    return rv;    
+#else /* !USE_GETADDRINFO */
     struct in_addr a;
     
     if (type == ne_iaddr_ipv6) {
         return NULL;
     }
 
+#ifdef WIN32
+    /* inet_addr() is broken because INADDR_NONE is a valid
+     * broadcast address, so only use it on Windows. */
+    a.s_addr = inet_addr(addr);
+    if (a.s_addr == INADDR_NONE) {
+        return NULL;
+    }
+#else /* !WIN32 */
     if (inet_aton(addr, &a) == 0) {
         return NULL;
     }
+#endif
     
     return ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&a.s_addr);
-#endif
+#endif /* !USE_GETADDRINFO */
 }
 
 int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
