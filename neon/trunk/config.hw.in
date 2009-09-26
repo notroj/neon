@@ -77,7 +77,7 @@
 #define in_addr_t                       unsigned int
 #endif
 
-#define socklen_t                       int
+typedef int socklen_t;
 
 #include <io.h>
 #define read _read
