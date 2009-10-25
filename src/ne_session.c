@@ -171,9 +171,24 @@ ne_session *ne_session_create(const char *scheme,
 
 #ifdef NE_HAVE_SSL
     if (sess->use_ssl) {
+        ne_inet_addr *ia;
+
         sess->ssl_context = ne_ssl_context_create(0);
         sess->flags[NE_SESSFLAG_SSLv2] = 1;
-        sess->flags[NE_SESSFLAG_TLS_SNI] = 1;
+        
+        /* If the hostname parses as an IP address, don't
+         * enable SNI by default. */
+        ia = ne_iaddr_parse(hostname, ne_iaddr_ipv4);
+        if (ia == NULL)
+            ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6);
+
+        if (ia) {
+            sess->flags[NE_SESSFLAG_TLS_SNI] = 1;
+            ne_iaddr_free(ia);
+        }
+        NE_DEBUG(NE_DBG_SSL, "ssl: SNI %s by default.\n",
+                 sess->flags[NE_SESSFLAG_TLS_SNI] ?
+                 "enabled" : "disabled");
     }
 #endif
 
