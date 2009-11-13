@@ -59,6 +59,7 @@
 #include <stddef.h>
 #ifdef USE_GETADDRINFO
 #include <ws2tcpip.h>
+#include <wspiapi.h>
 #endif
 #endif
 
