@@ -656,6 +656,9 @@ int ne__ntlm_authenticate(ne_ntlm_context *context, const char *responseToken)
     if (context == NULL) {
 	return -1;
     } else {
+        if (!responseToken && (context->state == NTLMSTATE_TYPE3))
+            context->state = NTLMSTATE_NONE;
+
         if (context->state <= NTLMSTATE_TYPE3) {
 	  ntlm ntlmstatus = ne_input_ntlm(context, responseToken);
 
