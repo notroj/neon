@@ -725,7 +725,7 @@ static int ntlm_challenge(auth_session *sess, int attempt,
     
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: NTLM challenge.\n");
     
-    if (!parms->opaque) {
+    if (!parms->opaque && (!sess->ntlm_context || (attempt > 1))) {
         char password[NE_ABUFSIZ];
 
         if (get_credentials(sess, errmsg, attempt, parms, password)) {
