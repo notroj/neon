@@ -356,7 +356,7 @@ static void mkhash(char *password,
     MD4_Update(&md4, pw, 2*len);
     MD4_Final(ntbuffer, &md4);
 
-    memset(ntbuffer+16, 0, 8);
+    memset(ntbuffer+16, 0, 5);
   }
 
   calc_resp(ntbuffer, nonce, ntresp);
