@@ -785,8 +785,10 @@ static int map_verify_failures(unsigned int *status)
         int to;
     } map[] = {
         { GNUTLS_CERT_REVOKED, NE_SSL_REVOKED },
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
         { GNUTLS_CERT_NOT_ACTIVATED, NE_SSL_NOTYETVALID },
         { GNUTLS_CERT_EXPIRED, NE_SSL_EXPIRED },
+#endif
         { GNUTLS_CERT_INVALID|GNUTLS_CERT_SIGNER_NOT_FOUND, NE_SSL_UNTRUSTED },
         { GNUTLS_CERT_INVALID|GNUTLS_CERT_SIGNER_NOT_CA, NE_SSL_UNTRUSTED }
     };
