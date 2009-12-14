@@ -171,7 +171,7 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
     unsigned int port;
     pair.fn = fn;
     pair.userdata = ud;
-    CALL(new_spawn_server(wrap_serve, &pair, &port));
+    CALL(new_spawn_server(1, wrap_serve, &pair, &port));
     CALL(do_connect(sock, localhost, port));
     ONV(ne_sock_connect_ssl(*sock, client_ctx, NULL),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
@@ -183,7 +183,7 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
     unsigned int port;
-    CALL(new_spawn_server(fn, ud, &port));
+    CALL(new_spawn_server(1, fn, ud, &port));
     return do_connect(sock, localhost, port);
 }
 #endif
@@ -406,7 +406,7 @@ static int addr_connect(void)
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(serve_close, NULL, &port));
+    CALL(new_spawn_server(1, serve_close, NULL, &port));
     ONN("could not connect", ne_sock_connect(sock, ia, port));
     ne_sock_close(sock);
     CALL(await_server());
@@ -425,7 +425,7 @@ static int addr_peer(void)
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(serve_close, NULL, &realport));
+    CALL(new_spawn_server(1, serve_close, NULL, &realport));
     ONN("could not connect", ne_sock_connect(sock, ia, realport));
 
     ia2 = ne_sock_peer(sock, &port);
@@ -1199,7 +1199,7 @@ static int try_prebind(int addr, int port)
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(serve_ppeer, NULL, &srvport));
+    CALL(new_spawn_server(1, serve_ppeer, NULL, &srvport));
 
     ne_sock_prebind(sock, addr ? ia : NULL, port ? 7778 : 0);
 
@@ -1299,7 +1299,7 @@ static int begin_socks(ne_socket **sock, struct socks_server *srv,
     srv->server = server;
     srv->userdata = userdata;
     srv->say_hello = 1;
-    CALL(new_spawn_server(socks_server, srv, &port));
+    CALL(new_spawn_server(1, socks_server, srv, &port));
     return do_connect(sock, localhost, port);
 }
 

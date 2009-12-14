@@ -315,7 +315,8 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
     return OK;
 }
 
-int new_spawn_server(server_fn fn, void *userdata, unsigned int *port)
+int new_spawn_server(int count, server_fn fn, void *userdata,
+                     unsigned int *port)
 {
     struct sockaddr_in sa;
     socklen_t salen = sizeof sa;
@@ -338,20 +339,29 @@ int new_spawn_server(server_fn fn, void *userdata, unsigned int *port)
     ONN("failed to fork server", child == -1);
 
     if (child == 0) {
-        ne_socket *sock = ne_sock_create();
-        int ret;
+        int ret, iter = 1;
         
         in_child();
 
-        if (ne_sock_accept(sock, ls)) {
-            t_context("Server child could not accept connection: %s", 
-                      ne_sock_error(sock));
-            exit(FAIL);
-        }
+        do {
+            ne_socket *sock = ne_sock_create();
+            
+            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d (of %d), "
+                     "awaiting connection...\n", iter, count);
 
-        ret = fn(sock, userdata);
+            if (ne_sock_accept(sock, ls)) {
+                t_context("Server child could not accept connection: %s", 
+                          ne_sock_error(sock));
+                exit(FAIL);
+            }
 
-        close_socket(sock);
+            NE_DEBUG(NE_DBG_HTTP, "child got connection, invoking server\n");
+            ret = fn(sock, userdata);
+            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d returns %d\n",
+                     iter, ret);
+
+            close_socket(sock);
+        } while (ret == 0 && ++iter <= count);
 
         NE_DEBUG(NE_DBG_HTTP, "child terminating with %d\n", ret);
         exit(ret);
