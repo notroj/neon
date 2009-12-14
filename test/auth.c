@@ -789,16 +789,14 @@ static int test_digest(struct digest_parms *parms)
              parms->stale);
 
     if (parms->proxy) {
-        sess = ne_session_create("http", "www.example.com", 80);
-        ne_session_proxy(sess, "localhost", 7777);
+        CALL(proxied_session_server(&sess, "www.example.com", 80,
+                                    serve_digest, parms));
         ne_set_proxy_auth(sess, auth_cb, NULL);
     } 
     else {
-        sess = ne_session_create("http", "localhost", 7777);
+        CALL(session_server(&sess, serve_digest, parms));
         ne_set_server_auth(sess, auth_cb, NULL);
     }
-
-    CALL(spawn_server(7777, serve_digest, parms));
 
     do {
         CALL(any_2xx_request(sess, "/fish"));
@@ -1070,11 +1068,10 @@ static int domains(void)
     parms.domain = "http://localhost:7777/fish/ https://example.com /agaor /other";
     parms.num_requests = 6;
 
-    CALL(make_session(&sess, serve_digest, &parms));
+    CALL(proxied_session_server(&sess, "localhost", 7777,
+                                serve_digest, &parms));
 
     ne_set_server_auth(sess, auth_cb, NULL);
-
-    ne_session_proxy(sess, "localhost", 7777);
 
     CALL(any_2xx_request(sess, "/fish/0"));
     CALL(any_2xx_request(sess, "/outside"));
@@ -1101,11 +1098,10 @@ static int CVE_2008_3746(void)
     parms.domain = "foo";
     parms.num_requests = 1;
 
-    CALL(make_session(&sess, serve_digest, &parms));
+    CALL(proxied_session_server(&sess, "www.example.com", 80,
+                                serve_digest, &parms));
 
     ne_set_server_auth(sess, auth_cb, NULL);
-
-    ne_session_proxy(sess, "localhost", 7777);
 
     any_2xx_request(sess, "/fish/0");
     
