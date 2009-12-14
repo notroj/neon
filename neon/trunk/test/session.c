@@ -1,6 +1,6 @@
 /* 
    Tests for session handling
-   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, 2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,12 +36,12 @@
 static int fill_uri(void)
 {
     ne_uri uri = {0};
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    ne_session *sess = ne_session_create("http", "localhost", 1234);
     
     ne_fill_server_uri(sess, &uri);
 
     ONCMP("localhost", uri.host, "fill_uri", "host");
-    ONN("port mis-match", uri.port != 7777);
+    ONN("port mis-match", uri.port != 1234);
     ONCMP("http", uri.scheme, "fill_uri", "scheme");
 
     ne_session_destroy(sess);
@@ -53,7 +53,7 @@ static int fill_uri(void)
 static int fill_proxy_uri(void)
 {
     ne_uri uri = {0};
-    ne_session *sess = ne_session_create("http", "localhost", 7777);
+    ne_session *sess = ne_session_create("http", "localhost", 1234);
 
     ne_fill_proxy_uri(sess, &uri);
     
