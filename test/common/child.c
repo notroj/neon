@@ -1,6 +1,6 @@
 /* 
    Framework for testing with a server process
-   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -311,6 +311,53 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	minisleep();
 #endif
     }
+
+    return OK;
+}
+
+int new_spawn_server(server_fn fn, void *userdata, unsigned int *port)
+{
+    struct sockaddr_in sa;
+    socklen_t salen = sizeof sa;
+    int ls;
+    
+    ls = do_listen(lh_addr, 0);
+    ONN("could not bind/listen fd for server", ls < 0);
+
+    ONV(getsockname(ls, &sa, &salen) != 0,
+        ("could not get socket name for listening fd: %s",
+         strerror(errno)));
+    
+    *port = ntohs(sa.sin_port);
+
+    NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
+    
+    NE_DEBUG(NE_DBG_SOCKET, "child forking now...\n");
+
+    child = fork();
+    ONN("failed to fork server", child == -1);
+
+    if (child == 0) {
+        ne_socket *sock = ne_sock_create();
+        int ret;
+        
+        in_child();
+
+        if (ne_sock_accept(sock, ls)) {
+            t_context("Server child could not accept connection: %s", 
+                      ne_sock_error(sock));
+            exit(FAIL);
+        }
+
+        ret = fn(sock, userdata);
+
+        close_socket(sock);
+
+        NE_DEBUG(NE_DBG_HTTP, "child terminating with %d\n", ret);
+        exit(ret);
+    }
+
+    close(ls);
 
     return OK;
 }
