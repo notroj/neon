@@ -178,7 +178,7 @@ int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
     unsigned int port;
     
-    CALL(new_spawn_server(fn, userdata, &port));
+    CALL(new_spawn_server(1, fn, userdata, &port));
     
     *sess = ne_session_create("http", "localhost", port);
 
@@ -191,7 +191,7 @@ int proxied_session_server(ne_session **sess, const char *scheme,
 {
     unsigned int port;
     
-    CALL(new_spawn_server(fn, userdata, &port));
+    CALL(new_spawn_server(1, fn, userdata, &port));
     
     *sess = ne_session_create(scheme, host, fakeport);
 

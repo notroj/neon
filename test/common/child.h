@@ -66,7 +66,8 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n);
 /* Forks a server child process running 'fn(userdata)' on an
  * unspecified port.  Sets test suite error on failure; on success,
  * sets *port to bound port number. */
-int new_spawn_server(server_fn fn, void *userdata, unsigned int *port);
+int new_spawn_server(int count, server_fn fn, void *userdata, 
+                     unsigned int *port);
 
 /* Blocks until child process exits, and gives return code of 'fn'. */
 int await_server(void);
