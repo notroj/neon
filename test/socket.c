@@ -168,10 +168,11 @@ static int wrap_serve(ne_socket *sock, void *ud)
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
     struct serve_pair pair;
+    unsigned int port;
     pair.fn = fn;
     pair.userdata = ud;
-    CALL(spawn_server(7777, wrap_serve, &pair));
-    CALL(do_connect(sock, localhost, 7777));
+    CALL(new_spawn_server(wrap_serve, &pair, &port));
+    CALL(do_connect(sock, localhost, port));
     ONV(ne_sock_connect_ssl(*sock, client_ctx, NULL),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
     return OK;
@@ -181,8 +182,9 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
 /* non-SSL begin() function. */
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
-    CALL(spawn_server(7777, fn, ud));
-    return do_connect(sock, localhost, 7777);
+    unsigned int port;
+    CALL(new_spawn_server(fn, ud, &port));
+    return do_connect(sock, localhost, port);
 }
 #endif
 
@@ -399,12 +401,13 @@ static int addr_connect(void)
 {
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia;
+    unsigned int port;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(spawn_server(7777, serve_close, NULL));
-    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
+    CALL(new_spawn_server(serve_close, NULL, &port));
+    ONN("could not connect", ne_sock_connect(sock, ia, port));
     ne_sock_close(sock);
     CALL(await_server());
 
@@ -416,21 +419,21 @@ static int addr_peer(void)
 {
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia, *ia2;
-    unsigned int port = 9999;
+    unsigned int port = 9999, realport;
     int ret;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(spawn_server(7777, serve_close, NULL));
-    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
+    CALL(new_spawn_server(serve_close, NULL, &realport));
+    ONN("could not connect", ne_sock_connect(sock, ia, realport));
 
     ia2 = ne_sock_peer(sock, &port);
     ret = ne_iaddr_cmp(ia, ia2);
     ONV(ret != 0,
         ("comparison of peer with server address was %d", ret));
 
-    ONV(port != 7777, ("got peer port %u", port));
+    ONV(port != realport, ("got peer port %u, expected %u", port, realport));
  
     ne_sock_close(sock);
     CALL(await_server());
@@ -1191,15 +1194,16 @@ static int try_prebind(int addr, int port)
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia;
     char buf[128], line[256];
+    unsigned int srvport;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(spawn_server(7777, serve_ppeer, NULL));
+    CALL(new_spawn_server(serve_ppeer, NULL, &srvport));
 
     ne_sock_prebind(sock, addr ? ia : NULL, port ? 7778 : 0);
 
-    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
+    ONN("could not connect", ne_sock_connect(sock, ia, srvport));
 
     ne_snprintf(line, sizeof line,
                 "%s@%d\n", ne_iaddr_print(ia, buf, sizeof buf),
@@ -1291,11 +1295,12 @@ static int error(void)
 static int begin_socks(ne_socket **sock, struct socks_server *srv,
                        server_fn server, void *userdata)
 {
+    unsigned int port;
     srv->server = server;
     srv->userdata = userdata;
     srv->say_hello = 1;
-    CALL(spawn_server(7777, socks_server, srv));
-    return do_connect(sock, localhost, 7777);
+    CALL(new_spawn_server(socks_server, srv, &port));
+    return do_connect(sock, localhost, port);
 }
 
 static int socks_proxy(void)
