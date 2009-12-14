@@ -1,6 +1,6 @@
 /* 
    Utility functions for HTTP client tests
-   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,12 +32,6 @@
 #include "child.h"
 #include "tests.h"
 #include "utils.h"
-
-int make_session(ne_session **sess, server_fn fn, void *ud)
-{
-    *sess = ne_session_create("http", "localhost", 7777);
-    return spawn_server(7777, fn, ud);
-}
 
 static int serve_response(ne_socket *s, const char *response)
 {
@@ -180,3 +174,33 @@ int full_write(ne_socket *sock, const char *data, size_t len)
     return OK;
 }
 
+int session_server(ne_session **sess, server_fn fn, void *userdata)
+{
+    unsigned int port;
+    
+    CALL(new_spawn_server(fn, userdata, &port));
+    
+    *sess = ne_session_create("http", "localhost", port);
+
+    return OK;
+}
+
+int proxied_session_server(ne_session **sess, 
+                           const char *host, unsigned int fakeport,
+                           server_fn fn, void *userdata)
+{
+    unsigned int port;
+    
+    CALL(new_spawn_server(fn, userdata, &port));
+    
+    *sess = ne_session_create("http", host, fakeport);
+
+    ne_session_proxy(*sess, "localhost", port);
+
+    return OK;
+}
+
+int make_session(ne_session **sess, server_fn fn, void *ud)
+{
+    return session_server(sess, fn, ud);
+}
