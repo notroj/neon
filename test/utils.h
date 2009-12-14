@@ -120,7 +120,7 @@ int session_server(ne_session **sess, server_fn fn, void *userdata);
  * on success.  Uses an unspecified hostname/port for the server;
  * session is created as if using origin 'host:fakeport' via proxy to
  * spawned server.  */
-int proxied_session_server(ne_session **sess, 
+int proxied_session_server(ne_session **sess, const char *scheme,
                            const char *host, unsigned int fakeport,
                            server_fn fn, void *userdata);
    
