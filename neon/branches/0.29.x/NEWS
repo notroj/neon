@@ -1,3 +1,13 @@
+Changes in release 0.29.1:
+* Fixes for (Unix) NTLM implementation:
+ - fix handling of session timeout (Kai Sommerfeld)
+ - fix possible crash (basic@mozdev.org)
+* Fix unnecessary re-authentication with SSPI (Danil Shopyrin)
+* Build fixes for Win32:
+  - fix use of socklen_t with recent SDKs (Stefan Kung)
+  - fix USE_GETADDRINFO on Win2K (Kai Sommerfeld)
+* Fix build with versions of GnuTLS older than 2.8.0.
+
 Changes in release 0.29.0:
 * Interface changes:
  - none, API and ABI backwards-compatible with 0.28.x and 0.27.x
