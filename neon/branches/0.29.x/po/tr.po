@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy-0.10.10\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-09-13 12:56+0100\n"
+"POT-Creation-Date: 2009-12-15 22:23+0000\n"
 "PO-Revision-Date: 2001-01-03 HO:MI+ZONE\n"
 "Last-Translator: A. Sinan Unur <sinan@unur.com>\n"
 "Language-Team: tr\n"
@@ -174,41 +174,41 @@ msgstr ""
 msgid "[unprintable]"
 msgstr ""
 
-#: src/ne_gnutls.c:815
+#: src/ne_gnutls.c:817
 msgid "signed using insecure algorithm"
 msgstr ""
 
-#: src/ne_gnutls.c:818
+#: src/ne_gnutls.c:820
 #, c-format
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:863 src/ne_openssl.c:467
+#: src/ne_gnutls.c:865 src/ne_openssl.c:467
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
-#: src/ne_gnutls.c:877
+#: src/ne_gnutls.c:879
 #, fuzzy, c-format
 msgid "Could not verify server certificate: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_gnutls.c:889 src/ne_openssl.c:454
+#: src/ne_gnutls.c:891 src/ne_openssl.c:454
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:922 src/ne_openssl.c:673
+#: src/ne_gnutls.c:924 src/ne_openssl.c:673
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:927 src/ne_openssl.c:678
+#: src/ne_gnutls.c:929 src/ne_openssl.c:678
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
 
-#: src/ne_gnutls.c:937
+#: src/ne_gnutls.c:939
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr ""
@@ -372,101 +372,101 @@ msgstr ""
 msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
 msgstr "Ara sunucu üzerinden SSL baðlantýsý kurulamadý"
 
-#: src/ne_session.c:513 src/ne_session.c:524
+#: src/ne_session.c:528 src/ne_session.c:539
 msgid "[invalid date]"
 msgstr ""
 
-#: src/ne_session.c:537
+#: src/ne_session.c:552
 msgid "certificate is not yet valid"
 msgstr ""
 
-#: src/ne_session.c:538
+#: src/ne_session.c:553
 msgid "certificate has expired"
 msgstr ""
 
-#: src/ne_session.c:539
+#: src/ne_session.c:554
 msgid "certificate issued for a different hostname"
 msgstr ""
 
-#: src/ne_session.c:540
+#: src/ne_session.c:555
 msgid "issuer is not trusted"
 msgstr ""
 
-#: src/ne_session.c:541
+#: src/ne_session.c:556
 msgid "bad certificate chain"
 msgstr ""
 
-#: src/ne_session.c:542
+#: src/ne_session.c:557
 msgid "certificate has been revoked"
 msgstr ""
 
-#: src/ne_session.c:547
+#: src/ne_session.c:562
 msgid "Server certificate verification failed: "
 msgstr ""
 
-#: src/ne_socket.c:515 src/ne_socket.c:611 src/ne_socket.c:715
+#: src/ne_socket.c:516 src/ne_socket.c:612 src/ne_socket.c:716
 #, fuzzy
 msgid "Connection closed"
 msgstr "Baðlantý sunucu tarafýndan kesildi"
 
-#: src/ne_socket.c:621 src/ne_socket.c:727
+#: src/ne_socket.c:622 src/ne_socket.c:728
 #, fuzzy
 msgid "Secure connection truncated"
 msgstr "Baðlantý süre sýnýrý aþýldý."
 
-#: src/ne_socket.c:633 src/ne_socket.c:739
+#: src/ne_socket.c:634 src/ne_socket.c:740
 #, fuzzy, c-format
 msgid "SSL error: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:636
+#: src/ne_socket.c:637
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:720
+#: src/ne_socket.c:721
 #, fuzzy, c-format
 msgid "SSL alert received: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:735
+#: src/ne_socket.c:736
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:866
+#: src/ne_socket.c:867
 msgid "Line too long"
 msgstr "Satýr çok uzun"
 
-#: src/ne_socket.c:1011 src/ne_socket.c:1017
+#: src/ne_socket.c:1012 src/ne_socket.c:1018
 msgid "Host not found"
 msgstr "Sunucu bulunamadý"
 
-#: src/ne_socket.c:1187
+#: src/ne_socket.c:1221
 #, fuzzy
 msgid "Connection timed out"
 msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
 
-#: src/ne_socket.c:1378
+#: src/ne_socket.c:1412
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1440
+#: src/ne_socket.c:1474
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1667
+#: src/ne_socket.c:1701
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1683
+#: src/ne_socket.c:1717
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1690
+#: src/ne_socket.c:1724
 msgid "SSL disabled due to library version mismatch"
 msgstr ""
 
-#: src/ne_socket.c:1696
+#: src/ne_socket.c:1730
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "SSL baðlantýsý kurulamadý"
