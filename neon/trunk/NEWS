@@ -1,25 +1,41 @@
+Changes in release 0.29.1:
+* Fixes for (Unix) NTLM implementation:
+ - fix handling of session timeout (Kai Sommerfeld)
+ - fix possible crash (basic@mozdev.org)
+* Fix unnecessary re-authentication with SSPI (Danil Shopyrin)
+* Build fixes for Win32:
+  - fix use of socklen_t with recent SDKs (Stefan Kung)
+  - fix USE_GETADDRINFO on Win2K (Kai Sommerfeld)
+* Fix build with versions of GnuTLS older than 2.8.0.
+
 Changes in release 0.29.0:
 * Interface changes:
  - none, API and ABI backwards-compatible with 0.28.x and 0.27.x
-* New interfaces:
+* New interfaces and features:
+ - added NTLM auth support for Unix builds (Kai Sommerfeld, Daniel Stenberg)
+ - ne_auth.h: added NE_AUTH_GSSAPI and NE_AUTH_NTLM auth protocol codes
  - added ne_acl3744.h, updated WebDAV ACL support (Henrik Holst)
  - added built-in SOCKS v4/v4a/v5 support: ne_socket.h:ne_sock_proxy(),       
    and ne_session.h:ne_session_socks_proxy()
  - added support for system-default proxies: ne_session_system_proxy(),
    implemented using libproxy where available
- - added NE_SESSFLAG_EXPECT100 session flag
- - SSL verification failure bits extended by NE_SSL_BADCHAIN and
-   NE_SSL_REVOKED
- - added feature code NE_FEATURE_SYSPROXY
+ - ne_session.h: added NE_SESSFLAG_EXPECT100 session flag, SSL verification
+   failure bits extended by NE_SSL_BADCHAIN and NE_SSL_REVOKED, better 
+   handling of failures within the cert chain (thanks to Ludwig Nussel)
+ - ne_utils.h: added feature code NE_FEATURE_SYSPROXY
  - ne_socket.h: ne_sock_writev() (Julien Reichel), ne_sock_set_error(),
-   ne_iaddr_raw()
+   ne_iaddr_raw(), ne_iaddr_parse()
  - ne_string.h: ne_buffer_qappend(), ne_strnqdup()
 * Deprecated interfaces:
  - ne_acl.h is obsoleted by ne_acl3744.h (but is still present)
  - obsolete feature "NE_FEATURE_SOCKS" now never marked present
 * Other changes:
+ - fix handling of "stale" flag in RFC2069-style Digest auth challenge
  - ne_free() implemented as a function on Win32 (thanks to Helge Hess)
- - test suite output now compacted
+ - symbol versioning used for new symbols, where supported
+ - ensure SSL connections are closed cleanly with OpenSSL
+ - fix build with OpenSSL 1.0 beta
+ - updated Polish (pl) translation (Arfrever Frehtes Taifersar Arahesis)
 
 Changes in release 0.28.6:
 * SECURITY (CVE-2009-2473): Fix "billion laughs" attack against expat;
