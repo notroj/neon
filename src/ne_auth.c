@@ -604,10 +604,7 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
 #ifdef HAVE_SSPI
 static char *request_sspi(auth_session *sess, struct auth_request *request) 
 {
-    if (sess->sspi_token)
-        return ne_concat(sess->protocol->name, " ", sess->sspi_token, "\r\n", NULL);
-    else
-        return NULL;
+    return ne_concat(sess->protocol->name, " ", sess->sspi_token, "\r\n", NULL);
 }
 
 static int sspi_challenge(auth_session *sess, int attempt,
@@ -1464,14 +1461,6 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     if (sess->gssapi_token) {
         ne_free(sess->gssapi_token);
         sess->gssapi_token = NULL;
-    }
-#endif
-
-#ifdef HAVE_SSPI
-    /* whatever happens: forget the SSPI token cached thus far */
-    if (sess->sspi_token) {
-        ne_free(sess->sspi_token);
-        sess->sspi_token = NULL;
     }
 #endif
 
