@@ -1,6 +1,6 @@
 /* 
    Framework for testing with a server process
-   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2008, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -311,63 +311,6 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	minisleep();
 #endif
     }
-
-    return OK;
-}
-
-int new_spawn_server(int count, server_fn fn, void *userdata,
-                     unsigned int *port)
-{
-    struct sockaddr_in sa;
-    socklen_t salen = sizeof sa;
-    int ls;
-    
-    ls = do_listen(lh_addr, 0);
-    ONN("could not bind/listen fd for server", ls < 0);
-
-    ONV(getsockname(ls, &sa, &salen) != 0,
-        ("could not get socket name for listening fd: %s",
-         strerror(errno)));
-    
-    *port = ntohs(sa.sin_port);
-
-    NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
-    
-    NE_DEBUG(NE_DBG_SOCKET, "child forking now...\n");
-
-    child = fork();
-    ONN("failed to fork server", child == -1);
-
-    if (child == 0) {
-        int ret, iter = 1;
-        
-        in_child();
-
-        do {
-            ne_socket *sock = ne_sock_create();
-            
-            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d (of %d), "
-                     "awaiting connection...\n", iter, count);
-
-            if (ne_sock_accept(sock, ls)) {
-                t_context("Server child could not accept connection: %s", 
-                          ne_sock_error(sock));
-                exit(FAIL);
-            }
-
-            NE_DEBUG(NE_DBG_HTTP, "child got connection, invoking server\n");
-            ret = fn(sock, userdata);
-            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d returns %d\n",
-                     iter, ret);
-
-            close_socket(sock);
-        } while (ret == 0 && ++iter <= count);
-
-        NE_DEBUG(NE_DBG_HTTP, "child terminating with %d\n", ret);
-        exit(ret);
-    }
-
-    close(ls);
 
     return OK;
 }
