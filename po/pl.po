@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.29.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-12-15 22:23+0000\n"
+"POT-Creation-Date: 2009-12-30 21:31+0000\n"
 "PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -74,68 +74,68 @@ msgstr ""
 msgid "Negotiate response verification failure: %s"
 msgstr "porażka weryfikacji odpowiedzi Negotiate: %s"
 
-#: src/ne_auth.c:762
+#: src/ne_auth.c:765
 msgid "unknown algorithm in Digest challenge"
 msgstr "nieznany algorytm w wezwaniu Digest"
 
-#: src/ne_auth.c:766
+#: src/ne_auth.c:769
 msgid "incompatible algorithm in Digest challenge"
 msgstr "niekompatybilny algorytm w wezwaniu Digest"
 
-#: src/ne_auth.c:770
+#: src/ne_auth.c:773
 msgid "missing parameter in Digest challenge"
 msgstr "brakujący parametr w wezwaniu Digest"
 
-#: src/ne_auth.c:774
+#: src/ne_auth.c:777
 msgid "initial Digest challenge was stale"
 msgstr "początkowe wezwanie Digest było nieaktualne"
 
-#: src/ne_auth.c:781
+#: src/ne_auth.c:784
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr "nieaktualne wezwanie Digest z nowym algorytmem lub domeną"
 
-#: src/ne_auth.c:793
+#: src/ne_auth.c:796
 msgid "could not parse domain in Digest challenge"
 msgstr "nie można parsować domeny w wezwaniu Digest"
 
-#: src/ne_auth.c:1102
+#: src/ne_auth.c:1105
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr "Porażka wzajemnego uwierzytelniania Digest: brakujące parametry"
 
-#: src/ne_auth.c:1107
+#: src/ne_auth.c:1110
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność posłańca klienta"
 
-#: src/ne_auth.c:1117
+#: src/ne_auth.c:1120
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: nie można parsować licznika "
 "posłańca"
 
-#: src/ne_auth.c:1122
+#: src/ne_auth.c:1125
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność licznika posłańca (%"
 "u nie %u)"
 
-#: src/ne_auth.c:1165
+#: src/ne_auth.c:1168
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność request-digest "
 "mismatch"
 
-#: src/ne_auth.c:1296
+#: src/ne_auth.c:1299
 #, c-format
 msgid "ignored %s challenge"
 msgstr "wezwanie %s zignorowane"
 
-#: src/ne_auth.c:1375
+#: src/ne_auth.c:1378
 msgid "could not parse challenge"
 msgstr "nie można parsować wezwania"
 
@@ -190,7 +190,7 @@ msgstr "podpisane przy użyciu niebezpiecznego algorytmu"
 msgid "unrecognized errors (%u)"
 msgstr "nierozpoznane błędy (%u)"
 
-#: src/ne_gnutls.c:865 src/ne_openssl.c:467
+#: src/ne_gnutls.c:865 src/ne_openssl.c:468
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
@@ -200,17 +200,17 @@ msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 msgid "Could not verify server certificate: %s"
 msgstr "Nie można zweryfikować certyfikatu serwera: %s"
 
-#: src/ne_gnutls.c:891 src/ne_openssl.c:454
+#: src/ne_gnutls.c:891 src/ne_openssl.c:455
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_gnutls.c:924 src/ne_openssl.c:673
+#: src/ne_gnutls.c:924 src/ne_openssl.c:674
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
 
-#: src/ne_gnutls.c:929 src/ne_openssl.c:678
+#: src/ne_gnutls.c:929 src/ne_openssl.c:679
 #, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Uzgodnienie SSL nie udało się: %s"
@@ -235,12 +235,12 @@ msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 "Nie zwrócono żadnej aktywnej blokady dla <%s> w odpowiedzi LOCK refresh"
 
-#: src/ne_openssl.c:698
+#: src/ne_openssl.c:699
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
 
-#: src/ne_openssl.c:707
+#: src/ne_openssl.c:708
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"

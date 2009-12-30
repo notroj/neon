@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: neon 0.29.x\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-12-15 22:23+0000\n"
+"POT-Creation-Date: 2009-12-30 21:31+0000\n"
 "PO-Revision-Date: 2008-03-03 11:20+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: neon@webdav.org\n"
@@ -72,61 +72,61 @@ msgstr "校验协商响应失败：非法响应头令牌"
 msgid "Negotiate response verification failure: %s"
 msgstr "磋商响应校验失败: %s"
 
-#: src/ne_auth.c:762
+#: src/ne_auth.c:765
 msgid "unknown algorithm in Digest challenge"
 msgstr "在摘要挑战中的算法不可识别"
 
-#: src/ne_auth.c:766
+#: src/ne_auth.c:769
 msgid "incompatible algorithm in Digest challenge"
 msgstr "在摘要挑战中的算法不兼容"
 
-#: src/ne_auth.c:770
+#: src/ne_auth.c:773
 msgid "missing parameter in Digest challenge"
 msgstr "在摘要挑战中的参数丢失"
 
-#: src/ne_auth.c:774
+#: src/ne_auth.c:777
 msgid "initial Digest challenge was stale"
 msgstr "陈旧的初始化摘要挑战"
 
-#: src/ne_auth.c:781
+#: src/ne_auth.c:784
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr "陈旧的摘要挑战用于新算法或新领域"
 
-#: src/ne_auth.c:793
+#: src/ne_auth.c:796
 msgid "could not parse domain in Digest challenge"
 msgstr "在摘要挑战中的不能解析域"
 
-#: src/ne_auth.c:1102
+#: src/ne_auth.c:1105
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr "摘要互相认证失败：参数遗漏"
 
-#: src/ne_auth.c:1107
+#: src/ne_auth.c:1110
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr "摘要互相认证失败：客户现时不匹配"
 
-#: src/ne_auth.c:1117
+#: src/ne_auth.c:1120
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr "摘要互相认证失败：不能解析现时计数"
 
-#: src/ne_auth.c:1122
+#: src/ne_auth.c:1125
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr "摘要互相认证失败：现时计算不匹配 (应该是 %u，不是 %u)"
 
-#: src/ne_auth.c:1165
+#: src/ne_auth.c:1168
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr "摘要互相认证失败：请求摘要不匹配"
 
-#: src/ne_auth.c:1296
+#: src/ne_auth.c:1299
 #, c-format
 msgid "ignored %s challenge"
 msgstr "被忽略的 %s 挑战"
 
-#: src/ne_auth.c:1375
+#: src/ne_auth.c:1378
 msgid "could not parse challenge"
 msgstr "不能解析挑战"
 
@@ -181,7 +181,7 @@ msgstr ""
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:865 src/ne_openssl.c:467
+#: src/ne_gnutls.c:865 src/ne_openssl.c:468
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "服务器证书在主题名称遗漏了属性 commonName"
@@ -191,17 +191,17 @@ msgstr "服务器证书在主题名称遗漏了属性 commonName"
 msgid "Could not verify server certificate: %s"
 msgstr "不能写入文件：%s"
 
-#: src/ne_gnutls.c:891 src/ne_openssl.c:454
+#: src/ne_gnutls.c:891 src/ne_openssl.c:455
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "证书校验失败：%s"
 
-#: src/ne_gnutls.c:924 src/ne_openssl.c:673
+#: src/ne_gnutls.c:924 src/ne_openssl.c:674
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:929 src/ne_openssl.c:678
+#: src/ne_gnutls.c:929 src/ne_openssl.c:679
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "SSL 协商失败：%s"
@@ -225,12 +225,12 @@ msgstr "锁定 %s 的响应遗漏了主动锁"
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr "刷新锁定 %s 的响应没有返回主动锁"
 
-#: src/ne_openssl.c:698
+#: src/ne_openssl.c:699
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "SSL 服务器不能呈现证书"
 
-#: src/ne_openssl.c:707
+#: src/ne_openssl.c:708
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr "服务器证书改变：是否被拦截攻击？"
