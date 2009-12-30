@@ -1,8 +1,11 @@
+Changes in release 0.29.2:
+* Fix spurious 'certificate verify failed' errors with OpenSSL (Tom C)
+* Fix unnecessary re-authentication with SSPI (Danil Shopyrin)
+
 Changes in release 0.29.1:
 * Fixes for (Unix) NTLM implementation:
  - fix handling of session timeout (Kai Sommerfeld)
  - fix possible crash (basic@mozdev.org)
-* Fix unnecessary re-authentication with SSPI (Danil Shopyrin)
 * Build fixes for Win32:
   - fix use of socklen_t with recent SDKs (Stefan Kung)
   - fix USE_GETADDRINFO on Win2K (Kai Sommerfeld)
