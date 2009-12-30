@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.3\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2009-12-15 22:23+0000\n"
+"POT-Creation-Date: 2009-12-30 21:31+0000\n"
 "PO-Revision-Date: 2002-01-13 13:37+0100\n"
 "Last-Translator: Thomas Schultz <tststs@gmx.de>\n"
 "Language-Team: de\n"
@@ -69,62 +69,62 @@ msgstr ""
 msgid "Negotiate response verification failure: %s"
 msgstr ""
 
-#: src/ne_auth.c:762
+#: src/ne_auth.c:765
 msgid "unknown algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:766
+#: src/ne_auth.c:769
 msgid "incompatible algorithm in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:770
+#: src/ne_auth.c:773
 msgid "missing parameter in Digest challenge"
 msgstr ""
 
-#: src/ne_auth.c:774
+#: src/ne_auth.c:777
 msgid "initial Digest challenge was stale"
 msgstr ""
 
-#: src/ne_auth.c:781
+#: src/ne_auth.c:784
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr ""
 
-#: src/ne_auth.c:793
+#: src/ne_auth.c:796
 #, fuzzy
 msgid "could not parse domain in Digest challenge"
 msgstr "Parser-Fehler bei Ermittlung der Blockgröße"
 
-#: src/ne_auth.c:1102
+#: src/ne_auth.c:1105
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr ""
 
-#: src/ne_auth.c:1107
+#: src/ne_auth.c:1110
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1117
+#: src/ne_auth.c:1120
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 
-#: src/ne_auth.c:1122
+#: src/ne_auth.c:1125
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 
-#: src/ne_auth.c:1165
+#: src/ne_auth.c:1168
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 
-#: src/ne_auth.c:1296
+#: src/ne_auth.c:1299
 #, c-format
 msgid "ignored %s challenge"
 msgstr ""
 
-#: src/ne_auth.c:1375
+#: src/ne_auth.c:1378
 #, fuzzy
 msgid "could not parse challenge"
 msgstr "Parser-Fehler bei Ermittlung der Blockgröße"
@@ -182,7 +182,7 @@ msgstr ""
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:865 src/ne_openssl.c:467
+#: src/ne_gnutls.c:865 src/ne_openssl.c:468
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
@@ -192,17 +192,17 @@ msgstr ""
 msgid "Could not verify server certificate: %s"
 msgstr "Konnte nicht in diese Datei schreiben: %s"
 
-#: src/ne_gnutls.c:891 src/ne_openssl.c:454
+#: src/ne_gnutls.c:891 src/ne_openssl.c:455
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:924 src/ne_openssl.c:673
+#: src/ne_gnutls.c:924 src/ne_openssl.c:674
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:929 src/ne_openssl.c:678
+#: src/ne_gnutls.c:929 src/ne_openssl.c:679
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Konnte nicht in diese Datei schreiben: %s"
@@ -226,12 +226,12 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:698
+#: src/ne_openssl.c:699
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:707
+#: src/ne_openssl.c:708
 #, c-format
 msgid "Server certificate changed: connection intercepted?"
 msgstr ""
