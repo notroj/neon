@@ -377,6 +377,7 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
     /* Map the error code onto any of the exported cert validation
      * errors, if possible. */
     switch (err) {
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
     case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
     case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
     case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
