@@ -6,7 +6,7 @@ m4_define(ne_version, [m4_translit(m4_include(.version), [
 
 AC_INIT(neon, ne_version, [neon@lists.manyfish.co.uk])
 
-AC_COPYRIGHT([Copyright 2000-2009 Joe Orton and others
+AC_COPYRIGHT([Copyright 2000-2010 Joe Orton and others
 This configure script may be copied, distributed and modified under the 
 terms of the GNU Library General Public license; see src/COPYING.LIB for
 more details.])
@@ -160,6 +160,14 @@ fi
 if test x${enable_shared}${pic_mode}z = xnodefaultz; then
    CFLAGS="$CFLAGS -prefer-pic"
    AC_MSG_NOTICE([Using PIC for static library build])
+fi
+
+if test x${enable_shared} = xno; then
+   # Defining NE_PRIVATE as the empty string would work; using a
+   # non-empty but redundant string 'extern' avoids any possible cpp
+   # confusion with from an empty macro.
+   CPPFLAGS="$CPPFLAGS -DNE_PRIVATE=extern"
+   AC_MSG_NOTICE([Private symbol suppression disabled for static library build])
 fi
 
 # Bundled language catalogs
