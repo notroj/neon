@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1998-2010, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -1579,8 +1579,10 @@ int ne_sock_accept(ne_socket *sock, int listener)
 {
     int fd = accept(listener, NULL, NULL);
 
-    if (fd < 0)
+    if (fd < 0) {
+        set_strerror(sock, ne_errno);
         return -1;
+    }
 
     sock->fd = fd;
     return 0;
