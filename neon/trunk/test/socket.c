@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2010, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1000,7 +1000,8 @@ static int ssl_closure(void)
     ONV(ret != NE_SOCK_RESET && ret != NE_SOCK_CLOSED, 
 	("write got %" NE_FMT_SSIZE_T " not reset or closure: %s", ret,
          ne_sock_error(sock)));
-    return good_close(sock);
+    ne_sock_close(sock);
+    return OK;
 }
 
 static int serve_truncate(ne_socket *sock, void *userdata)
@@ -1019,7 +1020,9 @@ static int ssl_truncate(void)
     ONV(ret != NE_SOCK_TRUNC,
 	("socket got error %d not truncation: `%s'", ret,
 	 ne_sock_error(sock)));
-    return finish(sock, 0);
+    ne_sock_close(sock);
+    CALL(await_server());
+    return OK;
 }
 
 #else
