@@ -1890,27 +1890,24 @@ void ne_sock_set_error(ne_socket *sock, const char *format, ...)
     va_end(params);
 }
 
-/* Closes given ne_socket */
 int ne_sock_close(ne_socket *sock)
 {
     int ret;
 
+    /* Per API description - for an SSL connection, simply send the
+     * close_notify but do not wait for the peer's response. */
 #if defined(HAVE_OPENSSL)
     if (sock->ssl) {
-        /* Correct SSL shutdown procedure: call once... */
-        if (SSL_shutdown(sock->ssl) == 0) {
-            /* close_notify sent but not received; wait for peer to
-             * send close_notify... */
-            SSL_shutdown(sock->ssl);
-        }
+        SSL_shutdown(sock->ssl);
 	SSL_free(sock->ssl);
     }
 #elif defined(HAVE_GNUTLS)
     if (sock->ssl) {
         do {
-            ret = gnutls_bye(sock->ssl, GNUTLS_SHUT_RDWR);
+            ret = gnutls_bye(sock->ssl, GNUTLS_SHUT_WR);
         } while (ret < 0
                  && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
+        gnutls_deinit(sock->ssl);
     }
 #endif
 
