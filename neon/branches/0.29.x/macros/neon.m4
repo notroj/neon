@@ -137,7 +137,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 # Define the current versions.
 NE_VERSION_MAJOR=0
 NE_VERSION_MINOR=29
-NE_VERSION_PATCH=2
+NE_VERSION_PATCH=3
 NE_VERSION_TAG=
 
 # 0.29.x is backwards-compatible to 0.27.x, so AGE=2
