@@ -1,6 +1,6 @@
 /* 
    socket handling interface
-   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2010, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -219,8 +219,10 @@ int ne_sock_fd(const ne_socket *sock);
  * must be destroyed by caller using ne_iaddr_free. */
 ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port);
 
-/* Close the socket and destroy the socket object.  Returns zero on
- * success, or an errno value if close() failed. */
+/* Close the socket and destroy the socket object.  If SSL is in use
+ * for the socket, a closure alert is sent to initiate a clean
+ * shutdown, but this function does not wait for the peer's response.
+ * Returns zero on success, or non-zero on failure. */
 int ne_sock_close(ne_socket *sock);
 
 /* Return current error string for socket. */
