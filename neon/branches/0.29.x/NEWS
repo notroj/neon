@@ -1,12 +1,12 @@
 Changes in release 0.29.3:
 * Change ne_sock_close() to no longer wait for SSL closure alert:
- - fixes possible hang with IIS servers when closing SSL connection;
-   this reverts the behaviour with OpenSSL to match 0.28.x, and
-   changes behaviour with GnuTLS to match that with OpenSSL
+ - fixes possible hang with IIS servers when closing SSL connection
+ - this reverts the behaviour with OpenSSL to match 0.28.x, and
+   changes the behaviour with GnuTLS to match that with OpenSSL
 * Fix memory leak with GnuTLS
 * API clarification in ne_sock_close():
  - SSL closure handling now documented
- - return value semantics fixed to match implementation
+ - return value semantics fixed to describe the implementation
 
 Changes in release 0.29.2:
 * Fix spurious 'certificate verify failed' errors with OpenSSL (Tom C)
