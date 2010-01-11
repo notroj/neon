@@ -1,4 +1,4 @@
-# Copyright (C) 1998-2009 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
+# Copyright (C) 1998-2010 Joe Orton <joe@manyfish.co.uk>    -*- autoconf -*-
 # Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 #
 # This file is free software; you may copy and/or distribute it with
@@ -137,7 +137,7 @@ AC_DEFUN([NE_VERSIONS_BUNDLED], [
 # Define the current versions.
 NE_VERSION_MAJOR=0
 NE_VERSION_MINOR=29
-NE_VERSION_PATCH=3
+NE_VERSION_PATCH=4
 NE_VERSION_TAG=
 
 # 0.29.x is backwards-compatible to 0.27.x, so AGE=2
