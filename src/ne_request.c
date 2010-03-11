@@ -1481,8 +1481,9 @@ static int do_connect(ne_session *sess, struct host_info *host)
 #ifdef NE_DEBUGGING
 	if (ne_debug_mask & NE_DBG_HTTP) {
 	    char buf[150];
-	    NE_DEBUG(NE_DBG_HTTP, "Connecting to %s\n",
-		     ne_iaddr_print(host->current, buf, sizeof buf));
+	    NE_DEBUG(NE_DBG_HTTP, "req: Connecting to %s:%u\n",
+		     ne_iaddr_print(host->current, buf, sizeof buf),
+                     host->port);
 	}
 #endif
 	ret = ne_sock_connect(sess->socket, host->current, host->port);
