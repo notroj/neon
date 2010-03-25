@@ -8,7 +8,7 @@
       <refnamediv>
 	<refname id="ne_buffer_create">ne_buffer_create</refname>
 	<refname id="ne_buffer_create_sized">ne_buffer_ncreate</refname>
-	<refpurpose>general purpose of group of functions</refpurpose>
+	<refpurpose>create a string buffer</refpurpose>
       </refnamediv>
       
       <refsynopsisdiv>

@@ -9,7 +9,7 @@
 	<refname id="ne_buffer_clear">ne_buffer_clear</refname>
 	<refname id="ne_buffer_grow">ne_buffer_grow</refname>
 	<refname id="ne_buffer_altered">ne_buffer_altered</refname>
-	<refpurpose>general purpose of group of functions</refpurpose>
+	<refpurpose>clear, grow, or mark as altered a string buffer</refpurpose>
       </refnamediv>
       
       <refsynopsisdiv>
