@@ -48,8 +48,13 @@
 	  <varlistentry>
             <term><constant>NE_REQFLAG_EXPECT100</constant></term>
 	    <listitem>
-	      <simpara>enables this flag to use the "Expect:
-	      100-continue" feature of HTTP/1.1</simpara>
+	      <simpara>enable this flag to use the "Expect:
+	      100-continue" feature of HTTP/1.1, which allows the
+	      server to process request headers without reading the
+	      entire request body.  This saves time and bandwidth if
+	      the server gives an authentication challenge (requiring
+	      the request to be resent), but has interoperability
+	      problems with some older servers.</simpara>
 	    </listitem>
 	  </varlistentry>
 	  <varlistentry>
