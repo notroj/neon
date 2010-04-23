@@ -392,12 +392,13 @@ static int raw_poll(int fdno, int rdwr, int secs)
         ret = poll(&fds, 1, timeout);
     } while (ret < 0 && NE_ISINTR(ne_errno));
 #else
-    fd_set rdfds, wrfds;
+    fd_set rdfds, wrfds, exfds;
     struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
 
     /* Init the fd set */
     FD_ZERO(&rdfds);
     FD_ZERO(&wrfds);
+    FD_ZERO(&exfds);
 
     /* Note that (amazingly) the FD_SET macro does not expand
      * correctly on Netware if not inside a compound statement
@@ -407,13 +408,14 @@ static int raw_poll(int fdno, int rdwr, int secs)
     } else {
         FD_SET(fdno, &wrfds);
     }
+    FD_SET(fdno, &exfds);
 
     if (tvp) {
         tvp->tv_sec = secs;
         tvp->tv_usec = 0;
     }
     do {
-	ret = select(fdno + 1, &rdfds, &wrfds, NULL, tvp);
+	ret = select(fdno + 1, &rdfds, &wrfds, &exfds, tvp);
     } while (ret < 0 && NE_ISINTR(ne_errno));
 #endif
     return ret;
