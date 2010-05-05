@@ -183,8 +183,10 @@ ne_session *ne_session_create(const char *scheme,
             ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6);
 
         if (ia) {
-            sess->flags[NE_SESSFLAG_TLS_SNI] = 1;
             ne_iaddr_free(ia);
+        } 
+        else {
+            sess->flags[NE_SESSFLAG_TLS_SNI] = 1;
         }
         NE_DEBUG(NE_DBG_SSL, "ssl: SNI %s by default.\n",
                  sess->flags[NE_SESSFLAG_TLS_SNI] ?
