@@ -752,11 +752,20 @@ static int get_failures(void *userdata, int fs, const ne_ssl_certificate *c)
     return -1;
 }
 
-/* Helper function: run a request using the given self-signed server
- * certificate, and expect the request to fail with the given
- * verification failure flags. */
+/* Helper function for expected-to-fail SSL tests.
+ *
+ * An SSL server is spawned using 'cert' and 'key' as the key pair.
+ * The client will trust CA cert 'cacert', and use 'host' as the server
+ * name.  If realhost is non-NULL, this address will be used to connect
+ * to in favour of host; the server is otherwise identified as 'host'.
+ * 'msg' must be a substring of the error string.
+ * 'failures' must equal the failure bitmask passed to the verify
+ * callback in the client.
+ * If none of the expected conditions is met, 'errstr' will be
+ * used in the test failure context.
+ */
 static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert, 
-                                        const char *host, const char *fakehost,
+                                        const char *host, const char *realhost,
                                         const char *msg, int failures,
                                         const char *errstr)
 {
@@ -766,11 +775,11 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
     ne_sock_addr *addr;
     const ne_inet_addr *list[1];
 
-    if (fakehost) {
-        addr = ne_addr_resolve(fakehost, 0);
+    if (realhost) {
+        addr = ne_addr_resolve(realhost, 0);
 
         ONV(ne_addr_result(addr),
-            ("fake hostname lookup failed for %s", fakehost));
+            ("fake hostname lookup failed for %s", realhost));
         
         list[0] = ne_addr_first(addr);
         
