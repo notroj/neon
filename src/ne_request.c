@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2010, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -284,6 +284,8 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
     ne_request *req = userdata;
 
     if (count) {
+        ssize_t ret;
+
         if (req->body.file.remain == 0)
             return 0;
 
@@ -292,7 +294,26 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
          * and 64-bit off64_t: */
         if ((ne_off_t)count > req->body.file.remain)
             count = (size_t)req->body.file.remain;
-	return read(req->body.file.fd, buffer, count);
+        
+        ret = read(req->body.file.fd, buffer, count);
+        if (ret > 0) {
+            req->body.file.remain -= ret;
+            return ret;
+        }
+        else if (ret == 0) {
+            ne_set_error(req->session, 
+                         _("Premature EOF in request body file"));
+        }
+        else if (ret < 0) {
+            char err[200];
+            int errnum = errno;
+
+            ne_set_error(req->session, 
+                         _("Failed reading request body file: %s"),
+                         ne_strerror(errnum, err, sizeof err));
+        }
+
+        return -1;
     } else {
         ne_off_t newoff;
 
