@@ -653,7 +653,8 @@ if test $ne_enable_gai = yes; then
    NE_ENABLE_SUPPORT(IPV6, [IPv6 support is enabled])
    AC_DEFINE(USE_GETADDRINFO, 1, [Define if getaddrinfo() should be used])
    AC_CACHE_CHECK([for working AI_ADDRCONFIG], [ne_cv_gai_addrconfig], [
-   AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <netdb.h>],
+   AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <netdb.h>
+#include <stdlib.h>],
 [struct addrinfo hints = {0}, *result;
 hints.ai_flags = AI_ADDRCONFIG;
 if (getaddrinfo("localhost", NULL, &hints, &result) != 0) return 1;])],

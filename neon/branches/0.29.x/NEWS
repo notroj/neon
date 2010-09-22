@@ -1,6 +1,6 @@
 Changes in release 0.29.4:
-* Fix possible Solaris linker errors if building static library.
 * Fix SNI support (Tobias Gruetzmacher).
+* Fix possible Solaris linker errors if building static library.
 
 Changes in release 0.29.3:
 * Change ne_sock_close() to no longer wait for SSL closure alert:
