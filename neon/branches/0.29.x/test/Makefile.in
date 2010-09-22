@@ -18,7 +18,7 @@ LIBS = $(LIBTEST)
 CC = @CC@
 OPENSSL = @OPENSSL@
 
-HELPERS = @HELPERS@
+HELPERS = @HELPERS@ foobar.txt
 BASIC_TESTS = uri-tests util-tests string-tests socket \
 	session request auth basic stubs redirect
 ZLIB_TESTS = compress
@@ -124,6 +124,9 @@ empty.gz:
 
 random.txt: $(NEWS)
 	cat $(NEWS) > $@
+
+foobar.txt:
+	echo foobar > $@
 
 # Dummy target to create the CA keys etc.  makekeys stderr is redirected
 # since it changes for every invocation; not helpful for regression
