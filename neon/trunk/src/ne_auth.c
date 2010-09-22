@@ -1540,8 +1540,10 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
                             sess->protocol 
                             && (sess->protocol->flags & AUTH_FLAG_CONN_AUTH));
     }
+
 #ifdef HAVE_SSPI
-    else if (sess->sspi_context) {
+    /* Whatever happens: clear the SSPI context if it exists. */
+    if (sess->sspi_context) {
         ne_sspi_clear_context(sess->sspi_context);
     }
 #endif
