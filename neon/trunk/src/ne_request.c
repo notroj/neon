@@ -1624,6 +1624,7 @@ static int open_connection(ne_session *sess)
                                  sess->nexthop->port,
                                  ne_sock_error(sess->socket));
                     ne_close_connection(sess);
+                    ret = NE_ERROR;
                 }
             }
         }
