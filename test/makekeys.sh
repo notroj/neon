@@ -154,6 +154,9 @@ cat ca/cert.pem ca[1234].pem > calist.pem
 csr_fields "Wildcard Cert Dept" "*.example.com" | \
 ${REQ} -new -key ${srcdir}/server.key -out wildcard.csr
 
+csr_fields "Wildcard IP Cert" "*.0.0.1" | \
+${REQ} -new -key ${srcdir}/server.key -out wildip.csr
+
 csr_fields "Neon Client Cert" ignored.example.com | \
 ${REQ} -new -key client.key -out client.csr
 
@@ -184,7 +187,7 @@ First OU Dept" | ${REQ} -new -key ${srcdir}/server.key -out twoou.csr
 
 for f in server client clientdsa twocn caseless cnfirst \
     t61subj bmpsubj utf8subj \
-    missingcn justmail twoou wildcard wrongcn; do
+    missingcn justmail twoou wildcard wildip wrongcn; do
   ${CA} -days 900 -in ${f}.csr -out ${f}.cert
 done
 
