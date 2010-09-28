@@ -583,6 +583,25 @@ int ne__ssl_match_hostname(const char *cn, size_t cnlen, const char *hostname)
 
     if (strncmp(cn, "*.", 2) == 0 && cnlen > 2
         && (dot = strchr(hostname, '.')) != NULL) {
+        ne_inet_addr *ia;
+
+        /* Prevent wildcard CN matches against anything which can be
+         * parsed as an IP address (i.e. a CN of "*.1.1.1" should not
+         * be match 8.1.1.1).  draft-saintandre-tls-server-id-check
+         * will require some more significant changes to cert ID
+         * verification which will probably obviate this check, but
+         * this is a desirable policy tightening in the mean time. */
+        ia = ne_iaddr_parse(hostname, ne_iaddr_ipv4);
+        if (ia == NULL)
+            ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6);
+        
+        if (ia) {
+            NE_DEBUG(NE_DBG_SSL, "ssl: Denying wildcard match for numeric "
+                     "IP address.\n");
+            ne_iaddr_free(ia);
+            return 0;
+        }
+
 	hostname = dot + 1;
 	cn += 2;
         cnlen -= 2;
