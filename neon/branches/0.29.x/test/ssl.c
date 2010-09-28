@@ -960,6 +960,12 @@ static int fail_wildcard(void)
                             "subjaltname not honored", NE_SSL_IDMISMATCH);
 }
 
+static int fail_wildcard_ip(void)
+{
+    return fail_ssl_request("wildip.cert", CA_CERT, "127.0.0.1",
+                            "wildcard IP", NE_SSL_IDMISMATCH);
+}
+
 static int fail_ca_expired(void)
 {
     return fail_ssl_request_with_error("ca1server.cert", "ca1/cert.pem", 
@@ -1891,6 +1897,7 @@ ne_test tests[] = {
     T(fail_bad_ipaltname),
     T(fail_bad_urialtname),
     T(fail_wildcard),
+    T(fail_wildcard_ip),
     T(fail_ca_notyetvalid),
     T(fail_ca_expired),
 
