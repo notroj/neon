@@ -2296,6 +2296,39 @@ static int send_length(void)
     return await_server();
 }
 
+/* Test for error code for a SOCKS proxy failure, bug in <= 0.29.3. */
+static int socks_fail(void)
+{
+    ne_session *sess;
+    struct socks_server srv = {0};
+    int ret;
+
+    srv.version = NE_SOCK_SOCKSV5;
+    srv.failure = fail_init_vers;
+    srv.expect_port = 4242;
+    srv.expect_addr = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+    srv.expect_fqdn = "localhost";
+    srv.username = "bloggs";
+    srv.password = "guessme";
+    
+    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                       single_serve_string, EMPTY_RESP));
+
+    ret = any_request(sess, "/blee");
+    ONV(ret != NE_ERROR,
+        ("request failed with %d not NE_ERROR", ret));
+    ONV(strstr(ne_get_error(sess), 
+               "Could not establish connection from SOCKS proxy") == NULL
+        || strstr(ne_get_error(sess),
+                  "Invalid version in proxy response") == NULL,
+        ("unexpected error string: %s", ne_get_error(sess)));
+
+    ne_iaddr_free(srv.expect_addr);
+
+    ne_session_destroy(sess);
+    return await_server();
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2388,5 +2421,6 @@ ne_test tests[] = {
     T(socks_proxy),
     T(socks_v4_proxy),
     T(send_length),
+    T(socks_fail),
     T(NULL)
 };
