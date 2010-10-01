@@ -610,8 +610,11 @@ static char *request_sspi(auth_session *sess, struct auth_request *request)
         return NULL;
 }
 
-static int continue_sspi(auth_session *sess, int ntlm, const char *hdr)
+static int sspi_challenge(auth_session *sess, int attempt,
+                          struct auth_challenge *parms,
+                          ne_buffer **errmsg) 
 {
+    int ntlm = ne_strcasecmp(parms->protocol->name, "NTLM") == 0;
     int status;
     char *response = NULL;
     
@@ -631,52 +634,17 @@ static int continue_sspi(auth_session *sess, int ntlm, const char *hdr)
         }
     }
     
-    status = ne_sspi_authenticate(sess->sspi_context, hdr, &response);
+    status = ne_sspi_authenticate(sess->sspi_context, parms->opaque, &response);
     if (status) {
         return status;
     }
-
-    if (response && *response) {
-        sess->sspi_token = response;
-        
-        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge [%s]\n", sess->sspi_token);
-    }
-
+    
+    sess->sspi_token = response;
+    
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge [%s]\n", sess->sspi_token);
+    
     return 0;
 }
-
-static int sspi_challenge(auth_session *sess, int attempt,
-                          struct auth_challenge *parms,
-                          ne_buffer **errmsg) 
-{
-    int ntlm = ne_strcasecmp(parms->protocol->name, "NTLM") == 0;
-
-    return continue_sspi(sess, ntlm, parms->opaque);
-}
-
-static int verify_sspi(struct auth_request *req, auth_session *sess,
-                       const char *hdr)
-{
-    int ntlm = ne_strncasecmp(hdr, "NTLM ", 5) == 0;
-    char *ptr = strchr(hdr, ' ');
-
-    if (!ptr) {
-        ne_set_error(sess->sess, _("SSPI response verification failed: "
-                                   "invalid response header token"));
-        return NE_ERROR;
-    }
-
-    while(*ptr == ' ')
-        ptr++;
-
-    if (*ptr == '\0') {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: No token in SSPI response!\n");
-        return NE_OK;
-    }
-
-    return continue_sspi(sess, ntlm, ptr);
-}
-
 #endif
 
 /* Parse the "domain" challenge parameter and set the domains array up
@@ -1232,7 +1200,7 @@ static const struct auth_protocol protocols[] = {
       sspi_challenge, request_sspi, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
     { NE_AUTH_GSSAPI, 30, "Negotiate",
-      sspi_challenge, request_sspi, verify_sspi,
+      sspi_challenge, request_sspi, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
 #ifdef HAVE_NTLM
