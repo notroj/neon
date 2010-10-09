@@ -1793,7 +1793,9 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     }
     sock->ops = &iofns_ssl;
 
-    ret = gnutls_handshake(sock->ssl);
+    do {
+        ret = gnutls_handshake(sock->ssl);
+    } while (RETRY_GNUTLS(sock, ret));
     if (ret < 0) {
 	error_gnutls(sock, ret);
         return NE_SOCK_ERROR;
