@@ -1,3 +1,6 @@
+Changes in release 0.29.5:
+* Further fix for SSPI support on Win32 (Danil Shopyrin)
+
 Changes in release 0.29.4:
 * Fix SNI support (Tobias Gruetzmacher)
 * Fix possible Solaris linker errors if building static library
