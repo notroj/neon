@@ -39,7 +39,7 @@ AC_BEFORE([$0], [NEON_XML_PARSER])
 
 AC_CHECK_HEADERS(sys/time.h stdint.h locale.h signal.h)
 
-AC_CHECK_FUNCS(pipe isatty usleep shutdown setlocale)
+AC_CHECK_FUNCS(pipe isatty usleep shutdown setlocale gethostname)
 
 AC_REQUIRE([NE_FIND_AR])
 
