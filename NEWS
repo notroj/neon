@@ -1,4 +1,5 @@
 Changes in release 0.29.5:
+* GnuTLS: Fix SSL handshakes failures with 'TLS warning alert' (Bryan Cain)
 * Further fix for SSPI support on Win32 (Danil Shopyrin)
 
 Changes in release 0.29.4:
