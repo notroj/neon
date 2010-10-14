@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1998-2009, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -392,13 +392,12 @@ static int raw_poll(int fdno, int rdwr, int secs)
         ret = poll(&fds, 1, timeout);
     } while (ret < 0 && NE_ISINTR(ne_errno));
 #else
-    fd_set rdfds, wrfds, exfds;
+    fd_set rdfds, wrfds;
     struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
 
     /* Init the fd set */
     FD_ZERO(&rdfds);
     FD_ZERO(&wrfds);
-    FD_ZERO(&exfds);
 
     /* Note that (amazingly) the FD_SET macro does not expand
      * correctly on Netware if not inside a compound statement
@@ -408,14 +407,13 @@ static int raw_poll(int fdno, int rdwr, int secs)
     } else {
         FD_SET(fdno, &wrfds);
     }
-    FD_SET(fdno, &exfds);
 
     if (tvp) {
         tvp->tv_sec = secs;
         tvp->tv_usec = 0;
     }
     do {
-	ret = select(fdno + 1, &rdfds, &wrfds, &exfds, tvp);
+	ret = select(fdno + 1, &rdfds, &wrfds, NULL, tvp);
     } while (ret < 0 && NE_ISINTR(ne_errno));
 #endif
     return ret;
@@ -1581,10 +1579,8 @@ int ne_sock_accept(ne_socket *sock, int listener)
 {
     int fd = accept(listener, NULL, NULL);
 
-    if (fd < 0) {
-        set_strerror(sock, ne_errno);
+    if (fd < 0)
         return -1;
-    }
 
     sock->fd = fd;
     return 0;

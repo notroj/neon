@@ -1,6 +1,6 @@
 /* 
    lock tests
-   Copyright (C) 2002-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2006, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -217,14 +217,6 @@ static int store_several(void)
     return OK;
 }
 
-/* Use a fake session forced to use port 7777 to the origin, to
- * simplify the tests. */
-static int fake_session(ne_session **sess, server_fn fn, void *userdata)
-{
-    return proxied_session_server(sess, "http", "localhost", 7777,
-                                  fn, userdata);
-}
-
 /* regression test for <= 0.18.2, where timeout field was not parsed correctly. */
 static int lock_timeout(void)
 {
@@ -238,7 +230,7 @@ static int lock_timeout(void)
 		     "Lock-Token: <opaquelocktoken:foo>" EOL
 		     "Connection: close\r\n\r\n", rbody, NULL);
 
-    CALL(fake_session(&sess, single_serve_string, resp));
+    CALL(make_session(&sess, single_serve_string, resp));
     ne_free(resp);
 
     ne_fill_server_uri(sess, &lock->uri);
@@ -332,7 +324,7 @@ static int submit_test(const char *lockpath, int lockdepth,
     
     expect_if = ne_concat("<http://localhost:7777", lockpath, 
 			  "> (<somelocktoken>)", NULL);
-    CALL(fake_session(&sess, serve_verify_if, expect_if));
+    CALL(make_session(&sess, serve_verify_if, expect_if));
     ne_free(expect_if);
 
     ne_fill_server_uri(sess, &lk->uri);
@@ -427,7 +419,7 @@ static void discover_result(void *userdata, const struct ne_lock *lk,
 
 static int discover(void)
 {
-    ne_session *sess;
+    ne_session *sess = ne_session_create("http", "localhost", 7777);
     char *response;
     int ret;
     struct result_args args;
@@ -436,17 +428,16 @@ static int discover(void)
 
     args.lock->owner = ne_strdup("someowner");
     args.lock->token = ne_strdup("sometoken");
-    args.lock->uri.host = ne_strdup("localhost");
-    args.lock->uri.port = 7777;
-    args.lock->uri.scheme = ne_strdup("http");
-    
+
     /* default */
     args.result = FAIL;
     t_context("results callback never invoked");
 
-    response = discover_response("/lockme", args.lock);
-    CALL(fake_session(&sess, serve_discovery, response));
+    ne_fill_server_uri(sess, &args.lock->uri);
     args.lock->uri.path = ne_strdup("/lockme");
+
+    response = discover_response("/lockme", args.lock);
+    CALL(spawn_server(7777, serve_discovery, response));
 
     ret = ne_lock_discover(sess, "/lockme", discover_result, &args);
     CALL(await_server());
@@ -487,7 +478,7 @@ static int lock_shared(void)
 		     "Connection: close\r\n\r\n", rbody, NULL);
     ne_free(rbody);
 
-    CALL(fake_session(&sess, single_serve_string, resp));
+    CALL(make_session(&sess, single_serve_string, resp));
     ne_free(resp);
 
     lock = ne_lock_create();
@@ -520,7 +511,7 @@ static int fail_discover(void)
     ne_session *sess;
     int ret;
     
-    CALL(fake_session(&sess, single_serve_string, 
+    CALL(make_session(&sess, single_serve_string, 
                       "HTTP/1.0 207 OK\r\n" "Connection: close\r\n" "\r\n"
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                       "<D:multistatus xmlns:D='DAV:'>\n"
@@ -555,7 +546,7 @@ static int fail_lockauth(void)
         "\r\n";
     args.count = 2;
 
-    CALL(fake_session(&sess, many_serve_string, &args));
+    CALL(make_session(&sess, many_serve_string, &args));
 
     ne_set_server_auth(sess, no_creds, NULL);
 
@@ -594,7 +585,7 @@ static int fail_noheader(void)
                      "Content-type: application/xml" EOL
                      "Connection: close\r\n\r\n", rbody, NULL);
 
-    CALL(fake_session(&sess, single_serve_string, resp));
+    CALL(make_session(&sess, single_serve_string, resp));
     ne_free(resp);
 
     ne_fill_server_uri(sess, &lock->uri);

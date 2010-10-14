@@ -12,4 +12,5 @@ NEON_0_29 {
     ne_acl3744_set;
     ne_buffer_qappend;
     ne_strnqdup;
+    ne_iaddr_parse;
 };
