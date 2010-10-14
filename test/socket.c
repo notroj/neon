@@ -32,6 +32,9 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* for gethostname() */
+#endif
 #include <time.h> /* for time() */
 
 #include "ne_socket.h"
@@ -368,7 +371,15 @@ static int addr_compare(void)
 static int addr_reverse(void)
 {
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
-    char buf[128];
+    char buf[128], *syshost = NULL;
+
+#ifdef HAVE_GETHOSTNAME
+    char host[128];
+
+    if (gethostname(host, sizeof host) == 0) {
+        syshost = host;
+    }
+#endif
 
     ONN("ne_iaddr_make returned NULL", ia == NULL);
 
@@ -376,7 +387,8 @@ static int addr_reverse(void)
         ne_iaddr_reverse(ia, buf, sizeof buf) != 0);
 
     ONV(!(strcmp(buf, "localhost.localdomain") == 0
-          || strcmp(buf, "localhost") == 0),
+          || strcmp(buf, "localhost") == 0
+          || (syshost && strcmp(buf, syshost) == 0)),
         ("reverse lookup for 127.0.0.1 got %s", buf));
 
     ne_iaddr_free(ia);
