@@ -10,8 +10,11 @@
     <refname id="ne_iaddr_cmp">ne_iaddr_cmp</refname>
     <refname id="ne_iaddr_print">ne_iaddr_print</refname>
     <refname id="ne_iaddr_typeof">ne_iaddr_typeof</refname>
+    <refname id="ne_iaddr_parse">ne_iaddr_parse</refname>
+    <refname id="ne_iaddr_raw">ne_iaddr_raw</refname>
+    <refname id="ne_iaddr_reverse">ne_iaddr_reverse</refname>
     <refname id="ne_iaddr_free">ne_iaddr_free</refname>
-    <refpurpose>functions to manipulate and compare network addresses</refpurpose>
+    <refpurpose>functions to manipulate network addresses</refpurpose>
   </refnamediv>
   
   <refsynopsisdiv>
@@ -50,6 +53,25 @@ typedef enum {
       </funcprototype>
 
       <funcprototype>
+        <funcdef>ne_inet_addr *<function>ne_iaddr_parse</function></funcdef>
+        <paramdef>const char *<parameter>address</parameter></paramdef>
+        <paramdef>ne_iaddr_type <parameter>type</parameter></paramdef>
+      </funcprototype>
+
+      <funcprototype>
+        <funcdef>unsigned char *<function>ne_iaddr_raw</function></funcdef>
+        <paramdef>const ne_inet_addr *<parameter>ia</parameter></paramdef>
+        <paramdef>unsigned char *<parameter>buffer</parameter></paramdef>
+      </funcprototype>
+
+      <funcprototype>
+        <funcdef>int <function>ne_iaddr_reverse</function></funcdef>
+        <paramdef>const ne_inet_addr *<parameter>ia</parameter></paramdef>
+        <paramdef>char *<parameter>buffer</parameter></paramdef>
+        <paramdef>size_t <parameter>buflen</parameter></paramdef>
+      </funcprototype>
+
+      <funcprototype>
         <funcdef>void <function>ne_iaddr_free</function></funcdef>
         <paramdef>const ne_inet_addr *<parameter>ia</parameter></paramdef>
       </funcprototype>
@@ -71,19 +93,36 @@ typedef enum {
     sixteen bytes; addresses passed must be in network byte
     order.</para>
 
-    <para><function>ne_iaddr_cmp</function> can be used to compare two
-    network addresses; returning zero only if they are identical.  The
-    addresses need not be of the same address type; if the addresses
-    are not of the same type, the return value is guaranteed to be
+    <para><function>ne_iaddr_cmp</function> compares two network
+    address objects; returning zero only if they are identical.  The
+    objects need not have the same address type; if the addresses are
+    not of the same type, the return value is guaranteed to be
     non-zero.</para>
 
-    <para><function>ne_iaddr_print</function> can be used to print the
-    human-readable string representation of a network address into a
-    buffer, for instance the string
-    <literal>"127.0.0.1"</literal>.</para>
+    <para><function>ne_iaddr_print</function> prints a human-readable
+    string representation of a network address into a buffer, for
+    instance the string <literal>"127.0.0.1"</literal>.</para>
 
     <para><function>ne_iaddr_typeof</function> returns the type of the
-    given network address.</para>
+    given network address object.</para>
+
+    <para><function>ne_iaddr_parse</function> parses a string
+    representation of a network address (such as
+    <literal>"127.0.0.1"</literal> and creates a network address
+    object to represent the parsed address.</para>
+
+    <para><function>ne_iaddr_raw</function> writes the raw byte
+    representation of a network address to the provided buffer.  The
+    bytes are written in network byte order; the buffer must be of
+    suitable length for the type of address (4 bytes for an IPv4
+    address, 16 bytes for an IPv6 address).</para>
+
+    <para><function>ne_iaddr_reverse</function> performs a reverse
+    name lookup on the address object, writing the (first) hostname
+    associated with the IP address to the provided buffer.  If the
+    hostname is longer than the buffer it will be silently truncated;
+    on success the string written to the buffer is always
+    &nul;-terminated.</para>
 
     <para><function>ne_iaddr_free</function> releases the memory
     associated with a network address object.</para>
@@ -97,9 +136,19 @@ typedef enum {
     address type passed is not supported (for instance on a platform
     which does not support IPv6).</para>
 
-
     <para><function>ne_iaddr_print</function> returns the
     <parameter>buffer</parameter> pointer, and never &null;.</para>
+
+    <para><function>ne_iaddr_parse</function> returns a network
+    address object on success, or &null; on failure to parse the
+    <parameter>address</parameter> parameter.</para>
+
+    <para><function>ne_iaddr_reverse</function> returns zero on
+    success or non-zero if no hostname is associated with the
+    address.</para>
+
+    <para><function>ne_iaddr_raw</function> returns the
+    <parameter>buffer</parameter> parameter, and never &null;.</para>
 
   </refsect1>
 
