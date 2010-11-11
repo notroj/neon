@@ -1,3 +1,8 @@
+Changes in release 0.29.6:
+* Don't abort SSL handshake with GnuTLS if a client cert is requested
+  but none is configured/available (thanks to Patrick Ohly)
+* Docs updates.
+
 Changes in release 0.29.5:
 * Fix GnuTLS handshakes failures with 'TLS warning alert' (Bryan Cain)
 * Further fix for SSPI support on Win32 (Danil Shopyrin)
