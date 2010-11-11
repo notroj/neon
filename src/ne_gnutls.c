@@ -1,6 +1,6 @@
 /*
    neon SSL/TLS support using GNU TLS
-   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2010, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -620,10 +620,12 @@ static int provide_client_cert(gnutls_session session,
         } else {
             return GNUTLS_E_UNSUPPORTED_CERTIFICATE_TYPE;
         }
-    } else {
+    } 
+    else {
         NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
+        st->ncerts = 0;
         sess->ssl_cc_requested = 1;
-        return GNUTLS_E_NO_CERTIFICATE_FOUND;
+        return 0;
     }
 
     return 0;
