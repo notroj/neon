@@ -484,7 +484,7 @@ ne_request *ne_request_create(ne_session *sess,
 
 	for (hk = sess->create_req_hooks; hk != NULL; hk = hk->next) {
 	    ne_create_request_fn fn = (ne_create_request_fn)hk->fn;
-	    fn(req, hk->userdata, method, req->uri);
+	    fn(req, hk->userdata, req->method, req->uri);
 	}
     }
 
