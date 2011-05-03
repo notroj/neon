@@ -858,7 +858,7 @@ static int check_chain_expiry(ne_ssl_certificate *chain)
 static int check_certificate(ne_session *sess, gnutls_session sock,
                              ne_ssl_certificate *chain)
 {
-    int ret, failures;
+    int ret, failures = 0;
     ne_uri server;
     unsigned int status;
 
@@ -1087,7 +1087,8 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
                  * really need to match up keyids. */
                 if (*x5) break;
 
-                gnutls_x509_crt_init(x5);
+                ret = gnutls_x509_crt_init(x5);
+                if (ret < 0) continue;
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
                 if (ret < 0) continue;

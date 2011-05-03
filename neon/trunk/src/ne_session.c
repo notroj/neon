@@ -565,8 +565,8 @@ void ne__ssl_set_verify_err(ne_session *sess, int failures)
 
     for (n = 0; reasons[n].bit; n++) {
 	if (failures & reasons[n].bit) {
-	    if (flag) strncat(sess->error, ", ", sizeof sess->error);
-	    strncat(sess->error, _(reasons[n].str), sizeof sess->error);
+	    if (flag) strncat(sess->error, ", ", sizeof sess->error - 1);
+	    strncat(sess->error, _(reasons[n].str), sizeof sess->error - 1);
 	    flag = 1;
 	}
     }
