@@ -38,10 +38,14 @@
 #ifdef NE_HAVE_TS_SSL
 #include <errno.h>
 #include <pthread.h>
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #include <gcrypt.h>
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 #else
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #include <gcrypt.h>
+#endif
 #endif
 
 #ifdef HAVE_ICONV
@@ -854,7 +858,7 @@ static int check_chain_expiry(ne_ssl_certificate *chain)
 static int check_certificate(ne_session *sess, gnutls_session sock,
                              ne_ssl_certificate *chain)
 {
-    int ret, failures;
+    int ret, failures = 0;
     ne_uri server;
     unsigned int status;
 
@@ -1083,7 +1087,8 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
                  * really need to match up keyids. */
                 if (*x5) break;
 
-                gnutls_x509_crt_init(x5);
+                ret = gnutls_x509_crt_init(x5);
+                if (ret < 0) continue;
 
                 ret = gnutls_pkcs12_bag_get_data(bag, j, &data);
                 if (ret < 0) continue;
@@ -1371,10 +1376,12 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 
 int ne__ssl_init(void)
 {
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #ifdef NE_HAVE_TS_SSL
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 #endif
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
+#endif
     return gnutls_global_init();
 }
 

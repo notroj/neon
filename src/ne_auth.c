@@ -46,7 +46,12 @@
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
 #elif defined(HAVE_GNUTLS)
+#include <gnutls/gnutls.h>
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b00
 #include <gcrypt.h>
+#else
+#include <gnutls/crypto.h>
+#endif
 #endif
 
 #include <errno.h>
@@ -316,7 +321,11 @@ static char *get_cnonce(void)
 
 #ifdef HAVE_GNUTLS
     if (1) {
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b00
         gcry_create_nonce(data, sizeof data);
+#else
+        gnutls_rnd(GNUTLS_RND_NONCE, data, sizeof data);
+#endif
         ne_md5_process_bytes(data, sizeof data, hash);
     }
     else
@@ -567,7 +576,7 @@ static int verify_negotiate_response(struct auth_request *req, auth_session *ses
     int ret;
     ne_buffer *errmsg = NULL;
 
-    if (strncmp(hdr, "Negotiate", ptr - duphdr) != 0) {
+    if (!ptr || strncmp(hdr, "Negotiate", ptr - duphdr) != 0) {
         ne_set_error(sess->sess, _("Negotiate response verification failed: "
                                    "invalid response header token"));
         ne_free(duphdr);
@@ -1542,8 +1551,8 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     }
 
 #ifdef HAVE_SSPI
-    /* Whatever happens: clear the SSPI context if it exists. */
-    if (sess->sspi_context) {
+    /* Clear the SSPI context after successfull authentication. */
+    if ((status->klass == 2 || status->klass == 3) && sess->sspi_context) {
         ne_sspi_clear_context(sess->sspi_context);
     }
 #endif
