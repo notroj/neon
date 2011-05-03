@@ -1,10 +1,10 @@
 Changes in release 0.29.6:
 * Don't abort SSL handshake with GnuTLS if a client cert is requested
   but none is configured/available (thanks to Patrick Ohly)
-* Fix the method string passed to create_request hooks to have the same
-  lifetime as the request object (Patrick Ohly)
 * Fix GnuTLS build with Nettle (Arfrever Frehtes Taifersar Arahesis)
 * Win32: Fix handling of SSPI challenges (Ivan Zhakov)
+* Fix the method string passed to create_request hooks to have the same
+  lifetime as the request object (Patrick Ohly)
 * Docs updates.
 
 Changes in release 0.29.5:
