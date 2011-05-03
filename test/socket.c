@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -171,11 +171,10 @@ static int wrap_serve(ne_socket *sock, void *ud)
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
     struct serve_pair pair;
-    unsigned int port;
     pair.fn = fn;
     pair.userdata = ud;
-    CALL(new_spawn_server(1, wrap_serve, &pair, &port));
-    CALL(do_connect(sock, localhost, port));
+    CALL(spawn_server(7777, wrap_serve, &pair));
+    CALL(do_connect(sock, localhost, 7777));
     ONV(ne_sock_connect_ssl(*sock, client_ctx, NULL),
 	("SSL negotation failed: %s", ne_sock_error(*sock)));
     return OK;
@@ -185,9 +184,8 @@ static int begin(ne_socket **sock, server_fn fn, void *ud)
 /* non-SSL begin() function. */
 static int begin(ne_socket **sock, server_fn fn, void *ud)
 {
-    unsigned int port;
-    CALL(new_spawn_server(1, fn, ud, &port));
-    return do_connect(sock, localhost, port);
+    CALL(spawn_server(7777, fn, ud));
+    return do_connect(sock, localhost, 7777);
 }
 #endif
 
@@ -413,13 +411,12 @@ static int addr_connect(void)
 {
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia;
-    unsigned int port;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(1, serve_close, NULL, &port));
-    ONN("could not connect", ne_sock_connect(sock, ia, port));
+    CALL(spawn_server(7777, serve_close, NULL));
+    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
     ne_sock_close(sock);
     CALL(await_server());
 
@@ -431,21 +428,21 @@ static int addr_peer(void)
 {
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia, *ia2;
-    unsigned int port = 9999, realport;
+    unsigned int port = 9999;
     int ret;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(1, serve_close, NULL, &realport));
-    ONN("could not connect", ne_sock_connect(sock, ia, realport));
+    CALL(spawn_server(7777, serve_close, NULL));
+    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
 
     ia2 = ne_sock_peer(sock, &port);
     ret = ne_iaddr_cmp(ia, ia2);
     ONV(ret != 0,
         ("comparison of peer with server address was %d", ret));
 
-    ONV(port != realport, ("got peer port %u, expected %u", port, realport));
+    ONV(port != 7777, ("got peer port %u", port));
  
     ne_sock_close(sock);
     CALL(await_server());
@@ -1012,8 +1009,7 @@ static int ssl_closure(void)
     ONV(ret != NE_SOCK_RESET && ret != NE_SOCK_CLOSED, 
 	("write got %" NE_FMT_SSIZE_T " not reset or closure: %s", ret,
          ne_sock_error(sock)));
-    ne_sock_close(sock);
-    return OK;
+    return good_close(sock);
 }
 
 static int serve_truncate(ne_socket *sock, void *userdata)
@@ -1032,9 +1028,7 @@ static int ssl_truncate(void)
     ONV(ret != NE_SOCK_TRUNC,
 	("socket got error %d not truncation: `%s'", ret,
 	 ne_sock_error(sock)));
-    ne_sock_close(sock);
-    CALL(await_server());
-    return OK;
+    return finish(sock, 0);
 }
 
 #else
@@ -1209,16 +1203,15 @@ static int try_prebind(int addr, int port)
     ne_socket *sock = ne_sock_create();
     ne_inet_addr *ia;
     char buf[128], line[256];
-    unsigned int srvport;
 
     ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
     ONN("ne_iaddr_make returned NULL", ia == NULL);
     
-    CALL(new_spawn_server(1, serve_ppeer, NULL, &srvport));
+    CALL(spawn_server(7777, serve_ppeer, NULL));
 
     ne_sock_prebind(sock, addr ? ia : NULL, port ? 7778 : 0);
 
-    ONN("could not connect", ne_sock_connect(sock, ia, srvport));
+    ONN("could not connect", ne_sock_connect(sock, ia, 7777));
 
     ne_snprintf(line, sizeof line,
                 "%s@%d\n", ne_iaddr_print(ia, buf, sizeof buf),
@@ -1310,12 +1303,11 @@ static int error(void)
 static int begin_socks(ne_socket **sock, struct socks_server *srv,
                        server_fn server, void *userdata)
 {
-    unsigned int port;
     srv->server = server;
     srv->userdata = userdata;
     srv->say_hello = 1;
-    CALL(new_spawn_server(1, socks_server, srv, &port));
-    return do_connect(sock, localhost, port);
+    CALL(spawn_server(7777, socks_server, srv));
+    return do_connect(sock, localhost, 7777);
 }
 
 static int socks_proxy(void)
