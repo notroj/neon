@@ -38,10 +38,14 @@
 #ifdef NE_HAVE_TS_SSL
 #include <errno.h>
 #include <pthread.h>
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #include <gcrypt.h>
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 #else
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #include <gcrypt.h>
+#endif
 #endif
 
 #ifdef HAVE_ICONV
@@ -1371,10 +1375,12 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 
 int ne__ssl_init(void)
 {
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b01
 #ifdef NE_HAVE_TS_SSL
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 #endif
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
+#endif
     return gnutls_global_init();
 }
 
