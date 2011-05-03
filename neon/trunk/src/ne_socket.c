@@ -1693,7 +1693,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     gnutls_db_set_ptr(ssl, ctx);
 
     if (ctx->verify)
-        gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUEST);
+        gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUIRE);
 
     sock->ssl = ssl;
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr)(long)sock->fd);
