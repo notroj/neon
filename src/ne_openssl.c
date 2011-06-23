@@ -814,22 +814,12 @@ static char *find_friendly_name(PKCS12 *p12)
     return name;
 }
 
-ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
+static ne_ssl_client_cert *parse_client_cert(PKCS12 *p12)
 {
-    PKCS12 *p12;
-    FILE *fp;
     X509 *cert;
     EVP_PKEY *pkey;
     ne_ssl_client_cert *cc;
 
-    fp = fopen(filename, "rb");
-    if (fp == NULL)
-        return NULL;
-
-    p12 = d2i_PKCS12_fp(fp, NULL);
-
-    fclose(fp);
-    
     if (p12 == NULL) {
         ERR_clear_error();
         return NULL;
@@ -873,6 +863,34 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
             return NULL;
         }
     }
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
+                                          size_t buflen)
+{
+    ne_d2i_uchar *p;
+    PKCS12 *p12;
+
+    p = buffer;
+    p12 = d2i_PKCS12(NULL, &p, buflen);
+    
+    return parse_client_cert(p12);
+}
+    
+ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
+{
+    PKCS12 *p12;
+    FILE *fp;
+
+    fp = fopen(filename, "rb");
+    if (fp == NULL)
+        return NULL;
+
+    p12 = d2i_PKCS12_fp(fp, NULL);
+
+    fclose(fp);
+
+    return parse_client_cert(p12);
 }
 
 #ifdef HAVE_PAKCHOIS

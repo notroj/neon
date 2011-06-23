@@ -13,3 +13,7 @@ NEON_0_29 {
     ne_buffer_qappend;
     ne_strnqdup;
 };
+
+NEON_0_30 {
+    ne_ssl_clicert_import;
+};

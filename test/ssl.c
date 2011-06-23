@@ -382,6 +382,22 @@ static int load_client_cert(void)
     return OK;
 }
 
+static int clicert_import(void)
+{
+    ne_ssl_client_cert *cc;
+    ne_buffer *buf = ne_buffer_create();
+
+    CALL(file_to_buffer("client.p12", buf));
+
+    cc = ne_ssl_clicert_import((unsigned char *)buf->data, ne_buffer_size(buf));
+    ONN("could not import client cert from buffer", cc == NULL);
+    
+    ONN("failed to decrypt", ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
+    ne_ssl_clicert_free(cc);
+
+    return OK;
+}
+
 /* Test that 'cert', which is signed by CA_CERT, is accepted
  * unconditionaly. */
 static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
@@ -1856,6 +1872,7 @@ ne_test tests[] = {
     T(read_write),
 
     T(load_client_cert),
+    T(clicert_import),
 
     T(simple),
     T(simple_sslv2),
