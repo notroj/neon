@@ -26,6 +26,7 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#include <fcntl.h>
 
 #include "ne_session.h"
 
@@ -203,4 +204,22 @@ int proxied_session_server(ne_session **sess, const char *scheme,
 int make_session(ne_session **sess, server_fn fn, void *ud)
 {
     return session_server(sess, fn, ud);
+}
+
+int file_to_buffer(const char *filename, ne_buffer *buf)
+{
+    char buffer[BUFSIZ];
+    int fd;
+    ssize_t n;
+    
+    fd = open(filename, O_RDONLY);
+    ONV(fd < 0, ("could not open file %s", filename));
+
+    while ((n = read(fd, buffer, BUFSIZ)) > 0) {
+	ne_buffer_append(buf, buffer, n);
+    }
+
+    close(fd);
+    
+    return 0;
 }

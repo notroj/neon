@@ -123,5 +123,8 @@ int session_server(ne_session **sess, server_fn fn, void *userdata);
 int proxied_session_server(ne_session **sess, const char *scheme,
                            const char *host, unsigned int fakeport,
                            server_fn fn, void *userdata);
+
+/* Read contents of file 'filename' into buffer 'buf'. */
+int file_to_buffer(const char *filename, ne_buffer *buf);
    
 #endif /* UTILS_H */

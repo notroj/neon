@@ -1119,6 +1119,21 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
 
 ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
 {
+    gnutls_datum datum;
+    ne_ssl_client_cert *cc;
+
+    if (read_to_datum(filename, &datum))
+        return NULL;
+
+    cc = ne_ssl_clicert_import(datum.data, datum.size);
+
+    ne_free(datum.data);
+
+    return cc;
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, size_t buflen)
+{
     int ret;
     gnutls_datum data;
     gnutls_pkcs12 p12;
@@ -1127,15 +1142,14 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     gnutls_x509_crt cert = NULL;
     gnutls_x509_privkey pkey = NULL;
 
-    if (read_to_datum(filename, &data))
-        return NULL;
+    data.data = buffer;
+    data.size = buflen;
 
     if (gnutls_pkcs12_init(&p12) != 0) {
         return NULL;
     }
 
     ret = gnutls_pkcs12_import(p12, &data, GNUTLS_X509_FMT_DER, 0);
-    ne_free(data.data);
     if (ret < 0) {
         gnutls_pkcs12_deinit(p12);
         return NULL;

@@ -127,6 +127,13 @@ typedef struct ne_ssl_client_cert_s ne_ssl_client_cert;
  * in either the encrypted or decrypted state. */
 ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
 
+/* Read a client certificate and private key from 'buffer', of length
+ * 'buflen', returning NULL if the certificate could not be parsed, or
+ * otherwise returning a client certificate object.  The returned
+ * object may be in either the encrypted or decrypted state. */
+ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
+                                          size_t buflen);
+
 /* Returns non-zero if client cert is in the encrypted state. */
 int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *ccert);
 
