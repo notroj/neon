@@ -121,16 +121,17 @@ void ne_ssl_cert_free(ne_ssl_certificate *cert);
  * "decrypted" state.  */
 typedef struct ne_ssl_client_cert_s ne_ssl_client_cert;
 
-/* Read a client certificate and private key from a PKCS12 file;
- * returns NULL if the file could not be parsed, or otherwise
- * returning a client certificate object.  The returned object may be
- * in either the encrypted or decrypted state. */
-ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
-
-/* Read a client certificate and private key from 'buffer', of length
- * 'buflen', returning NULL if the certificate could not be parsed, or
+/* Read a client certificate (and private key) in PKCS#12 format from
+ * file 'filename'; returns NULL if the file could not be parsed, or
  * otherwise returning a client certificate object.  The returned
  * object may be in either the encrypted or decrypted state. */
+ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
+
+/* Read a client certificate (and private key) in PKCS#12 format from
+ * 'buffer', of length 'buflen', returning NULL if the certificate
+ * could not be parsed, or otherwise returning a client certificate
+ * object.  The returned object may be in either the encrypted or
+ * decrypted state. */
 ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
                                           size_t buflen);
 
