@@ -638,11 +638,8 @@ static int unbounded_response(const char *header, const char *repeats)
 {
     ne_session *sess;
     struct infinite i = { header, repeats};
-    int dbg;
 
     CALL(make_session(&sess, serve_infinite, &i));
-
-    dbg = ne_debug_mask;
 
     ONN("unbounded PROPFIND response did not fail",
         ne_simple_propfind(sess, "/", 0, NULL, 
