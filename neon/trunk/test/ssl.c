@@ -741,15 +741,15 @@ static int no_verify(void)
 static int cache_verify(void)
 {
     ne_session *sess = DEFSESS;
-    int ret, count = 0;
+    int count = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
     
     /* force verify cert. */
-    ret = any_ssl_request(sess, ssl_server, &args, NULL, count_vfy,
-			  &count);
+    CALL(any_ssl_request(sess, ssl_server, &args, NULL, count_vfy,
+                         &count));
 
     CALL(spawn_server(7777, ssl_server, &args));
-    ret = any_request(sess, "/foo2");
+    ONREQ(any_request(sess, "/foo2"));
     CALL(await_server());
 
     ONV(count != 1,
