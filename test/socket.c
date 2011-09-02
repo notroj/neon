@@ -1,6 +1,6 @@
 /* 
    Socket handling tests
-   Copyright (C) 2002-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2011, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -395,6 +395,24 @@ static int addr_reverse(void)
 
     ne_iaddr_free(ia);
 
+    return OK;
+}
+
+static int addr_canonical(void)
+{
+    ne_sock_addr *sa;
+    const char *h;
+
+    sa = ne_addr_resolve("localhost", NE_ADDR_CANON);
+    ONN("could not resolve localhost", sa == NULL);
+    
+    h = ne_addr_canonical(sa);
+    ONN("no canonical name for localhost", h == NULL);
+
+    NE_DEBUG(NE_DBG_SOCKET, "canonical name: %s\n", h);
+
+    ne_addr_destroy(sa);
+    
     return OK;
 }
 
@@ -1456,6 +1474,7 @@ ne_test tests[] = {
     T(just_connect),
     T(addr_connect),
     T(addr_peer),
+    T(addr_canonical),
     T(read_close),
     T(peek_close),
     T(single_read),

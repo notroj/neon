@@ -1,6 +1,6 @@
 /* 
    Socket handling routines
-   Copyright (C) 1998-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1998-2011, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004 Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -227,6 +227,7 @@ struct ne_sock_addr_s {
 #else
     struct in_addr *addrs;
     size_t cursor, count;
+    char *name;
 #endif
     int errnum;
 };
@@ -912,12 +913,16 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 
     hints.ai_socktype = SOCK_STREAM;
 
+    if (flags == NE_ADDR_CANON) {
+        hints.ai_flags = AI_CANONNAME;
+    }
+
 #ifdef AF_INET6
     if (hostname[0] == '[' && ((pnt = strchr(hostname, ']')) != NULL)) {
 	char *hn = ne_strdup(hostname + 1);
 	hn[pnt - hostname - 1] = '\0';
 #ifdef AI_NUMERICHOST /* added in the RFC2553 API */
-	hints.ai_flags = AI_NUMERICHOST;
+	hints.ai_flags |= AI_NUMERICHOST;
 #endif
         hints.ai_family = AF_INET6;
 	addr->errnum = getaddrinfo(hn, NULL, &hints, &addr->result);
@@ -926,7 +931,7 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 #endif /* AF_INET6 */
     {
 #ifdef USE_GAI_ADDRCONFIG /* added in the RFC3493 API */
-        hints.ai_flags = AI_ADDRCONFIG;
+        hints.ai_flags |= AI_ADDRCONFIG;
         hints.ai_family = AF_UNSPEC;
         addr->errnum = getaddrinfo(hostname, NULL, &hints, &addr->result);
 #else
@@ -961,6 +966,9 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 
 	    for (n = 0; n < addr->count; n++)
 		memcpy(&addr->addrs[n], hp->h_addr_list[n], hp->h_length);
+            
+            if (hp->h_name && hp->h_name[0]) 
+                addr->name = ne_strdup(hp->h_name);
 	}
     } else {
 	addr->addrs = ne_malloc(sizeof *addr->addrs);
@@ -974,6 +982,15 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 int ne_addr_result(const ne_sock_addr *addr)
 {
     return addr->errnum;
+}
+
+const char *ne_addr_canonical(const ne_sock_addr *addr)
+{
+#ifdef USE_GETADDRINFO
+    return addr->result ? addr->result->ai_canonname : NULL;
+#else
+    return addr->name;
+#endif
 }
 
 const ne_inet_addr *ne_addr_first(ne_sock_addr *addr)
@@ -1154,6 +1171,8 @@ void ne_addr_destroy(ne_sock_addr *addr)
 #else
     if (addr->addrs)
 	ne_free(addr->addrs);
+    if (addr->name)
+        ne_free(addr->name);
 #endif
     ne_free(addr);
 }
