@@ -394,6 +394,7 @@ static int clicert_import(void)
     
     ONN("failed to decrypt", ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE));
     ne_ssl_clicert_free(cc);
+    ne_buffer_destroy(buf);
 
     return OK;
 }
@@ -788,7 +789,7 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
     ne_session *sess = ne_session_create("https", host, 7777);
     int gotf = 0, ret;
     struct ssl_server_args args = {0};
-    ne_sock_addr *addr;
+    ne_sock_addr *addr = NULL;
     const ne_inet_addr *list[1];
 
     if (realhost) {
@@ -828,6 +829,7 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
          ne_get_error(sess), errstr));
         
     ne_session_destroy(sess);
+    if (addr) ne_addr_destroy(addr);
 
     return OK;
 }

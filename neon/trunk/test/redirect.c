@@ -85,6 +85,8 @@ static int check_redir(struct redir_args *args, const char *expect)
         uri.path = (char *)expect;
         full_expect = ne_uri_unparse(&uri);
         expect = full_expect;
+        uri.path = NULL;
+        ne_uri_free(&uri);
     }
 
     CALL(process_redir(sess, args->path, &loc));

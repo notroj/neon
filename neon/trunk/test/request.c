@@ -2332,6 +2332,7 @@ static int send_length(void)
 
     ne_request_destroy(req);
     ne_session_destroy(sess);
+    ne_buffer_destroy(buf);
     close(fd);
     return await_server();
 }
