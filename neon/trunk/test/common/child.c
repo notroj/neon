@@ -221,7 +221,8 @@ int spawn_server_addr(int bind_local, int port, server_fn fn, void *ud)
 
 	/* print the error out otherwise it gets lost. */
 	if (ret) {
-	    printf("server child failed: %s\n", test_context);
+	    printf("server child failed (%s): %s\n", 
+                   tests[test_num].name, test_context);
 	}
 	
 	/* and quit the child. */
@@ -286,7 +287,8 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	    close_socket(sock);
 	    NE_DEBUG(NE_DBG_HTTP, "child served request, %d.\n", ret);
 	    if (ret) {
-		printf("server child failed: %s\n", test_context);
+                printf("server child failed (%s, iteration %d/%d): %s\n", 
+                       tests[test_num].name, count, n, test_context);
 		exit(-1);
 	    }
 	    /* don't send back notification to parent more than
