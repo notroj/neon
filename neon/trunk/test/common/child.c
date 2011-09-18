@@ -1,6 +1,6 @@
 /* 
    Framework for testing with a server process
-   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2010, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -284,8 +284,8 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 	    NE_DEBUG(NE_DBG_HTTP, "child awaiting connection #%d.\n", count);
 	    ONN("accept failed", ne_sock_accept(sock, listener));
 	    ret = fn(sock, userdata);
+	    NE_DEBUG(NE_DBG_HTTP, "child handled connection, %d.\n", ret);
 	    close_socket(sock);
-	    NE_DEBUG(NE_DBG_HTTP, "child served request, %d.\n", ret);
 	    if (ret) {
                 printf("server child failed (%s, iteration %d/%d): %s\n", 
                        tests[test_num].name, count, n, test_context);
@@ -347,7 +347,9 @@ int new_spawn_server(int count, server_fn fn, void *userdata,
 
         do {
             ne_socket *sock = ne_sock_create();
-            
+            char errbuf[256];            
+            int cret;
+
             NE_DEBUG(NE_DBG_HTTP, "child iteration #%d (of %d), "
                      "awaiting connection...\n", iter, count);
 
@@ -362,7 +364,11 @@ int new_spawn_server(int count, server_fn fn, void *userdata,
             NE_DEBUG(NE_DBG_HTTP, "child iteration #%d returns %d\n",
                      iter, ret);
 
-            close_socket(sock);
+	    cret = close_socket(sock);
+	    NE_DEBUG(NE_DBG_HTTP, "child closed connection, %d: %s.\n", cret,
+                     cret ? ne_strerror(cret, errbuf, sizeof errbuf) 
+                     : "no error");
+
         } while (ret == 0 && ++iter <= count);
 
         NE_DEBUG(NE_DBG_HTTP, "child terminating with %d\n", ret);
