@@ -16,8 +16,5 @@ NEON_0_29 {
 
 NEON_0_30 {
     ne_ssl_clicert_import;
-};
-
-NEON_0_31 {
     ne_addr_canonical;
 };
