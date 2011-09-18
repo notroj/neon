@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2011, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -181,6 +181,7 @@ typedef struct {
     /* This is used for SSPI (Negotiate/NTLM) auth */
     char *sspi_token;
     void *sspi_context;
+    char *sspi_host;
 #endif
 #ifdef HAVE_NTLM
      /* This is used for NTLM auth */
@@ -299,6 +300,8 @@ static void clean_session(auth_session *sess)
     sess->sspi_token = NULL;
     ne_sspi_destroy_context(sess->sspi_context);
     sess->sspi_context = NULL;
+    if (sess->sspi_host) ne_free(sess->sspi_host);
+    sess->sspi_host = NULL;
 #endif
 #ifdef HAVE_NTLM
     if (sess->ntlm_context) {
@@ -627,14 +630,7 @@ static int continue_sspi(auth_session *sess, int ntlm, const char *hdr)
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: SSPI challenge.\n");
     
     if (!sess->sspi_context) {
-        ne_uri uri = {0};
-
-        ne_fill_server_uri(sess->sess, &uri);
-
-        status = ne_sspi_create_context(&sess->sspi_context, uri.host, ntlm);
-
-        ne_uri_free(&uri);
-
+        status = ne_sspi_create_context(&sess->sspi_context, sess->sspi_host, ntlm);
         if (status) {
             return status;
         }
@@ -1652,6 +1648,21 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         ne_uri_free(&uri);
     }
 #endif
+#ifdef HAVE_SSPI
+    if ((protomask & (NE_AUTH_NTLM|NE_AUTH_GSSAPI)) && !ahs->sspi_host) {
+        ne_uri uri = {0};
+        
+        if (isproxy)
+            ne_fill_proxy_uri(sess, &uri);
+        else
+            ne_fill_server_uri(sess, &uri);
+
+        ahs->sspi_host = uri.host;
+        uri.host = NULL;
+
+        ne_uri_free(&uri);
+    }
+#endif        
 
     /* Find the end of the handler list, and add a new one. */
     hdl = &ahs->handlers;
