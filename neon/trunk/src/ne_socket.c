@@ -1251,11 +1251,11 @@ static int timed_connect(ne_socket *sock, int fd,
             }
         }
         
-        /* Reset to old flags: */
-        if (fcntl(fd, F_SETFL, flags) == -1) {
+        /* Reset to old flags; fail on error if no previous error. */
+        if (fcntl(fd, F_SETFL, flags) == -1 && !ret) {
             set_strerror(sock, errno);
             ret = NE_SOCK_ERROR;
-        }       
+        }
     } else 
 #endif /* USE_NONBLOCKING_CONNECT */
     {
