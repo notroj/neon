@@ -1387,7 +1387,9 @@ static int do_bind(int fd, int peer_family,
 
 #ifdef SOCK_CLOEXEC
 /* sock_cloexec is initialized to SOCK_CLOEXEC and cleared to zero if
- * a socket() call ever fails with EINVAL. */
+ * a socket() call ever fails with EINVAL; not strictly thread-safe
+ * but in practice it will not matter if two threads race accessing
+ * the variable. */
 static int sock_cloexec = SOCK_CLOEXEC;
 #define RETRY_ON_EINVAL
 #else
