@@ -913,7 +913,7 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 
     hints.ai_socktype = SOCK_STREAM;
 
-    if (flags == NE_ADDR_CANON) {
+    if (flags & NE_ADDR_CANON) {
         hints.ai_flags = AI_CANONNAME;
     }
 
