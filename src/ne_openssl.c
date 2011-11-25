@@ -568,6 +568,11 @@ ne_ssl_context *ne_ssl_context_create(int mode)
     } else if (mode == NE_SSL_CTX_SERVER) {
         ctx->ctx = SSL_CTX_new(SSLv23_server_method());
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
+#ifdef SSL_OP_NO_TICKET
+        /* disable ticket support since it inhibits testing of session
+         * caching. */
+        SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_TICKET);
+#endif
     } else {
 #ifndef OPENSSL_NO_SSL2
         ctx->ctx = SSL_CTX_new(SSLv2_server_method());
