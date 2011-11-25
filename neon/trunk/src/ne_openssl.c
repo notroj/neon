@@ -569,8 +569,10 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         ctx->ctx = SSL_CTX_new(SSLv23_server_method());
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
     } else {
+#ifndef OPENSSL_NO_SSL2
         ctx->ctx = SSL_CTX_new(SSLv2_server_method());
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
+#endif
     }
     return ctx;
 }
@@ -592,6 +594,22 @@ void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value)
     }
 
     SSL_CTX_set_options(ctx->ctx, opts);
+}
+
+int ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag)
+{
+    switch (flag) {
+    case NE_SSL_CTX_SSLv2:
+#ifdef OPENSSL_NO_SSL2
+        return 0;
+#else
+        return ! (SSL_CTX_get_options(ctx->ctx); & SSL_OP_NO_SSLv2);
+#endif
+    default:
+        break;
+    }
+
+    return 0;
 }
 
 int ne_ssl_context_keypair(ne_ssl_context *ctx, const char *cert,
