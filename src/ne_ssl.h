@@ -190,6 +190,9 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
 /* Set a flag for the SSL context. */
 void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value);
 
+/* Return flag value. */
+int ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag);
+
 /* Destroy an SSL context. */
 void ne_ssl_context_destroy(ne_ssl_context *ctx);
 

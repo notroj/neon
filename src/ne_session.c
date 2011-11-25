@@ -361,6 +361,7 @@ void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value)
 #ifdef NE_HAVE_SSL
         if (flag == NE_SESSFLAG_SSLv2 && sess->ssl_context) {
             ne_ssl_context_set_flag(sess->ssl_context, NE_SSL_CTX_SSLv2, value);
+            sess->flags[flag] = ne_ssl_context_get_flag(sess->ssl_context, NE_SSL_CTX_SSLv2);
         }
 #endif
     }
