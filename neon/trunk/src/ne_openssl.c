@@ -1,6 +1,6 @@
 /* 
    neon SSL/TLS support using OpenSSL
-   Copyright (C) 2002-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2011, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -574,7 +574,10 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_TICKET);
 #endif
     } else {
-#ifndef OPENSSL_NO_SSL2
+#ifdef OPENSSL_NO_SSL2
+        ne_free(ctx);
+        return NULL;
+#else
         ctx->ctx = SSL_CTX_new(SSLv2_server_method());
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
 #endif
@@ -608,7 +611,7 @@ int ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag)
 #ifdef OPENSSL_NO_SSL2
         return 0;
 #else
-        return ! (SSL_CTX_get_options(ctx->ctx); & SSL_OP_NO_SSLv2);
+        return ! (SSL_CTX_get_options(ctx->ctx) & SSL_OP_NO_SSLv2);
 #endif
     default:
         break;
