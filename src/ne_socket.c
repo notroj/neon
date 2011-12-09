@@ -1154,7 +1154,9 @@ int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz)
 #else
     struct hostent *hp;
     
-    hp = gethostbyaddr(ia, sizeof *ia, AF_INET);
+    /* Cast to const void *; some old libc headers apparently expect
+     * const char * here. */
+    hp = gethostbyaddr((const void *)ia, sizeof *ia, AF_INET);
     if (hp && hp->h_name) {
         ne_strnzcpy(buf, hp->h_name, bufsiz);
         return 0;
