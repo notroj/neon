@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
 	if (warnings) {
 	    if (quiet) {
                 printf("(%d warning%s)\n", warnings, 
-                       warnings==1?"s":"");
+                       warnings > 1 ? "s" : "");
             }
             else {
                 printf("-> %d warning%s issued.\n", warnings, 
