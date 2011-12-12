@@ -45,7 +45,9 @@
 #include "ne_string.h"
 #include "ne_utils.h"
 #include "ne_socket.h"
+#if NE_VERSION_MAJOR > 0 || NE_VERSION_MINOR > 25
 #include "ne_i18n.h"
+#endif
 
 #include "tests.h"
 #include "child.h"
@@ -188,7 +190,9 @@ int main(int argc, char *argv[])
     setlocale(LC_MESSAGES, "");
 #endif
 
+#if NE_VERSION_MAJOR > 0 || NE_VERSION_MAJOR > 25
     ne_i18n_init(NULL);
+#endif
 
 #if defined(HAVE_ISATTY) && defined(STDOUT_FILENO)
     if (isatty(STDOUT_FILENO)) {
