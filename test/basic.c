@@ -276,45 +276,45 @@ static int get(void)
 static int options2(void)
 {
     static const struct {
-	const char *hdrs;
-	unsigned int caps;
+        const char *hdrs;
+        unsigned int caps;
     } ts[] = {
-	{ "1,2\r\n", CLASS_12 },
-	{ "1 2\r\n", 0 },
-	/* these aren't strictly legal headers: */
-	{ "2,1\r\n", CLASS_12 },
-	{ " 1, 2  \r\n", CLASS_12 },
-	{ "1\r\nDAV:2\r\n", CLASS_12 },
+        { "1,2\r\n", CLASS_12 },
+        { "1 2\r\n", 0 },
+        /* these aren't strictly legal headers: */
+        { "2,1\r\n", CLASS_12 },
+        { " 1, 2  \r\n", CLASS_12 },
+        { "1\r\nDAV:2\r\n", CLASS_12 },
         /* extended types */
         { "1, 2, extended-mkcol", CLASS_12 | NE_CAP_EXT_MKCOL },
-	{ NULL, 0 }
+        { NULL, 0 }
     };
     char resp[BUFSIZ];
     int n;
 
     for (n = 0; ts[n].hdrs != NULL; n++) {
-	ne_session *sess;
+        ne_session *sess;
         unsigned int caps;
 
-	ne_snprintf(resp, BUFSIZ, "HTTP/1.0 200 OK\r\n"
-		    "Connection: close\r\n"
+        ne_snprintf(resp, BUFSIZ, "HTTP/1.0 200 OK\r\n"
+                    "Connection: close\r\n"
                     "Content-Length: 0\r\n"
-		    "DAV: %s" "\r\n\r\n", ts[n].hdrs);
+                    "DAV: %s" "\r\n\r\n", ts[n].hdrs);
 
-	CALL(make_session(&sess, single_serve_string, resp));
+        CALL(make_session(&sess, single_serve_string, resp));
 
-	ONREQ(ne_options2(sess, "/foo", &caps));
+        ONREQ(ne_options2(sess, "/foo", &caps));
 
-	ONV(caps != ts[n].caps,
+        ONV(caps != ts[n].caps,
             ("capabilities for 'DAV: %s' were 0x%x, expected 0x%x", 
              ts[n].hdrs, caps, ts[n].caps));
 
-	CALL(await_server());
+        CALL(await_server());
 
         ne_session_destroy(sess);
     }
 
-    return OK;	
+    return OK;  
 }
 
 ne_test tests[] = {
