@@ -798,17 +798,30 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
     int gotf = 0, ret;
     struct ssl_server_args args = {0};
     ne_sock_addr *addr = NULL;
-    const ne_inet_addr *list[1];
+    const ne_inet_addr **list = NULL;
 
     if (realhost) {
+        size_t n;
+        const ne_inet_addr *ia;
+
         addr = ne_addr_resolve(realhost, 0);
 
         ONV(ne_addr_result(addr),
             ("fake hostname lookup failed for %s", realhost));
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: Using fake hostname '%s'\n", realhost);
+
+        for (n = 0, ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr))
+            n++;
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: Address count '%lu'\n", n);
+
+        list = ne_calloc(n * sizeof(*list));
+
+        for (n = 0, ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr))
+            list[n++] = ia;
         
-        list[0] = ne_addr_first(addr);
-        
-        ne_set_addrlist(sess, list, 1);
+        ne_set_addrlist(sess, list, n);
     }
 
     args.cert = cert;
