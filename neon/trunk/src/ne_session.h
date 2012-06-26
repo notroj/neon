@@ -118,6 +118,16 @@ int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
  * created using this session.  */
 void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
+/* Bypass the normal name resolution; force the use of specific set of
+ * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
+ * array and pointed-to objects must remain valid until the session is
+ * destroyed.  This function will override (remove) any proxy servers
+ * previously configured, and must be called before any requests are
+ * created using this session.  Port number 'port' will be used
+ * instead of the "real" session port, to connect to the proxy. */
+void ne_set_addrlist2(ne_session *sess, unsigned int port, 
+                      const ne_inet_addr **addrs, size_t n);
+
 /* Bind connections to the specified local address.  If the address
  * determined for the remote host has a different family (type) to
  * 'addr', 'addr' will be ignored.  The 'addr' object must remain

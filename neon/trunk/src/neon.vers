@@ -18,4 +18,5 @@ NEON_0_30 {
     ne_ssl_clicert_import;
     ne_addr_canonical;
     ne_ssl_context_get_flag;
+    ne_set_addrlist2;
 };
