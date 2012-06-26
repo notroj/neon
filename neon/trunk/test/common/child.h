@@ -69,6 +69,10 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n);
 int new_spawn_server(int count, server_fn fn, void *userdata, 
                      unsigned int *port);
 
+/* As per new_spawn_server, but also returns the bound address as *addr. */
+int new_spawn_server2(int count, server_fn fn, void *userdata,
+                      ne_inet_addr **addr, unsigned int *port);
+
 /* Blocks until child process exits, and gives return code of 'fn'. */
 int await_server(void);
 

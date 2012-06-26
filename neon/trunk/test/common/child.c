@@ -54,7 +54,9 @@ static pid_t child = 0;
 
 int clength;
 
-static struct in_addr lh_addr = {0}, hn_addr = {0};
+static struct in_addr lh_addr, hn_addr;
+
+static int have_lh_addr;
 
 const char *want_header = NULL;
 got_header_fn got_header = NULL;
@@ -73,6 +75,7 @@ int lookup_localhost(void)
     /* this will break if a system is set up so that `localhost' does
      * not resolve to 127.0.0.1, but... */
     lh_addr.s_addr = inet_addr("127.0.0.1");
+    have_lh_addr = 1;
     return OK;
 }
 
@@ -320,10 +323,26 @@ int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
 int new_spawn_server(int count, server_fn fn, void *userdata,
                      unsigned int *port)
 {
+    ne_inet_addr *addr;
+    int ret;
+
+    ret = new_spawn_server2(count, fn, userdata, &addr, port);
+    
+    ne_iaddr_free(addr);
+
+    return ret;
+}
+
+int new_spawn_server2(int count, server_fn fn, void *userdata,
+                      ne_inet_addr **addr, unsigned int *port)
+{
     struct sockaddr_in sa;
     socklen_t salen = sizeof sa;
     int ls;
     
+    if (!have_lh_addr)
+        lookup_localhost();
+
     ls = do_listen(lh_addr, 0);
     ONN("could not bind/listen fd for server", ls < 0);
 
@@ -332,6 +351,7 @@ int new_spawn_server(int count, server_fn fn, void *userdata,
          strerror(errno)));
     
     *port = ntohs(sa.sin_port);
+    *addr = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&lh_addr.s_addr);
 
     NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
     
