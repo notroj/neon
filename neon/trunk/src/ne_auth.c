@@ -1228,7 +1228,7 @@ static const struct auth_protocol protocols[] = {
       digest_challenge, request_digest, verify_digest_response,
       0 },
 #ifdef HAVE_GSSAPI
-    { NE_AUTH_GSSAPI, 30, "Negotiate",
+    { NE_AUTH_GSSAPI_ONLY, 30, "Negotiate",
       negotiate_challenge, request_negotiate, verify_negotiate_response,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
@@ -1236,7 +1236,7 @@ static const struct auth_protocol protocols[] = {
     { NE_AUTH_NTLM, 30, "NTLM",
       sspi_challenge, request_sspi, NULL,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
-    { NE_AUTH_GSSAPI, 30, "Negotiate",
+    { NE_AUTH_SSPI, 30, "Negotiate",
       sspi_challenge, request_sspi, verify_sspi,
       AUTH_FLAG_OPAQUE_PARAM|AUTH_FLAG_VERIFY_NON40x|AUTH_FLAG_CONN_AUTH },
 #endif
@@ -1610,6 +1610,11 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         /* Map NEGOTIATE to NTLM | GSSAPI. */
         protomask |= NE_AUTH_GSSAPI | NE_AUTH_NTLM;
     }
+    
+    if ((protomask & NE_AUTH_GSSAPI) == NE_AUTH_GSSAPI) {
+        /* Map GSSAPI to GSSAPI_ONLY | SSPI. */
+        protomask |= NE_AUTH_GSSAPI_ONLY | NE_AUTH_SSPI;
+    }
 
     ahs = ne_get_session_private(sess, id);
     if (ahs == NULL) {
@@ -1635,7 +1640,7 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     }
 
 #ifdef HAVE_GSSAPI
-    if ((protomask & NE_AUTH_GSSAPI) && ahs->gssname == GSS_C_NO_NAME) {
+    if ((protomask & NE_AUTH_GSSAPI_ONLY) && ahs->gssname == GSS_C_NO_NAME) {
         ne_uri uri = {0};
         
         if (isproxy)
@@ -1649,7 +1654,7 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     }
 #endif
 #ifdef HAVE_SSPI
-    if ((protomask & (NE_AUTH_NTLM|NE_AUTH_GSSAPI)) && !ahs->sspi_host) {
+    if ((protomask & (NE_AUTH_NTLM|NE_AUTH_SSPI)) && !ahs->sspi_host) {
         ne_uri uri = {0};
         
         if (isproxy)
