@@ -201,6 +201,34 @@ int proxied_session_server(ne_session **sess, const char *scheme,
     return OK;
 }
 
+static void fakesess_destroy(void *userdata)
+{
+    ne_inet_addr *addr = userdata;
+
+    ne_iaddr_free(addr);
+}
+
+int fakeproxied_session_server(ne_session **sess, const char *scheme,
+                               const char *host, unsigned int fakeport,
+                               server_fn fn, void *userdata)
+{
+    unsigned int port;
+    ne_inet_addr *addr;
+    const ne_inet_addr *alist[1];
+    
+    CALL(new_spawn_server2(1, fn, userdata, &addr, &port));
+    
+    alist[0] = addr;
+
+    *sess = ne_session_create(scheme, host, fakeport);
+
+    ne_set_addrlist2(*sess, port, alist, 1);
+
+    ne_hook_destroy_session(*sess, fakesess_destroy, addr);
+
+    return OK;
+}
+
 int make_session(ne_session **sess, server_fn fn, void *ud)
 {
     return session_server(sess, fn, ud);
