@@ -467,6 +467,7 @@ int ne_sspi_clear_context(void *context)
         return status;
     }
     sspiContext->authfinished = 0;
+    sspiContext->continueNeeded = 0;
     return 0;
 }
 /*
