@@ -1264,7 +1264,7 @@ static int timed_connect(ne_socket *sock, int fd,
         ret = raw_connect(fd, sa, salen);
         
         if (ret < 0) {
-            set_strerror(sock, errno);
+            set_strerror(sock, ne_errno);
             ret = NE_SOCK_ERROR;
         }
     }
@@ -1453,7 +1453,7 @@ int ne_sock_connect(ne_socket *sock,
                         ia_family(sock->laddr) == ia_family(addr))) {
         ret = do_bind(fd, ia_family(addr), sock->laddr, sock->lport);
         if (ret < 0) {
-            int errnum = errno;
+            int errnum = ne_errno;
             ne_close(fd);
             set_strerror(sock, errnum);
             return NE_SOCK_ERROR;
