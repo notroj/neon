@@ -1548,7 +1548,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 
 #ifdef HAVE_SSPI
     /* Clear the SSPI context after successful authentication. */
-    if (status->code != sess->status_code && sess->sspi_context) {
+    if (status->code != sess->spec->status_code && sess->sspi_context) {
         ne_sspi_clear_context(sess->sspi_context);
     }
 #endif
