@@ -1188,7 +1188,7 @@ if test x${enable_nls} = xyes; then
   # presume that dgettext() is available if bindtextdomain() is...
   # checking for dgettext() itself is awkward because gcc has a 
   # builtin of that function, which confuses AC_CHECK_FUNCS et al.
-  NE_SEARCH_LIBS(bindtextdomain, intl,,[enable_nls=no])
+  NE_SEARCH_LIBS(bindtextdomain, intl, -liconv ,[enable_nls=no])
   NE_CHECK_FUNCS(bind_textdomain_codeset)
 fi
 
