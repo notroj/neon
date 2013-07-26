@@ -2067,30 +2067,70 @@ static void status_cb(void *userdata, ne_session_status status,
     }
 }
 
-static int status(void)
+static void print_addr(char *buf, size_t buflen, const char *recvs,
+                       const ne_inet_addr *i1, const ne_inet_addr *i2)
+{
+    char a1[64], a2[64];
+
+    if (i2 == NULL)
+        ne_snprintf(buf, buflen,
+                    "lookup(localhost)-"
+                    "connecting(localhost,%s)-"
+                    "connected(localhost)-"
+                    "send(0,5000)-"
+                    "send(5000,5000)-"
+                    "%s"
+                    "disconnected(localhost)-",
+                    ne_iaddr_print(i1, a1, sizeof a1),
+                    recvs);
+    else
+        ne_snprintf(buf, buflen,
+                    "lookup(localhost)-"
+                    "connecting(localhost,%s)-"
+                    "connecting(localhost,%s)-"
+                    "connected(localhost)-"
+                    "send(0,5000)-"
+                    "send(5000,5000)-"
+                    "%s"
+                    "disconnected(localhost)-",
+                    ne_iaddr_print(i1, a1, sizeof a1),
+                    ne_iaddr_print(i2, a2, sizeof a2),
+                    recvs);
+}
+
+static int notifier(const char *response, const char *recvs)
 {
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
     ne_sock_addr *sa = ne_addr_resolve("localhost", 0);
-    char addr[64], expect[1024];
+    const ne_inet_addr *ia, *ia2;
+    char *expect[3];
+    int expects, match;
 
     ONN("could not resolve localhost", ne_addr_result(sa));
 
-    ne_snprintf(expect, sizeof expect,
-                "lookup(localhost)-"
-                "connecting(localhost,%s)-"
-                "connected(localhost)-"
-                "send(0,5000)-"
-                "send(5000,5000)-"
-                "recv(0,5)-"
-                "recv(5,5)-"
-                "disconnected(localhost)-",
-                ne_iaddr_print(ne_addr_first(sa), addr, sizeof addr));
+    ia = ne_addr_first(sa);
+    ia2 = ne_addr_next(sa);
+    ONV(ne_addr_next(sa) != NULL,
+        ("dumb test cannot handle localhost with three addresses, sorry"));
+
+    expect[0] = ne_malloc(BUFSIZ);
+    print_addr(expect[0], BUFSIZ, recvs, ia, NULL);
+
+    if (ia2) {
+        expects = 3;
+        expect[1] = ne_malloc(BUFSIZ);
+        expect[2] = ne_malloc(BUFSIZ);
+        print_addr(expect[1], BUFSIZ, recvs, ia, ia2);
+        print_addr(expect[2], BUFSIZ, recvs, ia2, ia);
+    }
+    else {
+        expects = 1;
+    }
 
     ne_addr_destroy(sa);
 
-    CALL(make_session(&sess, single_serve_string, RESP200
-                      "Content-Length: 5\r\n\r\n" "abcde"));
+    CALL(make_session(&sess, single_serve_string, (char *)response));
 
     ne_set_notifier(sess, status_cb, buf);
 
@@ -2099,60 +2139,43 @@ static int status(void)
     ne_session_destroy(sess);
     CALL(await_server());
 
-    ONV(strcmp(expect, buf->data),
+    match = 0;
+    NE_DEBUG(NE_DBG_HTTP,     "test: Got      %s\n", buf->data);
+    while (expects-- && !match) {
+        NE_DEBUG(NE_DBG_HTTP, "test: Checking %s\n", expect[expects]);
+        if (strcmp(expect[expects], buf->data) == 0)
+            match = 1;
+    }
+
+    ONV(!match,
         ("status event sequence mismatch: got [%s] not [%s]",
-         buf->data, expect));
+         buf->data, expect[0]));
     
     ne_buffer_destroy(buf);
     
     return OK;
 }
 
+static int status_plain(void)
+{
+    return notifier(/* body */ 
+        RESP200 "Content-Length: 5\r\n\r\n" "abcde",
+        /* receive status */
+        "recv(0,5)-"
+        "recv(5,5)-");
+}
+
 static int status_chunked(void)
 {
-    ne_session *sess;
-    ne_buffer *buf = ne_buffer_create();
-    ne_sock_addr *sa = ne_addr_resolve("localhost", 0);
-    char addr[64], expect[1024];
-
-    ONN("could not resolve localhost", ne_addr_result(sa));
-
-    /* This sequence is not exactly guaranteed by the API, but it's
-     * what the current implementation should do. */
-    ne_snprintf(expect, sizeof expect,
-                "lookup(localhost)-"
-                "connecting(localhost,%s)-"
-                "connected(localhost)-"
-                "send(0,5000)-"
-                "send(5000,5000)-"
-                "recv(0,-1)-"
-                "recv(1,-1)-"
-                "recv(2,-1)-"
-                "recv(3,-1)-"
-                "recv(4,-1)-"
-                "recv(5,-1)-"
-                "disconnected(localhost)-",
-                ne_iaddr_print(ne_addr_first(sa), addr, sizeof addr));
-
-    ne_addr_destroy(sa);
-
-    CALL(make_session(&sess, single_serve_string, 
-                      RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
-
-    ne_set_notifier(sess, status_cb, buf);
-
-    CALL(any_2xx_request_body(sess, "/status"));
-
-    ne_session_destroy(sess);
-    CALL(await_server());
-    
-    ONV(strcmp(expect, buf->data),
-        ("status event sequence mismatch: got [%s] not [%s]",
-         buf->data, expect));
-
-    ne_buffer_destroy(buf);
-        
-    return OK;
+    return notifier(/* body */ 
+        RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS,
+        /* receive status */
+        "recv(0,-1)-"
+        "recv(1,-1)-"
+        "recv(2,-1)-"
+        "recv(3,-1)-"
+        "recv(4,-1)-"
+        "recv(5,-1)-");
 }
 
 static const unsigned char raw_127[4] = "\x7f\0\0\01"; /* 127.0.0.1 */
@@ -2452,7 +2475,7 @@ ne_test tests[] = {
     T(hooks),
     T(hook_self_destroy),
     T(icy_protocol),
-    T(status),
+    T(status_plain),
     T(status_chunked),
     T(local_addr),
     T(dereg_progress),
