@@ -96,7 +96,8 @@ typedef struct {
 				  * property a. la. mod_dav */
 } ne_server_capabilities;
 
-/* DEPRECATED: Determines server capabilities (using OPTIONS). */
+/* DEPRECATED: Determines server capabilities (using OPTIONS).  Use
+ * ne_options2() instead. */
 int ne_options(ne_session *sess, const char *path,
                ne_server_capabilities *caps);
 
