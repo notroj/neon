@@ -38,7 +38,9 @@
 
 #ifdef NE_HAVE_TS_SSL
 #include <stdlib.h> /* for abort() */
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #endif
 
 #include "ne_ssl.h"
@@ -1131,17 +1133,25 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
  * it's necessary to cast from a pthread_t to an unsigned long at some
  * point.  */
 
+#ifndef _WIN32
 static pthread_mutex_t *locks;
+#else
+static HANDLE *locks;
+#endif
 static size_t num_locks;
 
 #ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
 /* Named to be obvious when it shows up in a backtrace. */
 static unsigned long thread_id_neon(void)
 {
+#ifndef _WIN32
     /* This will break if pthread_t is a structure; upgrading OpenSSL
      * >= 0.9.9 (which does not require this callback) is the only
      * solution.  */
     return (unsigned long) pthread_self();
+#else
+    return (unsigned long) GetCurrentThreadId();
+#endif
 }
 #endif
 
@@ -1150,12 +1160,20 @@ static unsigned long thread_id_neon(void)
 static void thread_lock_neon(int mode, int n, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK) {
+#ifndef _WIN32
         if (pthread_mutex_lock(&locks[n])) {
+#else
+        if (WaitForSingleObject(locks[n], INFINITE)) {
+#endif
             abort();
         }
     }
     else {
+#ifndef _WIN32
         if (pthread_mutex_unlock(&locks[n])) {
+#else
+        if (!ReleaseMutex(locks[n])) {
+#endif
             abort();
         }
     }
@@ -1204,7 +1222,11 @@ int ne__ssl_init(void)
 
         locks = malloc(num_locks * sizeof *locks);
         for (n = 0; n < num_locks; n++) {
+#ifndef _WIN32
             if (pthread_mutex_init(&locks[n], NULL)) {
+#else
+            if ((locks[n] = CreateMutex(NULL, FALSE, NULL)) == NULL) {
+#endif
                 NE_DEBUG(NE_DBG_SOCKET, "ssl: Failed to initialize pthread mutex.\n");
                 return -1;
             }
@@ -1237,7 +1259,11 @@ void ne__ssl_exit(void)
         CRYPTO_set_locking_callback(NULL);
 
         for (n = 0; n < num_locks; n++) {
+#ifndef _WIN32
             pthread_mutex_destroy(&locks[n]);
+#else
+            CloseHandle(locks[n]);
+#endif
         }
 
         free(locks);
