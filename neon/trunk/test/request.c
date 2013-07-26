@@ -1536,7 +1536,7 @@ static int retry_after_abort(void)
      * aborted. */
     CALL(make_session(&sess, serve_then_abort, &flag));
 
-    CALL(any_request(sess, "/first"));
+    ONREQ(any_request(sess, "/first"));
     ONN("second request should fail", any_request(sess, "/second") == NE_OK);
 
     CALL(await_server());
@@ -2438,8 +2438,6 @@ ne_test tests[] = {
     T(fail_long_header),
     T(fail_on_invalid),
     T(read_timeout),
-    T(fail_lookup),
-    T(fail_double_lookup),
     T(fail_connect),
     T(proxy_no_resolve),
     T(fail_chunksize),
@@ -2463,5 +2461,7 @@ ne_test tests[] = {
     T(socks_v4_proxy),
     T(send_length),
     T(socks_fail),
+    T(fail_lookup),
+    T(fail_double_lookup),
     T(NULL)
 };
