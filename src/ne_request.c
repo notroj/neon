@@ -403,8 +403,6 @@ static int send_request_body(ne_request *req, int retry)
     }
     
     while ((bytes = req->body_cb(req->body_ud, start, buflen)) > 0) {
-        req->session->status.sr.progress += bytes;
-
         if (chunked) {
             /* Overwrite the buffer prefix with the appropriate chunk
              * size; since ne_snprintf always NUL-terminates, the \n
