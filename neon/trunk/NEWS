@@ -13,6 +13,7 @@ Changes in release 0.30.0:
    successful auth (Nathanael Rensen)
  - build fixes for Open Watcom compiler (NormW)
  - fix Win32 error code handling for local ne_sock_prebind bind failure
+ - Win32: support LFS, thread-safe OpenSSL (Diego Santa Cruz)
 * Test suite:
  - fix SSL tests for recent OpenSSL
 
