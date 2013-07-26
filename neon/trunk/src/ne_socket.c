@@ -27,6 +27,9 @@
 #include "config.h"
 
 #include <sys/types.h>
+#ifdef HAVE_SYS_UIO_h
+#include <sys/uio.h> /* writev(2) */
+#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif

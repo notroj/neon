@@ -454,7 +454,7 @@ AC_REQUIRE([AC_PROG_MAKE_SET])
 
 AC_REQUIRE([AC_HEADER_STDC])
 
-AC_CHECK_HEADERS([errno.h stdarg.h string.h stdlib.h])
+AC_CHECK_HEADERS([errno.h stdarg.h string.h stdlib.h sys/uio.h])
 
 NEON_FORMAT(size_t,,u) dnl size_t is unsigned; use %u formats
 NEON_FORMAT(off_t)
