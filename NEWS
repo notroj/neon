@@ -7,6 +7,8 @@ Changes in release 0.30.0:
  - ne_socket.h: added ne_addr_canonical
  - ne_auth.h: added NE_AUTH_GSSAPI_ONLY, NE_AUTH_SSPI (Nathanael Rensen)
  - ne_basic.h: added NE_CAP_EXT_MKCOL options test
+ - ne_request.h: support chunked bodies with negative length passed to
+   ne_set_request_body_provider (Julien Reichel)
 * Bug fixes:
  - ne_path_escape: fix excessive memory allocation (Pierre Crokaert)
  - SSPI auth: use canonical server hostname, clear SSPI context after
