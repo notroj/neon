@@ -196,6 +196,8 @@ int proxied_session_server(ne_session **sess, const char *scheme,
     
     *sess = ne_session_create(scheme, host, fakeport);
 
+    NE_DEBUG(NE_DBG_HTTP, "test: Using proxied session to port %u.\n", port);
+
     ne_session_proxy(*sess, "localhost", port);
 
     return OK;
