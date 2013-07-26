@@ -74,6 +74,7 @@ static void free_proxies(ne_session *sess)
         ne_free(hi);
     }
 
+    sess->proxies = NULL;
     sess->any_proxy_http = 0;
 }
 
