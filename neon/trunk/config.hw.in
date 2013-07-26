@@ -39,6 +39,8 @@
 
 #define HAVE_SSPI
 
+#define NE_HAVE_TS_SSL 1
+
 /* Define to enable debugging */
 #define NE_DEBUGGING 1
 
