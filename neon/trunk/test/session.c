@@ -187,6 +187,18 @@ static int flags(void)
     return OK;
 }
 
+static int proxies(void)
+{
+    ne_session *sess = ne_session_create("https", "localhost", 443);
+
+    ne_session_proxy(sess, "http", 80);
+    ne_set_addrlist2(sess, 80, NULL, 0);
+
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(fill_uri),
     T(fill_proxy_uri),
@@ -195,6 +207,7 @@ ne_test tests[] = {
     T(privates),
     T(get_scheme),
     T(flags),
+    T(proxies),
     T(NULL)
 };
 
