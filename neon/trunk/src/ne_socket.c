@@ -1801,7 +1801,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
                                strlen(ctx->hostname));
     }                               
 
-    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr)(long)sock->fd);
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr_t)(long)sock->fd);
 
     if (ctx->cache.client.data) {
 #if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
