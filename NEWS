@@ -16,8 +16,7 @@ Changes in release 0.30.0:
  - build fixes for Open Watcom compiler (NormW)
  - fix Win32 error code handling for local ne_sock_prebind bind failure
  - Win32: support LFS, thread-safe OpenSSL (Diego Santa Cruz)
-* Test suite:
- - fix SSL tests for recent OpenSSL
+ - GnuTLS: fix GnuTLS 3.x support (Matthias Petschick, Bartosz Brachaczek)
 
 Changes in release 0.29.6:
 * Don't abort SSL handshake with GnuTLS if a client cert is requested
