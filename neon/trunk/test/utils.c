@@ -181,7 +181,7 @@ int session_server(ne_session **sess, server_fn fn, void *userdata)
     
     CALL(new_spawn_server(1, fn, userdata, &port));
     
-    *sess = ne_session_create("http", "localhost", port);
+    *sess = ne_session_create("http", "127.0.0.1", port);
 
     return OK;
 }
@@ -198,7 +198,7 @@ int proxied_session_server(ne_session **sess, const char *scheme,
 
     NE_DEBUG(NE_DBG_HTTP, "test: Using proxied session to port %u.\n", port);
 
-    ne_session_proxy(*sess, "localhost", port);
+    ne_session_proxy(*sess, "127.0.0.1", port);
 
     return OK;
 }
