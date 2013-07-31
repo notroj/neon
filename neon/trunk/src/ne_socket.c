@@ -727,9 +727,11 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
                     _("SSL alert received: %s"),
                     gnutls_alert_get_name(gnutls_alert_get(sock->ssl)));
         break;
+#if GNUTLS_VERSION_MAJOR > 2 || (GNUTLS_VERSION_MAJOR == 2 && GNUTLS_VERSION_MINOR >= 99)
+    case GNUTLS_E_PREMATURE_TERMINATION:
+#else
     case GNUTLS_E_UNEXPECTED_PACKET_LENGTH:
-        /* It's not exactly an API guarantee but this error will
-         * always mean a premature EOF. */
+#endif
         ret = NE_SOCK_TRUNC;
         set_error(sock, _("Secure connection truncated"));
         break;
@@ -1708,6 +1710,8 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
         NE_DEBUG(NE_DBG_SSL, "ssl: Server reused session.\n");
     }
 #elif defined(HAVE_GNUTLS)
+    unsigned int verify_status;
+
     gnutls_init(&ssl, GNUTLS_SERVER);
     gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
     gnutls_set_default_priority(ssl);
@@ -1727,7 +1731,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     if (ret < 0) {
         return error_gnutls(sock, ret);
     }
-    if (ctx->verify && gnutls_certificate_verify_peers(ssl)) {
+    if (ctx->verify && (gnutls_certificate_verify_peers2(ssl, &verify_status) || verify_status)) {
         set_error(sock, _("Client certificate verification failed"));
         return NE_SOCK_ERROR;
     }
