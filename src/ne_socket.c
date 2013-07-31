@@ -1640,14 +1640,14 @@ void ne_sock_connect_timeout(ne_socket *sock, int timeout)
  * session. */
 
 /* Copy datum 'src' to 'dest'. */
-static void copy_datum(gnutls_datum *dest, gnutls_datum *src)
+static void copy_datum(gnutls_datum_t *dest, gnutls_datum_t *src)
 {
     dest->size = src->size;
     dest->data = memcpy(gnutls_malloc(src->size), src->data, src->size);
 }
 
 /* Callback to store a session 'data' with id 'key'. */
-static int store_sess(void *userdata, gnutls_datum key, gnutls_datum data)
+static int store_sess(void *userdata, gnutls_datum_t key, gnutls_datum_t data)
 {
     ne_ssl_context *ctx = userdata;
 
@@ -1663,17 +1663,17 @@ static int store_sess(void *userdata, gnutls_datum key, gnutls_datum data)
 }
 
 /* Returns non-zero if d1 and d2 are the same datum. */
-static int match_datum(gnutls_datum *d1, gnutls_datum *d2)
+static int match_datum(gnutls_datum_t *d1, gnutls_datum_t *d2)
 {
     return d1->size == d2->size
         && memcmp(d1->data, d2->data, d1->size) == 0;
 }
 
 /* Callback to retrieve a session of id 'key'. */
-static gnutls_datum retrieve_sess(void *userdata, gnutls_datum key)
+static gnutls_datum_t retrieve_sess(void *userdata, gnutls_datum_t key)
 {
     ne_ssl_context *ctx = userdata;
-    gnutls_datum ret = { NULL, 0 };
+    gnutls_datum_t ret = { NULL, 0 };
 
     if (match_datum(&ctx->cache.server.key, &key)) {
         copy_datum(&ret, &ctx->cache.server.data);
@@ -1684,7 +1684,7 @@ static gnutls_datum retrieve_sess(void *userdata, gnutls_datum key)
 
 /* Callback to remove a session of id 'key'; stub needed but
  * implementation seems unnecessary. */
-static int remove_sess(void *userdata, gnutls_datum key)
+static int remove_sess(void *userdata, gnutls_datum_t key)
 {
     return -1;
 }
@@ -1726,7 +1726,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
         gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUIRE);
 
     sock->ssl = ssl;
-    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr)(long)sock->fd);
+    gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr_t)(long)sock->fd);
     ret = gnutls_handshake(ssl);
     if (ret < 0) {
         return error_gnutls(sock, ret);
