@@ -611,7 +611,12 @@ static int provide_client_cert(gnutls_session_t session,
 
     if (sess->client_cert) {
         gnutls_certificate_type_t type = gnutls_certificate_type_get(session);
-        if (type == GNUTLS_CRT_X509) {
+        if (type == GNUTLS_CRT_X509
+#if LIBGNUTLS_VERSION_NUMBER > 0x030000
+            /* Ugly hack; prevent segfaults w/GnuTLS 3.0. */
+            && sess->client_cert->pkey != NULL
+#endif
+            ) {
             NE_DEBUG(NE_DBG_SSL, "Supplying client certificate.\n");
 
             st->type = type;
