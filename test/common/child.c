@@ -365,6 +365,9 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
         
         in_child();
 
+        NE_DEBUG(NE_DBG_SOCKET, ">>> child spawned, port %u, %d iterations.\n",
+                 *port, count);
+
         do {
             ne_socket *sock = ne_sock_create();
             char errbuf[256];            
