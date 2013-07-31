@@ -422,6 +422,7 @@ static int simple(void)
     return accept_signed_cert(SERVER_CERT);
 }
 
+#if 0 /* No longer works for modern SSL libraries, rightly so. */
 /* Test for SSL operation when server uses SSLv2 */
 static int simple_sslv2(void)
 {
@@ -441,6 +442,7 @@ static int simple_sslv2(void)
     ne_session_destroy(sess);
     return OK;
 }
+#endif
 
 /* Serves using HTTP/1.0 get-till-EOF semantics. */
 static int serve_eof(ne_socket *sock, void *ud)
@@ -1898,7 +1900,9 @@ ne_test tests[] = {
     T(clicert_import),
 
     T(simple),
+#if 0
     T(simple_sslv2),
+#endif
     T(simple_eof),
     T(empty_truncated_eof),
     T(fail_not_ssl),
