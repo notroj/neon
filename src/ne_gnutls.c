@@ -83,7 +83,7 @@ struct ne_ssl_certificate_s {
 };
 
 struct ne_ssl_client_cert_s {
-    gnutls_pkcs12 p12;
+    gnutls_pkcs12_t p12;
     int decrypted; /* non-zero if successfully decrypted. */
     int keyless;
     ne_ssl_certificate cert;
@@ -697,7 +697,7 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     ne_free(ctx);
 }
 
-#ifdef HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS
+#if !defined(HAVE_GNUTLS_CERTIFICATE_GET_ISSUER) && defined(HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS)
 /* Return the issuer of the given certificate, or NULL if none can be
  * found. */
 static gnutls_x509_crt find_issuer(gnutls_x509_crt *ca_list,
@@ -752,20 +752,29 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session sock,
         }
     }
 
-#ifdef HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS
+#if defined(HAVE_GNUTLS_CERTIFICATE_GET_ISSUER) || defined(HAVE_GNUTLS_CERTIFICATE_GET_X509_CAS)
     /* GnuTLS only returns the peers which were *sent* by the server
      * in the Certificate list during the handshake.  Fill in the
      * complete chain manually against the certs we trust: */
     if (current->issuer == NULL) {
         gnutls_x509_crt issuer;
+
+#ifndef HAVE_GNUTLS_CERTIFICATE_GET_ISSUER
         gnutls_x509_crt *ca_list;
         unsigned int num_cas;
         
         gnutls_certificate_get_x509_cas(crd, &ca_list, &num_cas);
+#endif
 
         do { 
             /* Look up the issuer. */
+#ifndef HAVE_GNUTLS_CERTIFICATE_GET_ISSUER
             issuer = find_issuer(ca_list, num_cas, current->subject);
+#else
+            if (gnutls_certificate_get_issuer(crd, current->subject, &issuer, 0))
+                issuer = NULL;
+#endif
+
             if (issuer) {
                 issuer = x509_crt_copy(issuer);
                 cert = populate_cert(ne_calloc(sizeof *cert), issuer);
@@ -1037,11 +1046,11 @@ static int read_to_datum(const char *filename, gnutls_datum *datum)
 /* Parses a PKCS#12 structure and loads the certificate, private key
  * and friendly name if possible.  Returns zero on success, non-zero
  * on error. */
-static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
+static int pkcs12_parse(gnutls_pkcs12_t p12, gnutls_x509_privkey *pkey,
                         gnutls_x509_crt *x5, char **friendly_name,
                         const char *password)
 {
-    gnutls_pkcs12_bag bag = NULL;
+    gnutls_pkcs12_bag_t bag = NULL;
     int i, j, ret = 0;
 
     for (i = 0; ret == 0; ++i) {
@@ -1056,7 +1065,7 @@ static int pkcs12_parse(gnutls_pkcs12 p12, gnutls_x509_privkey *pkey,
         gnutls_pkcs12_bag_decrypt(bag, password);
 
         for (j = 0; ret == 0 && j < gnutls_pkcs12_bag_get_count(bag); ++j) {
-            gnutls_pkcs12_bag_type type;
+            gnutls_pkcs12_bag_type_t type;
             gnutls_datum data;
 
             if (friendly_name && *friendly_name == NULL) {
@@ -1141,7 +1150,7 @@ ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, size_t bu
 {
     int ret;
     gnutls_datum data;
-    gnutls_pkcs12 p12;
+    gnutls_pkcs12_t p12;
     ne_ssl_client_cert *cc;
     char *friendly_name = NULL;
     gnutls_x509_crt cert = NULL;

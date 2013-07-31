@@ -989,12 +989,13 @@ gnutls)
    # Check for functions in later releases
    NE_CHECK_FUNCS([gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \
                   gnutls_sign_callback_set \
+                  gnutls_certificate_get_issuer \
                   gnutls_certificate_get_x509_cas \
-                  gnutls_certificate_verify_peers2])
+                  gnutls_x509_crt_sign2])
 
-   # fail if gnutls_certificate_verify_peers2 is not found
-   if test x${ac_cv_func_gnutls_certificate_verify_peers2} != xyes; then
-       AC_MSG_ERROR([GnuTLS version predates gnutls_certificate_verify_peers2, newer version required])
+   # fail if gnutls_x509_crt_sign2 is not found (it was introduced in 1.2.0, which is required)
+   if test x${ac_cv_func_gnutls_x509_crt_sign2} != xyes; then
+       AC_MSG_ERROR([GnuTLS version predates gnutls_x509_crt_sign2, newer version required (at least 1.2.0)])
    fi
                   
    # Check for iconv support if using the new RDN access functions:
