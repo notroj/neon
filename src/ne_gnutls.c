@@ -486,7 +486,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
 static gnutls_x509_crt_t x509_crt_copy(gnutls_x509_crt_t src)
 {
     int ret;
-    size_t size;
+    size_t size = 0;
     gnutls_datum_t tmp;
     gnutls_x509_crt_t dest;
     
@@ -777,6 +777,9 @@ static ne_ssl_certificate *make_peers_chain(gnutls_session_t sock,
 
             if (issuer) {
                 issuer = x509_crt_copy(issuer);
+                if (issuer == NULL)
+                    break;
+
                 cert = populate_cert(ne_calloc(sizeof *cert), issuer);
                 /* Check that the issuer does not match the current
                  * cert. */
