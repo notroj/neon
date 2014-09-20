@@ -694,7 +694,11 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
     gnutls_certificate_free_credentials(ctx->cred);
     if (ctx->cache.client.data) {
+#if defined(HAVE_GNUTLS_SESSION_GET_DATA2)
+        gnutls_free(ctx->cache.client.data);
+#else
         ne_free(ctx->cache.client.data);
+#endif
     } else if (ctx->cache.server.key.data) {
         gnutls_free(ctx->cache.server.key.data);
         gnutls_free(ctx->cache.server.data.data);
