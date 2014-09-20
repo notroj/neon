@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.9.3\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2013-07-31 16:46+0100\n"
+"POT-Creation-Date: 2014-09-20 20:02+0100\n"
 "PO-Revision-Date: 2000-01-31 00:00+0100\n"
 "Last-Translator: Sylvain Glaize <mokona@puupuu.org>\n"
 "Language-Team: fr\n"
@@ -235,11 +235,6 @@ msgstr ""
 msgid "SSL server did not present certificate"
 msgstr ""
 
-#: src/ne_openssl.c:736
-#, c-format
-msgid "Server certificate changed: connection intercepted?"
-msgstr ""
-
 #: src/ne_props.c:371 src/ne_props.c:435
 msgid "Response exceeds maximum property count"
 msgstr ""
@@ -464,27 +459,27 @@ msgstr ""
 msgid "Host not found"
 msgstr ""
 
-#: src/ne_socket.c:1249
+#: src/ne_socket.c:1251
 msgid "Connection timed out"
 msgstr ""
 
-#: src/ne_socket.c:1442
+#: src/ne_socket.c:1444
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1504
+#: src/ne_socket.c:1506
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1735
+#: src/ne_socket.c:1737
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1751
+#: src/ne_socket.c:1753
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1757
+#: src/ne_socket.c:1759
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "%s: erreur: impossible de se connecter à l'hôte distant.\n"
