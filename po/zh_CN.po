@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: neon 0.29.x\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2014-09-20 20:02+0100\n"
+"POT-Creation-Date: 2014-09-22 16:25+0100\n"
 "PO-Revision-Date: 2008-03-03 11:20+0800\n"
 "Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: neon@webdav.org\n"
@@ -178,41 +178,41 @@ msgstr "[非打印字符:#%lu]"
 msgid "[unprintable]"
 msgstr "[非打印字符]"
 
-#: src/ne_gnutls.c:845
+#: src/ne_gnutls.c:848
 msgid "signed using insecure algorithm"
 msgstr ""
 
-#: src/ne_gnutls.c:848
+#: src/ne_gnutls.c:851
 #, c-format
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:893 src/ne_openssl.c:470
+#: src/ne_gnutls.c:896 src/ne_openssl.c:470
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "服务器证书在主题名称遗漏了属性 commonName"
 
-#: src/ne_gnutls.c:907
+#: src/ne_gnutls.c:910
 #, fuzzy, c-format
 msgid "Could not verify server certificate: %s"
 msgstr "不能写入文件：%s"
 
-#: src/ne_gnutls.c:919 src/ne_openssl.c:457
+#: src/ne_gnutls.c:922 src/ne_openssl.c:457
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "证书校验失败：%s"
 
-#: src/ne_gnutls.c:952 src/ne_openssl.c:702
+#: src/ne_gnutls.c:955 src/ne_openssl.c:702
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:957 src/ne_openssl.c:707
+#: src/ne_gnutls.c:960 src/ne_openssl.c:707
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "SSL 协商失败：%s"
 
-#: src/ne_gnutls.c:967
+#: src/ne_gnutls.c:970
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr "服务器不能发送证书链"
