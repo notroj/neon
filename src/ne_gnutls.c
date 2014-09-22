@@ -189,7 +189,7 @@ static void append_dirstring(ne_buffer *buf, gnutls_datum_t *data, unsigned long
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 {
     gnutls_x509_dn_t dn;
-    int ret, rdn = 0, flag = 0;
+    int ret, rdn = 0;
     ne_buffer *buf;
     gnutls_x509_ava_st val;
 
@@ -227,7 +227,6 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
                 && ((!CMPOID(&val, OID_emailAddress)
                      && !CMPOID(&val, OID_commonName))
                     || (buf->used == 1 && rdn == 0))) {
-                flag = 1;
                 if (buf->used > 1) ne_buffer_append(buf, ", ", 2);
 
                 append_dirstring(buf, &val.value, val.value_tag);
