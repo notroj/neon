@@ -1167,7 +1167,9 @@ ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, size_t bu
     gnutls_x509_crt_t cert = NULL;
     gnutls_x509_privkey_t pkey = NULL;
 
-    data.data = buffer;
+    /* The datum structure is not modified by gnutls_pkcs12_import,
+     * cast safely: */
+    data.data = (unsigned char *)buffer;
     data.size = buflen;
 
     if (gnutls_pkcs12_init(&p12) != 0) {
