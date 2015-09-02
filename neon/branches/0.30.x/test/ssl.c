@@ -926,7 +926,7 @@ static int fail_nul_san(void)
 /* Check that an expired certificate is flagged as such. */
 static int fail_expired(void)
 {
-    char *c = ne_concat(srcdir, "/expired.pem", NULL);
+    char *c = ne_concat(srcdir, "/expired.cert", NULL);
     CALL(fail_ssl_request_with_error(c, c,  "localhost",
                                      "expired certificate was accepted", 
                                      NE_SSL_EXPIRED,
@@ -937,7 +937,7 @@ static int fail_expired(void)
 
 static int fail_notvalid(void)
 {
-    char *c = ne_concat(srcdir, "/notvalid.pem", NULL);
+    char *c = ne_concat(srcdir, "/notyet.cert", NULL);
     CALL(fail_ssl_request_with_error(c, c,  "localhost",
                                      "not yet valid certificate was accepted",
                                      NE_SSL_NOTYETVALID,
@@ -1488,16 +1488,14 @@ static int cert_identities(void)
 static int nulcn_identity(void)
 {
     ne_ssl_certificate *cert = ne_ssl_cert_read(nul_cn_fn);
-    const char *id, *expected = "www.bank.com\\x00.badguy.com";
+    const char *id;
 
     ONN("could not read nulcn.pem", cert == NULL);
 
     id = ne_ssl_cert_identity(cert);
 
-    ONV(id != NULL
-        && strcmp(id, expected) != 0,
-        ("certificate `nulcn.pem' had identity `%s' not `%s'", 
-         id, expected));
+    ONN("embedded NUL byte not quoted",
+        id != NULL && strcmp(id, "www.bank.com") == 0);
     
     ne_ssl_cert_free(cert);
     return OK;
