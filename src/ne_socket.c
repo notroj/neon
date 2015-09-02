@@ -1793,11 +1793,6 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     gnutls_session_set_ptr(sock->ssl, userdata);
     gnutls_credentials_set(sock->ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
-#ifdef HAVE_GNUTLS_SIGN_CALLBACK_SET
-    if (ctx->sign_func)
-        gnutls_sign_callback_set(sock->ssl, ctx->sign_func, ctx->sign_data);    
-#endif
-
     if (ctx->hostname) {
         gnutls_server_name_set(sock->ssl, GNUTLS_NAME_DNS, ctx->hostname,
                                strlen(ctx->hostname));
