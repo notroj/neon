@@ -926,7 +926,7 @@ static int fail_nul_san(void)
 /* Check that an expired certificate is flagged as such. */
 static int fail_expired(void)
 {
-    char *c = ne_concat(srcdir, "/expired.pem", NULL);
+    char *c = ne_concat(srcdir, "/expired.cert", NULL);
     CALL(fail_ssl_request_with_error(c, c,  "localhost",
                                      "expired certificate was accepted", 
                                      NE_SSL_EXPIRED,
@@ -937,7 +937,7 @@ static int fail_expired(void)
 
 static int fail_notvalid(void)
 {
-    char *c = ne_concat(srcdir, "/notvalid.pem", NULL);
+    char *c = ne_concat(srcdir, "/notyet.cert", NULL);
     CALL(fail_ssl_request_with_error(c, c,  "localhost",
                                      "not yet valid certificate was accepted",
                                      NE_SSL_NOTYETVALID,
