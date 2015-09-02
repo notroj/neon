@@ -156,6 +156,13 @@ static RSA_METHOD *pk11_rsa_method(ne_ssl_pkcs11_provider *prov)
 }
 #endif
 
+#ifdef HAVE_GNUTLS
+static int pk11_sign_callback(gnutls_privkey_t pkey,
+                              void *userdata,
+                              const gnutls_datum_t *raw_data,
+                              gnutls_datum_t *signature);
+#endif
+
 static int pk11_find_x509(ne_ssl_pkcs11_provider *prov,
                           pakchois_session_t *pks, 
                           unsigned char *certid, unsigned long *cid_len)
@@ -203,7 +210,7 @@ static int pk11_find_x509(ne_ssl_pkcs11_provider *prov,
             ne_ssl_client_cert *cc;
             
 #ifdef HAVE_GNUTLS
-            cc = ne__ssl_clicert_exkey_import(value, a[0].value_len);
+            cc = ne__ssl_clicert_exkey_import(value, a[0].value_len, pk11_sign_callback, prov);
 #else
             cc = ne__ssl_clicert_exkey_import(value, a[0].value_len, pk11_rsa_method(prov));
 #endif
@@ -298,10 +305,8 @@ static int find_client_cert(ne_ssl_pkcs11_provider *prov,
 #ifdef HAVE_GNUTLS
 /* Callback invoked by GnuTLS to provide the signature.  The signature
  * operation is handled here by the PKCS#11 provider.  */
-static int pk11_sign_callback(gnutls_session_t session,
+static int pk11_sign_callback(gnutls_privkey_t pkey,
                               void *userdata,
-                              gnutls_certificate_type_t cert_type,
-                              const gnutls_datum_t *cert,
                               const gnutls_datum_t *hash,
                               gnutls_datum_t *signature)
 {
@@ -571,11 +576,6 @@ void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
 void ne_ssl_set_pkcs11_provider(ne_session *sess, 
                                 ne_ssl_pkcs11_provider *provider)
 {
-#ifdef HAVE_GNUTLS
-    sess->ssl_context->sign_func = pk11_sign_callback;
-    sess->ssl_context->sign_data = provider;
-#endif
-
     ne_ssl_provide_clicert(sess, pk11_provide, provider);
 }
 
