@@ -310,6 +310,8 @@ void ne_lock_using_resource(ne_request *req, const char *uri, int depth)
     /* Iterate over the list of stored locks to see if any of them
      * apply to this resource */
     for (item = lrc->store->locks; item != NULL; item = item->next) {
+	if (!item->lock->uri.path)
+	    continue;
 	
 	match = 0;
 	
