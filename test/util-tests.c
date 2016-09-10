@@ -101,13 +101,16 @@ static int status_lines(void)
 }
 
 /* Write MD5 of 'len' bytes of 'str' to 'digest' */
-static unsigned char *digest_md5(const char *data, size_t len,
+static const unsigned char *digest_md5(const char *data, size_t len,
                                  unsigned int digest[4])
 {
     struct ne_md5_ctx *ctx;
 
 #define CHUNK 100
     ctx = ne_md5_create_ctx();
+    if (!ctx) {
+        return (unsigned char *)"NO-MD5-SUPPORT";
+    }        
     /* exercise the buffering interface */
     while (len > CHUNK) {
         ne_md5_process_bytes(data, CHUNK, ctx);
@@ -154,6 +157,7 @@ static int md5_alignment(void)
      * the process_bytes function would SIGBUS if the buffer argument
      * isn't 32-bit aligned. Won't trigger on x86 though. */
     ctx = ne_md5_create_ctx();
+    ONN("could not create MD5 context", ctx == NULL);
     ne_md5_process_bytes(bb + 1, 65, ctx);
     ne_md5_destroy_ctx(ctx);
     ne_free(bb);
