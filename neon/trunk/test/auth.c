@@ -418,6 +418,7 @@ static void make_digest(struct digest_state *state, struct digest_parms *parms,
 
     /* H(A1) */
     ctx = ne_md5_create_ctx();
+    if (!ctx) return;
     ne_md5_process_bytes(state->username, strlen(state->username), ctx);
     ne_md5_process_bytes(":", 1, ctx);
     ne_md5_process_bytes(state->realm, strlen(state->realm), ctx);
