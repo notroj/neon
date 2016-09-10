@@ -35,6 +35,7 @@
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
+#include <openssl/evp.h>
 
 #ifdef NE_HAVE_TS_SSL
 #include <stdlib.h> /* for abort() */
@@ -47,7 +48,7 @@
 #include "ne_string.h"
 #include "ne_session.h"
 #include "ne_internal.h"
-
+#include "ne_md5.h"
 #include "ne_private.h"
 #include "ne_privssl.h"
 
@@ -1262,4 +1263,78 @@ void ne__ssl_exit(void)
         free(locks);
     }
 #endif
+}
+
+struct ne_md5_ctx {
+    EVP_MD_CTX ctx;
+};
+
+/* Returns zero on succes, non-zero on failure. */
+static int init_md5_ctx(struct ne_md5_ctx *ctx)
+{
+    EVP_MD_CTX_init(&ctx->ctx);
+
+    if (EVP_DigestInit_ex(&ctx->ctx, EVP_md5(), NULL) != 1) {
+        EVP_MD_CTX_cleanup(&ctx->ctx);
+        return 1;
+    }
+
+    return 0;
+}
+
+struct ne_md5_ctx *ne_md5_create_ctx(void)
+{
+#if 1
+    return NULL;
+#else
+    struct ne_md5_ctx *ctx = ne_malloc(sizeof *ctx);
+    
+    if (init_md5_ctx(ctx)) {
+        ne_free(ctx);
+        return NULL;
+    }
+    
+    return ctx;
+#endif
+}
+
+void ne_md5_process_block(const void *buffer, size_t len,
+                          struct ne_md5_ctx *ctx)
+{
+    EVP_DigestUpdate(&ctx->ctx, buffer, len);
+}
+
+void ne_md5_process_bytes(const void *buffer, size_t len,
+                          struct ne_md5_ctx *ctx)
+{
+    EVP_DigestUpdate(&ctx->ctx, buffer, len);
+}
+
+void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf)
+{
+    EVP_DigestFinal(&ctx->ctx, resbuf, NULL);
+    
+    return resbuf;
+}
+
+struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx)
+{
+    struct ne_md5_ctx *r = ne_md5_create_ctx();
+
+    EVP_MD_CTX_copy_ex(&r->ctx, &ctx->ctx);
+    
+    return r;
+}
+
+void ne_md5_reset_ctx(struct ne_md5_ctx *ctx)
+{
+    EVP_MD_CTX_cleanup(&ctx->ctx);
+
+    init_md5_ctx(ctx);    
+}
+    
+void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
+{
+    EVP_MD_CTX_cleanup(&ctx->ctx);
+    ne_free(ctx);
 }
