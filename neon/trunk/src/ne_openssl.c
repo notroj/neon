@@ -1284,9 +1284,6 @@ static int init_md5_ctx(struct ne_md5_ctx *ctx)
 
 struct ne_md5_ctx *ne_md5_create_ctx(void)
 {
-#if 1
-    return NULL;
-#else
     struct ne_md5_ctx *ctx = ne_malloc(sizeof *ctx);
     
     if (init_md5_ctx(ctx)) {
@@ -1295,7 +1292,6 @@ struct ne_md5_ctx *ne_md5_create_ctx(void)
     }
     
     return ctx;
-#endif
 }
 
 void ne_md5_process_block(const void *buffer, size_t len,
