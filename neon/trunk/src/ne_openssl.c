@@ -67,6 +67,14 @@ typedef unsigned char ne_d2i_uchar;
 typedef const unsigned char ne_d2i_uchar;
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define X509_up_ref(x) x->references++
+#define EVP_PKEY_up_ref(x) x->references++
+#define EVP_MD_CTX_new() ne_calloc(sizeof(EVP_MD_CTX))
+#define EVP_MD_CTX_free(ctx) ne_free(ctx)
+#define EVP_MD_CTX_reset EVP_MD_CTX_cleanup
+#endif
+
 struct ne_ssl_dname_s {
     X509_NAME *dn;
 };
@@ -152,15 +160,16 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 
     for (n = X509_NAME_entry_count(name->dn); n > 0; n--) {
 	X509_NAME_ENTRY *ent = X509_NAME_get_entry(name->dn, n-1);
+	ASN1_OBJECT *obj = X509_NAME_ENTRY_get_object(ent);
 	
         /* Skip commonName or emailAddress except if there is no other
          * attribute in dname. */
-	if ((OBJ_cmp(ent->object, cname) && OBJ_cmp(ent->object, email)) ||
+	if ((OBJ_cmp(obj, cname) && OBJ_cmp(obj, email)) ||
             (!flag && n == 1)) {
  	    if (flag++)
 		ne_buffer_append(dump, ", ", 2);
 
-            if (append_dirstring(dump, ent->value))
+            if (append_dirstring(dump, X509_NAME_ENTRY_get_data(ent)))
                 ne_buffer_czappend(dump, "???");
 	}
     }
@@ -501,8 +510,8 @@ static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
 
     populate_cert(&newcc->cert, cc->cert.subject);
 
-    cc->cert.subject->references++;
-    cc->pkey->references++;
+    X509_up_ref(cc->cert.subject);
+    EVP_PKEY_up_ref(cc->pkey);
     return newcc;
 }
 
@@ -540,8 +549,8 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
     if (sess->client_cert) {
         ne_ssl_client_cert *const cc = sess->client_cert;
 	NE_DEBUG(NE_DBG_SSL, "Supplying client certificate.\n");
-	cc->pkey->references++;
-	cc->cert.subject->references++;
+	EVP_PKEY_up_ref(cc->pkey);
+	X509_up_ref(cc->cert.subject);
 	*cert = cc->cert.subject;
 	*pkey = cc->pkey;
 	return 1;
@@ -577,13 +586,8 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_TICKET);
 #endif
     } else {
-#ifdef OPENSSL_NO_SSL2
         ne_free(ctx);
         return NULL;
-#else
-        ctx->ctx = SSL_CTX_new(SSLv2_server_method());
-        SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
-#endif
     }
     return ctx;
 }
@@ -671,8 +675,14 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
  * sufficient. */
 static int SSL_SESSION_cmp(SSL_SESSION *a, SSL_SESSION *b)
 {
-    return a->session_id_length == b->session_id_length
-        && memcmp(a->session_id, b->session_id, a->session_id_length) == 0;
+    const unsigned char *session1_buf, *session2_buf;
+    unsigned int session1_len, session2_len;
+
+    session1_buf = SSL_SESSION_get_id(a, &session1_len);
+    session2_buf = SSL_SESSION_get_id(b, &session2_len);
+
+    return session1_len == session2_len
+        && memcmp(session1_buf, session2_buf, session1_len) == 0;
 }
 #endif
 
@@ -1188,6 +1198,7 @@ static void thread_lock_neon(int mode, int n, const char *file, int line)
 
 int ne__ssl_init(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     CRYPTO_malloc_init();
     SSL_load_error_strings();
     SSL_library_init();
@@ -1230,6 +1241,7 @@ int ne__ssl_init(void)
                  "for %" NE_FMT_SIZE_T " locks.\n", num_locks);
     }
 #endif
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 
     return 0;
 }
@@ -1266,16 +1278,15 @@ void ne__ssl_exit(void)
 }
 
 struct ne_md5_ctx {
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
 };
 
 /* Returns zero on succes, non-zero on failure. */
 static int init_md5_ctx(struct ne_md5_ctx *ctx)
 {
-    EVP_MD_CTX_init(&ctx->ctx);
+    ctx->ctx = EVP_MD_CTX_new();
 
-    if (EVP_DigestInit_ex(&ctx->ctx, EVP_md5(), NULL) != 1) {
-        EVP_MD_CTX_cleanup(&ctx->ctx);
+    if (EVP_DigestInit_ex(ctx->ctx, EVP_md5(), NULL) != 1) {
         return 1;
     }
 
@@ -1297,18 +1308,18 @@ struct ne_md5_ctx *ne_md5_create_ctx(void)
 void ne_md5_process_block(const void *buffer, size_t len,
                           struct ne_md5_ctx *ctx)
 {
-    EVP_DigestUpdate(&ctx->ctx, buffer, len);
+    EVP_DigestUpdate(ctx->ctx, buffer, len);
 }
 
 void ne_md5_process_bytes(const void *buffer, size_t len,
                           struct ne_md5_ctx *ctx)
 {
-    EVP_DigestUpdate(&ctx->ctx, buffer, len);
+    EVP_DigestUpdate(ctx->ctx, buffer, len);
 }
 
 void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf)
 {
-    EVP_DigestFinal(&ctx->ctx, resbuf, NULL);
+    EVP_DigestFinal(ctx->ctx, resbuf, NULL);
     
     return resbuf;
 }
@@ -1317,20 +1328,20 @@ struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx)
 {
     struct ne_md5_ctx *r = ne_md5_create_ctx();
 
-    EVP_MD_CTX_copy_ex(&r->ctx, &ctx->ctx);
+    EVP_MD_CTX_copy_ex(r->ctx, ctx->ctx);
     
     return r;
 }
 
 void ne_md5_reset_ctx(struct ne_md5_ctx *ctx)
 {
-    EVP_MD_CTX_cleanup(&ctx->ctx);
+    EVP_MD_CTX_reset(ctx->ctx);
 
     init_md5_ctx(ctx);    
 }
     
 void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
 {
-    EVP_MD_CTX_cleanup(&ctx->ctx);
+    EVP_MD_CTX_free(ctx->ctx);
     ne_free(ctx);
 }
