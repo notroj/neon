@@ -73,6 +73,7 @@ typedef const unsigned char ne_d2i_uchar;
 #define EVP_MD_CTX_new() ne_calloc(sizeof(EVP_MD_CTX))
 #define EVP_MD_CTX_free(ctx) ne_free(ctx)
 #define EVP_MD_CTX_reset EVP_MD_CTX_cleanup
+#define EVP_PKEY_get0_RSA(evp) (evp->pkey.rsa)
 #endif
 
 struct ne_ssl_dname_s {
@@ -933,8 +934,8 @@ ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
     ne_ssl_client_cert *cc;
     ne_d2i_uchar *p;
     X509 *x5;
-    RSA *pk;    
-    EVP_PKEY *epk, *tpk;
+    EVP_PKEY *pubkey, *privkey;
+    RSA *rsa;
 
     p = der;
     x5 = d2i_X509(NULL, &p, der_len); /* p is incremented */
@@ -942,24 +943,28 @@ ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
         ERR_clear_error();
         return NULL;
     }
-    
-    pk = RSA_new();
-    RSA_set_method(pk, method);
-    epk = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(epk, pk);
-    
-    /* It is necessary to initialize pk->n otherwise OpenSSL will barf
-     * later calling RSA_size() on this RSA structure.
-     * X509_get_pubkey() forces the relevant RSA parameters to be
-     * extracted from the certificate. */
-    tpk = X509_get_pubkey(x5);
-    pk->n = BN_dup(tpk->pkey.rsa->n);
-    EVP_PKEY_free(tpk);
 
-    cc = ne_calloc(sizeof *cc);
+    pubkey = X509_get_pubkey(x5);
+    if (EVP_PKEY_base_id(pubkey) != EVP_PKEY_RSA) {
+        X509_free(x5);
+        NE_DEBUG(NE_DBG_SSL, "ssl: Only RSA private keys are supported via PKCS#11.\n");
+        return NULL;
+    }
+
+    /* Duplicate the public parameters of the RSA key. */
+    rsa = RSAPublicKey_dup(EVP_PKEY_get0_RSA(pubkey));
+    /* Done with the copied public key. */
+    EVP_PKEY_free(pubkey);
     
+    /* Switch to using customer RSA_METHOD for RSA object. */
+    RSA_set_method(rsa, method);
+    /* Set up new EVP_PKEY. */
+    privkey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(privkey, rsa);
+    
+    cc = ne_calloc(sizeof *cc);
     cc->decrypted = 1;
-    cc->pkey = epk;
+    cc->pkey = privkey;
 
     populate_cert(&cc->cert, x5);
 
