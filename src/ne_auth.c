@@ -1616,18 +1616,6 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         protomask |= NE_AUTH_GSSAPI_ONLY | NE_AUTH_SSPI;
     }
 
-    if (protomask | NE_AUTH_DIGEST) {
-        struct ne_md5_ctx *ctx = ne_md5_create_ctx();
-
-        if (ctx) {
-            ne_md5_destroy_ctx(ctx);
-        }
-        else {
-            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Disabling Digest support without MD5.\n");
-            protomask &= ~NE_AUTH_DIGEST;
-        }
-    }
-    
     ahs = ne_get_session_private(sess, id);
     if (ahs == NULL) {
         ahs = ne_calloc(sizeof *ahs);

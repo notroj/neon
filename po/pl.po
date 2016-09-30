@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.30.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2013-07-31 16:46+0100\n"
+"POT-Creation-Date: 2016-09-30 09:51+0100\n"
 "PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -180,50 +180,55 @@ msgstr "Nie można "
 msgid "Could not initialize zlib"
 msgstr "Nie można zainicjalizować zlib"
 
-#: src/ne_gnutls.c:176
+#: src/ne_gnutls.c:183
 #, c-format
 msgid "[unprintable:#%lu]"
 msgstr "[niedrukowalne:#%lu]"
 
-#: src/ne_gnutls.c:205
+#: src/ne_gnutls.c:212
 msgid "[unprintable]"
 msgstr "[niedrukowalne]"
 
-#: src/ne_gnutls.c:845
+#: src/ne_gnutls.c:659
+#, c-format
+msgid "Failed to import private key: %s"
+msgstr ""
+
+#: src/ne_gnutls.c:903
 msgid "signed using insecure algorithm"
 msgstr "podpisane przy użyciu niebezpiecznego algorytmu"
 
-#: src/ne_gnutls.c:848
+#: src/ne_gnutls.c:906
 #, c-format
 msgid "unrecognized errors (%u)"
 msgstr "nierozpoznane błędy (%u)"
 
-#: src/ne_gnutls.c:893 src/ne_openssl.c:470
+#: src/ne_gnutls.c:951 src/ne_openssl.c:477
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
-#: src/ne_gnutls.c:907
+#: src/ne_gnutls.c:965
 #, c-format
 msgid "Could not verify server certificate: %s"
 msgstr "Nie można zweryfikować certyfikatu serwera: %s"
 
-#: src/ne_gnutls.c:919 src/ne_openssl.c:457
+#: src/ne_gnutls.c:977 src/ne_openssl.c:464
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_gnutls.c:952 src/ne_openssl.c:702
+#: src/ne_gnutls.c:1010 src/ne_openssl.c:710
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
 
-#: src/ne_gnutls.c:957 src/ne_openssl.c:707
+#: src/ne_gnutls.c:1015 src/ne_openssl.c:715
 #, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Uzgodnienie SSL nie udało się: %s"
 
-#: src/ne_gnutls.c:967
+#: src/ne_gnutls.c:1025
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr "Serwer nie wysłał łańcucha certyfikatu"
@@ -243,15 +248,10 @@ msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 "Nie zwrócono żadnej aktywnej blokady dla <%s> w odpowiedzi LOCK refresh"
 
-#: src/ne_openssl.c:727
+#: src/ne_openssl.c:735
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
-
-#: src/ne_openssl.c:736
-#, c-format
-msgid "Server certificate changed: connection intercepted?"
-msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
 
 #: src/ne_props.c:371 src/ne_props.c:435
 msgid "Response exceeds maximum property count"
@@ -467,27 +467,27 @@ msgstr "Linia zbyt długa"
 msgid "Host not found"
 msgstr "Host nieznaleziony"
 
-#: src/ne_socket.c:1249
+#: src/ne_socket.c:1251
 msgid "Connection timed out"
 msgstr "Czas połączenia się skończył"
 
-#: src/ne_socket.c:1442
+#: src/ne_socket.c:1444
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 
-#: src/ne_socket.c:1504
+#: src/ne_socket.c:1506
 msgid "Socket family not supported"
 msgstr "Rodzina gniazda niewspierana"
 
-#: src/ne_socket.c:1735
+#: src/ne_socket.c:1737
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1751
+#: src/ne_socket.c:1753
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1757
+#: src/ne_socket.c:1759
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 
@@ -631,6 +631,9 @@ msgstr "Błąd podczas parsowania XML w linii %d: %s"
 #, c-format
 msgid "Could not parse response: %s"
 msgstr "Nie można parsować odpowiedzi: %s"
+
+#~ msgid "Server certificate changed: connection intercepted?"
+#~ msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
 
 #~ msgid "SSL disabled due to library version mismatch"
 #~ msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
