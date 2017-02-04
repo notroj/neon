@@ -44,7 +44,7 @@ AC_CHECK_HEADER(expat.h,
 
 dnl Find libxml2: run $1 if found, else $2
 AC_DEFUN([NE_XML_LIBXML2], [
-AC_CHECK_PROG(XML2_CONFIG, xml2-config, xml2-config)
+AC_CHECK_TOOL(XML2_CONFIG, xml2-config, xml2-config)
 if test -n "$XML2_CONFIG"; then
     neon_xml_parser_message="libxml `$XML2_CONFIG --version`"
     AC_DEFINE(HAVE_LIBXML, 1, [Define if you have libxml])
