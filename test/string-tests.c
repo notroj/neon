@@ -320,7 +320,7 @@ static int str_errors(void)
 {
     char expect[200], actual[200];
     
-    strncpy(expect, strerror(ENOENT), sizeof(expect));
+    strncpy(expect, strerror(ENOENT), sizeof(expect)-1);
     ONN("ne_strerror did not return passed-in buffer",
 	ne_strerror(ENOENT, actual, sizeof(actual)) != actual);
     
