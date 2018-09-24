@@ -1023,15 +1023,14 @@ static int fail_ca_notyetvalid(void)
 static int session_cache(void)
 {
     struct ssl_server_args args = {0};
-    ne_session *sess = ne_session_create("https", "localhost", 7777);
-    
+    ne_session *sess;
+
     args.cert = SERVER_CERT;
     args.cache = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
+    CALL(multi_session_server(&sess, "https", "localhost", 4, ssl_server, &args));
 
-    /* have spawned server listen for several connections. */
-    CALL(spawn_server_repeat(7777, ssl_server, &args, 4));
+    ne_ssl_trust_cert(sess, def_ca_cert);
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
