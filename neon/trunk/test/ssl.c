@@ -1028,20 +1028,16 @@ static int session_cache(void)
     args.cert = SERVER_CERT;
     args.cache = 1;
 
-    CALL(multi_session_server(&sess, "https", "localhost", 4, ssl_server, &args));
+    CALL(multi_session_server(&sess, "https", "localhost",
+                              2, ssl_server, &args));
 
     ne_ssl_trust_cert(sess, def_ca_cert);
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
     ne_session_destroy(sess);
-    /* server should still be waiting for connections: if not,
-     * something went wrong. */
-    ONN("error from child", dead_server());
-    /* now get rid of it. */
-    reap_server();
 
-    return OK;
+    return await_server();
 }
 
 /* Callback for client_cert_provider; takes a c. cert as userdata and
