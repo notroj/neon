@@ -329,7 +329,7 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
                 /* errno was set */
                 ne_strerror(errno, err, sizeof err);
             } else {
-                strcpy(err, _("offset invalid"));
+                ne_strnzcpy(err, _("offset invalid"), sizeof err);
             }
             ne_snprintf(offstr, sizeof offstr, "%" FMT_NE_OFF_T,
                         req->body.file.offset);
@@ -585,7 +585,7 @@ void ne_set_request_body_fd(ne_request *req, int fd,
 
 void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value)
 {
-    if (flag < (ne_request_flag)NE_SESSFLAG_LAST) {
+    if (flag < (ne_request_flag)NE_REQFLAG_LAST) {
         req->flags[flag] = value;
     }
 }

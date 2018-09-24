@@ -332,7 +332,7 @@ void ne_lockstore_remove(ne_lock_store *store, struct ne_lock *lock)
     for (item = store->locks; item != NULL; item = item->next)
 	if (item->lock == lock)
 	    break;
-    
+
     if (item->prev != NULL) {
 	item->prev->next = item->next;
     } else {
