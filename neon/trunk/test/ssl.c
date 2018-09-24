@@ -1201,6 +1201,8 @@ static int ccert_unencrypted(void)
 }
 
 #define NOCERT_MESSAGE "client certificate was requested"
+/* random SSL read may fail like this with TLSv1.3 */
+#define NOCERT_ALT "certificate required"
 
 /* Tests for useful error message if a handshake fails where a client
  * cert was requested. */
@@ -1222,7 +1224,8 @@ static int no_client_cert(void)
     ONV(ret != NE_ERROR,
         ("unexpected result %d: %s", ret, ne_get_error(sess)));
 
-    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL,
+    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL
+        && strstr(ne_get_error(sess), NOCERT_ALT) == NULL,
         ("error message was '%s', missing '%s'", 
          ne_get_error(sess), NOCERT_MESSAGE));
     
