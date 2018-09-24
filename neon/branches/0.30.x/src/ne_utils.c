@@ -108,6 +108,9 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #ifdef NE_HAVE_SOCKS
    ", SOCKSv5"
 #endif
+#ifdef NE_HAVE_LFS
+   ", LFS"
+#endif
 #ifdef HAVE_OPENSSL
 #ifdef OPENSSL_VERSION_TEXT
     ", " OPENSSL_VERSION_TEXT
@@ -121,6 +124,9 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #ifdef HAVE_SSPI
     ", SSPI"
 #endif /* HAVE_SSPI */
+#ifdef HAVE_PAKCHOIS
+    ", PKCS#11"
+#endif
    "."
 ;
 
