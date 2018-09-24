@@ -1134,7 +1134,10 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
-#ifdef NE_HAVE_TS_SSL
+#if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10101000L
+/* For OpenSSL 1.1.1 locking callbacks are no longer need at all. */
+#define WITH_OPENSSL_LOCKING (1)
+
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
  * If the OpenSSL API was better designed, this wouldn't be necessary.
  * In OpenSSL releases without CRYPTO_set_idptr_callback, it's not
@@ -1188,8 +1191,6 @@ static void thread_lock_neon(int mode, int n, const char *file, int line)
     }
 }
 
-#endif
-
 /* ID_CALLBACK_IS_{NEON,OTHER} evaluate as true if the currently
  * registered OpenSSL ID callback is the neon function (_NEON), or has
  * been overwritten by some other app (_OTHER). */
@@ -1200,6 +1201,8 @@ static void thread_lock_neon(int mode, int n, const char *file, int line)
 #define ID_CALLBACK_IS_OTHER (CRYPTO_get_id_callback() != NULL)
 #define ID_CALLBACK_IS_NEON (CRYPTO_get_id_callback() == thread_id_neon)
 #endif
+        
+#endif /* NE_HAVE_TS_SSL && OPENSSL_VERSION_NUMBER < 1.1.1 */
 
 int ne__ssl_init(void)
 {
@@ -1209,7 +1212,7 @@ int ne__ssl_init(void)
     SSL_library_init();
     OpenSSL_add_all_algorithms();
 
-#ifdef NE_HAVE_TS_SSL
+#ifdef WITH_OPENSSL_LOCKING
     /* If some other library has already come along and set up the
      * thread-safety callbacks, then it must be presumed that the
      * other library will have a longer lifetime in the process than
@@ -1256,7 +1259,7 @@ void ne__ssl_exit(void)
     /* Cannot call ERR_free_strings() etc here in case any other code
      * in the process using OpenSSL. */
 
-#ifdef NE_HAVE_TS_SSL
+#ifdef WITH_OPENSSL_LOCKING
     /* Only unregister the callbacks if some *other* library has not
      * come along in the mean-time and trampled over the callbacks
      * installed by neon. */
