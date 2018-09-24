@@ -73,11 +73,13 @@ static char *lock_response(enum ne_lock_scope scope,
 			   const char *token_href)
 {
     static char buf[BUFSIZ];
-    sprintf(buf, 
-	    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-	    "<D:prop xmlns:D=\"DAV:\">"
-	    "<D:lockdiscovery>%s</D:lockdiscovery></D:prop>\n",
-	    activelock(scope, depth, owner, timeout, token_href));
+
+    ne_snprintf(buf, sizeof buf,
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                "<D:prop xmlns:D=\"DAV:\">"
+                "<D:lockdiscovery>%s</D:lockdiscovery></D:prop>\n",
+                activelock(scope, depth, owner, timeout, token_href));
+
     return buf;
 }
 
