@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy-0.10.10\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2016-09-30 09:51+0100\n"
+"POT-Creation-Date: 2018-09-25 16:24+0100\n"
 "PO-Revision-Date: 2001-01-03 HO:MI+ZONE\n"
 "Last-Translator: A. Sinan Unur <sinan@unur.com>\n"
 "Language-Team: tr\n"
@@ -209,12 +209,12 @@ msgstr "%s dosyasýna yazým yapýlamadý"
 msgid "Certificate verification error: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:1010 src/ne_openssl.c:710
+#: src/ne_gnutls.c:1010 src/ne_openssl.c:713
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr ""
 
-#: src/ne_gnutls.c:1015 src/ne_openssl.c:715
+#: src/ne_gnutls.c:1015 src/ne_openssl.c:718
 #, fuzzy, c-format
 msgid "SSL handshake failed: %s"
 msgstr "%s dosyasýna yazým yapýlamadý"
@@ -238,7 +238,7 @@ msgstr ""
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 
-#: src/ne_openssl.c:735
+#: src/ne_openssl.c:738
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr ""
@@ -425,65 +425,69 @@ msgstr ""
 msgid "Server certificate verification failed: "
 msgstr ""
 
-#: src/ne_socket.c:522 src/ne_socket.c:618 src/ne_socket.c:722
+#: src/ne_socket.c:525 src/ne_socket.c:658 src/ne_socket.c:768
 #, fuzzy
 msgid "Connection closed"
 msgstr "Baðlantý sunucu tarafýndan kesildi"
 
-#: src/ne_socket.c:628 src/ne_socket.c:736
+#: src/ne_socket.c:662
+msgid "Retry operation"
+msgstr ""
+
+#: src/ne_socket.c:672 src/ne_socket.c:782
 #, fuzzy
 msgid "Secure connection truncated"
 msgstr "Baðlantý süre sýnýrý aþýldý."
 
-#: src/ne_socket.c:640 src/ne_socket.c:748
+#: src/ne_socket.c:684 src/ne_socket.c:794
 #, fuzzy, c-format
 msgid "SSL error: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:643
+#: src/ne_socket.c:687
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr ""
 
-#: src/ne_socket.c:727
+#: src/ne_socket.c:773
 #, fuzzy, c-format
 msgid "SSL alert received: %s"
 msgstr "%s: Hata: %s\n"
 
-#: src/ne_socket.c:744
+#: src/ne_socket.c:790
 msgid "SSL socket read failed"
 msgstr ""
 
-#: src/ne_socket.c:875
+#: src/ne_socket.c:921
 msgid "Line too long"
 msgstr "Satýr çok uzun"
 
-#: src/ne_socket.c:1036 src/ne_socket.c:1042
+#: src/ne_socket.c:1082 src/ne_socket.c:1088
 msgid "Host not found"
 msgstr "Sunucu bulunamadý"
 
-#: src/ne_socket.c:1251
+#: src/ne_socket.c:1297
 #, fuzzy
 msgid "Connection timed out"
 msgstr "%s: baðlantý bekleme sýnýrý aþýldý."
 
-#: src/ne_socket.c:1444
+#: src/ne_socket.c:1490
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr ""
 
-#: src/ne_socket.c:1506
+#: src/ne_socket.c:1552
 msgid "Socket family not supported"
 msgstr ""
 
-#: src/ne_socket.c:1737
+#: src/ne_socket.c:1783
 msgid "Client certificate verification failed"
 msgstr ""
 
-#: src/ne_socket.c:1753
+#: src/ne_socket.c:1799
 msgid "SSL disabled due to lack of entropy"
 msgstr ""
 
-#: src/ne_socket.c:1759
+#: src/ne_socket.c:1805
 #, fuzzy
 msgid "Could not create SSL structure"
 msgstr "SSL baðlantýsý kurulamadý"
