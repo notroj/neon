@@ -113,13 +113,13 @@ static int pk11_rsa_encrypt(int mlen, const unsigned char *m,
         return 0;
     }
 
-    if (padding != RSA_PKCS1_PADDING) {
+    if (padding != RSA_PKCS1_PADDING && padding != RSA_NO_PADDING) {
         NE_DEBUG(NE_DBG_SSL, "pk11: Cannot sign, unknown padding mode '%d'.\n", padding);
         RSAerr(PK11_RSA_ERR,ERR_R_RSA_LIB);
         return 0;
     }        
 
-    mech.mechanism = CKM_RSA_PKCS;
+    mech.mechanism = padding == RSA_PKCS1_PADDING ? CKM_RSA_PKCS : CKM_RSA_X_509;
     mech.parameter = NULL;
     mech.parameter_len = 0;
 
