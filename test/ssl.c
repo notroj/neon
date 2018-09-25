@@ -1023,26 +1023,21 @@ static int fail_ca_notyetvalid(void)
 static int session_cache(void)
 {
     struct ssl_server_args args = {0};
-    ne_session *sess = ne_session_create("https", "localhost", 7777);
-    
+    ne_session *sess;
+
     args.cert = SERVER_CERT;
     args.cache = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
+    CALL(multi_session_server(&sess, "https", "localhost",
+                              2, ssl_server, &args));
 
-    /* have spawned server listen for several connections. */
-    CALL(spawn_server_repeat(7777, ssl_server, &args, 4));
+    ne_ssl_trust_cert(sess, def_ca_cert);
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
     ne_session_destroy(sess);
-    /* server should still be waiting for connections: if not,
-     * something went wrong. */
-    ONN("error from child", dead_server());
-    /* now get rid of it. */
-    reap_server();
 
-    return OK;
+    return await_server();
 }
 
 /* Callback for client_cert_provider; takes a c. cert as userdata and
@@ -1201,6 +1196,8 @@ static int ccert_unencrypted(void)
 }
 
 #define NOCERT_MESSAGE "client certificate was requested"
+/* random SSL read may fail like this with TLSv1.3 */
+#define NOCERT_ALT "certificate required"
 
 /* Tests for useful error message if a handshake fails where a client
  * cert was requested. */
@@ -1222,7 +1219,8 @@ static int no_client_cert(void)
     ONV(ret != NE_ERROR,
         ("unexpected result %d: %s", ret, ne_get_error(sess)));
 
-    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL,
+    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL
+        && strstr(ne_get_error(sess), NOCERT_ALT) == NULL,
         ("error message was '%s', missing '%s'", 
          ne_get_error(sess), NOCERT_MESSAGE));
     
