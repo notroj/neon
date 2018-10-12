@@ -1,5 +1,5 @@
 Changes in release 0.30.3:
-* OpenSSL 1.1.1 fixes.
+* Fixes for OpenSSL 1.1.1 and TLSv1.3 support.
 * Fix possible crash in ne_set_request_flag().
 * Add more gcc "nonnull" attributes to ne_request_* functions.
 
