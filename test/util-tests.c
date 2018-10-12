@@ -207,18 +207,24 @@ static int parse_dates(void)
     return OK;
 }
 
-/* trigger segfaults in ne_rfc1036_parse() in <=0.24.5. */
-static int regress_dates(void)
+#define BAD_DATE(format, result) \
+    ONN(format " date parse must fail", result != -1)
+
+/* Test for bad dates; trigger segfaults in ne_rfc1036_parse() in
+ * <=0.24.5. */
+static int bad_dates(void)
 {
     static const char *dates[] = {
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "Friday, 08-Jun-01",
     };
     size_t n;
     
     for (n = 0; n < sizeof(dates)/sizeof(dates[0]); n++) {
-        ne_rfc1036_parse(dates[n]);
-        ne_iso8601_parse(dates[n]);
-        ne_rfc1123_parse(dates[n]);
+        BAD_DATE("rfc1036", ne_rfc1036_parse(dates[n]));
+        BAD_DATE("iso8601", ne_iso8601_parse(dates[n]));
+        BAD_DATE("rfc1123", ne_rfc1123_parse(dates[n]));
+        BAD_DATE("asctime", ne_asctime_parse(dates[n]));
     }
 
     return OK;
@@ -307,7 +313,7 @@ ne_test tests[] = {
     T(md5),
     T(md5_alignment),
     T(parse_dates),
-    T(regress_dates),
+    T(bad_dates),
     T(versioning),
     T(version_string),
     T(support),
