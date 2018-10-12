@@ -2,7 +2,6 @@ Changes in release 0.30.3:
 * OpenSSL 1.1.1 fixes.
 * Fix possible crash in ne_set_request_flag().
 * Add more gcc "nonnull" attributes to ne_request_* functions.
-* Fix various (harmless) GCC * warnings, static-scanner false +ves
 
 Changes in release 0.30.2:
 * Add support for OpenSSL 1.1.x (Kurt Roeckx).
