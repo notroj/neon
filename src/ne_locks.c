@@ -32,6 +32,7 @@
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+#include <assert.h>
 
 #include <ctype.h> /* for isdigit() */
 
@@ -332,6 +333,9 @@ void ne_lockstore_remove(ne_lock_store *store, struct ne_lock *lock)
     for (item = store->locks; item != NULL; item = item->next)
 	if (item->lock == lock)
 	    break;
+
+    /* API condition that lock is present in the store. */
+    assert(item);
     
     if (item->prev != NULL) {
 	item->prev->next = item->next;
