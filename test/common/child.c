@@ -251,12 +251,12 @@ int spawn_server_addr(int bind_local, int port, server_fn fn, void *ud)
 int new_spawn_server(int count, server_fn fn, void *userdata,
                      unsigned int *port)
 {
-    ne_inet_addr *addr;
+    ne_inet_addr *addr = NULL;
     int ret;
 
     ret = new_spawn_server2(count, fn, userdata, &addr, port);
-    
-    ne_iaddr_free(addr);
+    if (addr)
+        ne_iaddr_free(addr);
 
     return ret;
 }
