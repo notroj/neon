@@ -66,6 +66,7 @@
                      * ... except "+" which is PS */
 
 #define OT (0x4000) /* others */
+/* UNUSED  (0x8000) /* only remaining bit. */
 
 #define URI_ALPHA (AL)
 #define URI_DIGIT (DG)
