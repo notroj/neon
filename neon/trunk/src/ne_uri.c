@@ -92,7 +92,7 @@
 /* any characters which should be path-escaped: */
 #define URI_ESCAPE ((URI_GENDELIM & ~(FS)) | URI_SUBDELIM | OT | PC)
 
-static const unsigned int uri_chars[256] = {
+static const unsigned short uri_chars[256] = {
 /* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
 /*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
 /*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
