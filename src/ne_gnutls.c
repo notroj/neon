@@ -660,7 +660,7 @@ static int provide_client_cert(gnutls_session_t session,
                 return ret;
             }
             
-            *pcert = gnutls_malloc(sizeof *pcert);
+            *pcert = gnutls_calloc(1, sizeof **pcert);
             gnutls_pcert_import_x509(*pcert, sess->client_cert->cert.subject, 0);
             *pcert_length = 1;
 #else /* !HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION2 */
