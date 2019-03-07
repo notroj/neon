@@ -201,6 +201,50 @@ static int fail_serve(ne_socket *sock, void *ud)
 
 #define DEFSESS  (ne_session_create("https", "localhost", 7777))
 
+static int make_ssl_session_port(ne_session **sess,
+                                 const char *hostname, int port,
+                                 server_fn fn, void *userdata)
+{
+    return fakeproxied_session_server(sess, "https", hostname, port,
+                                      fn, userdata);
+}
+
+static int make_ssl_session(ne_session **sess, const char *hostname,
+                            server_fn fn, void *userdata)
+{
+    return make_ssl_session_port(sess,
+                                 hostname ? hostname : "localhost", 7777,
+                                 fn, userdata);
+}
+
+static int load_and_trust_cert(ne_session *sess, const char *ca_cert)
+{
+    ne_ssl_certificate *ca = ne_ssl_cert_read(ca_cert);
+    ONV(ca == NULL, ("could not load CA cert `%s'", ca_cert));
+    ne_ssl_trust_cert(sess, ca);
+    ne_ssl_cert_free(ca);
+    return OK;
+}
+
+static int make_ssl_request(struct ssl_server_args *args,
+                            const char *ca_cert, const char *hostname,
+                            ne_ssl_verify_fn verify_fn, void *verify_ud)
+{
+    ne_session *sess;
+    int ret;
+
+    CALL(make_ssl_session(&sess, hostname, ssl_server, args));
+
+    if (ca_cert) CALL(load_and_trust_cert(sess, ca_cert));
+    
+    if (verify_fn) ne_ssl_set_verify(sess, verify_fn, verify_ud);
+
+    ret = any_2xx_request(sess, "/foo");
+    CALL(await_server());
+    ne_session_destroy(sess);
+    return ret;
+}
+
 /* Run a request in the given session. */
 static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
 			   char *ca_cert,
@@ -209,10 +253,7 @@ static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
     int ret;
     
     if (ca_cert) {
-        ne_ssl_certificate *ca = ne_ssl_cert_read(ca_cert);
-        ONV(ca == NULL, ("could not load CA cert `%s'", ca_cert));
-        ne_ssl_trust_cert(sess, ca);
-        ne_ssl_cert_free(ca);
+        CALL(load_and_trust_cert(sess, ca_cert));
     }
 
     CALL(spawn_server(7777, fn, server_ud));
@@ -403,12 +444,10 @@ static int clicert_import(void)
  * unconditionaly. */
 static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
 {
-    ne_session *sess = ne_session_create("https", hostname, 7777);
     struct ssl_server_args args = {cert, 0};
+
     /* no verify callback needed. */
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, hostname, NULL, NULL);
 }
 
 
@@ -444,51 +483,34 @@ static int simple_sslv2(void)
 }
 #endif
 
-/* Serves using HTTP/1.0 get-till-EOF semantics. */
-static int serve_eof(ne_socket *sock, void *ud)
+/* Test read-til-EOF behaviour with SSL. */
+static int simple_eof(void)
 {
-    struct ssl_server_args args = {0};
+    struct ssl_server_args args = {SERVER_CERT, 0};
 
-    args.cert = ud;
     args.response = "HTTP/1.0 200 OK\r\n"
         "Connection: close\r\n"
         "\r\n"
         "This is a response body, like it or not.";
 
-    return ssl_server(sock, &args);
-}
-
-/* Test read-til-EOF behaviour with SSL. */
-static int simple_eof(void)
-{
-    ne_session *sess = DEFSESS;
-
-    CALL(any_ssl_request(sess, serve_eof, SERVER_CERT, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 static int intermediary(void)
 {
-    ne_session *sess = DEFSESS;
     struct ssl_server_args args = {CA2_SERVER_CERT, 0};
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 static int empty_truncated_eof(void)
 {
-    ne_session *sess = DEFSESS;
     struct ssl_server_args args = {0};
 
     args.cert = SERVER_CERT;
     args.response = "HTTP/1.0 200 OK\r\n" "\r\n";
     
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 /* Server function which just sends a string then EOF. */
@@ -515,44 +537,18 @@ static int fail_not_ssl(void)
     return OK;
 }
 
-/* Server callback which handles a CONNECT request. */
-static int tunnel_server(ne_socket *sock, void *ud)
-{
-    struct ssl_server_args *args = ud;
-
-    CALL(discard_request(sock));
-
-    SEND_STRING(sock, "HTTP/1.1 200 OK\r\nServer: serve_tunnel\r\n\r\n");
-    
-    return ssl_server(sock, args);
-}
-
 static int wildcard_match(void)
 {
-    ne_session *sess;
     struct ssl_server_args args = {"wildcard.cert", 0};
-    
-    sess = ne_session_create("https", "anything.example.com", 443);
-    ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    
-    return OK;
+    return make_ssl_request(&args, CA_CERT, "bar.example.com", NULL, NULL);
 }
 
 static int wildcard_match_altname(void)
 {
-    ne_session *sess;
     struct ssl_server_args args = {"altname9.cert", 0};
-    
-    sess = ne_session_create("https", "anything.example.com", 443);
-    ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    
-    return OK;
+    return make_ssl_request(&args, CA_CERT, "foo.example.com", NULL, NULL);
 }
 
 /* Check that hostname comparisons are not cases-sensitive. */
@@ -655,15 +651,12 @@ static int check_cert(void *userdata, int fs, const ne_ssl_certificate *cert)
 /* Check that certificate attributes are passed correctly. */
 static int parse_cert(void)
 {
-    ne_session *sess = DEFSESS;
-    int ret = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
+    int ret = 0;
 
     /* don't give a CA cert; should force the verify callback to be
      * used. */
-    CALL(any_ssl_request(sess, ssl_server, &args, NULL, 
-			 check_cert, &ret));
-    ne_session_destroy(sess);
+    CALL(make_ssl_request(&args, NULL, NULL, check_cert, &ret));
 
     ONN("cert verification never called", ret == 0);
 
@@ -705,7 +698,6 @@ static int check_chain(void *userdata, int fs, const ne_ssl_certificate *cert)
 /* Check that certificate attributes are passed correctly. */
 static int parse_chain(void)
 {
-    ne_session *sess = DEFSESS;
     int ret = 0;
     struct ssl_server_args args = {"wrongcn.cert", 0};
 
@@ -713,9 +705,7 @@ static int parse_chain(void)
 
     /* The cert is signed by the CA but has a CN mismatch, so will
      * force the verification callback to be invoked. */
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, 
-			 check_chain, &ret));
-    ne_session_destroy(sess);
+    CALL(make_ssl_request(&args, CA_CERT, NULL, check_chain, &ret));
 
     ONN("cert verification never called", ret == 0);
 
@@ -735,16 +725,12 @@ static int count_vfy(void *userdata, int fs, const ne_ssl_certificate *c)
 
 static int no_verify(void)
 {
-    ne_session *sess = DEFSESS;
     int count = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
 
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, count_vfy,
-			 &count));
+    CALL(make_ssl_request(&args, CA_CERT, NULL, count_vfy, &count));
 
     ONN("verify callback called unnecessarily", count != 0);
-
-    ne_session_destroy(sess);
 
     return OK;
 }
