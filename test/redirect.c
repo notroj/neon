@@ -162,6 +162,7 @@ static int fail_loop(void)
 }
 #endif
 
+#if 0
 /* ensure that ne_redirect_location returns NULL when no redirect has
  * been encountered, or redirect hooks aren't registered. */
 static int no_redirect(void)
@@ -187,6 +188,7 @@ static int no_redirect(void)
     ne_session_destroy(sess);
     return OK;
 }
+#endif
 
 ne_test tests[] = {
     T(lookup_localhost),
@@ -194,7 +196,9 @@ ne_test tests[] = {
     T(non_absolute),
     T(relative_1),
     T(relative_2),
+#if 0
     T(no_redirect),
+#endif
     T(NULL) 
 };
 
