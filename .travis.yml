@@ -1,4 +1,22 @@
 language: c
 os:
   - linux
-script: ./autogen.sh && ./configure && make check
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-static"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-shared"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=gnutls"
+script: ./autogen.sh && ./configure --enable-warnings $CONF && make check
