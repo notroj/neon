@@ -5,8 +5,9 @@ addons:
   apt:
     packages:
       - xmlto
-      - libgnutls28-dev
       - libnss3-tools
+      - libproxy-dev
+env:
 matrix:
   include:
     - os: linux
@@ -20,9 +21,18 @@ matrix:
     - os: linux
       compiler: gcc
       dist: trusty
+      env: CONF="--without-libproxy --without-gssapi --without-zlib"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-memleak"
+    - os: linux
+      compiler: gcc
+      dist: trusty
       env: CONF="--with-ssl=openssl"
+  allow_failures:
     - os: linux
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=gnutls"
-script: ./autogen.sh && ./configure --enable-warnings $CONF && make check
+script: ./autogen.sh && ./configure --enable-warnings $CONF && make check && make docs
