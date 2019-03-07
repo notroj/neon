@@ -5,6 +5,7 @@ addons:
   apt:
     packages:
       - xmlto
+      - libxml2-dev
       - libnss3-tools
       - libproxy-dev
 matrix:
@@ -20,7 +21,7 @@ matrix:
     - os: linux
       compiler: gcc
       dist: trusty
-      env: CONF="--without-libproxy --without-gssapi --without-zlib"
+      env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --without-webdav"
     - os: linux
       compiler: gcc
       dist: trusty
@@ -28,5 +29,13 @@ matrix:
     - os: linux
       compiler: gcc
       dist: trusty
+      env: CONF="--with-libxml2"
+    - os: linux
+      compiler: gcc
+      dist: trusty
       env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=openssl --enable-memleak"
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make check
