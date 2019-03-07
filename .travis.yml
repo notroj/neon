@@ -41,8 +41,4 @@ matrix:
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl --enable-memleak"
-    - os: linux
-      compiler: gcc
-      dist: trusty
-      env: MARGS=docs
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
