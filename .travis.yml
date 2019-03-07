@@ -1,0 +1,4 @@
+language: c
+os:
+  - linux
+script: ./autogen.sh && ./configure && make check
