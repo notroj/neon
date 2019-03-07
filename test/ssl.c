@@ -839,6 +839,7 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
         
     ne_session_destroy(sess);
     if (addr) ne_addr_destroy(addr);
+    if (list) ne_free(list);
 
     return OK;
 }
