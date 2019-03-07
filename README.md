@@ -1,5 +1,9 @@
 
-neon is an HTTP and WebDAV client library, with a C language API.
+[![Travis CI Build Status](https://travis-ci.org/notroj/neon.svg?branch=master)](https://travis-ci.org/notroj/neon)
+
+# neon
+
+_neon_ is an HTTP and WebDAV client library, with a C language API.
 
 Mailing list: neon@lists.manyfish.co.uk || Web site: http://www.webdav.org/neon/
 
