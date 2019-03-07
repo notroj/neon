@@ -1,6 +1,12 @@
 language: c
 os:
   - linux
+addons:
+  apt:
+    packages:
+      - xmlto
+      - libgnutls28-dev
+      - libnss3-tools
 matrix:
   include:
     - os: linux
