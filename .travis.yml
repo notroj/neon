@@ -7,7 +7,6 @@ addons:
       - xmlto
       - libnss3-tools
       - libproxy-dev
-env:
 matrix:
   include:
     - os: linux
@@ -30,9 +29,4 @@ matrix:
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl"
-  allow_failures:
-    - os: linux
-      compiler: gcc
-      dist: trusty
-      env: CONF="--with-ssl=gnutls"
-script: ./autogen.sh && ./configure --enable-warnings $CONF && make check && make docs
+script: ./autogen.sh && ./configure --enable-warnings $CONF && make check
