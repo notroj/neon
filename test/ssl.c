@@ -524,10 +524,10 @@ static int just_serve_string(ne_socket *sock, void *userdata)
 /* test for the SSL negotiation failing. */
 static int fail_not_ssl(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     int ret;
     
-    CALL(spawn_server(7777, just_serve_string, "Hello, world.\n"));
+    CALL(make_ssl_session(&sess, NULL, just_serve_string, "Hello, world.\n"));
     ret = any_request(sess, "/bar");
     CALL(await_server());
 
