@@ -602,7 +602,9 @@ static ssize_t writev_dummy(ne_socket *sock, const struct ne_iovec *vector, int 
 
 static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw, writev_raw };
 
+#ifdef HAVE_OPENSSL
 static int error_ossl(ne_socket *sock, int sret);
+#endif
 
 #ifdef HAVE_OPENSSL
 /* OpenSSL I/O function implementations. */
