@@ -820,8 +820,8 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
 			  get_failures, &gotf);
 
     ONV(gotf == 0,
-	("no error in verification callback; error string: %s",
-	 ne_get_error(sess)));
+	("no error in verification callback; request rv %d error string: %s",
+	 ret, ne_get_error(sess)));
 
     ONV(gotf & ~NE_SSL_FAILMASK,
 	("verification flags %x outside mask %x", gotf, NE_SSL_FAILMASK));
