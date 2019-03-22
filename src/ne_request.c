@@ -950,8 +950,12 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
 
     ret = ne_sock_readline(req->session->socket, buffer, sizeof req->respbuf);
     if (ret <= 0) {
-	int aret = aborted(req, _("Could not read status line"), ret);
-	return RETRY_RET(retry, ret, aret);
+        const char *errstr
+            = req->session->ssl_cc_requested
+            ? _("Could not read status line (TLS client certificate was requested)")
+            : _("Could not read status line");
+        int aret = aborted(req, errstr, ret);
+        return RETRY_RET(retry, ret, aret);
     }
     
     NE_DEBUG(NE_DBG_HTTP, "[status-line] < %s", buffer);
