@@ -1006,6 +1006,7 @@ static int fail_ca_notyetvalid(void)
                             "issuer ca not yet valid", NE_SSL_BADCHAIN);
 }
 
+#if 0
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
 {
@@ -1026,6 +1027,7 @@ static int session_cache(void)
 
     return await_server();
 }
+#endif
 
 /* Callback for client_cert_provider; takes a c. cert as userdata and
  * registers it. */
@@ -1930,9 +1932,11 @@ ne_test tests[] = {
     T(nulcn_identity),
     T(fail_nul_cn),
     T(fail_nul_san),
-    
+
+#if 0
     T(session_cache),
-	
+#endif
+
     T(fail_tunnel),
     T(proxy_tunnel),
     T(auth_proxy_tunnel),
