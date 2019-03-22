@@ -8,6 +8,8 @@ addons:
       - libxml2-dev
       - libnss3-tools
       - libproxy-dev
+      - gnutls-bin
+      - libgnutls28-dev
 env:
   global:
     - MARGS="-j2 check"
@@ -37,6 +39,10 @@ matrix:
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=gnutls" MARGS="-j2"
     - os: linux
       compiler: gcc
       dist: trusty
