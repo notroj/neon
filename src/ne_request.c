@@ -941,6 +941,12 @@ static inline void strip_eol(char *buf, ssize_t *len)
     }
 }
 
+#ifdef NE_HAVE_SSL
+#define SSL_CC_REQUESTED(_r) (_r->session->ssl_cc_requested)
+#else
+#define SSL_CC_REQUESTED(_r) (0)
+#endif
+
 /* Read and parse response status-line into 'status'.  'retry' is non-zero
  * if an NE_RETRY should be returned if an EOF is received. */
 static int read_status_line(ne_request *req, ne_status *status, int retry)
@@ -950,8 +956,7 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
 
     ret = ne_sock_readline(req->session->socket, buffer, sizeof req->respbuf);
     if (ret <= 0) {
-        const char *errstr
-            = req->session->ssl_cc_requested
+        const char *errstr = SSL_CC_REQUESTED(req)
             ? _("Could not read status line (TLS client certificate was requested)")
             : _("Could not read status line");
         int aret = aborted(req, errstr, ret);
