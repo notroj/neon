@@ -42,7 +42,7 @@ matrix:
     - os: linux
       compiler: gcc
       dist: trusty
-      env: CONF="--with-ssl=gnutls" MARGS="-j2"
+      env: CONF="--with-ssl=gnutls" MARGS="-j2 check TESTS=socket-ssl"
     - os: linux
       compiler: gcc
       dist: trusty
