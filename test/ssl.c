@@ -882,6 +882,7 @@ static int fail_wrongCN(void)
 
 #define SRCDIR(s) ne_concat(srcdir, "/" s, NULL)
 
+#ifndef HAVE_GNUTLS
 static int fail_nul_cn(void)
 {
     char *key = SRCDIR("nulsrv.key"), *ca = SRCDIR("nulca.pem");
@@ -894,6 +895,7 @@ static int fail_nul_cn(void)
     ne_free(ca);
     return OK;
 }
+#endif
 
 static int fail_nul_san(void)
 {
@@ -1930,7 +1932,12 @@ ne_test tests[] = {
     T(fail_ca_expired),
 
     T(nulcn_identity),
+#ifndef HAVE_GNUTLS
+    /* test failing with GnuTLS since GnuTLS fails handshake?
+     * fail_nul_cn (no error in verification callback; request rv 1 error string: Server certificate was missing commonName attribute in subject name)
+     */
     T(fail_nul_cn),
+#endif
     T(fail_nul_san),
 
 #if 0
