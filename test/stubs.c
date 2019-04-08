@@ -174,6 +174,8 @@ static int stub_pkcs11(void)
         ne_ssl_pkcs11_provider_destroy(prov);
     }
 
+    ne_session_destroy(sess);
+
     return OK;
 }
 
