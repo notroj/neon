@@ -1,0 +1,50 @@
+language: c
+os:
+  - linux
+addons:
+  apt:
+    packages:
+      - xmlto
+      - libxml2-dev
+      - libnss3-tools
+      - libproxy-dev
+      - gnutls-bin
+      - libgnutls28-dev
+env:
+  global:
+    - MARGS="-j2 check"
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-static"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-shared"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--enable-memleak"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-libxml2"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=gnutls"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--with-ssl=openssl --enable-memleak"
+script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
