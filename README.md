@@ -1,5 +1,5 @@
 
-[![Travis CI Build Status](https://travis-ci.org/notroj/neon.svg?branch=master)](https://travis-ci.org/notroj/neon)
+[![Travis CI Build Status](https://travis-ci.org/notroj/neon.svg?branch=0.30.x)](https://travis-ci.org/notroj/neon)
 
 # neon
 
