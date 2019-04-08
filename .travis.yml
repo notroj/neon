@@ -47,4 +47,8 @@ matrix:
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl --enable-memleak"
+    - os: linux
+      compiler: gcc
+      dist: trusty
+      env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
