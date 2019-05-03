@@ -516,7 +516,7 @@ static int verify_digest_header(struct digest_state *state,
         name = ne_shave(ptr, " ");
 
         val = strchr(name, '=');
-        ONV(val == NULL, ("bad name/value pair: %s", val));
+        ONV(val == NULL, ("bad name/value pair: %s", name));
         
         *val++ = '\0';
 
