@@ -26,7 +26,7 @@ ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz \
 	corrupt1.gz corrupt2.gz empty.gz random.txt
 DAV_TESTS = xml xmlreq oldacl acl3744 props lock
 SSL_TESTS = socket-ssl ssl
-SSL_HELPERS = ca-stamp
+SSL_HELPERS = ca-stamp nulcn.pem nulsan.pem nulca.pem nulsrv.key
 TESTS = @TESTS@
 VALGRIND = valgrind --tool=memcheck --leak-check=yes --trace-children=no --show-reachable=yes
 
