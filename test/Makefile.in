@@ -52,6 +52,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL = @INSTALL@
+TEST_INSTALL_DIR = $(libdir)/neon-tests
 
 INSTALL_HELPERS = $(HELPERS) server.key makekeys \
 	$(srcdir)/openssl.conf $(srcdir)/notvalid.pem \
@@ -80,17 +81,17 @@ lfs-check: largefile $(LFS_HELPERS)
 	@SRCDIR=$(srcdir) $(SHELL) $(srcdir)/run.sh largefile
 
 install: $(TESTS) $(HELPERS)
-	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests
-	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests/bin
-	@$(INSTALL) -d $(DESTDIR)$(libdir)/neon-tests/data
+	@$(INSTALL) -d $(DESTDIR)$(TEST_INSTALL_DIR)
+	@$(INSTALL) -d $(DESTDIR)$(TEST_INSTALL_DIR)/bin
+	@$(INSTALL) -d $(DESTDIR)$(TEST_INSTALL_DIR)/data
 	@for t in $(TESTS); do \
 	 $(LIBTOOL) --mode=install \
-	      $(INSTALL_PROGRAM) $$t $(DESTDIR)$(libdir)/neon-tests/bin; \
+	      $(INSTALL_PROGRAM) $$t $(DESTDIR)$(TEST_INSTALL_DIR)/bin; \
 	done
 	@for h in $(INSTALL_HELPERS); do \
-	 $(INSTALL_DATA) $$h $(DESTDIR)$(libdir)/neon-tests/data; \
+	 $(INSTALL_DATA) $$h $(DESTDIR)$(TEST_INSTALL_DIR)/data; \
 	done
-	@$(INSTALL_PROGRAM) $(srcdir)/run-tests.sh $(DESTDIR)$(libdir)/neon-tests
+	@$(INSTALL_PROGRAM) -p $(srcdir)/run-tests.sh $(DESTDIR)$(TEST_INSTALL_DIR)
 
 NEWS = $(top_srcdir)/NEWS
 
