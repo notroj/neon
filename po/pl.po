@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.30.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2013-07-31 16:46+0100\n"
+"POT-Creation-Date: 2019-07-09 15:08+0100\n"
 "PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -180,78 +180,78 @@ msgstr "Nie można "
 msgid "Could not initialize zlib"
 msgstr "Nie można zainicjalizować zlib"
 
-#: src/ne_gnutls.c:176
+#: src/ne_gnutls.c:183
 #, c-format
 msgid "[unprintable:#%lu]"
 msgstr "[niedrukowalne:#%lu]"
 
-#: src/ne_gnutls.c:205
+#: src/ne_gnutls.c:212
 msgid "[unprintable]"
 msgstr "[niedrukowalne]"
 
-#: src/ne_gnutls.c:845
+#: src/ne_gnutls.c:659
+#, c-format
+msgid "Failed to import private key: %s"
+msgstr ""
+
+#: src/ne_gnutls.c:903
 msgid "signed using insecure algorithm"
 msgstr "podpisane przy użyciu niebezpiecznego algorytmu"
 
-#: src/ne_gnutls.c:848
+#: src/ne_gnutls.c:906
 #, c-format
 msgid "unrecognized errors (%u)"
 msgstr "nierozpoznane błędy (%u)"
 
-#: src/ne_gnutls.c:893 src/ne_openssl.c:470
+#: src/ne_gnutls.c:951 src/ne_openssl.c:481
 #, c-format
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr "Certyfikat serwera nie posiada atrybutu commonName w nazwie tematu"
 
-#: src/ne_gnutls.c:907
+#: src/ne_gnutls.c:965
 #, c-format
 msgid "Could not verify server certificate: %s"
 msgstr "Nie można zweryfikować certyfikatu serwera: %s"
 
-#: src/ne_gnutls.c:919 src/ne_openssl.c:457
+#: src/ne_gnutls.c:984 src/ne_openssl.c:468
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr "Błąd weryfikacji certyfikatu: %s"
 
-#: src/ne_gnutls.c:952 src/ne_openssl.c:702
+#: src/ne_gnutls.c:1017 src/ne_openssl.c:717
 #, c-format
 msgid "SSL handshake failed, client certificate was requested: %s"
 msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
 
-#: src/ne_gnutls.c:957 src/ne_openssl.c:707
+#: src/ne_gnutls.c:1022 src/ne_openssl.c:722
 #, c-format
 msgid "SSL handshake failed: %s"
 msgstr "Uzgodnienie SSL nie udało się: %s"
 
-#: src/ne_gnutls.c:967
+#: src/ne_gnutls.c:1032
 #, c-format
 msgid "Server did not send certificate chain"
 msgstr "Serwer nie wysłał łańcucha certyfikatu"
 
-#: src/ne_locks.c:584
+#: src/ne_locks.c:588
 msgid "LOCK response missing Lock-Token header"
 msgstr "Odpowiedź LOCK nie zawiera nagłówka Lock-Token"
 
-#: src/ne_locks.c:759
+#: src/ne_locks.c:763
 #, c-format
 msgid "Response missing activelock for %s"
 msgstr "Odpowiedź nie zawiera aktywnej blokady dla %s"
 
-#: src/ne_locks.c:801
+#: src/ne_locks.c:805
 #, c-format
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
 "Nie zwrócono żadnej aktywnej blokady dla <%s> w odpowiedzi LOCK refresh"
 
-#: src/ne_openssl.c:727
+#: src/ne_openssl.c:742
 #, c-format
 msgid "SSL server did not present certificate"
 msgstr "Serwer SSL nie przedstawił certyfikatu"
-
-#: src/ne_openssl.c:736
-#, c-format
-msgid "Server certificate changed: connection intercepted?"
-msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
 
 #: src/ne_props.c:371 src/ne_props.c:435
 msgid "Response exceeds maximum property count"
@@ -305,97 +305,102 @@ msgstr "Nie można wysłać ciała żądania"
 msgid "Could not send chunked request terminator"
 msgstr "Nie można wysłać żądania połączenia"
 
-#: src/ne_request.c:784
+#: src/ne_request.c:785
 msgid "Could not read chunk size"
 msgstr "Nie można odczytać rozmiaru kawałka"
 
-#: src/ne_request.c:791
+#: src/ne_request.c:792
 msgid "Could not parse chunk size"
 msgstr "Nie można parsować rozmiaru kawałka"
 
-#: src/ne_request.c:828
+#: src/ne_request.c:829
 msgid "Could not read response body"
 msgstr "Nie można odczytać ciała odpowiedzi"
 
-#: src/ne_request.c:844
+#: src/ne_request.c:845
 msgid "Could not read chunk delimiter"
 msgstr "Nie można odczytać ogranicznika kawałka"
 
-#: src/ne_request.c:847
+#: src/ne_request.c:848
 msgid "Chunk delimiter was invalid"
 msgstr "Ogranicznik kawałka był nieprawidłowy"
 
-#: src/ne_request.c:952
+#: src/ne_request.c:960
+#, fuzzy
+msgid "Could not read status line (TLS client certificate was requested)"
+msgstr "Uzgodnienie SSL nie udało się, certyfikat klienta został zażądany: %s"
+
+#: src/ne_request.c:961
 msgid "Could not read status line"
 msgstr "Nie można odczytać linii statusu"
 
-#: src/ne_request.c:974
+#: src/ne_request.c:984
 msgid "Could not parse response status line"
 msgstr "Nie można parsować linii statusu odpowiedzi"
 
-#: src/ne_request.c:986
+#: src/ne_request.c:996
 msgid "Could not read interim response headers"
 msgstr "Nie można odczytać nagłówków tymczasowej odpowiedzi"
 
-#: src/ne_request.c:1020
+#: src/ne_request.c:1030
 msgid "Could not send request"
 msgstr "Nie można wysłać żądania"
 
-#: src/ne_request.c:1068 src/ne_request.c:1086 src/ne_request.c:1096
+#: src/ne_request.c:1078 src/ne_request.c:1096 src/ne_request.c:1106
 msgid "Error reading response headers"
 msgstr "Błąd podczas odczytywania nagłówków odpowiedzi"
 
-#: src/ne_request.c:1114
+#: src/ne_request.c:1124
 #, c-format
 msgid "Response header too long"
 msgstr "Nagłówek odpowiedzi zbyt długi"
 
-#: src/ne_request.c:1196
+#: src/ne_request.c:1206
 msgid "Response exceeded maximum number of header fields"
 msgstr "Odpowiedź przekroczyła maksymalną liczbę pól nagłówka"
 
-#: src/ne_request.c:1211
+#: src/ne_request.c:1221
 #, c-format
 msgid "Could not resolve hostname `%s': %s"
 msgstr "Nie można rozwiązać nazwy hosta `%s': %s"
 
-#: src/ne_request.c:1342
+#: src/ne_request.c:1352
 msgid "Unknown transfer-coding in response"
 msgstr "Nieznane transfer-coding w odpowiedzi"
 
-#: src/ne_request.c:1355
+#: src/ne_request.c:1365
 msgid "Invalid Content-Length in response"
 msgstr "Nieprawidłowe Content-Length w odpowiedzi"
 
-#: src/ne_request.c:1428
+#: src/ne_request.c:1438
 #, c-format
 msgid "Could not write to file: %s"
 msgstr "Nie można pisać do pliku: %s"
 
-#: src/ne_request.c:1501
+#: src/ne_request.c:1511
 #, c-format
 msgid "Could not create SSL connection through proxy server: %s"
 msgstr "Nie można utworzyć połączenia SSL przez serwer proxy: %s"
 
-#: src/ne_request.c:1540
+#: src/ne_request.c:1550
 #, c-format
 msgid "Could not create socket"
 msgstr "Nie można utworzyć gniazda"
 
-#: src/ne_request.c:1574
+#: src/ne_request.c:1584
 msgid "Could not connect to server"
 msgstr "Nie można połączyć się z serwerem"
 
-#: src/ne_request.c:1576
+#: src/ne_request.c:1586
 msgid "Could not connect to proxy server"
 msgstr "Nie można połączyć się z serwerem proxy"
 
-#: src/ne_request.c:1619
+#: src/ne_request.c:1629
 #, c-format
 msgid "Could not find IPv4 address of hostname %s for SOCKS v4 proxy"
 msgstr "Nie można znaleźć adresu IPv4 nazwy hosta %s dla proxy SOCKS v4"
 
-#: src/ne_request.c:1677
+#: src/ne_request.c:1687
 #, c-format
 msgid "Could not establish connection from SOCKS proxy (%s:%u): %s"
 msgstr "Nie można nawiązać połączenia z proxy SOCKS (%s:%u): %s"
@@ -432,62 +437,66 @@ msgstr "certyfikat został unieważniony"
 msgid "Server certificate verification failed: "
 msgstr "Weryfikacja certyfikatu serwera nie powiodła się: "
 
-#: src/ne_socket.c:522 src/ne_socket.c:618 src/ne_socket.c:722
+#: src/ne_socket.c:525 src/ne_socket.c:660 src/ne_socket.c:770
 msgid "Connection closed"
 msgstr "Połączenie zamknięte"
 
-#: src/ne_socket.c:628 src/ne_socket.c:736
+#: src/ne_socket.c:664
+msgid "Retry operation"
+msgstr ""
+
+#: src/ne_socket.c:674 src/ne_socket.c:784
 msgid "Secure connection truncated"
 msgstr "Bezpieczne połączenie obcięte"
 
-#: src/ne_socket.c:640 src/ne_socket.c:748
+#: src/ne_socket.c:686 src/ne_socket.c:796
 #, c-format
 msgid "SSL error: %s"
 msgstr "Błąd SSL: %s"
 
-#: src/ne_socket.c:643
+#: src/ne_socket.c:689
 #, c-format
 msgid "SSL error code %d/%d/%lu"
 msgstr "Kod błędu SSL %d/%d/%lu"
 
-#: src/ne_socket.c:727
+#: src/ne_socket.c:775
 #, c-format
 msgid "SSL alert received: %s"
 msgstr "Alarm SSL otrzymany: %s"
 
-#: src/ne_socket.c:744
+#: src/ne_socket.c:792
 msgid "SSL socket read failed"
 msgstr "Odczytywanie gniazda SSL nie powiodło się"
 
-#: src/ne_socket.c:875
+#: src/ne_socket.c:923
 msgid "Line too long"
 msgstr "Linia zbyt długa"
 
-#: src/ne_socket.c:1036 src/ne_socket.c:1042
+#: src/ne_socket.c:1084 src/ne_socket.c:1090
 msgid "Host not found"
 msgstr "Host nieznaleziony"
 
-#: src/ne_socket.c:1249
+#: src/ne_socket.c:1299
 msgid "Connection timed out"
 msgstr "Czas połączenia się skończył"
 
-#: src/ne_socket.c:1442
+#: src/ne_socket.c:1492
 msgid "Socket descriptor number exceeds FD_SETSIZE"
 msgstr "Numer deskryptoru gniazda przekracza FD_SETSIZE"
 
-#: src/ne_socket.c:1504
+#: src/ne_socket.c:1554
 msgid "Socket family not supported"
 msgstr "Rodzina gniazda niewspierana"
 
-#: src/ne_socket.c:1735
+#: src/ne_socket.c:1785
 msgid "Client certificate verification failed"
 msgstr "Weryfikacja certyfikatu klienta nie powiodła się"
 
-#: src/ne_socket.c:1751
+#: src/ne_socket.c:1801
 msgid "SSL disabled due to lack of entropy"
 msgstr "SSL wyłączone z powodu braku entropii"
 
-#: src/ne_socket.c:1757
+#: src/ne_socket.c:1807
 msgid "Could not create SSL structure"
 msgstr "Nie można utworzyć struktury SSL"
 
@@ -631,6 +640,9 @@ msgstr "Błąd podczas parsowania XML w linii %d: %s"
 #, c-format
 msgid "Could not parse response: %s"
 msgstr "Nie można parsować odpowiedzi: %s"
+
+#~ msgid "Server certificate changed: connection intercepted?"
+#~ msgstr "Certyfikat serwera zmienił się: połączenie przechwycone?"
 
 #~ msgid "SSL disabled due to library version mismatch"
 #~ msgstr "SSL wyłączone z powodu niezgodności wersji biblioteki"
