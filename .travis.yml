@@ -1,6 +1,6 @@
 language: c
-os:
-  - linux
+os: linux
+dist: xenial
 addons:
   apt:
     packages:
@@ -17,24 +17,22 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--enable-static"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--enable-shared"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--enable-memleak"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--with-libxml2"
+    - os: linux
+      compiler: gcc
+      env: CONF="--with-ssl=openssl"
     - os: linux
       compiler: gcc
       dist: trusty
@@ -45,14 +43,15 @@ matrix:
       env: CONF="--with-ssl=openssl"
     - os: linux
       compiler: gcc
-      dist: trusty
+      dist: bionic
+      env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
       env: CONF="--with-ssl=gnutls"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--with-ssl=openssl --enable-memleak"
     - os: linux
       compiler: gcc
-      dist: trusty
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
