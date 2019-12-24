@@ -41,6 +41,10 @@ matrix:
       env: CONF="--with-ssl=openssl"
     - os: linux
       compiler: gcc
+      dist: bionic
+      env: CONF="--with-ssl=openssl"
+    - os: linux
+      compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=gnutls"
     - os: linux
