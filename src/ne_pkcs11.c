@@ -72,8 +72,8 @@ struct ne_ssl_pkcs11_provider_s {
 #include <openssl/rsa.h>
 #include <openssl/err.h>
 
-#if defined(RSA_F_RSA_PRIVATE_ENCRYPT)
-#define PK11_RSA_ERR (RSA_F_RSA_PRIVATE_ENCRYPT)
+#if defined(RSA_F_RSA_OSSL_PRIVATE_ENCRYPT)
+#define PK11_RSA_ERR (RSA_F_RSA_OSSL_PRIVATE_ENCRYPT)
 #else
 #define PK11_RSA_ERR (RSA_F_RSA_EAY_PRIVATE_ENCRYPT)
 #endif
