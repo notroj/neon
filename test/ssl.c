@@ -889,7 +889,7 @@ static int fail_nul_cn(void)
     CALL(fail_ssl_request_with_error2(nul_cn_fn, key, ca,
                                       "www.bank.com", "localhost",
                                       "certificate with incorrect CN was accepted",
-                                      NE_SSL_IDMISMATCH,
+                                      NE_SSL_IDMISMATCH|NE_SSL_EXPIRED|NE_SSL_BADCHAIN,
                                       "certificate issued for a different hostname"));
     ne_free(key);
     ne_free(ca);
@@ -904,7 +904,7 @@ static int fail_nul_san(void)
     CALL(fail_ssl_request_with_error2(cert, key, ca, 
                                       "www.bank.com", "localhost",
                                       "certificate with incorrect CN was accepted",
-                                      NE_SSL_IDMISMATCH,
+                                      NE_SSL_IDMISMATCH|NE_SSL_EXPIRED|NE_SSL_BADCHAIN,
                                       "certificate issued for a different hostname"));
     ne_free(cert);
     ne_free(key);
