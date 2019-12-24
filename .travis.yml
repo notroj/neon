@@ -15,43 +15,39 @@ env:
     - MARGS="-j2 check"
 matrix:
   include:
-    - os: linux
+    - name: Static
       compiler: gcc
       env: CONF="--enable-static"
-    - os: linux
+    - name: Shared
       compiler: gcc
       env: CONF="--enable-shared"
-    - os: linux
+    - name: Disable-all
       compiler: gcc
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav"
-    - os: linux
+    - name: Memleak
       compiler: gcc
       env: CONF="--enable-memleak"
-    - os: linux
+    - name: Libxml2
       compiler: gcc
       env: CONF="--with-libxml2"
-    - os: linux
+    - name: OpenSSL
       compiler: gcc
       env: CONF="--with-ssl=openssl"
-    - os: linux
+    - name: OpenSSL on trusty
       compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl"
-    - os: linux
+    - name: OpenSSL on bionic
       compiler: gcc
       dist: bionic
       env: CONF="--with-ssl=openssl"
-    - os: linux
-      compiler: gcc
-      dist: bionic
-      env: CONF="--with-ssl=openssl"
-    - os: linux
+    - name: GnuTLS
       compiler: gcc
       env: CONF="--with-ssl=gnutls"
-    - os: linux
+    - name: OpenSSL memleak
       compiler: gcc
       env: CONF="--with-ssl=openssl --enable-memleak"
-    - os: linux
+    - name: Copyright check
       compiler: gcc
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
