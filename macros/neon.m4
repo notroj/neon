@@ -871,7 +871,7 @@ else
    if test "$ne_cvar" = "yes"; then
       $1_CFLAGS=`$PKG_CONFIG --cflags $2`
       $1_LIBS=`$PKG_CONFIG --libs $2`
-      $1_VERSION=`$PKG_CONFIG --version $2`
+      $1_VERSION=`$PKG_CONFIG --modversion $2`
       : Using provided pkg-config data
       $3
    else
