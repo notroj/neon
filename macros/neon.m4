@@ -958,8 +958,6 @@ gnutls)
      [AC_MSG_NOTICE(using GnuTLS configuration from pkg-config)
       CPPFLAGS="$CPPFLAGS ${NE_SSL_CFLAGS}"
       NEON_LIBS="$NEON_LIBS ${NE_SSL_LIBS}"
-
-      ne_gnutls_ver=`$PKG_CONFIG --modversion gnutls`
      ], [
       # Fall back on libgnutls-config script
       AC_PATH_PROG(GNUTLS_CONFIG, libgnutls-config, no)
@@ -970,14 +968,13 @@ gnutls)
 
       CPPFLAGS="$CPPFLAGS `$GNUTLS_CONFIG --cflags`"
       NEON_LIBS="$NEON_LIBS `$GNUTLS_CONFIG --libs`"
-
-      ne_gnutls_ver=`$GNUTLS_CONFIG --version`
+      NE_SSL_VERSION="`$GNUTLS_CONFIG --version`"
      ])
 
    AC_CHECK_HEADER([gnutls/gnutls.h],,
       [AC_MSG_ERROR([could not find gnutls/gnutls.h in include path])])
 
-   NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using GnuTLS $ne_gnutls_ver])
+   NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using GnuTLS $NE_SSL_VERSION])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_gnutls"
    AC_DEFINE([HAVE_GNUTLS], 1, [Define if GnuTLS support is enabled])
 
