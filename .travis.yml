@@ -20,7 +20,7 @@ matrix:
       env: CONF="--enable-static"
     - name: Static 32-bit
       compiler: gcc
-      env: CONF="--enable-static" CC='gcc -m32'
+      env: CONF="--enable-static --with-ssl=openssl" CC='gcc -m32'
       addons:
         apt:
           packages:
