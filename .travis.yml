@@ -50,4 +50,9 @@ matrix:
     - name: Copyright check
       compiler: gcc
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
+  allow_failures:
+    - name: GnuTLS
+      compiler: gcc
+      env: CONF="--with-ssl=gnutls"
+
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
