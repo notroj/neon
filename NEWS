@@ -1,7 +1,25 @@
+Changes in release 0.31.0:
+* Interface changes:
+ - none, API and ABI backwards-compatible with 0.27.x and later
+* New interfaces and features:
+ - add more gcc "nonnull" attributes to ne_request_* functions.
+ - for OpenSSL builds, ne_md5 code uses the OpenSSL implementation
+* Bug fixes:
+ - build fixes for OpenSSL 1.1.1 and TLSv1.3 support.
+ - fix crash with GnuTLS in client cert support (Henrik Holst)
+ - fix possible crash in ne_set_request_flag().
+
+Changes in release 0.30.2:
+* Add support for OpenSSL 1.1.x (Kurt Roeckx).
+* Fix PKCS#11 support under GnuTLS 3.x.
+ - PKCS#11 API no longer supported with GnuTLS 2.x
+
 Changes in release 0.30.1:
-* Fix possible crash after DNS resolver errors on Windows (Olivier Goffart)
+* Fix memory leak with GnuTLS (Werner Baumann, Patrick Ohly).
+* Fix possible crash after DNS lookup errors on Windows (Olivier Goffart).
 * Don't fail if the SSL cert changes between connections with OpenSSL,
   behaviour now matches that with GnuTLS.
+* Fix PKCS#11 support under OpenSSL with TLS 1.2.
 * Fix static linking with pkg-config file (Alan H).
 
 Changes in release 0.30.0:
