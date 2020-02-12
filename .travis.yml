@@ -18,6 +18,17 @@ matrix:
     - name: Static
       compiler: gcc
       env: CONF="--enable-static"
+    - name: Static 32-bit
+      compiler: gcc
+      env: CONF="--enable-static" CC='gcc -m32'
+      addons:
+        apt:
+          packages:
+            - libc6-dev-i386
+            - gcc-multilib
+            - libexpat1-dev:i386
+            - libssl-dev:i386
+            - lib32z1-dev
     - name: Shared
       compiler: gcc
       env: CONF="--enable-shared"
