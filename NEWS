@@ -9,6 +9,7 @@ Changes in release 0.31.0:
  - fix crash with GnuTLS in client cert support (Henrik Holst)
  - fix possible crash in ne_set_request_flag().
  - fix build with libxml2 2.9.10 and later
+ - fix handling lock timeouts >LONG_MAX (Giuseppe Castagno)
 
 Changes in release 0.30.2:
 * Add support for OpenSSL 1.1.x (Kurt Roeckx).
