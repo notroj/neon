@@ -196,7 +196,7 @@ lock.lo: $(srcdir)/lock.c $(OBJDEPS)
 largefile.lo: $(srcdir)/largefile.c $(OBJDEPS)
 
 auth: auth.lo $(DEPS)
-	$(LINK) -o $@ auth.lo $(LIBS)
+	$(LINK) -o $@ auth.lo $(LDADD)
 basic: basic.lo $(DEPS)
 	$(LINK) -o $@ basic.lo $(LDADD)
 uri-tests: uri-tests.lo $(DEPS)
