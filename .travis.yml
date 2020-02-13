@@ -31,7 +31,7 @@ matrix:
       compiler: gcc
       env: CONF="--with-libxml2"
     - name: Static clang UBsan w/OpenSSL
-      env: CONF="--enable-static --with-ssl=openssl" CC="clang-7" CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" NEON_LIBS=-lubsan
+      env: CONF="--enable-static --with-ssl=openssl" CC="clang-7" CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" LIBS=-lubsan
       addons:
         apt:
           sources:

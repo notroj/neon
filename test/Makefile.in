@@ -14,7 +14,8 @@ VPATH = @srcdir@
 AR = ar
 
 RANLIB = @RANLIB@
-LIBS = $(LIBTEST)
+LIBS = @LIBS@
+TEST_LIBS = $(LIBTEST) $(LIBS)
 CC = @CC@
 OPENSSL = @OPENSSL@
 
@@ -153,7 +154,7 @@ makekeys: $(srcdir)/makekeys.sh
 LIBOBJS = common/tests.lo common/child.lo utils.lo util-socks.lo
 
 $(LIBTEST): $(LIBOBJS)
-	$(LINK) -o $(LIBTEST) $(LIBOBJS) $(LIBNEON)
+	$(LINK) -o $(LIBTEST) $(LIBOBJS) $(LIBNEON) $(LIBS)
 
 .c.lo:
 	$(COMPILE) -c $< -o $@
@@ -163,7 +164,7 @@ socket-ssl.lo: $(srcdir)/socket.c $(HDRS)
 	$(COMPILE) -DSOCKET_SSL -c $(srcdir)/socket.c -o $@
 
 socket-ssl: socket-ssl.lo $(LIBTEST)
-	$(LINK) -o $@ socket-ssl.lo $(LIBS)
+	$(LINK) -o $@ socket-ssl.lo $(TEST_LIBS)
 
 resolve: resolve.lo $(LIBNEON)
 	$(LINK) -o $@ resolve.lo $(LIBNEON)
