@@ -45,7 +45,7 @@
 static char *activelock(enum ne_lock_scope scope,
 			int depth,
 			const char *owner,
-			long timeout,
+			unsigned long timeout,
 			const char *token_href)
 {
     static char buf[BUFSIZ];
@@ -56,7 +56,7 @@ static char *activelock(enum ne_lock_scope scope,
 		"<D:lockscope><D:%s/></D:lockscope>\n"
 		"<D:depth>%d</D:depth>\n"
 		"<D:owner>%s</D:owner>\n"
-		"<D:timeout>Second-%ld</D:timeout>\n"
+		"<D:timeout>Second-%lu</D:timeout>\n"
 		"<D:locktoken><D:href>%s</D:href></D:locktoken>\n"
 		"</D:activelock>",
 		scope==ne_lockscope_exclusive?"exclusive":"shared",
@@ -69,7 +69,7 @@ static char *activelock(enum ne_lock_scope scope,
 static char *lock_response(enum ne_lock_scope scope,
 			   int depth,
 			   const char *owner,
-			   long timeout,
+			   unsigned long timeout,
 			   const char *token_href)
 {
     static char buf[BUFSIZ];
@@ -251,6 +251,39 @@ static int lock_timeout(void)
 
     ONN("lock timeout ignored in response",
 	lock->timeout != 6500);
+
+    ne_session_destroy(sess);
+    ne_lock_destroy(lock);
+
+    CALL(await_server());
+
+    return OK;
+}
+
+#define LONG_TIMEOUT (4294967295UL)
+
+/* Lock timeouts should be allowed up to 2^32-1, but ne_lock uses a
+ * signed long to store timeouts, so this would fail with 32-bit long. */
+static int lock_long_timeout(void)
+{
+    ne_session *sess;
+    char *resp, *rbody = lock_response(ne_lockscope_exclusive, 0, "me",
+                                       LONG_TIMEOUT, "opaquelocktoken:foo");
+    struct ne_lock *lock = ne_lock_create();
+
+    resp = ne_concat("HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                     "Content-type: application/xml" EOL
+                     "Lock-Token: <opaquelocktoken:foo>" EOL
+                     "Connection: close\r\n\r\n", rbody, NULL);
+
+    CALL(fake_session(&sess, single_serve_string, resp));
+    ne_free(resp);
+
+    ne_fill_server_uri(sess, &lock->uri);
+    lock->uri.path = ne_strdup("/foo");
+    lock->timeout = 5;
+
+    ONREQ(ne_lock(sess, lock));
 
     ne_session_destroy(sess);
     ne_lock_destroy(lock);
@@ -626,6 +659,7 @@ ne_test tests[] = {
     T(if_child),
     T(if_covered_child),
     T(lock_timeout),
+    T(lock_long_timeout),
     T(lock_shared),
     T(discover),
     T(fail_discover),
