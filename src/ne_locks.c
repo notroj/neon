@@ -32,6 +32,10 @@
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
+
 #include <assert.h>
 
 #include <ctype.h> /* for isdigit() */
@@ -432,10 +436,21 @@ static long parse_timeout(const char *timeout)
     if (ne_strcasecmp(timeout, "infinite") == 0) {
 	return NE_TIMEOUT_INFINITE;
     } else if (strncasecmp(timeout, "Second-", 7) == 0) {
-	long to = strtol(timeout+7, NULL, 10);
-	if (to == LONG_MIN || to == LONG_MAX)
-	    return NE_TIMEOUT_INVALID;
-	return to;
+	unsigned long ut;
+
+        /* The value for a lock timeout should be unsigned 32-bit per
+         * <http://tools.ietf.org/html/rfc4918#section-10.7> but the
+         * ne_lock API used a "long" timeout, so map anything bigger
+         * to LONG_MAX. */
+        errno = 0;
+        ut = strtoul(timeout+7, NULL, 10);
+        if (ut == ULONG_MAX && errno == ERANGE)
+            return NE_TIMEOUT_INVALID;
+
+        if (ut > LONG_MAX)
+            return LONG_MAX;
+        else
+            return (long)ut;
     } else {
 	return NE_TIMEOUT_INVALID;
     }
