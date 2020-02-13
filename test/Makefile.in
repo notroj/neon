@@ -23,10 +23,10 @@ BASIC_TESTS = uri-tests util-tests string-tests socket \
 	session request auth basic stubs redirect
 ZLIB_TESTS = compress
 ZLIB_HELPERS = file1.gz file2.gz trailing.gz badcsum.gz truncated.gz \
-	corrupt1.gz corrupt2.gz empty.gz random.txt
+	corrupt1.gz corrupt2.gz empty.gz random.txt hello.txt hello.gz
 DAV_TESTS = xml xmlreq oldacl acl3744 props lock
 SSL_TESTS = socket-ssl ssl
-SSL_HELPERS = ca-stamp nulcn.pem nulsan.pem nulca.pem nulsrv.key
+SSL_HELPERS = ca-stamp
 TESTS = @TESTS@
 VALGRIND = valgrind --tool=memcheck --leak-check=yes --trace-children=no --show-reachable=yes
 
@@ -100,6 +100,12 @@ file1.gz: $(NEWS)
 
 file2.gz: $(NEWS)
 	gzip -c --name $(NEWS) > $@
+
+hello.txt:
+	echo hello world > $@
+
+hello.gz: hello.txt
+	gzip -c hello.txt > $@
 
 # gzip file with trailing bytes.
 trailing.gz: $(NEWS)
