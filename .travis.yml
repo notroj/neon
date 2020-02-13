@@ -30,6 +30,8 @@ matrix:
     - name: Libxml2
       compiler: gcc
       env: CONF="--with-libxml2"
+    - name: Static -fsanitize=undefined
+      env: CONF="--enable-static --with-ssl=openssl" CFLAGS="-fsanitize-undefined"
     - name: Static 32-bit w/OpenSSL
       compiler: gcc
       env: CONF="--enable-static --with-ssl=openssl" CC='gcc -m32'
