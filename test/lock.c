@@ -351,24 +351,35 @@ static int do_request(ne_session *sess, const char *path, int depth,
     return OK;
 }
 
+/* If modparent is non-zero; the request is flagged to
+ * modify the parent resource too. */
+#define LOCK_MODPARENT (0x01)
+/* Enable SharePoint hacks. */
+#define LOCK_SHAREPOINT (0x02)
+
 /* Tests If: header submission, for a lock of depth 'lockdepth' at
  * 'lockpath', with a request to 'reqpath' which Depth header of
- * 'reqdepth'.  If modparent is non-zero; the request is flagged to
- * modify the parent resource too. */
+ * 'reqdepth'.  'flags' is bitwise-or of LOCK_* flags above. */
 static int submit_test(const char *lockpath, int lockdepth,
 		       const char *reqpath, int reqdepth,
-		       int modparent)
+		       unsigned int flags)
 {
     ne_lock_store *store = ne_lockstore_create();
     ne_session *sess;
     struct ne_lock *lk = ne_lock_create();
     char *expect_if;
     int ret;
-    
-    expect_if = ne_concat("<http://localhost:7777", lockpath, 
-			  "> (<somelocktoken>)", NULL);
+
+    if (flags & LOCK_SHAREPOINT)
+        expect_if = ne_strdup("(<somelocktoken>)");
+    else
+        expect_if = ne_concat("<http://localhost:7777", lockpath,
+                              "> (<somelocktoken>)", NULL);
     CALL(fake_session(&sess, serve_verify_if, expect_if));
     ne_free(expect_if);
+
+    if (flags & LOCK_SHAREPOINT)
+        ne_set_session_flag(sess, NE_SESSFLAG_SHAREPOINT, 1);
 
     ne_fill_server_uri(sess, &lk->uri);
     lk->uri.path = ne_strdup(lockpath);
@@ -379,7 +390,7 @@ static int submit_test(const char *lockpath, int lockdepth,
     ne_lockstore_register(store, sess);
     ne_lockstore_add(store, lk);
 
-    ret = do_request(sess, reqpath, reqdepth, modparent);
+    ret = do_request(sess, reqpath, reqdepth, flags & LOCK_MODPARENT);
     CALL(await_server());
 
     ne_lockstore_destroy(store);
@@ -405,7 +416,7 @@ static int if_infinite_over(void)
 
 static int if_child(void)
 {
-    return submit_test("/foo/", 0, "/foo/bar", 0, 1);
+    return submit_test("/foo/", 0, "/foo/bar", 0, LOCK_MODPARENT);
 }
 
 /* this is a special test, where the PARENT resource of "/foo/bar" is
@@ -415,7 +426,13 @@ static int if_child(void)
  * correctly. */
 static int if_covered_child(void)
 {
-    return submit_test("/", NE_DEPTH_INFINITE, "/foo/bar", -1, 1);
+    return submit_test("/", NE_DEPTH_INFINITE, "/foo/bar", -1,
+                       LOCK_MODPARENT);
+}
+static int if_sharepoint(void)
+{
+    return submit_test("/foo-sharepoint", 0, "/foo-sharepoint", 0,
+                       LOCK_SHAREPOINT);
 }
 
 static int serve_discovery(ne_socket *sock, void *userdata)
@@ -658,6 +675,7 @@ ne_test tests[] = {
     T(if_infinite_over),
     T(if_child),
     T(if_covered_child),
+    T(if_sharepoint),
     T(lock_timeout),
     T(lock_long_timeout),
     T(lock_shared),

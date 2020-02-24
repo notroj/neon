@@ -137,16 +137,32 @@ static void lk_pre_send(ne_request *r, void *userdata, ne_buffer *req)
 
     if (lrc->submit != NULL) {
 	struct lock_list *item;
+        int ntl = ne_get_session_flag(ne_get_session(r), NE_SESSFLAG_SHAREPOINT);
+
+        /* Sharepoint doesn't like the more-accurate tagged-list
+         * format for If: headers, so use the no-tag-list format iff
+         * the Sharepoint hacks flag is enabled.  See
+         * <https://tools.ietf.org/html/rfc4918#section-10.4.2> */
+        if (ntl)
+            NE_DEBUG(NE_DBG_LOCKS, "lock: Using no-tag-list If: header construction\n");
 
 	/* Add in the If header */
-	ne_buffer_czappend(req, "If:");
+        ne_buffer_zappend(req, ntl ? "If: (" : "If:");
+
 	for (item = lrc->submit; item != NULL; item = item->next) {
-	    char *uri = ne_uri_unparse(&item->lock->uri);
-	    ne_buffer_concat(req, " <", uri, "> (<",
-			     item->lock->token, ">)", NULL);
-	    ne_free(uri);
+            if (ntl) {
+                ne_buffer_concat(req, "<", item->lock->token, ">",
+                                 item->next ? " " : "", NULL);
+            }
+            else {
+                char *uri = ne_uri_unparse(&item->lock->uri);
+                ne_buffer_concat(req, " <", uri, "> (<",
+                                 item->lock->token, ">)", NULL);
+                ne_free(uri);
+            }
 	}
-	ne_buffer_czappend(req, "\r\n");
+
+	ne_buffer_zappend(req, ntl ? ")\r\n" : "\r\n");
     }
 }
 
