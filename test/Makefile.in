@@ -67,7 +67,7 @@ INSTALL_HELPERS = $(HELPERS) server.key makekeys \
 all: $(TESTS)
 
 clean:
-	rm -f $(TESTS) $(HELPERS) *.*o common/*.*o libtest.*a *.log
+	rm -f $(TESTS) $(HELPERS) *.o *.lo common/*.o common/*.lo libtest.*a *.log
 	rm -f *.gc* *.da *.bb* common/*.bb* common/*.gc* common/*.da
 	rm -rf ca ca2 .libs nssdb*
 	rm -f ca-stamp client.key *.csr ssigned.pem wrongcn.pem \
