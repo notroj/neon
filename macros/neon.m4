@@ -904,12 +904,13 @@ case $with_ssl in
    ;;
 yes|openssl)
    NE_PKG_CONFIG(NE_SSL, openssl,
-    [AC_MSG_NOTICE(using SSL library configuration from pkg-config)
+    [AC_MSG_NOTICE(using OpenSSL $NE_SSL_VERSION library configuration from pkg-config)
      CPPFLAGS="$CPPFLAGS ${NE_SSL_CFLAGS}"
      NEON_LIBS="$NEON_LIBS ${NE_SSL_LIBS}"],
     [# Either OpenSSL library may require -ldl if built with dynamic engine support
      NE_SEARCH_LIBS(RSA_new, crypto, -ldl)
-     NE_SEARCH_LIBS(SSL_library_init, ssl, -ldl)])
+     NE_SEARCH_LIBS(SSL_library_init, ssl, -ldl)
+     NE_SSL_VERSION="(0.9.7 or later)"])
 
    AC_CHECK_HEADERS(openssl/ssl.h openssl/opensslv.h,,
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
@@ -918,7 +919,7 @@ yes|openssl)
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    if test "$ne_cv_lib_ssl097" = "yes"; then
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
-      NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL (0.9.7 or later)])
+      NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       NE_CHECK_FUNCS(CRYPTO_set_idptr_callback SSL_SESSION_cmp)
    else
       # Fail if OpenSSL is older than 0.9.6
@@ -1043,7 +1044,7 @@ noX*Y*) ;;
 *X*Yyes|*XyesY*)
     # PKCS#11... ho!
     NE_PKG_CONFIG(NE_PK11, pakchois,
-      [AC_MSG_NOTICE([[using pakchois for PKCS#11 support]])
+      [AC_MSG_NOTICE([[using pakchois $NE_PK11_VERSION for PKCS#11 support]])
        AC_DEFINE(HAVE_PAKCHOIS, 1, [Define if pakchois library supported])
        CPPFLAGS="$CPPFLAGS ${NE_PK11_CFLAGS}"
        NEON_LIBS="${NEON_LIBS} ${NE_PK11_LIBS}"],
@@ -1095,7 +1096,7 @@ if test "x$with_libproxy" != "xno"; then
      [AC_DEFINE(HAVE_LIBPROXY, 1, [Define if libproxy is supported])
       CPPFLAGS="$CPPFLAGS $NE_PXY_CFLAGS"
       NEON_LIBS="$NEON_LIBS ${NE_PXY_LIBS}"
-      NE_ENABLE_SUPPORT(LIBPXY, [libproxy support enabled])],
+      NE_ENABLE_SUPPORT(LIBPXY, [libproxy support enabled using libproxy $NE_PXY_VERSION])],
      [NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])])
 else
    NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])
