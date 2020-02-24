@@ -1137,8 +1137,8 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
-#if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10101000L
-/* For OpenSSL 1.1.1 locking callbacks are no longer need at all. */
+#if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L
+/* From OpenSSL 1.1.0 locking callbacks are no longer neede. */
 #define WITH_OPENSSL_LOCKING (1)
 
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
