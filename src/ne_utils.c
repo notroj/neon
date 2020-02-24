@@ -117,6 +117,9 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #else
    "OpenSSL (unknown version)"
 #endif /* OPENSSL_VERSION_TEXT */
+#ifdef NE_HAVE_TS_SSL
+    " (thread-safe)"
+#endif
 #endif /* HAVE_OPENSSL */
 #ifdef HAVE_GNUTLS
     ", GNU TLS " LIBGNUTLS_VERSION
@@ -126,6 +129,9 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #endif /* HAVE_SSPI */
 #ifdef HAVE_PAKCHOIS
     ", PKCS#11"
+#endif
+#ifdef NE_HAVE_LIBPXY
+    ", libproxy"
 #endif
    "."
 ;
