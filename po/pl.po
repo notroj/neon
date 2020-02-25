@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Neon 0.30.0\n"
 "Report-Msgid-Bugs-To: neon@lists.manyfish.co.uk\n"
-"POT-Creation-Date: 2019-07-09 15:08+0100\n"
+"POT-Creation-Date: 2020-02-25 08:20+0000\n"
 "PO-Revision-Date: 2009-09-04 02:00+0200\n"
 "Last-Translator: Arfrever Frehtes Taifersar Arahesis <Arfrever.FTA@gmail."
 "com>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/ne_207.c:198
+#: src/ne_207.c:213
 #, c-format
 msgid ""
 "Invalid HTTP status line in status element at line %d of response:\n"
@@ -37,113 +37,113 @@ msgstr "Nie można autentykować się do serwera: %s"
 msgid "Could not authenticate to proxy server: %s"
 msgstr "Nie można autentykować się do serwera proxy: %s"
 
-#: src/ne_auth.c:386
+#: src/ne_auth.c:384
 #, c-format
 msgid "rejected %s challenge"
 msgstr "odrzucone wezwanie %s"
 
-#: src/ne_auth.c:402
+#: src/ne_auth.c:400
 msgid "missing realm in Basic challenge"
 msgstr "brakująca domena w wezwaniu Basic"
 
-#: src/ne_auth.c:497
+#: src/ne_auth.c:495
 msgid "invalid Negotiate token"
 msgstr "niewłaściwy żeton Negotiate"
 
-#: src/ne_auth.c:520
+#: src/ne_auth.c:518
 msgid "GSSAPI authentication error: "
 msgstr "Błąd autentykacji GSSAPI: "
 
-#: src/ne_auth.c:533
+#: src/ne_auth.c:531
 #, c-format
 msgid "GSSAPI failure (code %u)"
 msgstr "Porażka GSSAPI (kod %u)"
 
-#: src/ne_auth.c:568
+#: src/ne_auth.c:566
 msgid "ignoring empty Negotiate continuation"
 msgstr "ignorowanie pustej kontynuacji Negotiate"
 
-#: src/ne_auth.c:583
+#: src/ne_auth.c:581
 #, c-format
 msgid "Negotiate response verification failed: invalid response header token"
 msgstr ""
 "weryfikacja odpowiedzi Negotiate nie udała się: niewłaściwy żeton nagłówka "
 "odpowiedzi"
 
-#: src/ne_auth.c:605
+#: src/ne_auth.c:603
 #, c-format
 msgid "Negotiate response verification failure: %s"
 msgstr "porażka weryfikacji odpowiedzi Negotiate: %s"
 
-#: src/ne_auth.c:669
+#: src/ne_auth.c:667
 #, fuzzy, c-format
 msgid "SSPI response verification failed: invalid response header token"
 msgstr ""
 "weryfikacja odpowiedzi Negotiate nie udała się: niewłaściwy żeton nagłówka "
 "odpowiedzi"
 
-#: src/ne_auth.c:802
+#: src/ne_auth.c:800
 msgid "unknown algorithm in Digest challenge"
 msgstr "nieznany algorytm w wezwaniu Digest"
 
-#: src/ne_auth.c:806
+#: src/ne_auth.c:804
 msgid "incompatible algorithm in Digest challenge"
 msgstr "niekompatybilny algorytm w wezwaniu Digest"
 
-#: src/ne_auth.c:810
+#: src/ne_auth.c:808
 msgid "missing parameter in Digest challenge"
 msgstr "brakujący parametr w wezwaniu Digest"
 
-#: src/ne_auth.c:814
+#: src/ne_auth.c:812
 msgid "initial Digest challenge was stale"
 msgstr "początkowe wezwanie Digest było nieaktualne"
 
-#: src/ne_auth.c:821
+#: src/ne_auth.c:819
 msgid "stale Digest challenge with new algorithm or realm"
 msgstr "nieaktualne wezwanie Digest z nowym algorytmem lub domeną"
 
-#: src/ne_auth.c:833
+#: src/ne_auth.c:831
 msgid "could not parse domain in Digest challenge"
 msgstr "nie można parsować domeny w wezwaniu Digest"
 
-#: src/ne_auth.c:1142
+#: src/ne_auth.c:1140
 #, c-format
 msgid "Digest mutual authentication failure: missing parameters"
 msgstr "Porażka wzajemnego uwierzytelniania Digest: brakujące parametry"
 
-#: src/ne_auth.c:1147
+#: src/ne_auth.c:1145
 #, c-format
 msgid "Digest mutual authentication failure: client nonce mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność posłańca klienta"
 
-#: src/ne_auth.c:1157
+#: src/ne_auth.c:1155
 #, c-format
 msgid "Digest mutual authentication failure: could not parse nonce count"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: nie można parsować licznika "
 "posłańca"
 
-#: src/ne_auth.c:1162
+#: src/ne_auth.c:1160
 #, c-format
 msgid "Digest mutual authentication failure: nonce count mismatch (%u not %u)"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność licznika posłańca "
 "(%u nie %u)"
 
-#: src/ne_auth.c:1205
+#: src/ne_auth.c:1203
 #, c-format
 msgid "Digest mutual authentication failure: request-digest mismatch"
 msgstr ""
 "Porażka wzajemnego uwierzytelniania Digest: niezgodność request-digest "
 "mismatch"
 
-#: src/ne_auth.c:1336
+#: src/ne_auth.c:1334
 #, c-format
 msgid "ignored %s challenge"
 msgstr "wezwanie %s zignorowane"
 
-#: src/ne_auth.c:1415
+#: src/ne_auth.c:1413
 msgid "could not parse challenge"
 msgstr "nie można parsować wezwania"
 
@@ -233,16 +233,16 @@ msgstr "Uzgodnienie SSL nie udało się: %s"
 msgid "Server did not send certificate chain"
 msgstr "Serwer nie wysłał łańcucha certyfikatu"
 
-#: src/ne_locks.c:588
+#: src/ne_locks.c:619
 msgid "LOCK response missing Lock-Token header"
 msgstr "Odpowiedź LOCK nie zawiera nagłówka Lock-Token"
 
-#: src/ne_locks.c:763
+#: src/ne_locks.c:794
 #, c-format
 msgid "Response missing activelock for %s"
 msgstr "Odpowiedź nie zawiera aktywnej blokady dla %s"
 
-#: src/ne_locks.c:805
+#: src/ne_locks.c:836
 #, c-format
 msgid "No activelock for <%s> returned in LOCK refresh response"
 msgstr ""
