@@ -47,9 +47,12 @@ matrix:
       compiler: gcc
       env: CONF="--with-ssl=openssl"
     - name: OpenSSL on trusty
-      compiler: gcc
       dist: trusty
       env: CONF="--with-ssl=openssl"
+    - name: OpenSSL on trusty, shared w/thread-safety
+      dist: trusty
+      env: CONF="--with-ssl=openssl --enable-shared --disable-static --enable-threadsafe-ssl=posix"
+           CC="gcc -pthread"
     - name: OpenSSL on bionic
       compiler: gcc
       dist: bionic
