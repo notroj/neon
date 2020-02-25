@@ -9,6 +9,8 @@ Changes in release 0.31.0:
    Jan-Marek Glogowski and Giuseppe Castagno)
  - ne_uri.h: add ne_path_escapef() in support of above
  - ne_207.h: add ne_207_set_flags() likewise in support of above
+* API clarification:
+ - ne_version_match() behaviour now matches actual 0.27+ ABI history
 * Bug fixes:
  - fixes for OpenSSL 1.1.1 and TLSv1.3 support
  - fix crash with GnuTLS in client cert support (Henrik Holst)
