@@ -1328,6 +1328,19 @@ void ne_md5_process_bytes(const void *buffer, size_t len,
     EVP_DigestUpdate(ctx->ctx, buffer, len);
 }
 
+void *ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf)
+{
+    EVP_MD_CTX *ssl_ctx = EVP_MD_CTX_new();
+
+    if (ssl_ctx) {
+        if (EVP_MD_CTX_copy(ssl_ctx, ctx->ctx))
+            EVP_DigestFinal(ssl_ctx, resbuf, NULL);
+        EVP_MD_CTX_free(ssl_ctx);
+    }
+
+    return resbuf;
+}
+
 void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf)
 {
     EVP_DigestFinal(ctx->ctx, resbuf, NULL);
