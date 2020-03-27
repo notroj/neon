@@ -1326,7 +1326,7 @@ static void s_progress(void *userdata, ne_off_t prog, ne_off_t total)
 	    prog_state = prog_error;
 	}
 	else if (prog_last != -1 && prog_last > prog) {
-	    t_context("progess went backwards: " FOFF " to " FOFF, prog_last, prog);
+	    t_context("progress went backwards: " FOFF " to " FOFF, prog_last, prog);
 	    prog_state = prog_error;
 	}
 	else if (prog_last == prog) {
