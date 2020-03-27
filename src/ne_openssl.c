@@ -368,7 +368,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
 }
 
 /* OpenSSL cert verification callback.  This is invoked for *each*
- * error which is encoutered whilst verifying the cert chain; multiple
+ * error which is encountered whilst verifying the cert chain; multiple
  * invocations for any particular cert in the chain are possible. */
 static int verify_callback(int ok, X509_STORE_CTX *ctx)
 {
@@ -1138,7 +1138,7 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 }
 
 #if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L
-/* From OpenSSL 1.1.0 locking callbacks are no longer neede. */
+/* From OpenSSL 1.1.0 locking callbacks are no longer needed. */
 #define WITH_OPENSSL_LOCKING (1)
 
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
