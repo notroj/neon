@@ -759,7 +759,7 @@ void ne_request_destroy(ne_request *req)
 /* Reads a block of the response into BUFFER, which is of size
  * *BUFLEN.  Returns zero on success or non-zero on error.  On
  * success, *BUFLEN is updated to be the number of bytes read into
- * BUFFER (which will be 0 to indicate the end of the repsonse).  On
+ * BUFFER (which will be 0 to indicate the end of the response).  On
  * error, the connection is closed and the session error string is
  * set.  */
 static int read_response_block(ne_request *req, struct ne_response *resp, 
