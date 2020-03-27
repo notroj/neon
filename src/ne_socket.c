@@ -1406,7 +1406,7 @@ static int do_bind(int fd, int peer_family,
     
 
 #if defined(USE_GETADDRINFO) && defined(AF_INET6)
-    /* Use a sockaddr_in6 if an AF_INET6 local address is specifed, or
+    /* Use a sockaddr_in6 if an AF_INET6 local address is specified, or
      * if no address is specified and the peer address is AF_INET6: */
     if ((addr != &dummy_laddr && addr->ai_family == AF_INET6)
         || (addr == &dummy_laddr && peer_family == AF_INET6)) {

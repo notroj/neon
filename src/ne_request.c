@@ -913,7 +913,7 @@ static void dump_request(const char *request)
 	/* Display everything mode */
 	NE_DEBUG(NE_DBG_HTTP, "Sending request headers:\n%s", request);
     } else if (ne_debug_mask & NE_DBG_HTTP) {
-	/* Blank out the Authorization paramaters */
+	/* Blank out the Authorization parameters */
 	char *reqdebug = ne_strdup(request), *pnt = reqdebug;
 	while ((pnt = strstr(pnt, "Authorization: ")) != NULL) {
 	    for (pnt += 15; *pnt != '\r' && *pnt != '\0'; pnt++) {
