@@ -165,6 +165,31 @@ static int md5_alignment(void)
     return OK;
 }
 
+#define INIT_MD5 "0123456789abcdeffedcba9876543210"
+
+static int md5_read(void)
+{
+    union {
+        unsigned int int32[4];
+        unsigned char buf[16];
+    } u;
+    struct ne_md5_ctx *ctx = ne_md5_create_ctx();
+    void *rv;
+    char hex[33];
+
+    rv = ne_md5_read_ctx(ctx, u.buf);
+    ONN("bogus return value", rv != u.buf);
+
+    ne_md5_to_ascii(u.buf, hex);
+
+    ONV(strcmp(INIT_MD5, hex) != 0,
+        ("read context was %s not %s", hex, INIT_MD5));
+
+    ne_md5_destroy_ctx(ctx);
+
+    return OK;
+}
+
 static const struct {
     const char *str;
     time_t time;
@@ -316,6 +341,7 @@ ne_test tests[] = {
     T(status_lines),
     T(md5),
     T(md5_alignment),
+    T(md5_read),
     T(parse_dates),
     T(bad_dates),
     T(versioning),
