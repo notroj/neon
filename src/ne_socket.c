@@ -610,7 +610,7 @@ static int error_ossl(ne_socket *sock, int sret);
 /* OpenSSL I/O function implementations. */
 static int readable_ossl(ne_socket *sock, int secs)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
+#if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10101000L
     /* Sufficient for TLSv1.2 and earlier. */
     if (SSL_pending(sock->ssl))
 	return 0;
