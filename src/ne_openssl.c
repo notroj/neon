@@ -578,7 +578,7 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         /* enable workarounds for buggy SSL server implementations */
         SSL_CTX_set_options(ctx->ctx, SSL_OP_ALL);
         SSL_CTX_set_verify(ctx->ctx, SSL_VERIFY_PEER, verify_callback);
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10101000L
         SSL_CTX_set_post_handshake_auth(ctx->ctx, 1);
 #endif
     } else if (mode == NE_SSL_CTX_SERVER) {
