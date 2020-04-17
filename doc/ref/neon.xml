@@ -279,7 +279,8 @@
   <refsect1>
     <title>See also</title>
 
-    <para><xref linkend="refsess"/>, <xref linkend="ne_oom_callback"/></para>
+    <para><xref linkend="refsess"/>, <xref linkend="ne_oom_callback"/>,
+    <ulink url="https://notroj.github.io/neon/"/></para>
   </refsect1>
 
 </refentry>
