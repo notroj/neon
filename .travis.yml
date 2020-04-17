@@ -49,6 +49,9 @@ matrix:
     - name: OpenSSL on arm64
       arch: arm64
       env: CONF="--with-ssl=openssl"
+    - name: OpenSSL on s390x
+      arch: s390x
+      env: CONF="--with-ssl=openssl"
     - name: OpenSSL on trusty
       dist: trusty
       env: CONF="--with-ssl=openssl"
