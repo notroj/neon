@@ -221,11 +221,20 @@ int fakeproxied_session_server(ne_session **sess, const char *scheme,
                                const char *host, unsigned int fakeport,
                                server_fn fn, void *userdata)
 {
+    return fakeproxied_multi_session_server(1, sess, scheme, host, fakeport,
+                                            fn, userdata);
+}
+
+int fakeproxied_multi_session_server(int count,
+                                     ne_session **sess, const char *scheme,
+                                     const char *host, unsigned int fakeport,
+                                     server_fn fn, void *userdata)
+{
     unsigned int port;
     ne_inet_addr *addr;
     const ne_inet_addr *alist[1];
     
-    CALL(new_spawn_server2(1, fn, userdata, &addr, &port));
+    CALL(new_spawn_server2(count, fn, userdata, &addr, &port));
     
     alist[0] = addr;
 
