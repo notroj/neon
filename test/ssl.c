@@ -217,6 +217,18 @@ static int make_ssl_session(ne_session **sess, const char *hostname,
                                  fn, userdata);
 }
 
+/* Runs SSL server which will accept 'count' connections, running
+ * ssl_server as callback with given 'args'. */
+static int multi_ssl_session(int count, ne_session **sess,
+                             struct ssl_server_args *args)
+{
+    return fakeproxied_multi_session_server(count, sess, "https",
+                                            "localhost",
+                                            7777,
+                                            ssl_server, args);
+}
+
+
 static int load_and_trust_cert(ne_session *sess, const char *ca_cert)
 {
     ne_ssl_certificate *ca = ne_ssl_cert_read(ca_cert);
@@ -735,19 +747,20 @@ static int no_verify(void)
     return OK;
 }
 
+/* Checks that the verify callback is only called on the first
+ * connection to the SSL server, and not on subsequent connections. */
 static int cache_verify(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     int count = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
-    
-    /* force verify cert. */
-    CALL(any_ssl_request(sess, ssl_server, &args, NULL, count_vfy,
-                         &count));
 
-    CALL(spawn_server(7777, ssl_server, &args));
-    ONREQ(any_request(sess, "/foo2"));
-    CALL(await_server());
+    CALL(multi_ssl_session(2, &sess, &args));
+
+    ne_ssl_set_verify(sess, count_vfy, &count);
+
+    ONREQ(any_request(sess, "/foo-alpha"));
+    ONREQ(any_request(sess, "/foo-beta"));
 
     ONV(count != 1,
 	("verify callback result not cached: called %d times", count));
@@ -1194,16 +1207,16 @@ static int ccert_unencrypted(void)
  * cert was requested. */
 static int no_client_cert(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     struct ssl_server_args args = {SERVER_CERT, NULL};
     int ret;
 
     args.require_cc = 1;
     args.fail_silently = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
+    CALL(make_ssl_session(&sess, NULL, ssl_server, &args));
 
-    CALL(spawn_server(7777, ssl_server, &args));
+    ne_ssl_trust_cert(sess, def_ca_cert);
     
     ret = any_request(sess, "/failme");
 
