@@ -420,7 +420,7 @@ struct digest_state {
 #else
 #define hash_process(str, len, ctx) ne_md5_process_bytes(str, len, ctx)
 #define hash_reset(ctx) ne_md5_reset_ctx(ctx)
-#define hash_final(ctx, out) ne_md5_finish_ascii(ctx, out, NULL)
+#define hash_final(ctx, out) ne_md5_finish_ascii(ctx, out)
 #define hash_destroy(ctx) ne_md5_destroy_ctx(ctx);
 #endif
 
