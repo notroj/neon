@@ -427,19 +427,19 @@ struct digest_state {
 #define hash_destroy(ctx) ne_md5_destroy_ctx(ctx);
 #endif
 
-/* Write the request-digest into 'digest' (or response-digest if
- * auth_info is non-zero) for given digest auth state and
- * parameters.  */
-static int make_digest(struct digest_state *state, struct digest_parms *parms,
-                       int auth_info, char digest[33])
+static char *hash(struct digest_parms *p, char digest[33], ...)
+    ne_attribute_sentinel;
+
+static char *hash(struct digest_parms *p, char digest[33], ...)
 {
+    va_list ap;
+    const char *arg;
 #ifdef HAVE_OPENSSL11
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     const EVP_MD *md;
 #else
     struct ne_md5_ctx *ctx;
 #endif
-    char h_a1[33], h_a2[33];
 
 #ifdef HAVE_OPENSSL11
     switch (parms->alg) {
@@ -452,56 +452,49 @@ static int make_digest(struct digest_state *state, struct digest_parms *parms,
         break;
     }
 
-    if (EVP_DigestInit(ctx, md) != 1) return -1;
+    if (EVP_DigestInit(ctx, md) != 1) return NULL;
 #else
     ctx = ne_md5_create_ctx();
 #endif
 
-    /* H(A1) */
-    hash_process(state->username, strlen(state->username), ctx);
-    hash_process(":", 1, ctx);
-    hash_process(state->realm, strlen(state->realm), ctx);
-    hash_process(":", 1, ctx);
-    hash_process(state->password, strlen(state->password), ctx);
-    hash_final(ctx, h_a1);
+    va_start(ap, digest);
+    while ((arg = va_arg(ap, char *)) != NULL)
+        hash_process(arg, strlen(arg), ctx);
+    va_end(ap);
 
-    if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS) {
-        hash_reset(ctx);
-        hash_process(h_a1, 32, ctx);
-        hash_process(":", 1, ctx);
-        hash_process(state->nonce, strlen(state->nonce), ctx);
-        hash_process(":", 1, ctx);
-        hash_process(state->cnonce, strlen(state->cnonce), ctx);
-        hash_final(ctx, h_a1);
-    }
-
-    /* H(A2) */
-    hash_reset(ctx);
-    if (!auth_info)
-        hash_process(state->method, strlen(state->method), ctx);
-    hash_process(":", 1, ctx);
-    hash_process(state->uri, strlen(state->uri), ctx);
-    hash_final(ctx, h_a2);
-
-    /* request-digest */
-    hash_reset(ctx);
-    hash_process(h_a1, strlen(h_a1), ctx);
-    hash_process(":", 1, ctx);
-    hash_process(state->nonce, strlen(state->nonce), ctx);
-    hash_process(":", 1, ctx);
-
-    if (parms->flags & PARM_RFC2617) {
-        hash_process(state->ncval, strlen(state->ncval), ctx);
-        hash_process(":", 1, ctx);
-        hash_process(state->cnonce, strlen(state->cnonce), ctx);
-        hash_process(":", 1, ctx);
-        hash_process(state->qop, strlen(state->qop), ctx);
-        hash_process(":", 1, ctx);
-    }
-
-    hash_process(h_a2, strlen(h_a2), ctx);
     hash_final(ctx, digest);
     hash_destroy(ctx);
+
+    return digest;
+}
+
+/* Write the request-digest into 'digest' (or response-digest if
+ * auth_info is non-zero) for given digest auth state and
+ * parameters.  */
+static int make_digest(struct digest_state *state, struct digest_parms *parms,
+                       int auth_info, char digest[33])
+{
+    char h_a1[33], h_a2[33];
+
+    hash(parms, h_a1, state->username, ":", state->realm, ":", 
+         state->password, NULL);
+
+    if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS) {
+        hash(parms, h_a1, h_a1, ":", state->nonce, ":", state->cnonce, NULL);
+    }
+
+    hash(parms, h_a2, !auth_info ? state->method : "", ":", state->uri, NULL);
+
+    if (parms->flags & PARM_RFC2617) {
+        hash(parms, digest,
+             h_a1, ":", state->nonce, ":",
+             state->ncval, ":", state->cnonce, ":", state->qop, ":",
+             h_a2, NULL);
+    }
+    else {
+        /* RFC2069-style */
+        hash(parms, digest, h_a1, ":", state->nonce, ":", h_a2, NULL);
+    }
 
     return 0;
 }
