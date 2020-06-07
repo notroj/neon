@@ -314,11 +314,7 @@ static void clean_session(auth_session *sess)
 /* Returns client nonce string. */
 static char *get_cnonce(void) 
 {
-    char ret[33];
-    unsigned char data[256];
-    struct ne_md5_ctx *hash;
-
-    hash = ne_md5_create_ctx();
+    unsigned char data[32];
 
 #ifdef HAVE_GNUTLS
     if (1) {
@@ -327,18 +323,22 @@ static char *get_cnonce(void)
 #else
         gnutls_rnd(GNUTLS_RND_NONCE, data, sizeof data);
 #endif
-        ne_md5_process_bytes(data, sizeof data, hash);
+        return ne_base64(data, sizeof data);
     }
     else
 #elif defined(HAVE_OPENSSL)
     if (RAND_status() == 1 && RAND_bytes(data, sizeof data) >= 0) {
-	ne_md5_process_bytes(data, sizeof data, hash);
+        return ne_base64(data, sizeof data);
     } 
     else 
 #endif /* HAVE_OPENSSL */
     {
         /* Fallback sources of random data: all bad, but no good sources
          * are available. */
+        struct ne_md5_ctx *hash;
+        char ret[33];
+
+        hash = ne_md5_create_ctx();
         
         /* Uninitialized stack data; yes, happy valgrinders, this is
          * supposed to be here. */
@@ -362,12 +362,12 @@ static char *get_cnonce(void)
 #endif
             ne_md5_process_bytes(&pid, sizeof pid, hash);
         }
+
+        ne_md5_finish_ascii(hash, ret);
+        ne_md5_destroy_ctx(hash);
+
+        return ne_strdup(ret);
     }
-
-    ne_md5_finish_ascii(hash, ret);
-    ne_md5_destroy_ctx(hash);
-
-    return ne_strdup(ret);
 }
 
 /* Callback to retrieve user credentials for given session on given
