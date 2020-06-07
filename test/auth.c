@@ -29,7 +29,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL11
 #include <openssl/evp.h>
 #endif
 #include "ne_md5.h"
@@ -411,7 +411,7 @@ struct digest_state {
     long nc;
 };
 
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL11
 #define hash_process(str, len, ctx) if (EVP_DigestUpdate(ctx, str, len) != 1) return -1
 #define hash_reset(ctx) if (EVP_DigestInit(ctx, md) != 1) return -1
 #define hash_create(ctx) hash_reset(ctx)
@@ -430,7 +430,7 @@ struct digest_state {
 static int make_digest(struct digest_state *state, struct digest_parms *parms,
                        int auth_info, char digest[33])
 {
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL11
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     const EVP_MD *md;
 #else
@@ -438,7 +438,7 @@ static int make_digest(struct digest_state *state, struct digest_parms *parms,
 #endif
     char h_a1[33], h_a2[33];
 
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL11
     switch (parms->alg) {
     case ALG_SHA256_SESS:
     case ALG_SHA256:
