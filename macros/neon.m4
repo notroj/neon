@@ -849,7 +849,8 @@ AC_CACHE_CHECK([OpenSSL version is >= $2], $1, [
 AC_EGREP_CPP(good, [#include <openssl/opensslv.h>
 #if OPENSSL_VERSION_NUMBER >= $3
 good
-#endif], [$1=yes], [$1=no])])])
+#endif], [$1=yes
+$4], [$1=no])])])
 
 dnl Less noisy replacement for PKG_CHECK_MODULES
 AC_DEFUN([NE_PKG_CONFIG], [
@@ -916,9 +917,10 @@ yes|openssl)
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
 
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
-   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
+   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L,
    if test "$ne_cv_lib_ssl110" = "yes"; then
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
+      AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])
    elif test "$ne_cv_lib_ssl097" = "yes"; then
       # Enable EGD support if using 0.9.7 or newer
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
