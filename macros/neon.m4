@@ -917,7 +917,7 @@ yes|openssl)
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
 
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
-   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L,
+   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
    if test "$ne_cv_lib_ssl110" = "yes"; then
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])
