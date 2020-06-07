@@ -589,8 +589,10 @@ static int verify_digest_header(struct digest_state *state,
         }
     }
 
-    ONN("cnonce param missing for 2617-style auth",
-        (parms->flags & PARM_RFC2617) && !newstate.cnonce);
+    ONN("cnonce param missing or short for 2617-style auth",
+        (parms->flags & PARM_RFC2617)
+        && (newstate.cnonce == NULL
+            || strlen(newstate.cnonce) < 32));
 
     DIGCMP(realm);
     DIGCMP(username);
