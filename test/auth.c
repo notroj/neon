@@ -29,10 +29,14 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_OPENSSL
+#include <openssl/evp.h>
+#endif
+#include "ne_md5.h"
+
 #include "ne_request.h"
 #include "ne_auth.h"
 #include "ne_basic.h"
-#include "ne_md5.h"
 
 #include "tests.h"
 #include "child.h"
@@ -376,7 +380,7 @@ struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
     int rfc2617;
     int send_ainfo;
-    enum { ALG_MD5 = 0, ALG_MD5_SESS = 1, ALG_SHA256 = 2 } alg;
+    enum { ALG_MD5 = 0, ALG_MD5_SESS, ALG_SHA256, ALG_SHA256_SESS } alg;
     int proxy;
     int send_nextnonce;
     int num_requests;
@@ -407,62 +411,96 @@ struct digest_state {
     long nc;
 };
 
+#ifdef HAVE_OPENSSL
+#define hash_process(str, len, ctx) if (EVP_DigestUpdate(ctx, str, len) != 1) return -1
+#define hash_reset(ctx) if (EVP_DigestInit(ctx, md) != 1) return -1
+#define hash_create(ctx) hash_reset(ctx)
+#define hash_final(ctx, out) do { unsigned char v[EVP_MAX_MD_SIZE]; EVP_DigestFinal_ex(ctx, v, NULL); ne_md5_to_ascii(v, out); } while (0)
+#define hash_destroy(ctx) EVP_MD_CTX_free(ctx)
+#else
+#define hash_process(str, len, ctx) ne_md5_process_bytes(str, len, ctx)
+#define hash_reset(ctx) ne_md5_reset_ctx(ctx)
+#define hash_final(ctx, out) ne_md5_finish_ascii(ctx, out, NULL)
+#define hash_destroy(ctx) ne_md5_destroy_ctx(ctx);
+#endif
+
 /* Write the request-digest into 'digest' (or response-digest if
  * auth_info is non-zero) for given digest auth state and
  * parameters.  */
-static void make_digest(struct digest_state *state, struct digest_parms *parms,
-                        int auth_info, char digest[33])
+static int make_digest(struct digest_state *state, struct digest_parms *parms,
+                       int auth_info, char digest[33])
 {
+#ifdef HAVE_OPENSSL
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    const EVP_MD *md;
+#else
     struct ne_md5_ctx *ctx;
+#endif
     char h_a1[33], h_a2[33];
 
-    /* H(A1) */
-    ctx = ne_md5_create_ctx();
-    if (!ctx) return;
-    ne_md5_process_bytes(state->username, strlen(state->username), ctx);
-    ne_md5_process_bytes(":", 1, ctx);
-    ne_md5_process_bytes(state->realm, strlen(state->realm), ctx);
-    ne_md5_process_bytes(":", 1, ctx);
-    ne_md5_process_bytes(state->password, strlen(state->password), ctx);
-    ne_md5_finish_ascii(ctx, h_a1);
+#ifdef HAVE_OPENSSL
+    switch (parms->alg) {
+    case ALG_SHA256_SESS:
+    case ALG_SHA256:
+        md = EVP_sha256();
+        break;
+    default:
+        md = EVP_md5();
+        break;
+    }
 
-    if (parms->alg == ALG_MD5_SESS) {
-        ne_md5_reset_ctx(ctx);
-        ne_md5_process_bytes(h_a1, 32, ctx);
-        ne_md5_process_bytes(":", 1, ctx);
-        ne_md5_process_bytes(state->nonce, strlen(state->nonce), ctx);
-        ne_md5_process_bytes(":", 1, ctx);
-        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), ctx);
-        ne_md5_finish_ascii(ctx, h_a1);
+    if (EVP_DigestInit(ctx, md) != 1) return -1;
+#else
+    ctx = ne_md5_create_ctx();
+#endif
+
+    /* H(A1) */
+    hash_process(state->username, strlen(state->username), ctx);
+    hash_process(":", 1, ctx);
+    hash_process(state->realm, strlen(state->realm), ctx);
+    hash_process(":", 1, ctx);
+    hash_process(state->password, strlen(state->password), ctx);
+    hash_final(ctx, h_a1);
+
+    if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS) {
+        hash_reset(ctx);
+        hash_process(h_a1, 32, ctx);
+        hash_process(":", 1, ctx);
+        hash_process(state->nonce, strlen(state->nonce), ctx);
+        hash_process(":", 1, ctx);
+        hash_process(state->cnonce, strlen(state->cnonce), ctx);
+        hash_final(ctx, h_a1);
     }
 
     /* H(A2) */
-    ne_md5_reset_ctx(ctx);
+    hash_reset(ctx);
     if (!auth_info)
-        ne_md5_process_bytes(state->method, strlen(state->method), ctx);
-    ne_md5_process_bytes(":", 1, ctx);
-    ne_md5_process_bytes(state->uri, strlen(state->uri), ctx);
-    ne_md5_finish_ascii(ctx, h_a2);
+        hash_process(state->method, strlen(state->method), ctx);
+    hash_process(":", 1, ctx);
+    hash_process(state->uri, strlen(state->uri), ctx);
+    hash_final(ctx, h_a2);
 
     /* request-digest */
-    ne_md5_reset_ctx(ctx);
-    ne_md5_process_bytes(h_a1, strlen(h_a1), ctx);
-    ne_md5_process_bytes(":", 1, ctx);
-    ne_md5_process_bytes(state->nonce, strlen(state->nonce), ctx);
-    ne_md5_process_bytes(":", 1, ctx);
+    hash_reset(ctx);
+    hash_process(h_a1, strlen(h_a1), ctx);
+    hash_process(":", 1, ctx);
+    hash_process(state->nonce, strlen(state->nonce), ctx);
+    hash_process(":", 1, ctx);
 
     if (parms->rfc2617) {
-        ne_md5_process_bytes(state->ncval, strlen(state->ncval), ctx);
-        ne_md5_process_bytes(":", 1, ctx);
-        ne_md5_process_bytes(state->cnonce, strlen(state->cnonce), ctx);
-        ne_md5_process_bytes(":", 1, ctx);
-        ne_md5_process_bytes(state->qop, strlen(state->qop), ctx);
-        ne_md5_process_bytes(":", 1, ctx);
+        hash_process(state->ncval, strlen(state->ncval), ctx);
+        hash_process(":", 1, ctx);
+        hash_process(state->cnonce, strlen(state->cnonce), ctx);
+        hash_process(":", 1, ctx);
+        hash_process(state->qop, strlen(state->qop), ctx);
+        hash_process(":", 1, ctx);
     }
 
-    ne_md5_process_bytes(h_a2, strlen(h_a2), ctx);
-    ne_md5_finish_ascii(ctx, digest);
-    ne_md5_destroy_ctx(ctx);
+    hash_process(h_a2, strlen(h_a2), ctx);
+    hash_final(ctx, digest);
+    hash_destroy(ctx);
+
+    return 0;
 }
 
 /* Verify that the response-digest matches expected state. */
@@ -470,7 +508,8 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
 {
     char digest[33];
 
-    make_digest(state, parms, 0, digest);
+    ONV(make_digest(state, parms, 0, digest),
+        ("failed to create digest for %s", state->algorithm));
 
     ONV(strcmp(digest, state->digest),
         ("bad digest; expected %s got %s", state->digest, digest));
@@ -844,7 +883,7 @@ static int digest(void)
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, 1, 1, 0, 1, 0, 1, 0, fail_not },
 
 #if 0
-        /* RFC 6717. */
+        /* RFC 7616. */
         { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, 1, 1, ALG_SHA256, 0, 0, 1, 0, fail_not },
 #endif
         
