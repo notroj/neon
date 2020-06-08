@@ -855,6 +855,7 @@ static int digest_challenge(auth_session *sess, int attempt,
             ne_md5_process_bytes(":", 1, tmp);
             ne_md5_process_bytes(sess->realm, strlen(sess->realm), tmp);
             ne_md5_finish_ascii(tmp, digest);
+            ne_md5_destroy_ctx(tmp);
 
             sess->userhash = ne_strdup(digest);
         }
