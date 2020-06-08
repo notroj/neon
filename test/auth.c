@@ -380,6 +380,8 @@ static void dup_header(char *header)
 #define PARM_NEXTNONCE (0x0002)
 #define PARM_RFC2617   (0x0004)
 #define PARM_AINFO     (0x0008)
+#define PARM_USERHASH  (0x0010) /* userhash=true */
+#define PARM_UHFALSE   (0x0020) /* userhash=false */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -409,9 +411,11 @@ struct digest_parms {
 struct digest_state {
     const char *realm, *nonce, *uri, *username, *password, *algorithm, *qop,
         *method, *opaque;
+    char userhash[33];
     char *cnonce, *digest, *ncval;
     long nc;
     int count;
+    int uhash_bool;
 };
 
 #ifdef HAVE_OPENSSL11
@@ -580,6 +584,9 @@ static int verify_digest_header(struct digest_state *state,
         else if (ne_strcasecmp(name, "response") == 0) {
             state->digest = ne_strdup(val);
         }
+        else if (ne_strcasecmp(name, "userhash") == 0 ) {
+            newstate.uhash_bool = strcmp(val, "true") == 0;
+        }
     }
 
     ONN("cnonce param missing or short for 2617-style auth",
@@ -587,8 +594,18 @@ static int verify_digest_header(struct digest_state *state,
         && (newstate.cnonce == NULL
             || strlen(newstate.cnonce) < 32));
 
+    if (parms->flags & PARM_USERHASH) {
+        ONN("userhash missing", !newstate.uhash_bool);
+
+        ONCMP(state->userhash, newstate.username,
+              "Digest username (userhash) field", "userhash");
+    }
+    else {
+        ONN("unexpected userhash=true sent", newstate.uhash_bool);
+        DIGCMP(username);
+    }
+
     DIGCMP(realm);
-    DIGCMP(username);
     if (!parms->domain)
         DIGCMP(uri);
     DIGCMP(nonce);
@@ -698,6 +715,13 @@ static char *make_digest_header(struct digest_state *state,
         ne_buffer_concat(buf, "domain=\"", parms->domain, "\", ", NULL);
     }
 
+    if (parms->flags & PARM_USERHASH) {
+        ne_buffer_czappend(buf, "userhash=true, ");
+    }
+    else if (parms->flags & PARM_UHFALSE) {
+        ne_buffer_czappend(buf, "userhash=false, ");
+    }
+
     if (parms->failure == fail_req0_stale
         || parms->failure == fail_req0_2069_stale
         || parms->stale == parms->num_requests) {
@@ -736,6 +760,10 @@ static int serve_digest(ne_socket *sock, void *userdata)
     case ALG_MD5: state.algorithm = "MD5"; break;
     }
     state.qop = "auth";
+
+    if (parms->flags & PARM_USERHASH) {
+        hash(parms, state.userhash, username, ":", parms->realm, NULL);
+    }
 
     state.cnonce = state.digest = state.ncval = NULL;
 
@@ -870,6 +898,11 @@ static int digest(void)
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO, 3, 2, fail_not },
         /* 2069 + stale */
         { "WallyWorld", "this-is-a-nonce", NULL, NULL, ALG_MD5, PARM_AINFO, 3, 2, fail_not },
+
+        /* RFC 7616-style */
+        { "WallyWorld", "new-day-new-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_USERHASH, 1, 0, fail_not },
+        /* ... userhash=false */
+        { "WallyWorld", "just-another-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_UHFALSE, 1, 0, fail_not },
 
         /* RFC 2069-style */ 
         { "WallyWorld", "lah-di-da-di-dah", NULL, NULL, ALG_MD5, 0, 1, 0, fail_not },

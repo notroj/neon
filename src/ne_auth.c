@@ -122,6 +122,7 @@ struct auth_challenge {
     unsigned int stale; /* if stale=true */
     unsigned int got_qop; /* we were given a qop directive */
     unsigned int qop_auth; /* "auth" token in qop attrib */
+    unsigned int userhash; /* got userhash=true */
     auth_algorithm alg;
     struct auth_challenge *next;
 };
@@ -194,6 +195,7 @@ typedef struct {
     char *opaque;
     char **domains; /* list of paths given as domain. */
     size_t ndomains; /* size of domains array */
+    char *userhash;
     auth_qop qop;
     auth_algorithm alg;
     unsigned int nonce_count;
@@ -277,8 +279,9 @@ static void clean_session(auth_session *sess)
     if (sess->cnonce) ne_free(sess->cnonce);
     if (sess->opaque) ne_free(sess->opaque);
     if (sess->realm) ne_free(sess->realm);
+    if (sess->userhash) ne_free(sess->userhash);
     sess->realm = sess->basic = sess->cnonce = sess->nonce =
-        sess->opaque = NULL;
+        sess->opaque = sess->userhash = NULL;
     if (sess->stored_rdig) {
         ne_md5_destroy_ctx(sess->stored_rdig);
         sess->stored_rdig = NULL;
@@ -840,6 +843,21 @@ static int digest_challenge(auth_session *sess, int attempt,
             /* Failed to get credentials */
             return -1;
         }
+
+        /* Calculate userhash for this (realm, username) if required.
+         * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
+        if (parms->userhash) {
+            struct ne_md5_ctx *tmp;
+            char digest[33];
+
+            tmp = ne_md5_create_ctx();
+            ne_md5_process_bytes(sess->username, strlen(sess->username), tmp);
+            ne_md5_process_bytes(":", 1, tmp);
+            ne_md5_process_bytes(sess->realm, strlen(sess->realm), tmp);
+            ne_md5_finish_ascii(tmp, digest);
+
+            sess->userhash = ne_strdup(digest);
+        }
     }
     else {
         /* Stale challenge: accept a new nonce or opaque. */
@@ -998,7 +1016,8 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     ret = ne_buffer_create();
 
     ne_buffer_concat(ret, 
-		     "Digest username=\"", sess->username, "\", "
+                     "Digest username=\"",
+                     sess->userhash ? sess->userhash : sess->username, "\", "
 		     "realm=\"", sess->realm, "\", "
 		     "nonce=\"", sess->nonce, "\", "
 		     "uri=\"", req->uri, "\", "
@@ -1015,6 +1034,9 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 	ne_buffer_concat(ret, ", cnonce=\"", sess->cnonce, "\", "
 			 "nc=", nc_value, ", "
 			 "qop=\"", qop_value, "\"", NULL);
+    }
+    if (sess->userhash) {
+        ne_buffer_czappend(ret, ", userhash=true");
     }
 
     ne_buffer_zappend(ret, "\r\n");
@@ -1389,6 +1411,9 @@ static int auth_challenge(auth_session *sess, int attempt,
 	}
         else if (ne_strcasecmp(key, "domain") == 0) {
             chall->domain = val;
+        }
+        else if (ne_strcasecmp(key, "userhash") == 0) {
+            chall->userhash = strcmp(val, "true") == 0;
         }
     }
     
