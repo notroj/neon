@@ -39,6 +39,11 @@
 #include "ne_alloc.h"
 #include "ne_string.h"
 
+#if !defined(HAVE_OPENSSL11)
+#include "ne_md5.h"
+#define NEED_VSTRHASH
+#endif
+
 char *ne_token(char **str, char separator)
 {
     char *ret = *str, *pnt = strchr(*str, separator);
@@ -614,3 +619,39 @@ int ne_strncasecmp(const char *s1, const char *s2, size_t n)
     
     return c1 - c2;
 }
+
+char *ne_strhash(unsigned int flags, ...)
+{
+    va_list ap;
+    char *rv;
+
+    if (flags != NE_STRHASH_MD5) return NULL;
+    
+    va_start(ap, flags);
+    rv = ne_vstrhash(flags, ap);
+    va_end(ap);
+
+    return rv;
+}
+
+#ifdef NEED_VSTRHASH
+char *ne_vstrhash(unsigned int flags, va_list ap)
+{
+    char ret[33];
+    const char *arg;
+    struct ne_md5_ctx *ctx;
+
+    if (flags != NE_STRHASH_MD5) return NULL;
+
+    ctx = ne_md5_create_ctx();
+    if (!ctx) return NULL;
+
+    while ((arg = va_arg(ap, const char *)) != NULL)
+        ne_md5_process_bytes(arg, strlen(arg), ctx);
+
+    ne_md5_finish_ascii(ctx, ret);
+    ne_md5_destroy_ctx(ctx);
+
+    return ne_strdup(ret);
+}
+#endif

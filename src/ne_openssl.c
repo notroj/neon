@@ -1139,6 +1139,30 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
+#ifdef HAVE_OPENSSL11
+char *ne_vstrhash(unsigned int flags, va_list ap)
+{
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    const EVP_MD *md;
+    unsigned char v[EVP_MAX_MD_SIZE];
+    char ret[33];
+    const char *arg;
+
+    md = EVP_md5();
+
+    if (EVP_DigestInit(ctx, md) != 1) return NULL;
+
+    while ((arg = va_arg(ap, const char *)) != NULL)
+        EVP_DigestUpdate(ctx, arg, strlen(arg));
+
+    EVP_DigestFinal_ex(ctx, v, NULL);
+    ne_md5_to_ascii(v, ret);
+    EVP_MD_CTX_free(ctx);
+
+    return ne_strdup(ret);
+}
+#endif
+
 #if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L
 /* From OpenSSL 1.1.0 locking callbacks are no longer needed. */
 #define WITH_OPENSSL_LOCKING (1)

@@ -29,11 +29,8 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_OPENSSL11
-#include <openssl/evp.h>
-#endif
 #include "ne_md5.h"
-
+#include "ne_string.h"
 #include "ne_request.h"
 #include "ne_auth.h"
 #include "ne_basic.h"
@@ -418,57 +415,32 @@ struct digest_state {
     int uhash_bool;
 };
 
-#ifdef HAVE_OPENSSL11
-#define hash_process(str, len, ctx) if (EVP_DigestUpdate(ctx, str, len) != 1) return -1
-#define hash_reset(ctx) if (EVP_DigestInit(ctx, md) != 1) return -1
-#define hash_create(ctx) hash_reset(ctx)
-#define hash_final(ctx, out) do { unsigned char v[EVP_MAX_MD_SIZE]; EVP_DigestFinal_ex(ctx, v, NULL); ne_md5_to_ascii(v, out); } while (0)
-#define hash_destroy(ctx) EVP_MD_CTX_free(ctx)
-#else
-#define hash_process(str, len, ctx) ne_md5_process_bytes(str, len, ctx)
-#define hash_reset(ctx) ne_md5_reset_ctx(ctx)
-#define hash_final(ctx, out) ne_md5_finish_ascii(ctx, out)
-#define hash_destroy(ctx) ne_md5_destroy_ctx(ctx);
-#endif
-
 static char *hash(struct digest_parms *p, char digest[33], ...)
     ne_attribute_sentinel;
 
 static char *hash(struct digest_parms *p, char digest[33], ...)
 {
     va_list ap;
-    const char *arg;
-#ifdef HAVE_OPENSSL11
-    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-    const EVP_MD *md;
-#else
-    struct ne_md5_ctx *ctx;
-#endif
+    unsigned int flags;
+    char *h;
 
-#ifdef HAVE_OPENSSL11
-    switch (parms->alg) {
+    switch (p->alg) {
     case ALG_SHA256_SESS:
     case ALG_SHA256:
-        md = EVP_sha256();
+        abort();
         break;
     default:
-        md = EVP_md5();
+        flags = NE_STRHASH_MD5;
         break;
     }
 
-    if (EVP_DigestInit(ctx, md) != 1) return NULL;
-#else
-    ctx = ne_md5_create_ctx();
-#endif
-
     va_start(ap, digest);
-    while ((arg = va_arg(ap, char *)) != NULL)
-        hash_process(arg, strlen(arg), ctx);
+    h = ne_vstrhash(flags, ap);
     va_end(ap);
 
-    hash_final(ctx, digest);
-    hash_destroy(ctx);
-
+    if (h == NULL) abort();
+    memcpy(digest, h, 33);
+    ne_free(h);
     return digest;
 }
 
