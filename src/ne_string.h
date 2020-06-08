@@ -149,6 +149,18 @@ char *ne_strnqdup(const unsigned char *data, size_t len);
 char *ne_concat(const char *str, ...)
     ne_attribute_sentinel;
 
+/* Calculate hash over concatenation of NUL-terminated const char *
+ * string arguments, up to a terminating NULL pointer, and return as a
+ * malloc-allocated ASCII hex string.  Uses hash type specified by
+ * 'flags', which must be non-zero.  Returns NULL if the hash type is
+ * not supported or an internal error occurs. */
+#define NE_STRHASH_MD5     (0x0001)
+char *ne_strhash(unsigned int flags, ...)
+    ne_attribute_sentinel;
+/* Equivalent of ne_strhash(), taking va_list argument; the behaviour
+ * is otherwise identical. */
+char *ne_vstrhash(unsigned int flags, va_list ap);
+
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
 size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)

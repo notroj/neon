@@ -650,6 +650,23 @@ static int qappend(void)
     return OK;
 }
 
+static int strhash(void)
+{
+    char *h;
+
+    ONN("zero flags must return NULL", ne_strhash(0, "", NULL) != NULL);
+    
+    h = ne_strhash(NE_STRHASH_MD5, "", NULL);
+    ONCMP(h, "d41d8cd98f00b204e9800998ecf8427e");
+    ne_free(h);
+
+    h = ne_strhash(NE_STRHASH_MD5, "foo", "ba", "r", NULL);
+    ONCMP(h, "3858f62230ac3c915f300c664312c63f");
+    ne_free(h);
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -678,6 +695,7 @@ ne_test tests[] = {
     T(casencmp),
     T(buf_print),
     T(qappend),
+    T(strhash),
     T(NULL)
 };
 
