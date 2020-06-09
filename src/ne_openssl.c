@@ -1164,11 +1164,13 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     switch (flags) {
     case NE_HASH_MD5: md = EVP_md5(); break;
     case NE_HASH_SHA256: md = EVP_sha256(); break;
+#ifdef HAVE_OPENSSL11
     case NE_HASH_SHA512_256: md = EVP_sha512_256(); break;
+#endif
     default: return NULL;
     }
 
-    ctx = EVP_MD_CTX_new()
+    ctx = EVP_MD_CTX_new();
     if (EVP_DigestInit(ctx, md) != 1) return NULL;
 
     while ((arg = va_arg(ap, const char *)) != NULL)
