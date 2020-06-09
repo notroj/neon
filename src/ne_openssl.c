@@ -1139,7 +1139,7 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
-#ifdef HAVE_OPENSSL11
+#ifdef HAVE_OPENSSL
 char *ne_vstrhash(unsigned int flags, va_list ap)
 {
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
