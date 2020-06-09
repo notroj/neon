@@ -650,11 +650,25 @@ static int qappend(void)
     return OK;
 }
 
+static char *test_vstrhash(unsigned int flags, ...)
+{
+    va_list ap;
+    char *rv;
+
+    va_start(ap, flags);
+    rv = ne_vstrhash(flags, ap);
+    va_end(ap);
+
+    return rv;
+}
+
 static int strhash(void)
 {
     char *h;
 
     ONN("zero flags must return NULL", ne_strhash(0, "", NULL) != NULL);
+
+    ONN("zero flags must return NULL for vstrhash", test_vstrhash(0, "", NULL) != NULL);
     
     h = ne_strhash(NE_STRHASH_MD5, "", NULL);
     ONCMP(h, "d41d8cd98f00b204e9800998ecf8427e");

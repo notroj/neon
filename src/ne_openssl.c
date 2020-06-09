@@ -1148,6 +1148,8 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     char ret[33];
     const char *arg;
 
+    if (flags != NE_STRHASH_MD5) return NULL;
+
     md = EVP_md5();
 
     if (EVP_DigestInit(ctx, md) != 1) return NULL;
