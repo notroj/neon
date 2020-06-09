@@ -152,11 +152,12 @@ char *ne_concat(const char *str, ...)
 /* Calculate hash over concatenation of NUL-terminated const char *
  * string arguments, up to a terminating NULL pointer, and return as a
  * malloc-allocated ASCII hex string.  Uses hash type specified by
- * 'flags', which must be equal one of the NE_HASH_ values below.
+ * 'flags', which must equal exactly one of the NE_HASH_ values below.
  * Returns NULL if the hash type is not supported or an internal error
  * occurs. */
-#define NE_HASH_MD5       (0x0001)
-#define NE_HASH_SHA256    (0x0002)
+#define NE_HASH_MD5        (0x0001)
+#define NE_HASH_SHA256     (0x0002)
+#define NE_HASH_SHA512_256 (0x0003)
 char *ne_strhash(unsigned int flags, ...)
     ne_attribute_sentinel;
 /* Equivalent of ne_strhash(), taking va_list argument; the behaviour
