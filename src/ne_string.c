@@ -39,7 +39,7 @@
 #include "ne_alloc.h"
 #include "ne_string.h"
 
-#if !defined(HAVE_OPENSSL11)
+#if !defined(HAVE_OPENSSL)
 #include "ne_md5.h"
 #define NEED_VSTRHASH
 #endif
