@@ -624,8 +624,6 @@ char *ne_strhash(unsigned int flags, ...)
 {
     va_list ap;
     char *rv;
-
-    if (flags != NE_STRHASH_MD5) return NULL;
     
     va_start(ap, flags);
     rv = ne_vstrhash(flags, ap);
@@ -641,7 +639,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     const char *arg;
     struct ne_md5_ctx *ctx;
 
-    if (flags != NE_STRHASH_MD5) return NULL;
+    if (flags != NE_HASH_MD5) return NULL;
 
     ctx = ne_md5_create_ctx();
     if (!ctx) return NULL;

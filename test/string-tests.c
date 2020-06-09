@@ -36,7 +36,7 @@
 #include "tests.h"
 
 #undef ONCMP
-#define ONCMP(a,b) ONV(strcmp(a, b), \
+#define ONCMP(a,b) ONV(!a || strcmp(a, b), \
 		       ("result was [%s] not [%s]", a, b))
 
 static int simple(void) {
@@ -497,7 +497,7 @@ static int printing(void)
 
         ret = ne_snprintf(buf, ts[n].pass, "%s", ts[n].in);
         
-        ONCMP(buf, ts[n].out);
+        ONCMP(ts[n].out, buf);
         ONV(ret != ts[n].ret, 
             ("got return value %" NE_FMT_SIZE_T " not %" NE_FMT_SIZE_T,
              ret, ts[n].ret));
@@ -662,21 +662,25 @@ static char *test_vstrhash(unsigned int flags, ...)
     return rv;
 }
 
+#define TEST1 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+#define TEST1_SHA "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+
+#define ONVEC(args, expect) \
+    do { char *h = ne_strhash args; ONCMP(h, expect); ne_free(h); } while (0)
+
 static int strhash(void)
 {
-    char *h;
-
     ONN("zero flags must return NULL", ne_strhash(0, "", NULL) != NULL);
-
     ONN("zero flags must return NULL for vstrhash", test_vstrhash(0, "", NULL) != NULL);
     
-    h = ne_strhash(NE_STRHASH_MD5, "", NULL);
-    ONCMP(h, "d41d8cd98f00b204e9800998ecf8427e");
-    ne_free(h);
+    ONVEC((NE_HASH_MD5, "", NULL), "d41d8cd98f00b204e9800998ecf8427e");
+    ONVEC((NE_HASH_MD5, "foo", "ba", "r", NULL), "3858f62230ac3c915f300c664312c63f");
 
-    h = ne_strhash(NE_STRHASH_MD5, "foo", "ba", "r", NULL);
-    ONCMP(h, "3858f62230ac3c915f300c664312c63f");
-    ne_free(h);
+#ifdef HAVE_OPENSSL
+    ONVEC((NE_HASH_SHA256, TEST1, NULL), TEST1_SHA);
+    ONVEC((NE_HASH_SHA256, "foobar", "foo", "bar", "f", "oobar", NULL),
+          "d173c93898d3ca8455a4526e0af2a1aee9b91c8ec19adac16e6e8be2da09436c");
+#endif
 
     return OK;
 }
