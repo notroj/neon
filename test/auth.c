@@ -427,10 +427,10 @@ static char *hash(struct digest_parms *p, char digest[33], ...)
     switch (p->alg) {
     case ALG_SHA256_SESS:
     case ALG_SHA256:
-        abort();
+        flags = NE_HASH_SHA256;
         break;
     default:
-        flags = NE_STRHASH_MD5;
+        flags = NE_HASH_MD5;
         break;
     }
 
