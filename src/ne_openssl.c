@@ -1155,7 +1155,7 @@ static char *hash2hex(unsigned char *digest, size_t len)
 
 char *ne_vstrhash(unsigned int flags, va_list ap)
 {
-    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_MD_CTX *ctx;
     const EVP_MD *md;
     unsigned char v[EVP_MAX_MD_SIZE];
     unsigned int vlen;
@@ -1164,9 +1164,11 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     switch (flags) {
     case NE_HASH_MD5: md = EVP_md5(); break;
     case NE_HASH_SHA256: md = EVP_sha256(); break;
+    case NE_HASH_SHA512_256: md = EVP_sha512_256(); break;
     default: return NULL;
     }
 
+    ctx = EVP_MD_CTX_new()
     if (EVP_DigestInit(ctx, md) != 1) return NULL;
 
     while ((arg = va_arg(ap, const char *)) != NULL)
