@@ -382,7 +382,7 @@ static void dup_header(char *header)
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
-    enum { ALG_MD5 = 0, ALG_MD5_SESS, ALG_SHA256, ALG_SHA256_SESS } alg;
+    enum { ALG_MD5 = 0, ALG_MD5_SESS, ALG_SHA256, ALG_SHA256_SESS, ALG_SHA512_256, ALG_SHA512_256_SESS } alg;
     unsigned int flags;
     int num_requests;
     int stale;
@@ -408,23 +408,27 @@ struct digest_parms {
 struct digest_state {
     const char *realm, *nonce, *uri, *username, *password, *algorithm, *qop,
         *method, *opaque;
-    char userhash[33];
+    char *userhash;
     char *cnonce, *digest, *ncval;
     long nc;
     int count;
     int uhash_bool;
 };
 
-static char *hash(struct digest_parms *p, char digest[33], ...)
+static char *hash(struct digest_parms *p, ...)
     ne_attribute_sentinel;
 
-static char *hash(struct digest_parms *p, char digest[33], ...)
+static char *hash(struct digest_parms *p, ...)
 {
     va_list ap;
     unsigned int flags;
     char *h;
 
     switch (p->alg) {
+    case ALG_SHA512_256_SESS:
+    case ALG_SHA512_256:
+        flags = NE_HASH_SHA512_256;
+        break;
     case ALG_SHA256_SESS:
     case ALG_SHA256:
         flags = NE_HASH_SHA256;
@@ -434,53 +438,53 @@ static char *hash(struct digest_parms *p, char digest[33], ...)
         break;
     }
 
-    va_start(ap, digest);
+    va_start(ap, p);
     h = ne_vstrhash(flags, ap);
     va_end(ap);
 
     if (h == NULL) abort();
-    memcpy(digest, h, 33);
-    ne_free(h);
-    return digest;
+
+    return h;
 }
 
 /* Write the request-digest into 'digest' (or response-digest if
  * auth_info is non-zero) for given digest auth state and
  * parameters.  */
-static int make_digest(struct digest_state *state, struct digest_parms *parms,
-                       int auth_info, char digest[33])
+static char *make_digest(struct digest_state *state, struct digest_parms *parms,
+                         int auth_info)
 {
-    char h_a1[33], h_a2[33];
+    char *h_a1, *h_a2, *rv;
 
-    hash(parms, h_a1, state->username, ":", state->realm, ":", 
-         state->password, NULL);
+    h_a1 = hash(parms, state->username, ":", state->realm, ":", 
+                state->password, NULL);
 
-    if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS) {
-        hash(parms, h_a1, h_a1, ":", state->nonce, ":", state->cnonce, NULL);
+    if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS || parms->alg == ALG_SHA512_256_SESS) {
+        h_a1 = hash(parms, h_a1, ":", state->nonce, ":", state->cnonce, NULL);
     }
 
-    hash(parms, h_a2, !auth_info ? state->method : "", ":", state->uri, NULL);
+    h_a2 = hash(parms, !auth_info ? state->method : "", ":", state->uri, NULL);
 
     if (parms->flags & PARM_RFC2617) {
-        hash(parms, digest,
-             h_a1, ":", state->nonce, ":",
-             state->ncval, ":", state->cnonce, ":", state->qop, ":",
-             h_a2, NULL);
+        rv = hash(parms,
+                  h_a1, ":", state->nonce, ":",
+                  state->ncval, ":", state->cnonce, ":", state->qop, ":",
+                  h_a2, NULL);
     }
     else {
         /* RFC2069-style */
-        hash(parms, digest, h_a1, ":", state->nonce, ":", h_a2, NULL);
+        rv = hash(parms, h_a1, ":", state->nonce, ":", h_a2, NULL);
     }
 
-    return 0;
+    return rv;
 }
 
 /* Verify that the response-digest matches expected state. */
 static int check_digest(struct digest_state *state, struct digest_parms *parms)
 {
-    char digest[33];
+    char *digest;
 
-    ONV(make_digest(state, parms, 0, digest),
+    digest = make_digest(state, parms, 0);
+    ONV(digest == NULL,
         ("failed to create digest for %s", state->algorithm));
 
     ONV(strcmp(digest, state->digest),
@@ -608,12 +612,12 @@ static char *make_authinfo_header(struct digest_state *state,
                                   struct digest_parms *parms)
 {
     ne_buffer *buf = ne_buffer_create();
-    char digest[33], *ncval, *cnonce;
+    char *digest, *ncval, *cnonce;
 
     if (parms->failure == fail_ai_bad_digest) {
-        strcpy(digest, "fish");
+        digest = ne_strdup("fish");
     } else {
-        make_digest(state, parms, 1, digest);
+        digest = make_digest(state, parms, 1);
     }
 
     if (parms->failure == fail_ai_bad_nc_syntax) {
@@ -655,6 +659,8 @@ static char *make_authinfo_header(struct digest_state *state,
         }
         ne_buffer_czappend(buf, "qop=\"auth\"");
     }
+
+    ne_free(digest);
     
     return ne_buffer_finish(buf);
 }
@@ -726,7 +732,10 @@ static int serve_digest(ne_socket *sock, void *userdata)
     state.password = password;
     state.nc = 1;
     switch (parms->alg) {
+    case ALG_SHA512_256: state.algorithm = "SHA-512-256"; break;
+    case ALG_SHA512_256_SESS: state.algorithm = "SHA-512-256-sess"; break;
     case ALG_SHA256: state.algorithm = "SHA-256"; break;
+    case ALG_SHA256_SESS: state.algorithm = "SHA-256-sess"; break;
     case ALG_MD5_SESS: state.algorithm = "MD5-sess"; break;
     default:
     case ALG_MD5: state.algorithm = "MD5"; break;
@@ -734,7 +743,7 @@ static int serve_digest(ne_socket *sock, void *userdata)
     state.qop = "auth";
 
     if (parms->flags & PARM_USERHASH) {
-        hash(parms, state.userhash, username, ":", parms->realm, NULL);
+        state.userhash = hash(parms, username, ":", parms->realm, NULL);
     }
 
     state.cnonce = state.digest = state.ncval = NULL;
@@ -886,15 +895,64 @@ static int digest(void)
         /* Proxy + nextnonce */
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_PROXY, 1, 0, fail_not },
 
-#if 0
-        /* RFC 7616. */
-        { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, 1, 1, ALG_SHA256, 0, 0, 1, 0, fail_not },
-#endif
-        
         { NULL }
     };
     size_t n;
     
+    for (n = 0; parms[n].realm; n++) {
+        CALL(test_digest(&parms[n]));
+
+    }
+
+    return OK;
+}
+
+static int digest_sha256(void)
+{
+    struct digest_parms parms[] = {
+        { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, ALG_SHA256, PARM_RFC2617, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, ALG_SHA256, PARM_RFC2617|PARM_AINFO, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha-session", "opaque-string", NULL, ALG_SHA256_SESS, PARM_RFC2617|PARM_AINFO, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, ALG_SHA256, PARM_RFC2617|PARM_AINFO, 8, 0, fail_not },
+        
+        { NULL },
+    };
+    size_t n;
+    char *p = ne_strhash(NE_HASH_SHA256, "", NULL);
+
+    if (p == NULL) {
+        t_context("no SHA-256 support");
+        return SKIP;
+    }
+    ne_free(p);
+    
+    for (n = 0; parms[n].realm; n++) {
+        CALL(test_digest(&parms[n]));
+
+    }
+
+    return OK;
+}
+
+
+static int digest_sha512_256(void)
+{
+    struct digest_parms parms[] = {
+        { "WallyWorld", "nonce-sha5-nonce", "opaque-string", NULL, ALG_SHA512_256, PARM_RFC2617, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha5-nonce", "opaque-string", NULL, ALG_SHA512_256, PARM_RFC2617|PARM_AINFO, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha5-session", "opaque-string", NULL, ALG_SHA512_256_SESS, PARM_RFC2617|PARM_AINFO, 1, 0, fail_not },
+        { "WallyWorld", "nonce-sha-nonce", "opaque-string", NULL, ALG_SHA512_256_SESS, PARM_RFC2617|PARM_AINFO, 20, 0, fail_not },
+        { NULL },
+    };
+    size_t n;
+    char *p = ne_strhash(NE_HASH_SHA512_256, "", NULL);
+
+    if (p == NULL) {
+        t_context("no SHA-512-256 support");
+        return SKIP;
+    }
+    ne_free(p);
+
     for (n = 0; parms[n].realm; n++) {
         CALL(test_digest(&parms[n]));
 
@@ -1250,6 +1308,8 @@ ne_test tests[] = {
     T(tunnel_regress),
     T(negotiate_regress),
     T(digest),
+    T(digest_sha256),
+    T(digest_sha512_256),
     T(digest_failures),
     T(fail_challenge),
     T(multi_handler),

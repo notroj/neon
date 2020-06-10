@@ -90,10 +90,33 @@
 #define HOOK_PROXY_ID "http://webdav.org/neon/hooks/proxy-auth"
 
 typedef enum { 
-    auth_alg_md5,
+    auth_alg_md5 = 0,
     auth_alg_md5_sess,
+    auth_alg_sha256,
+    auth_alg_sha256_sess,
+    auth_alg_sha512_256,
+    auth_alg_sha512_256_sess,
     auth_alg_unknown
 } auth_algorithm;
+
+static const unsigned int alg_to_hash[] = {
+    NE_HASH_MD5,
+    NE_HASH_MD5,
+    NE_HASH_SHA256,
+    NE_HASH_SHA256,
+    NE_HASH_SHA512_256,
+    NE_HASH_SHA512_256,
+    0
+};
+static const char *const alg_to_name[] = {
+    "MD5",
+    "MD5-sess",
+    "SHA-256",
+    "SHA-256-sess",
+    "SHA-512-256",
+    "SHA-512-256-sess",
+    "(unknown)",
+};
 
 /* Selected method of qop which the client is using */
 typedef enum {
@@ -199,12 +222,10 @@ typedef struct {
     auth_qop qop;
     auth_algorithm alg;
     unsigned int nonce_count;
-    /* The ASCII representation of the session's H(A1) value */
-    char h_a1[33];
-
-    /* Temporary store for half of the Request-Digest
-     * (an optimisation - used in the response-digest calculation) */
-    struct ne_md5_ctx *stored_rdig;
+    /* The hex representation of the H(A1) value */
+    char *h_a1;
+    /* Part of the RHS of the response digest. */
+    char *response_rhs;
 } auth_session;
 
 struct auth_request {
@@ -280,12 +301,9 @@ static void clean_session(auth_session *sess)
     if (sess->opaque) ne_free(sess->opaque);
     if (sess->realm) ne_free(sess->realm);
     if (sess->userhash) ne_free(sess->userhash);
+    if (sess->response_rhs) ne_free(sess->response_rhs);
     sess->realm = sess->basic = sess->cnonce = sess->nonce =
-        sess->opaque = sess->userhash = NULL;
-    if (sess->stored_rdig) {
-        ne_md5_destroy_ctx(sess->stored_rdig);
-        sess->stored_rdig = NULL;
-    }
+        sess->opaque = sess->userhash = sess->response_rhs = NULL;
     if (sess->ndomains) free_domains(sess);
 #ifdef HAVE_GSSAPI
     {
@@ -798,6 +816,7 @@ static int digest_challenge(auth_session *sess, int attempt,
                             ne_buffer **errmsg) 
 {
     char password[NE_ABUFSIZ];
+    unsigned int hash;
 
     if (parms->alg == auth_alg_unknown) {
         challenge_error(errmsg, _("unknown algorithm in Digest challenge"));
@@ -823,6 +842,8 @@ static int digest_challenge(auth_session *sess, int attempt,
         return -1;
     }
 
+    hash = alg_to_hash[parms->alg];
+
     if (!parms->stale) {
         /* Non-stale challenge: clear session and request credentials. */
         clean_session(sess);
@@ -847,17 +868,8 @@ static int digest_challenge(auth_session *sess, int attempt,
         /* Calculate userhash for this (realm, username) if required.
          * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
         if (parms->userhash) {
-            struct ne_md5_ctx *tmp;
-            char digest[33];
-
-            tmp = ne_md5_create_ctx();
-            ne_md5_process_bytes(sess->username, strlen(sess->username), tmp);
-            ne_md5_process_bytes(":", 1, tmp);
-            ne_md5_process_bytes(sess->realm, strlen(sess->realm), tmp);
-            ne_md5_finish_ascii(tmp, digest);
-            ne_md5_destroy_ctx(tmp);
-
-            sess->userhash = ne_strdup(digest);
+            sess->userhash = ne_strhash(hash, sess->username, ":",
+                                        sess->realm, NULL);
         }
     }
     else {
@@ -882,41 +894,24 @@ static int digest_challenge(auth_session *sess, int attempt,
     }
     
     if (!parms->stale) {
-        struct ne_md5_ctx *tmp;
+        /* H(A1) calculation identical for 2069 or 2617/7616:
+         * https://tools.ietf.org/html/rfc7616#section-3.4.2 */
+        char *h_urp;
 
-	/* Calculate H(A1).
-	 * tmp = H(unq(username-value) ":" unq(realm-value) ":" passwd)
-	 */
-	tmp = ne_md5_create_ctx();
-	ne_md5_process_bytes(sess->username, strlen(sess->username), tmp);
-	ne_md5_process_bytes(":", 1, tmp);
-	ne_md5_process_bytes(sess->realm, strlen(sess->realm), tmp);
-	ne_md5_process_bytes(":", 1, tmp);
-	ne_md5_process_bytes(password, strlen(password), tmp);
-	memset(password, 0, sizeof password); /* done with that. */
-	if (sess->alg == auth_alg_md5_sess) {
-	    struct ne_md5_ctx *a1;
-	    char tmp_md5_ascii[33];
+        h_urp = ne_strhash(hash, sess->username, ":", sess->realm,
+                           ":", password, NULL);
 
-	    /* Now we calculate the SESSION H(A1)
-	     *    A1 = H(...above...) ":" unq(nonce-value) ":" unq(cnonce-value) 
-	     */
-	    ne_md5_finish_ascii(tmp, tmp_md5_ascii);
-	    a1 = ne_md5_create_ctx();
-	    ne_md5_process_bytes(tmp_md5_ascii, 32, a1);
-	    ne_md5_process_bytes(":", 1, a1);
-	    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), a1);
-	    ne_md5_process_bytes(":", 1, a1);
-	    ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), a1);
-	    ne_md5_finish_ascii(a1, sess->h_a1);
-            ne_md5_destroy_ctx(a1);
-	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
-	} else {
-	    ne_md5_finish_ascii(tmp, sess->h_a1);
-	    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A1) is [%s]\n", sess->h_a1);
-	}
-        ne_md5_destroy_ctx(tmp);
-	
+        if (sess->alg == auth_alg_md5_sess || sess->alg == auth_alg_sha256_sess
+            || sess->alg == auth_alg_sha512_256_sess) {
+            sess->h_a1 = ne_strhash(hash, h_urp, ":", sess->nonce, ":",
+                                    sess->cnonce, NULL);
+            ne_free(h_urp);
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
+        }
+        else {
+            sess->h_a1 = h_urp;
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A1) is [%s]\n", sess->h_a1);
+        }
     }
     
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Accepting digest challenge.\n");
@@ -956,11 +951,11 @@ static int inside_domain(auth_session *sess, const char *req_uri)
  * session. */
 static char *request_digest(auth_session *sess, struct auth_request *req) 
 {
-    struct ne_md5_ctx *a2, *rdig;
-    char a2_md5_ascii[33], rdig_md5_ascii[33];
+    char *h_a2, *response;
     char nc_value[9] = {0};
     const char *qop_value = "auth"; /* qop-value */
     ne_buffer *ret;
+    unsigned int hash = alg_to_hash[sess->alg];
 
     /* Do not submit credentials if an auth domain is defined and this
      * request-uri fails outside it. */
@@ -968,51 +963,31 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
         return NULL;
     }
 
-    /* Increase the nonce-count */
-    if (sess->qop != auth_qop_none) {
-	sess->nonce_count++;
-	ne_snprintf(nc_value, 9, "%08x", sess->nonce_count);
+    /* H(A2): https://tools.ietf.org/html/rfc7616#section-3.4.3 */
+    h_a2 = ne_strhash(hash, req->method, ":", req->uri, NULL);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", h_a2);
+
+    /* Calculate the 'response' to the Digest challenge to send the
+     * server in the request. */
+    if (sess->qop == auth_qop_none) {
+        /* RFC 2069 case,
+         * https://tools.ietf.org/html/rfc2069#section-2.1.2 */
+        response = ne_strhash(hash, sess->h_a1, ":", sess->nonce,
+                              ":", h_a2, NULL);
+    } else {
+        /* For RFC 2617/7616-style; part of this calculation will be
+         * needed again when verifying the (Proxy-)Authentication-Info
+         * response header; that part is cached in sess->response_rhs.
+         * https://tools.ietf.org/html/rfc7616#section-3.4.1 */
+        sess->nonce_count++;
+        ne_snprintf(nc_value, 9, "%08x", sess->nonce_count);
+
+        sess->response_rhs = ne_concat(sess->nonce, ":",
+                                       nc_value, ":", sess->cnonce, ":",
+                                       qop_value, NULL);
+        response = ne_strhash(hash, sess->h_a1, ":",
+                              sess->response_rhs, ":", h_a2, NULL);
     }
-
-    /* Calculate H(A2). */
-    a2 = ne_md5_create_ctx();
-    ne_md5_process_bytes(req->method, strlen(req->method), a2);
-    ne_md5_process_bytes(":", 1, a2);
-    ne_md5_process_bytes(req->uri, strlen(req->uri), a2);
-    ne_md5_finish_ascii(a2, a2_md5_ascii);
-    ne_md5_destroy_ctx(a2);
-    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", a2_md5_ascii);
-
-    /* Now, calculation of the Request-Digest.
-     * The first section is the regardless of qop value
-     *     H(A1) ":" unq(nonce-value) ":" */
-    rdig = ne_md5_create_ctx();
-
-    /* Use the calculated H(A1) */
-    ne_md5_process_bytes(sess->h_a1, 32, rdig);
-
-    ne_md5_process_bytes(":", 1, rdig);
-    ne_md5_process_bytes(sess->nonce, strlen(sess->nonce), rdig);
-    ne_md5_process_bytes(":", 1, rdig);
-    if (sess->qop != auth_qop_none) {
-	/* Add on:
-	 *    nc-value ":" unq(cnonce-value) ":" unq(qop-value) ":"
-	 */
-	ne_md5_process_bytes(nc_value, 8, rdig);
-	ne_md5_process_bytes(":", 1, rdig);
-	ne_md5_process_bytes(sess->cnonce, strlen(sess->cnonce), rdig);
-	ne_md5_process_bytes(":", 1, rdig);
-	/* Store a copy of this structure (see note below) */
-        if (sess->stored_rdig) ne_md5_destroy_ctx(sess->stored_rdig);
-	sess->stored_rdig = ne_md5_dup_ctx(rdig);
-	ne_md5_process_bytes(qop_value, strlen(qop_value), rdig);
-	ne_md5_process_bytes(":", 1, rdig);
-    }
-
-    /* And finally, H(A2) */
-    ne_md5_process_bytes(a2_md5_ascii, 32, rdig);
-    ne_md5_finish_ascii(rdig, rdig_md5_ascii);
-    ne_md5_destroy_ctx(rdig);
 
     ret = ne_buffer_create();
 
@@ -1022,9 +997,11 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 		     "realm=\"", sess->realm, "\", "
 		     "nonce=\"", sess->nonce, "\", "
 		     "uri=\"", req->uri, "\", "
-		     "response=\"", rdig_md5_ascii, "\", "
-		     "algorithm=\"", sess->alg == auth_alg_md5 ? "MD5" : "MD5-sess", "\"", 
+		     "response=\"", response, "\", "
+		     "algorithm=\"", alg_to_name[sess->alg], "\"", 
 		     NULL);
+    ne_free(response);
+    ne_free(h_a2);
     
     if (sess->opaque != NULL) {
 	ne_buffer_concat(ret, ", opaque=\"", sess->opaque, "\"", NULL);
@@ -1189,38 +1166,22 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     /* Finally, for qop=auth cases, if everything else is OK, verify
      * the response-digest field. */    
     if (qop == auth_qop_auth && ret == NE_OK) {
-        struct ne_md5_ctx *a2;
-        char a2_md5_ascii[33], rdig_md5_ascii[33];
+        char *h_a2, *response;
+        unsigned int hash = alg_to_hash[sess->alg];
 
-        /* Modified H(A2): */
-        a2 = ne_md5_create_ctx();
-        ne_md5_process_bytes(":", 1, a2);
-        ne_md5_process_bytes(req->uri, strlen(req->uri), a2);
-        ne_md5_finish_ascii(a2, a2_md5_ascii);
-        ne_md5_destroy_ctx(a2);
-
-        /* sess->stored_rdig contains digest-so-far of:
-         *   H(A1) ":" unq(nonce-value) 
-         */
-        
-        /* Add in qop-value */
-        ne_md5_process_bytes(qop_value, strlen(qop_value), 
-                             sess->stored_rdig);
-        ne_md5_process_bytes(":", 1, sess->stored_rdig);
-
-        /* Digest ":" H(A2) */
-        ne_md5_process_bytes(a2_md5_ascii, 32, sess->stored_rdig);
-        /* All done */
-        ne_md5_finish_ascii(sess->stored_rdig, rdig_md5_ascii);
-        ne_md5_destroy_ctx(sess->stored_rdig);
-        sess->stored_rdig = NULL;
+        h_a2 = ne_strhash(hash, ":", req->uri, NULL);
+        response = ne_strhash(hash, sess->h_a1, ":", sess->response_rhs,
+                              ":", h_a2, NULL);
+        ne_free(h_a2);
+        ne_free(sess->response_rhs);
+        sess->response_rhs = NULL;
 
         /* And... do they match? */
-        ret = ne_strcasecmp(rdig_md5_ascii, rspauth) == 0 ? NE_OK : NE_ERROR;
+        ret = ne_strcasecmp(response, rspauth) == 0 ? NE_OK : NE_ERROR;
         
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: response-digest match: %s "
                  "(expected [%s] vs actual [%s])\n", 
-                 ret == NE_OK ? "yes" : "no", rdig_md5_ascii, rspauth);
+                 ret == NE_OK ? "yes" : "no", response, rspauth);
 
         if (ret) {
             ne_set_error(sess->sess, _("Digest mutual authentication failure: "
@@ -1393,9 +1354,23 @@ static int auth_challenge(auth_session *sess, int attempt,
 	} else if (ne_strcasecmp(key, "algorithm") == 0) {
 	    if (ne_strcasecmp(val, "md5") == 0) {
 		chall->alg = auth_alg_md5;
-	    } else if (ne_strcasecmp(val, "md5-sess") == 0) {
+	    }
+            else if (ne_strcasecmp(val, "md5-sess") == 0) {
 		chall->alg = auth_alg_md5_sess;
-	    } else {
+	    }
+	    else if (ne_strcasecmp(val, "sha-256") == 0) {
+		chall->alg = auth_alg_sha256;
+	    }
+	    else if (ne_strcasecmp(val, "sha-256-sess") == 0) {
+		chall->alg = auth_alg_sha256_sess;
+	    }
+	    else if (ne_strcasecmp(val, "sha-512-256") == 0) {
+		chall->alg = auth_alg_sha512_256;
+	    }
+	    else if (ne_strcasecmp(val, "sha-512-256-sess") == 0) {
+		chall->alg = auth_alg_sha512_256_sess;
+	    }
+            else {
 		chall->alg = auth_alg_unknown;
 	    }
 	} else if (ne_strcasecmp(key, "qop") == 0) {
