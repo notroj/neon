@@ -408,7 +408,7 @@ struct digest_parms {
 struct digest_state {
     const char *realm, *nonce, *uri, *username, *password, *algorithm, *qop,
         *method, *opaque;
-    char *userhash;
+    char userhash[64];
     char *cnonce, *digest, *ncval;
     long nc;
     int count;
@@ -459,7 +459,11 @@ static char *make_digest(struct digest_state *state, struct digest_parms *parms,
                 state->password, NULL);
 
     if (parms->alg == ALG_MD5_SESS || parms->alg == ALG_SHA256_SESS || parms->alg == ALG_SHA512_256_SESS) {
-        h_a1 = hash(parms, h_a1, ":", state->nonce, ":", state->cnonce, NULL);
+        char *sess_h_a1;
+
+        sess_h_a1 = hash(parms, h_a1, ":", state->nonce, ":", state->cnonce, NULL);
+        ne_free(h_a1);
+        h_a1 = sess_h_a1;
     }
 
     h_a2 = hash(parms, !auth_info ? state->method : "", ":", state->uri, NULL);
@@ -475,6 +479,9 @@ static char *make_digest(struct digest_state *state, struct digest_parms *parms,
         rv = hash(parms, h_a1, ":", state->nonce, ":", h_a2, NULL);
     }
 
+    ne_free(h_a2);
+    ne_free(h_a1);
+
     return rv;
 }
 
@@ -489,6 +496,8 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
 
     ONV(strcmp(digest, state->digest),
         ("bad digest; expected %s got %s", state->digest, digest));
+
+    ne_free(digest);
 
     return OK;
 }
@@ -716,7 +725,7 @@ static int serve_digest(ne_socket *sock, void *userdata)
 {
     struct digest_parms *parms = userdata;
     struct digest_state state;
-    char resp[NE_BUFSIZ];
+    char resp[NE_BUFSIZ], *rspdigest;
     
     if ((parms->flags & PARM_PROXY))
         state.uri = "http://www.example.com/fish";
@@ -743,7 +752,12 @@ static int serve_digest(ne_socket *sock, void *userdata)
     state.qop = "auth";
 
     if (parms->flags & PARM_USERHASH) {
-        state.userhash = hash(parms, username, ":", parms->realm, NULL);
+        char *uh = hash(parms, username, ":", parms->realm, NULL);
+
+        ONN("userhash too long", strlen(uh) >= sizeof state.userhash);
+
+        ne_strnzcpy(state.userhash, uh, sizeof state.userhash);
+        ne_free(uh);
     }
 
     state.cnonce = state.digest = state.ncval = NULL;
@@ -762,12 +776,14 @@ static int serve_digest(ne_socket *sock, void *userdata)
     ONV(digest_hdr != NULL,
         ("got unwarranted WWW-Auth header: %s", digest_hdr));
 
+    rspdigest = make_digest_header(&state, parms);
     ne_snprintf(resp, sizeof resp,
                 "HTTP/1.1 %d Auth Denied\r\n"
                 "%s\r\n"
                 "Content-Length: 0\r\n" "\r\n",
                 (parms->flags & PARM_PROXY) ? 407 : 401,
-                make_digest_header(&state, parms));
+                rspdigest);
+    ne_free(rspdigest);
 
     SEND_STRING(sock, resp);
 
@@ -798,15 +814,18 @@ static int serve_digest(ne_socket *sock, void *userdata)
         }
 
         if (parms->num_requests == parms->stale) {
+            char *dig;
             state.nonce = ne_concat("stale-", state.nonce, NULL);
             state.nc = 1;
 
+            dig = make_digest_header(&state, parms);
             ne_snprintf(resp, sizeof resp,
                         "HTTP/1.1 %d Auth Denied\r\n"
                         "%s\r\n"
                         "Content-Length: 0\r\n" "\r\n",
                         (parms->flags & PARM_PROXY) ? 407 : 401,
-                        make_digest_header(&state, parms));
+                        dig);
+            ne_free(dig);
         }
         else if (parms->flags & PARM_AINFO) {
             char *ai = make_authinfo_header(&state, parms);
