@@ -302,8 +302,10 @@ static void clean_session(auth_session *sess)
     if (sess->realm) ne_free(sess->realm);
     if (sess->userhash) ne_free(sess->userhash);
     if (sess->response_rhs) ne_free(sess->response_rhs);
+    if (sess->h_a1) ne_free(sess->h_a1);
     sess->realm = sess->basic = sess->cnonce = sess->nonce =
-        sess->opaque = sess->userhash = sess->response_rhs = NULL;
+        sess->opaque = sess->userhash = sess->response_rhs =
+        sess->h_a1 = NULL;
     if (sess->ndomains) free_domains(sess);
 #ifdef HAVE_GSSAPI
     {
@@ -982,6 +984,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
         sess->nonce_count++;
         ne_snprintf(nc_value, 9, "%08x", sess->nonce_count);
 
+        if (sess->response_rhs) ne_free(sess->response_rhs);
         sess->response_rhs = ne_concat(sess->nonce, ":",
                                        nc_value, ":", sess->cnonce, ":",
                                        qop_value, NULL);
