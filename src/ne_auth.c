@@ -1190,6 +1190,8 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
             ne_set_error(sess->sess, _("Digest mutual authentication failure: "
                                        "request-digest mismatch"));
         }
+
+        ne_free(response);
     }
 
     /* Check for a nextnonce */
