@@ -417,6 +417,23 @@ int discard_request(ne_socket *sock)
     return OK;
 }
 
+int error_response(ne_socket *sock, int ret)
+{
+    char resp[1024];
+
+    ne_snprintf(resp, sizeof resp,
+                "HTTP/1.1 500 Server Test Failed\r\n"
+                "X-Neon-Context: %s\r\n"
+                "Content-Length: 0\r\n"
+                "Connection: close\r\n"
+                "\r\n",
+                test_context);
+    SEND_STRING(sock, resp);
+
+    return ret;
+}
+
+
 int discard_body(ne_socket *sock)
 {
     while (clength > 0) {
