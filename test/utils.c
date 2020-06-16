@@ -104,9 +104,18 @@ int any_2xx_request(ne_session *sess, const char *uri)
     ne_request *req = ne_request_create(sess, "GET", uri);
     int ret = ne_request_dispatch(req);
     int klass = ne_get_status(req)->klass;
+    const char *context = ne_get_response_header(req, "X-Neon-Context");
+    if (ret != NE_OK || klass != 2) {
+        if (context)
+            t_context("request failed, server error: %s", context);
+        else
+            t_context("request failed: %s", ne_get_error(sess));
+        ret = FAIL;
+    }
+    else {
+        ret = OK;
+    }
     ne_request_destroy(req);
-    ONV(ret != NE_OK || klass != 2,
-	("request failed: %s", ne_get_error(sess)));
     return ret;
 }
 
