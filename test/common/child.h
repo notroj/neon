@@ -89,6 +89,14 @@ ssize_t server_send(ne_socket *sock, const char *data, size_t len);
 /* Utility macro: send given string down socket. */
 #define SEND_STRING(sock, str) server_send((sock), (str), strlen((str)))
 
+/* If test result 'err' is not OK, return an HTTP 500 error response
+ * including the test context in a response header. */
+#define ONERR(sock, err) do { int ret_ = (err); if (ret_) return error_response(sock, ret_); } while (0)
+
+/* Send an HTTP error response including the test context in a
+ * response header. */
+int error_response(ne_socket *sock, int ret);
+
 /* Tries to ensure that the socket will be closed using RST rather
  * than FIN. */
 int reset_socket(ne_socket *sock);
