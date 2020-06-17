@@ -36,6 +36,13 @@ NE_BEGIN_DECLS
  * on the first call to the callback, and increases by one each time
  * an attempt to authenticate fails.
  *
+ * With Basic and Digest authentication, a non-alphanumeric username
+ * can be provided as a UTF-8-encoded string only if the NE_AUTH_UTF8
+ * flag is used in the protocol mask to configure the callback via
+ * ne_add_*_auth.  Otherwise the username must be an alphanumeric
+ * ASCII username string.  Non-alphanumeric usernames are only
+ * accepted in some cases.
+ *
  * The callback must return zero to indicate that authentication
  * should be attempted with the username/password, or non-zero to
  * cancel the request. (if non-zero, username and password are
@@ -107,6 +114,11 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
 
 /* All protocols supported by the library. */
 #define NE_AUTH_ALL (0x2000)
+
+/* This flag may be used in combination with another auth protocol
+ * specifier. If present, it indicates that the username passed back
+ * by the credentials callback is in UTF-8 encoding. */
+#define NE_AUTH_UTF8 (0x4000)
 
 /* Add a callback to provide credentials for server and proxy
  * authentication using a particular auth protocol or set of

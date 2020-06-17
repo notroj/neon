@@ -40,6 +40,8 @@
 #include "utils.h"
 
 static const char username[] = "Aladdin", password[] = "open sesame";
+static const char *alt_username, *alt_username_star;
+
 static int auth_failed;
 
 #define BASIC_WALLY "Basic realm=WallyWorld"
@@ -54,7 +56,7 @@ static int auth_cb(void *userdata, const char *realm, int tries,
         NE_DEBUG(NE_DBG_HTTP, "Got wrong realm '%s'!\n", realm);
         return -1;
     }    
-    strcpy(un, username);
+    strcpy(un, userdata ? userdata : username);
     strcpy(pw, password);
     return tries;
 }		   
@@ -379,6 +381,7 @@ static void dup_header(char *header)
 #define PARM_AINFO     (0x0008)
 #define PARM_USERHASH  (0x0010) /* userhash=true */
 #define PARM_UHFALSE   (0x0020) /* userhash=false */
+#define PARM_ALTUSER   (0x0040)
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -406,7 +409,7 @@ struct digest_parms {
 };
 
 struct digest_state {
-    const char *realm, *nonce, *uri, *username, *password, *algorithm, *qop,
+    const char *realm, *nonce, *uri, *username, *username_star, *password, *algorithm, *qop,
         *method, *opaque;
     char userhash[64];
     char *cnonce, *digest, *ncval;
@@ -508,15 +511,16 @@ static int check_digest(struct digest_state *state, struct digest_parms *parms)
               "Digest response header", #field);        \
     } while (0)
 
-#define PARAM(field)                                            \
+#define NPARAM(field, param)                                    \
     do {                                                        \
-        if (ne_strcasecmp(name, #field) == 0) {                 \
-            ONV(newstate.field != NULL,                        \
-                ("received multiple %s params: %s, %s", #field, \
-                 newstate.field, val));                        \
-            newstate.field = val;                              \
+        if (ne_strcasecmp(name, param) == 0) {                  \
+            ONV(newstate.field != NULL,                         \
+                ("received multiple %s params: %s, %s", param,  \
+                 newstate.field, val));                         \
+            newstate.field = val;                               \
         }                                                       \
     } while (0)
+#define PARAM(field) NPARAM(field, #field)
 
 /* Verify that Digest auth request header, 'header', meets expected
  * state and parameters. */
@@ -556,6 +560,7 @@ static int verify_digest_header(struct digest_state *state,
         PARAM(qop);
         PARAM(opaque);
         PARAM(cnonce);
+        NPARAM(username_star, "username*");
 
         if (ne_strcasecmp(name, "nc") == 0) {
             long nc = strtol(val, NULL, 16);
@@ -579,7 +584,12 @@ static int verify_digest_header(struct digest_state *state,
         && (newstate.cnonce == NULL
             || strlen(newstate.cnonce) < 32));
 
-    if (parms->flags & PARM_USERHASH) {
+    if (alt_username_star) {
+        ONN("unexpected userhash=true sent", newstate.uhash_bool);
+        ONN("username* missing", newstate.username_star == NULL);
+        ONCMP(alt_username_star, newstate.username_star, "Digest field", "username*");
+    }
+    else if (parms->flags & PARM_USERHASH) {
         ONN("userhash missing", !newstate.uhash_bool);
 
         ONCMP(state->userhash, newstate.username,
@@ -737,7 +747,10 @@ static int serve_digest(ne_socket *sock, void *userdata)
     state.realm = parms->realm;
     state.nonce = parms->nonce;
     state.opaque = parms->opaque;
-    state.username = username;
+    if (parms->flags & PARM_ALTUSER)
+        state.username = alt_username;
+    else
+        state.username = username;
     state.password = password;
     state.nc = 1;
     switch (parms->alg) {
@@ -810,7 +823,7 @@ static int serve_digest(ne_socket *sock, void *userdata)
         else {
             ONN("no Authorization header sent", digest_hdr == NULL);
 
-            CALL(verify_digest_header(&state, parms, digest_hdr));
+            ONERR(sock, verify_digest_header(&state, parms, digest_hdr));
         }
 
         if (parms->num_requests == parms->stale) {
@@ -855,6 +868,7 @@ static int serve_digest(ne_socket *sock, void *userdata)
 static int test_digest(struct digest_parms *parms)
 {
     ne_session *sess;
+    void *auth_userdata = (parms->flags & PARM_ALTUSER) ? (void *)alt_username : NULL;
 
     NE_DEBUG(NE_DBG_HTTP, ">>>> Request sequence begins "
              "(reqs=%d, nonce=%s, rfc=%s, stale=%d, proxy=%d).\n",
@@ -865,11 +879,15 @@ static int test_digest(struct digest_parms *parms)
     if ((parms->flags & PARM_PROXY)) {
         CALL(proxied_session_server(&sess, "http", "www.example.com", 80,
                                     serve_digest, parms));
-        ne_set_proxy_auth(sess, auth_cb, NULL);
+        ne_set_proxy_auth(sess, auth_cb, auth_userdata);
     } 
     else {
         CALL(session_server(&sess, serve_digest, parms));
-        ne_set_server_auth(sess, auth_cb, NULL);
+        if ((parms->flags & PARM_ALTUSER))
+            ne_add_server_auth(sess, NE_AUTH_DEFAULT|NE_AUTH_UTF8,
+                               auth_cb, auth_userdata);
+        else
+            ne_set_server_auth(sess, auth_cb, auth_userdata);
     }
 
     do {
@@ -953,7 +971,6 @@ static int digest_sha256(void)
     return OK;
 }
 
-
 static int digest_sha512_256(void)
 {
     struct digest_parms parms[] = {
@@ -979,6 +996,39 @@ static int digest_sha512_256(void)
 
     return OK;
 }
+
+static int digest_username_star(void)
+{
+    static const struct {
+        const char *username_raw, *username_star;
+    } ts[] = {
+        { "Aladdin", NULL },
+        { "Ałâddín", "UTF-8''A%c5%82%c3%a2dd%c3%adn" },
+        { "Jäsøn Doe", "UTF-8''J%c3%a4s%c3%b8n%20Doe" },
+        { "foo bar",  "UTF-8''foo%20bar"},
+        { "foo\"bar", "UTF-8''foo%22bar" },
+        { NULL, NULL }
+    };
+    unsigned n;
+    int ret = OK;
+
+    for (n = 0; ret == OK && ts[n].username_raw; n++) {
+        struct digest_parms parms = {
+            "WallyWorld", "nonce-sha5-nonce", "opaque-string",
+            NULL, ALG_SHA256, PARM_RFC2617|PARM_UHFALSE|PARM_ALTUSER, 1, 0, fail_not };
+
+        alt_username = ts[n].username_raw;
+        alt_username_star = ts[n].username_star;
+
+        ret = test_digest(&parms);
+    }
+
+    alt_username = NULL;
+    alt_username_star = NULL;
+
+    return ret;
+}
+
 
 static int digest_failures(void)
 {
@@ -1330,6 +1380,7 @@ ne_test tests[] = {
     T(digest_sha256),
     T(digest_sha512_256),
     T(digest_failures),
+    T(digest_username_star),
     T(fail_challenge),
     T(multi_handler),
     T(domains),
