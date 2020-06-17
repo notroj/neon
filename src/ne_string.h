@@ -199,6 +199,15 @@ const unsigned char *ne_tolower_array(void) ne_attribute((const));
  * ASCII hexadecimal equivalent character, in the range '0..9,'a..f' */
 #define NE_HEX2ASC(x) ((char) ((x) > 9 ? ((x) - 10 + 'a') : ((x) + '0')))
 
+/* Encodes a extended parameter value for HTTP headers, as defined in
+ * RFC 5987.  Returns a malloc-allocated string if the parameter
+ * 'value' needs to be encoded as an extended parameter, or NULL if it
+ * can be used as a regular parameter.  The charset of the string must
+ * be non-NULL, but the language value can be NULL. */
+char *ne_strparam(const char *charset, const char *lang,
+                  const unsigned char *value)
+    ne_attribute((nonnull (1, 3)));
+
 NE_END_DECLS
 
 #endif /* NE_STRING_H */

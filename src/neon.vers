@@ -29,4 +29,5 @@ NEON_0_31 {
 NEON_0_32 {
     ne_strhash;
     ne_vstrhash;
+    ne_strparam;
 };

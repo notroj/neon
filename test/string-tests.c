@@ -685,6 +685,37 @@ static int strhash(void)
     return OK;
 }
 
+static int strparam(void)
+{
+    static const struct {
+        const char *charset, *lang;
+        const char *value;
+        const char *expect;
+    } ts[] = {
+        { "UTF-8", NULL, "foobar", NULL },
+        { "UTF-8", NULL, "foo@bar", "UTF-8''foo%40bar" },
+        { "UTF-8", NULL, "foo bar", "UTF-8''foo%20bar" },
+        { "iso-8859-1", "en", "\xA3 rates", "iso-8859-1'en'%a3%20rates" },
+        { "UTF-8", NULL, "£ and € rates", "UTF-8''%c2%a3%20and%20%e2%82%ac%20rates" },
+        { NULL }
+    };
+    unsigned n;
+
+    for (n = 0; ts[n].charset; n++) {
+        char *act = ne_strparam(ts[n].charset, ts[n].lang, (const unsigned char *)ts[n].value);
+
+        if (ts[n].expect == NULL) {
+            ONV(act != NULL, ("expected NULL output for '%s'", ts[n].value));
+        }
+        else {
+            ONCMP(act, ts[n].expect);
+        }
+    }
+
+    return OK;
+}
+
+
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -714,6 +745,7 @@ ne_test tests[] = {
     T(buf_print),
     T(qappend),
     T(strhash),
+    T(strparam),
     T(NULL)
 };
 
