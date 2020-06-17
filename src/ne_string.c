@@ -653,3 +653,72 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     return ne_strdup(ret);
 }
 #endif
+
+/* Determines whether a character is valid in a regular parameter (NQ)
+ * not (QT). Per https://tools.ietf.org/html/rfc5987#section-3.2.1
+ * every character in attr-char is NQ, everything else is QT. */
+#define QT 3
+#define NQ 1
+static const unsigned char ext_notation[256] = {
+/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
+/*   0x */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT,
+/*   1x */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT,
+/*   2x */ QT, NQ, QT, NQ, NQ, QT, NQ, QT, QT, QT, QT, NQ, QT, NQ, NQ, QT,
+/*   3x */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT,
+/*   4x */ QT, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ,
+/*   5x */ NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, QT, QT, QT, NQ, NQ,
+/*   6x */ NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ,
+/*   7x */ NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, NQ, QT, NQ, QT, NQ, QT,
+/*   8x */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   9x */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Ax */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Bx */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Cx */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Dx */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Ex */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, 
+/*   Fx */ QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT, QT
+};
+#undef QT
+#undef NQ
+
+char *ne_strparam(const char *charset, const char *lang,
+                  const unsigned char *value)
+{
+    const unsigned char *p;
+    size_t count = 0;
+    char *rv, *rp;
+
+    /* Determine length required for the value. */
+    for (p = value; *p; p++)
+        count += ext_notation[*p];
+
+    /* If length == input length, no encoding is required, return
+     * NULL. */
+    if (count == strlen((const char *)value)) return NULL;
+
+    /* +3 accounts for '' and trailing NUL */
+    rv = ne_malloc(strlen(charset) + (lang ? strlen(lang) : 0) + count + 3);
+    memcpy(rv, charset, strlen(charset));
+    rp = rv + strlen(charset);
+    *rp++ = '\'';
+    if (lang) {
+        memcpy(rp, lang, strlen(lang));
+        rp += strlen(lang);
+    }
+    *rp++ = '\'';
+
+    for (p = value; *p; p++) {
+        if (ext_notation[*p] == 1)  {
+            *rp++ = *p;
+        }
+        else {
+            *rp++ = '%';
+            *rp++ = NE_HEX2ASC(*p >> 4);
+            *rp++ = NE_HEX2ASC(*p & 0x0f);
+        }
+    }
+
+    *rp = '\0';
+
+    return rv;
+}
