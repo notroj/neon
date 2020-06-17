@@ -145,7 +145,7 @@ struct auth_challenge {
     unsigned int stale; /* if stale=true */
     unsigned int got_qop; /* we were given a qop directive */
     unsigned int qop_auth; /* "auth" token in qop attrib */
-    unsigned int userhash; /* got userhash=true */
+    enum { userhash_none=0, userhash_true=1, userhash_false=2} userhash;
     auth_algorithm alg;
     struct auth_challenge *next;
 };
@@ -219,6 +219,7 @@ typedef struct {
     char **domains; /* list of paths given as domain. */
     size_t ndomains; /* size of domains array */
     char *userhash;
+    char *username_star;
     auth_qop qop;
     auth_algorithm alg;
     unsigned int nonce_count;
@@ -301,11 +302,12 @@ static void clean_session(auth_session *sess)
     if (sess->opaque) ne_free(sess->opaque);
     if (sess->realm) ne_free(sess->realm);
     if (sess->userhash) ne_free(sess->userhash);
+    if (sess->username_star) ne_free(sess->username_star);
     if (sess->response_rhs) ne_free(sess->response_rhs);
     if (sess->h_a1) ne_free(sess->h_a1);
     sess->realm = sess->basic = sess->cnonce = sess->nonce =
         sess->opaque = sess->userhash = sess->response_rhs =
-        sess->h_a1 = NULL;
+        sess->h_a1 = sess->username_star = NULL;
     if (sess->ndomains) free_domains(sess);
 #ifdef HAVE_GSSAPI
     {
@@ -810,7 +812,7 @@ static int ntlm_challenge(auth_session *sess, int attempt,
     return 0;
 }
 #endif /* HAVE_NTLM */
-  
+
 /* Examine a digest challenge: return 0 if it is a valid Digest challenge,
  * else non-zero. */
 static int digest_challenge(auth_session *sess, int attempt,
@@ -869,9 +871,31 @@ static int digest_challenge(auth_session *sess, int attempt,
 
         /* Calculate userhash for this (realm, username) if required.
          * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
-        if (parms->userhash) {
+        if (parms->userhash == userhash_true) {
             sess->userhash = ne_strhash(hash, sess->username, ":",
                                         sess->realm, NULL);
+        }
+        else {
+            /* Without userhash, for usernames which need some kind of
+             * escaping, either: a) username* must be supported, which
+             * is known if the server sent userhash=false, *and* the
+             * caller has indicated the username really is UTF-8; or
+             * else b) the challenge is an error since the username
+             * cannot be sent safely. */
+            char *esc = ne_strparam("UTF-8", NULL,
+                                    (unsigned char *)sess->username);
+
+            if (esc) {
+                if (parms->userhash == userhash_none
+                    || (parms->handler->protomask & NE_AUTH_UTF8) == 0) {
+                    ne_free(esc);
+                    challenge_error(errmsg, _("could not handle non-ASCII "
+                                              "username in Digest challenge"));
+                    return -1;
+                }
+                sess->username_star = esc;
+                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using username* => %s\n", esc);
+            }
         }
     }
     else {
@@ -995,14 +1019,21 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     ret = ne_buffer_create();
 
     ne_buffer_concat(ret, 
-                     "Digest username=\"",
-                     sess->userhash ? sess->userhash : sess->username, "\", "
-		     "realm=\"", sess->realm, "\", "
+                     "Digest realm=\"", sess->realm, "\", "
 		     "nonce=\"", sess->nonce, "\", "
 		     "uri=\"", req->uri, "\", "
 		     "response=\"", response, "\", "
 		     "algorithm=\"", alg_to_name[sess->alg], "\"", 
 		     NULL);
+    if (sess->username_star) {
+        ne_buffer_concat(ret, ", username*=", sess->username_star, NULL);
+    }
+    else {
+        ne_buffer_concat(ret, ", username=\"",
+                         sess->userhash ? sess->userhash : sess->username,
+                         "\"", NULL);
+    }
+
     ne_free(response);
     ne_free(h_a2);
     
@@ -1394,7 +1425,12 @@ static int auth_challenge(auth_session *sess, int attempt,
             chall->domain = val;
         }
         else if (ne_strcasecmp(key, "userhash") == 0) {
-            chall->userhash = strcmp(val, "true") == 0;
+            if (strcmp(val, "true") == 0)
+                chall->userhash = userhash_true;
+            else if (strcmp(val, "false") == 0)
+                chall->userhash = userhash_false;
+            else
+                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignored bogus userhash value '%s'\n", val);
         }
     }
     
@@ -1603,10 +1639,10 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     struct auth_handler **hdl;
 
     /* Handle the _ALL and _DEFAULT protocol masks: */
-    if (protomask == NE_AUTH_ALL) {
+    if ((protomask & NE_AUTH_ALL) == NE_AUTH_ALL) {
         protomask |= NE_AUTH_BASIC | NE_AUTH_DIGEST | NE_AUTH_NEGOTIATE;
     }
-    else if (protomask == NE_AUTH_DEFAULT) {
+    else if ((protomask & NE_AUTH_DEFAULT) == NE_AUTH_DEFAULT) {
         protomask |= NE_AUTH_BASIC | NE_AUTH_DIGEST;
         
         if (strcmp(ne_get_scheme(sess), "https") == 0 || isproxy) {
