@@ -709,6 +709,7 @@ static int strparam(void)
         }
         else {
             ONCMP(act, ts[n].expect);
+            ne_free(act);
         }
     }
 
