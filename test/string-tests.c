@@ -695,9 +695,12 @@ static int strhash_sha_256(void)
     return OK;
 }
 
-/* NIST example */
-#define TEST1_512_256 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
-#define TEST1_512_256_MD "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a"
+/* NIST examples from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA512_256.pdf */
+#define TEST1_512_256 "abc"
+#define TEST1_512_256_MD "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23"
+#define TEST2_512_256_1 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijkl"
+#define TEST2_512_256_2 "mnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
+#define TEST2_512_256_MD "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a"
 
 static int strhash_sha_512_256(void)
 {
@@ -709,7 +712,8 @@ static int strhash_sha_512_256(void)
     }
     ne_free(p);
 
-    ONVEC((NE_HASH_SHA256, TEST1_512_256, NULL), TEST1_512_256_MD);
+    ONVEC((NE_HASH_SHA512_256, TEST1_512_256, NULL), TEST1_512_256_MD);
+    ONVEC((NE_HASH_SHA512_256, TEST2_512_256_1, TEST2_512_256_2, NULL), TEST2_512_256_MD);
 
     return OK;
 }
