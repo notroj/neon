@@ -83,4 +83,8 @@
 #endif
 #endif /* NE_LFS */
 
+/* Return malloc-allocated ASCII hexadecimal representation of
+ * input. */
+NE_PRIVATE char *ne__strhash2hex(unsigned char *digest, size_t len);
+
 #endif /* NE_INTERNAL_H */

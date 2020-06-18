@@ -33,6 +33,7 @@
 #include <errno.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/crypto.h>
 #include <gnutls/pkcs12.h>
 
 #ifdef NE_HAVE_TS_SSL
@@ -1504,4 +1505,34 @@ void ne__ssl_exit(void)
      * the process. */
     gnutls_global_deinit();
 #endif
+}
+
+char *ne_vstrhash(unsigned int flags, va_list ap)
+{
+    gnutls_digest_algorithm_t alg;
+    gnutls_hash_hd_t hd;
+    unsigned char *out;
+    const char *arg;
+    unsigned len;
+    char *rv;
+
+    switch (flags) {
+    case NE_HASH_MD5: alg = GNUTLS_DIG_MD5; break;
+    case NE_HASH_SHA256: alg = GNUTLS_DIG_SHA256; break;
+    default: return NULL;
+    }
+
+    if (gnutls_hash_init(&hd, alg) < 0)
+        return NULL;
+
+    while ((arg = va_arg(ap, const char *)) != NULL)
+        gnutls_hash(hd, arg, strlen(arg));
+
+    len = gnutls_hash_get_len(alg);
+    out = ne_malloc(len);
+    gnutls_hash_deinit(hd, out);
+
+    rv = ne__strhash2hex(out, len);
+    ne_free(out);
+    return rv;
 }

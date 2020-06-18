@@ -38,8 +38,9 @@
 
 #include "ne_alloc.h"
 #include "ne_string.h"
+#include "ne_internal.h"
 
-#if !defined(HAVE_OPENSSL)
+#ifndef NE_HAVE_SSL
 #include "ne_md5.h"
 #define NEED_VSTRHASH
 #endif
@@ -653,6 +654,20 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     return ne_strdup(ret);
 }
 #endif
+
+char *ne__strhash2hex(unsigned char *digest, size_t len)
+{
+    char *rv = ne_malloc(len * 2 + 1);
+    size_t n;
+
+    for (n = 0; n < len; n++) {
+	rv[n*2] = NE_HEX2ASC(digest[n] >> 4);
+	rv[n*2+1] = NE_HEX2ASC(digest[n] & 0x0f);
+    }
+
+    rv[len*2] = '\0';
+    return rv;
+}
 
 /* Determines whether a character is valid in a regular parameter (NQ)
  * not (QT). Per https://tools.ietf.org/html/rfc5987#section-3.2.1

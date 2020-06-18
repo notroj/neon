@@ -1139,20 +1139,6 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
     return 0;
 }
 
-static char *hash2hex(unsigned char *digest, size_t len)
-{
-    char *rv = ne_malloc(len * 2 + 1);
-    size_t n;
-
-    for (n = 0; n < len; n++) {
-	rv[n*2] = NE_HEX2ASC(digest[n] >> 4);
-	rv[n*2+1] = NE_HEX2ASC(digest[n] & 0x0f);
-    }
-
-    rv[len*2] = '\0';
-    return rv;
-}
-
 char *ne_vstrhash(unsigned int flags, va_list ap)
 {
     EVP_MD_CTX *ctx;
@@ -1179,7 +1165,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     EVP_DigestFinal_ex(ctx, v, &vlen);
     EVP_MD_CTX_free(ctx);
 
-    return hash2hex(v, vlen);
+    return ne__strhash2hex(v, vlen);
 }
 
 #if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L
