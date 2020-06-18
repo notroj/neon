@@ -821,6 +821,7 @@ static int digest_challenge(auth_session *sess, int attempt,
 {
     char password[NE_ABUFSIZ];
     unsigned int hash;
+    char *p;
 
     if (parms->alg == auth_alg_unknown) {
         challenge_error(errmsg, _("unknown algorithm in Digest challenge"));
@@ -847,6 +848,14 @@ static int digest_challenge(auth_session *sess, int attempt,
     }
 
     hash = alg_to_hash[parms->alg];
+    p = ne_strhash(hash, "", NULL);
+    if (p == NULL) {
+        challenge_error(errmsg,
+                        _("%s algorithm in Digest challenge not supported"),
+                        alg_to_name[parms->alg]);
+        return -1;
+    }
+    ne_free(p);
 
     if (!parms->stale) {
         /* Non-stale challenge: clear session and request credentials. */
@@ -1660,18 +1669,6 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         protomask |= NE_AUTH_GSSAPI_ONLY | NE_AUTH_SSPI;
     }
 
-    if ((protomask & NE_AUTH_DIGEST) == NE_AUTH_DIGEST) {
-        struct ne_md5_ctx *ctx = ne_md5_create_ctx();
-
-        if (ctx) {
-            ne_md5_destroy_ctx(ctx);
-        }
-        else {
-            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Disabling Digest support without MD5.\n");
-            protomask &= ~NE_AUTH_DIGEST;
-        }
-    }
-    
     ahs = ne_get_session_private(sess, id);
     if (ahs == NULL) {
         ahs = ne_calloc(sizeof *ahs);

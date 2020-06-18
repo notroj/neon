@@ -1015,7 +1015,7 @@ static int digest_username_star(void)
     for (n = 0; ret == OK && ts[n].username_raw; n++) {
         struct digest_parms parms = {
             "WallyWorld", "nonce-sha5-nonce", "opaque-string",
-            NULL, ALG_SHA256, PARM_RFC2617|PARM_UHFALSE|PARM_ALTUSER, 1, 0, fail_not };
+            NULL, ALG_MD5, PARM_RFC2617|PARM_UHFALSE|PARM_ALTUSER, 1, 0, fail_not };
 
         alt_username = ts[n].username_raw;
         alt_username_star = ts[n].username_star;
