@@ -1,3 +1,17 @@
+Changes in release 0.32.0:
+* Interface changes:
+ - none, API and ABI backwards-compatible with 0.27.x and later
+* API clarification:
+ - for ne_auth.h, the character encoding of the username provided
+   by a credentials callback was unspecified.  Callers providing
+   non-alphanumeric usernames for Basic and Digest challenges must
+   now use the NE_AUTH_UTF8 flag, or the auth challenge will fail
+   if the username cannot be sent safely.
+* New interfaces and features:
+ - ne_string.h: added ne_strhash, ne_vstrhash, ne_strparam
+ - added RFC 7616 (Digest authentication) support, including
+   userhash, username*, SHA-256, SHA-512-256 algorithms
+
 Changes in release 0.31.0:
 * Interface changes:
  - none, API and ABI backwards-compatible with 0.27.x and later
