@@ -676,11 +676,40 @@ static int strhash(void)
     ONVEC((NE_HASH_MD5, "", NULL), "d41d8cd98f00b204e9800998ecf8427e");
     ONVEC((NE_HASH_MD5, "foo", "ba", "r", NULL), "3858f62230ac3c915f300c664312c63f");
 
-#ifdef HAVE_OPENSSL
+    return OK;
+}
+
+static int strhash_sha_256(void)
+{
+    char *p = ne_strhash(NE_HASH_SHA256, "", NULL);
+    if (p == NULL) {
+        t_context("SHA-2-256 not supported");
+        return SKIP;
+    }
+    ne_free(p);
+
     ONVEC((NE_HASH_SHA256, TEST1, NULL), TEST1_SHA);
     ONVEC((NE_HASH_SHA256, "foobar", "foo", "bar", "f", "oobar", NULL),
           "d173c93898d3ca8455a4526e0af2a1aee9b91c8ec19adac16e6e8be2da09436c");
-#endif
+
+    return OK;
+}
+
+/* NIST example */
+#define TEST1_512_256 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
+#define TEST1_512_256_MD "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a"
+
+static int strhash_sha_512_256(void)
+{
+    char *p = ne_strhash(NE_HASH_SHA512_256, "", NULL);
+
+    if (p == NULL) {
+        t_context("SHA-2-512/256 not supported");
+        return SKIP;
+    }
+    ne_free(p);
+
+    ONVEC((NE_HASH_SHA256, TEST1_512_256, NULL), TEST1_512_256_MD);
 
     return OK;
 }
@@ -746,6 +775,8 @@ ne_test tests[] = {
     T(buf_print),
     T(qappend),
     T(strhash),
+    T(strhash_sha_256),
+    T(strhash_sha_512_256),
     T(strparam),
     T(NULL)
 };

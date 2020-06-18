@@ -958,7 +958,7 @@ static int digest_sha256(void)
     char *p = ne_strhash(NE_HASH_SHA256, "", NULL);
 
     if (p == NULL) {
-        t_context("no SHA-256 support");
+        t_context("SHA-256 not supported");
         return SKIP;
     }
     ne_free(p);
@@ -984,7 +984,7 @@ static int digest_sha512_256(void)
     char *p = ne_strhash(NE_HASH_SHA512_256, "", NULL);
 
     if (p == NULL) {
-        t_context("no SHA-512-256 support");
+        t_context("SHA-512/256 not supported");
         return SKIP;
     }
     ne_free(p);
