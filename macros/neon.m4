@@ -806,11 +806,11 @@ AC_DEFUN([NE_FIND_AR], [
 
 # Search in /usr/ccs/bin for Solaris
 ne_PATH=$PATH:/usr/ccs/bin
-AC_PATH_TOOL(AR, ar, notfound, $ne_PATH)
+AC_CHECK_TOOL(AR, ar, notfound, $ne_PATH)
 if test "x$AR" = "xnotfound"; then
    AC_MSG_ERROR([could not find ar tool])
 fi
-AC_PATH_TOOL(RANLIB, ranlib, :, $ne_PATH)
+AC_CHECK_TOOL(RANLIB, ranlib, :, $ne_PATH)
 
 ])
 
