@@ -44,6 +44,8 @@ static const char *alt_username, *alt_username_star;
 
 static int auth_failed;
 
+static int has_sha256 = 0, has_sha512_256 = 0;
+
 #define BASIC_WALLY "Basic realm=WallyWorld"
 #define CHAL_WALLY "WWW-Authenticate: " BASIC_WALLY
 
@@ -113,6 +115,21 @@ static int auth_serve(ne_socket *sock, void *userdata)
     send_response(sock, NULL, auth_failed?500:200, 1);
 
     return 0;
+}
+
+static int init(void)
+{
+    char *p;
+
+    p = ne_strhash(NE_HASH_SHA256, "", NULL);
+    has_sha256 = p != NULL;
+    if (p) ne_free(p);
+
+    p = ne_strhash(NE_HASH_SHA512_256, "", NULL);
+    has_sha512_256 = p != NULL;
+    if (p) ne_free(p);
+
+    return lookup_localhost();
 }
 
 /* Test that various Basic auth challenges are correctly handled. */
@@ -935,7 +952,7 @@ static int digest(void)
         { NULL }
     };
     size_t n;
-    
+
     for (n = 0; parms[n].realm; n++) {
         CALL(test_digest(&parms[n]));
 
@@ -955,14 +972,12 @@ static int digest_sha256(void)
         { NULL },
     };
     size_t n;
-    char *p = ne_strhash(NE_HASH_SHA256, "", NULL);
 
-    if (p == NULL) {
+    if (!has_sha256) {
         t_context("SHA-256 not supported");
         return SKIP;
     }
-    ne_free(p);
-    
+
     for (n = 0; parms[n].realm; n++) {
         CALL(test_digest(&parms[n]));
 
@@ -981,13 +996,11 @@ static int digest_sha512_256(void)
         { NULL },
     };
     size_t n;
-    char *p = ne_strhash(NE_HASH_SHA512_256, "", NULL);
 
-    if (p == NULL) {
+    if (!has_sha512_256) {
         t_context("SHA-512/256 not supported");
         return SKIP;
     }
-    ne_free(p);
 
     for (n = 0; parms[n].realm; n++) {
         CALL(test_digest(&parms[n]));
@@ -1240,6 +1253,54 @@ static int multi_handler(void)
     return await_server();
 }
 
+static int multi_rfc7616(void)
+{
+    ne_session *sess;
+    struct multi_context c[2];
+    unsigned n;
+    ne_buffer *buf, *exp;
+
+    buf = ne_buffer_create();
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 401 Auth Denied\r\n"
+                      "WWW-Authenticate: "
+                      "Digest realm='sha512-realm', algorithm=SHA-512-256, qop=auth, nonce=gaga, "
+                      "Basic realm='basic-realm', "
+                      "Digest realm='md5-realm', algorithm=MD5, qop=auth, nonce=gaga, "
+                      "Digest realm='sha256-realm', algorithm=SHA-256, qop=auth, nonce=gaga\r\n"
+                      "Content-Length: 0\r\n" "\r\n"));
+
+    for (n = 0; n < 2; n++) {
+        c[n].buf = buf;
+        c[n].id = n + 1;
+    }
+
+    ne_add_server_auth(sess, NE_AUTH_BASIC, multi_cb, &c[0]);
+    ne_add_server_auth(sess, NE_AUTH_DIGEST, multi_cb, &c[1]);
+
+    any_request(sess, "/fish");
+
+    exp = ne_buffer_create();
+    n = 0;
+    if (has_sha512_256)
+        ne_buffer_snprintf(exp, 100, "[id=2, realm=sha512-realm, tries=%u]", n++);
+    if (has_sha256)
+        ne_buffer_snprintf(exp, 100, "[id=2, realm=sha256-realm, tries=%u]", n++);
+    ne_buffer_snprintf(exp, 100,
+                       "[id=2, realm=md5-realm, tries=%u]"
+                       "[id=1, realm=basic-realm, tries=0]", n);
+    ONV(strcmp(exp->data, buf->data),
+        ("unexpected callback ordering.\n"
+         "expected: %s\n"
+         "actual:   %s\n",
+         exp->data, buf->data));
+
+    ne_session_destroy(sess);
+    ne_buffer_destroy(buf);
+
+    return await_server();
+}
+
 static int domains(void)
 {
     ne_session *sess;
@@ -1370,7 +1431,7 @@ static int forget(void)
 /* proxy auth, proxy AND origin */
 
 ne_test tests[] = {
-    T(lookup_localhost),
+    T(init),
     T(basic),
     T(retries),
     T(forget_regress),
@@ -1383,6 +1444,7 @@ ne_test tests[] = {
     T(digest_username_star),
     T(fail_challenge),
     T(multi_handler),
+    T(multi_rfc7616),
     T(domains),
     T(defaults),
     T(CVE_2008_3746),
