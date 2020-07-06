@@ -1297,6 +1297,7 @@ static int multi_rfc7616(void)
 
     ne_session_destroy(sess);
     ne_buffer_destroy(buf);
+    ne_buffer_destroy(exp);
 
     return await_server();
 }
