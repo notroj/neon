@@ -1275,33 +1275,31 @@ static const struct auth_protocol protocols[] = {
     { 0 }
 };
 
-/* Insert a new auth challenge for protocol 'proto' in list of
- * challenges 'list'.  The challenge list is kept in sorted order of
- * strength, with highest strength first. */
-static struct auth_challenge *insert_challenge(struct auth_challenge **list,
-                                               const struct auth_protocol *proto)
+/* Insert a new auth challenge 'chall' into list of challenges 'list'.
+ * The challenge list is kept in sorted order of strength, with
+ * highest strength first. */
+static void insert_challenge(struct auth_challenge **list, struct auth_challenge *chall)
 {
-    struct auth_challenge *ret = ne_calloc(sizeof *ret);
-    struct auth_challenge *chall, *prev;
+    struct auth_challenge *cur, *prev;
 
-    for (chall = *list, prev = NULL; chall != NULL; 
-         prev = chall, chall = chall->next) {
-        if (proto->strength > chall->protocol->strength) {
+    for (cur = *list, prev = NULL; cur != NULL;
+         prev = cur, cur = cur->next) {
+        if (chall->protocol->strength > cur->protocol->strength
+            || (cur->protocol->id == NE_AUTH_DIGEST
+                && chall->protocol->id == NE_AUTH_DIGEST
+                && chall->alg > cur->alg)) {
             break;
         }
     }
 
     if (prev) {
-        ret->next = prev->next;
-        prev->next = ret;
-    } else {
-        ret->next = *list;
-        *list = ret;
+        chall->next = prev->next;
+        prev->next = chall;
     }
-
-    ret->protocol = proto;
-
-    return ret;
+    else {
+        chall->next = *list;
+        *list = chall;
+    }
 }
 
 static void challenge_error(ne_buffer **errbuf, const char *fmt, ...)
@@ -1342,9 +1340,17 @@ static int auth_challenge(auth_session *sess, int attempt,
     while (!tokenize(&pnt, &key, &val, &sep, 1)) {
 
 	if (val == NULL) {
+            /* Special case, challenge token, not key=value pair: */
             const struct auth_protocol *proto = NULL;
             struct auth_handler *hdl;
             size_t n;
+
+            /* Accumulated challenge is now completed and can be
+             * inserted into the list. */
+            if (chall) {
+                insert_challenge(&challenges, chall);
+                chall = NULL;
+            }
 
             for (hdl = sess->handlers; hdl; hdl = hdl->next) {
                 for (n = 0; protocols[n].id; n++) {
@@ -1359,13 +1365,13 @@ static int auth_challenge(auth_session *sess, int attempt,
 
             if (proto == NULL) {
                 /* Ignore this challenge. */
-                chall = NULL;
                 challenge_error(&errmsg, _("ignored %s challenge"), key);
                 continue;
 	    }
             
             NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got '%s' challenge.\n", proto->name);
-            chall = insert_challenge(&challenges, proto);
+            chall = ne_calloc(sizeof *chall);
+            chall->protocol = proto;
             chall->handler = hdl;
 
             if ((proto->flags & AUTH_FLAG_OPAQUE_PARAM) && sep == ' ') {
@@ -1442,6 +1448,9 @@ static int auth_challenge(auth_session *sess, int attempt,
                 NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Ignored bogus userhash value '%s'\n", val);
         }
     }
+
+    /* Insert the in-flight challenge (if any). */
+    if (chall) insert_challenge(&challenges, chall);
     
     sess->protocol = NULL;
 
