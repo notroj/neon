@@ -1497,7 +1497,7 @@ static void ah_create(ne_request *req, void *session, const char *method,
         struct auth_request *areq = ne_calloc(sizeof *areq);
         struct auth_handler *hdl;
         
-        NE_DEBUG(NE_DBG_HTTPAUTH, "ah_create, for %s\n", sess->spec->resp_hdr);
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Create for %s\n", sess->spec->resp_hdr);
         
         areq->method = method;
         areq->uri = uri;
@@ -1571,7 +1571,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
 #endif
 
     NE_DEBUG(NE_DBG_HTTPAUTH, 
-	     "ah_post_send (#%d), code is %d (want %d), %s is %s\n",
+	     "auth: Post-send (#%d), code is %d (want %d), %s is %s\n",
 	     areq->attempt, status->code, sess->spec->status_code, 
 	     sess->spec->resp_hdr, auth_hdr ? auth_hdr : "(none)");
     if (auth_info_hdr && sess->protocol && sess->protocol->verify 
