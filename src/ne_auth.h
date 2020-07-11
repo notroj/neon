@@ -77,8 +77,13 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * password, and certain aspects of the request, so prevents passive
  * attackers from obtaining the credentials; active attackers can
  * still modify most of the request/response if using an unsecured
- * channel. */ 
-#define NE_AUTH_DIGEST (0x0002)
+ * channel.  Supports algorithms from RFC 2617 and RFC 7616. */
+#define NE_AUTH_DIGEST (0x0080)
+
+/* NE_AUTH_WEAK_DIGEST: This may be used in conjunction with
+ * NE_AUTH_DIGEST to enable support for the older, weaker version of
+ * the Digest algorithm specified in RFC 2069. */
+#define NE_AUTH_WEAK_DIGEST (0x0002)
 
 /* NE_AUTH_NEGOTIATE: Negotiate uses GSSAPI/SSPI, or NTLM, to
  * authenticate the user; an active attacker can modify any of the
@@ -107,6 +112,8 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * active attacker can modify any of the request/response at will, so
  * this must not be used over an unsecured channel. */
 #define NE_AUTH_GSSAPI_ONLY (0x0040)
+
+/* 0x0080 used for NE_AUTH_DIGEST */
 
 /* The default set of supported protocols, as deemed appropriate for
  * the given session scheme. */
