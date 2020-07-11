@@ -846,6 +846,11 @@ static int digest_challenge(auth_session *sess, int attempt,
         challenge_error(errmsg, _("stale Digest challenge with new algorithm or realm"));
         return -1;
     }
+    else if (!parms->got_qop
+             && (parms->handler->protomask & NE_AUTH_WEAK_DIGEST) == 0) {
+        challenge_error(errmsg, _("weak Digest challenge not supported"));
+        return -1;
+    }
 
     hash = alg_to_hash[parms->alg];
     p = ne_strhash(hash, "", NULL);
@@ -1666,6 +1671,14 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         if (strcmp(ne_get_scheme(sess), "https") == 0 || isproxy) {
             protomask |= NE_AUTH_NEGOTIATE;
         }
+    }
+
+    /* For backwards-compatibility with older releases where DIGEST
+     * used to be defined as WEAKEST, if only WEAK_DIGEST is given,
+     * that implies DIGEST|WEAK_DIGEST. */
+    if ((protomask & (NE_AUTH_WEAK_DIGEST|NE_AUTH_DIGEST)) == NE_AUTH_WEAK_DIGEST) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Weak Digest support compatibility mode.\n");
+        protomask |= NE_AUTH_DIGEST;
     }
 
     if ((protomask & NE_AUTH_NEGOTIATE) == NE_AUTH_NEGOTIATE) {

@@ -399,6 +399,8 @@ static void dup_header(char *header)
 #define PARM_USERHASH  (0x0010) /* userhash=true */
 #define PARM_UHFALSE   (0x0020) /* userhash=false */
 #define PARM_ALTUSER   (0x0040)
+#define PARM_WEAK      (0x0080)
+#define PARM_WEAK_ONLY (0x0100)
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -421,7 +423,8 @@ struct digest_parms {
         fail_ai_omit_cnonce,
         fail_ai_omit_digest,
         fail_ai_omit_nc,
-        fail_outside_domain
+        fail_outside_domain,
+        fail_2069_weak
     } failure;
 };
 
@@ -886,6 +889,14 @@ static int test_digest(struct digest_parms *parms)
 {
     ne_session *sess;
     void *auth_userdata = (parms->flags & PARM_ALTUSER) ? (void *)alt_username : NULL;
+    unsigned proto = NE_AUTH_DIGEST;
+
+    if ((parms->flags & PARM_ALTUSER))
+        proto |= NE_AUTH_UTF8;
+    else if ((parms->flags & PARM_WEAK))
+        proto |= NE_AUTH_WEAK_DIGEST;
+    else if ((parms->flags & PARM_WEAK_ONLY))
+        proto = NE_AUTH_WEAK_DIGEST;
 
     NE_DEBUG(NE_DBG_HTTP, ">>>> Request sequence begins "
              "(reqs=%d, nonce=%s, rfc=%s, stale=%d, proxy=%d).\n",
@@ -900,11 +911,7 @@ static int test_digest(struct digest_parms *parms)
     } 
     else {
         CALL(session_server(&sess, serve_digest, parms));
-        if ((parms->flags & PARM_ALTUSER))
-            ne_add_server_auth(sess, NE_AUTH_DEFAULT|NE_AUTH_UTF8,
-                               auth_cb, auth_userdata);
-        else
-            ne_set_server_auth(sess, auth_cb, auth_userdata);
+        ne_add_server_auth(sess, proto, auth_cb, auth_userdata);
     }
 
     do {
@@ -932,7 +939,7 @@ static int digest(void)
         /* staleness. */
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO, 3, 2, fail_not },
         /* 2069 + stale */
-        { "WallyWorld", "this-is-a-nonce", NULL, NULL, ALG_MD5, PARM_AINFO, 3, 2, fail_not },
+        { "WallyWorld", "this-is-a-nonce", NULL, NULL, ALG_MD5, PARM_WEAK|PARM_AINFO, 3, 2, fail_not },
 
         /* RFC 7616-style */
         { "WallyWorld", "new-day-new-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_USERHASH, 1, 0, fail_not },
@@ -940,9 +947,10 @@ static int digest(void)
         { "WallyWorld", "just-another-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_UHFALSE, 1, 0, fail_not },
 
         /* RFC 2069-style */ 
-        { "WallyWorld", "lah-di-da-di-dah", NULL, NULL, ALG_MD5, 0, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, 0, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_AINFO, 1, 0, fail_not },
+        { "WallyWorld", "lah-di-da-di-dah", NULL, NULL, ALG_MD5, PARM_WEAK, 1, 0, fail_not },
+        { "WallyWorld", "lah-lah-lah-lah", NULL, NULL, ALG_MD5, PARM_WEAK_ONLY, 1, 0, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_WEAK, 1, 0, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_AINFO|PARM_WEAK, 1, 0, fail_not },
 
         /* Proxy auth */
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROXY, 1, 0, fail_not },
@@ -1060,6 +1068,7 @@ static int digest_failures(void)
         { fail_bogus_alg, "unknown algorithm" },
         { fail_req0_stale, "initial Digest challenge was stale" },
         { fail_req0_2069_stale, "initial Digest challenge was stale" },
+        { fail_2069_weak, "weak Digest challenge not supported" },
         { fail_not, NULL }
     };
     unsigned n;
@@ -1078,7 +1087,7 @@ static int digest_failures(void)
 
         parms.failure = fails[n].mode;
 
-        if (parms.failure == fail_req0_2069_stale)
+        if (parms.failure == fail_req0_2069_stale || parms.failure == fail_2069_weak)
             parms.flags &= ~PARM_RFC2617;
         else
             parms.flags |= PARM_RFC2617;
@@ -1102,7 +1111,8 @@ static int digest_failures(void)
         ne_session_destroy(sess);
         
         if (fails[n].mode == fail_bogus_alg
-            || fails[n].mode == fail_req0_stale) {
+            || fails[n].mode == fail_req0_stale
+            || fails[n].mode == fail_2069_weak) {
             reap_server();
         } else {
             CALL(await_server());
