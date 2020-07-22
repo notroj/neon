@@ -85,6 +85,7 @@ matrix:
       arch: s390x
       env: CONF="--with-ssl=openssl"
 
-before_script: echo Travis: tag ${TRAVIS_TAG}, branch ${TRAVIS_BRANCH}
+before_script:
+  - echo Travis: tag ${TRAVIS_TAG}, branch ${TRAVIS_BRANCH}
 
 script: ./autogen.sh && ./configure --enable-warnings $CONF && make $MARGS
