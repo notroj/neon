@@ -1128,6 +1128,12 @@ static int fail_cb(void *userdata, const char *realm, int tries,
     ne_buffer *buf = userdata;
     char str[64];
 
+    if (strcmp(realm, "colonic") == 0 && ne_buffer_size(buf) == 0) {
+        ne_strnzcpy(un, "user:name", NE_ABUFSIZ);
+        ne_strnzcpy(pw, "passwerd", NE_ABUFSIZ);
+        return 0;
+    }
+
     ne_snprintf(str, sizeof str, "<%s, %d>", realm, tries);
     ne_buffer_zappend(buf, str);
 
@@ -1141,6 +1147,8 @@ static int fail_challenge(void)
     } ts[] = {
         /* only possible Basic parse failure. */
         { "Basic", "missing realm in Basic challenge" },
+
+        { "Basic realm=\"colonic\"", "username containing colon" },
 
         /* Digest parameter invalid/omitted failure cases: */
         { "Digest algorithm=MD5, qop=auth, nonce=\"foo\"",
@@ -1188,7 +1196,8 @@ static int fail_challenge(void)
                     "Content-Length: 0\r\n" "\r\n",
                     ts[n].resp);
         
-        CALL(make_session(&sess, single_serve_string, resp));
+        CALL(multi_session_server(&sess, "http", "localhost",
+                                  2, single_serve_string, resp));
 
         ne_set_server_auth(sess, fail_cb, buf);
         
@@ -1208,7 +1217,7 @@ static int fail_challenge(void)
 
         ne_session_destroy(sess);
         ne_buffer_destroy(buf);
-        CALL(await_server());
+        reap_server();
     }
 
     return OK;

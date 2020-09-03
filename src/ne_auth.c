@@ -435,6 +435,12 @@ static int basic_challenge(auth_session *sess, int attempt,
 	return -1;
     }
 
+    if (strchr(sess->username, ':') != NULL) {
+        challenge_error(errmsg, _("cannot handle Basic challenge "
+                                  "for username containing colon"));
+        return -1;
+    }
+
     tmp = ne_concat(sess->username, ":", password, NULL);
     sess->basic = ne_base64((unsigned char *)tmp, strlen(tmp));
     ne_free(tmp);
