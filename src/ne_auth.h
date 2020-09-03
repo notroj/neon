@@ -1,6 +1,6 @@
 /* 
    HTTP authentication routines
-   Copyright (C) 1999-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2020, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -117,10 +117,13 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
 /* 0x0080 used for NE_AUTH_DIGEST */
 
 /* The default set of supported protocols, as deemed appropriate for
- * the given session scheme. */
+ * the given session scheme.  The interpretation of this flag may
+ * change across versions, for example with older, less secure
+ * protocols being removed from the default set. */
 #define NE_AUTH_DEFAULT (0x1000)
 
-/* All protocols supported by the library. */
+/* All protocols supported by the library. The interpretation of this
+ * flag may change across versions. */
 #define NE_AUTH_ALL (0x2000)
 
 /* This flag may be used in combination with another auth protocol
