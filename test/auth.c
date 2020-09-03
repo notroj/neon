@@ -399,8 +399,8 @@ static void dup_header(char *header)
 #define PARM_USERHASH  (0x0010) /* userhash=true */
 #define PARM_UHFALSE   (0x0020) /* userhash=false */
 #define PARM_ALTUSER   (0x0040)
-#define PARM_WEAK      (0x0080)
-#define PARM_WEAK_ONLY (0x0100)
+#define PARM_LEGACY      (0x0080)
+#define PARM_LEGACY_ONLY (0x0100)
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -893,10 +893,10 @@ static int test_digest(struct digest_parms *parms)
 
     if ((parms->flags & PARM_ALTUSER))
         proto |= NE_AUTH_UTF8;
-    else if ((parms->flags & PARM_WEAK))
-        proto |= NE_AUTH_WEAK_DIGEST;
-    else if ((parms->flags & PARM_WEAK_ONLY))
-        proto = NE_AUTH_WEAK_DIGEST;
+    else if ((parms->flags & PARM_LEGACY))
+        proto |= NE_AUTH_LEGACY_DIGEST;
+    else if ((parms->flags & PARM_LEGACY_ONLY))
+        proto = NE_AUTH_LEGACY_DIGEST;
 
     NE_DEBUG(NE_DBG_HTTP, ">>>> Request sequence begins "
              "(reqs=%d, nonce=%s, rfc=%s, stale=%d, proxy=%d).\n",
@@ -939,7 +939,7 @@ static int digest(void)
         /* staleness. */
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO, 3, 2, fail_not },
         /* 2069 + stale */
-        { "WallyWorld", "this-is-a-nonce", NULL, NULL, ALG_MD5, PARM_WEAK|PARM_AINFO, 3, 2, fail_not },
+        { "WallyWorld", "this-is-a-nonce", NULL, NULL, ALG_MD5, PARM_LEGACY|PARM_AINFO, 3, 2, fail_not },
 
         /* RFC 7616-style */
         { "WallyWorld", "new-day-new-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_USERHASH, 1, 0, fail_not },
@@ -947,10 +947,10 @@ static int digest(void)
         { "WallyWorld", "just-another-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617 | PARM_UHFALSE, 1, 0, fail_not },
 
         /* RFC 2069-style */ 
-        { "WallyWorld", "lah-di-da-di-dah", NULL, NULL, ALG_MD5, PARM_WEAK, 1, 0, fail_not },
-        { "WallyWorld", "lah-lah-lah-lah", NULL, NULL, ALG_MD5, PARM_WEAK_ONLY, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_WEAK, 1, 0, fail_not },
-        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_AINFO|PARM_WEAK, 1, 0, fail_not },
+        { "WallyWorld", "lah-di-da-di-dah", NULL, NULL, ALG_MD5, PARM_LEGACY, 1, 0, fail_not },
+        { "WallyWorld", "lah-lah-lah-lah", NULL, NULL, ALG_MD5, PARM_LEGACY_ONLY, 1, 0, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_LEGACY, 1, 0, fail_not },
+        { "WallyWorld", "fee-fi-fo-fum", "opaque-string", NULL, ALG_MD5, PARM_AINFO|PARM_LEGACY, 1, 0, fail_not },
 
         /* Proxy auth */
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROXY, 1, 0, fail_not },
@@ -1068,7 +1068,7 @@ static int digest_failures(void)
         { fail_bogus_alg, "unknown algorithm" },
         { fail_req0_stale, "initial Digest challenge was stale" },
         { fail_req0_2069_stale, "initial Digest challenge was stale" },
-        { fail_2069_weak, "weak Digest challenge not supported" },
+        { fail_2069_weak, "legacy Digest challenge not supported" },
         { fail_not, NULL }
     };
     unsigned n;

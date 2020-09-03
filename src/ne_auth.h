@@ -80,10 +80,11 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * channel.  Supports algorithms from RFC 2617 and RFC 7616. */
 #define NE_AUTH_DIGEST (0x0080)
 
-/* NE_AUTH_WEAK_DIGEST: This may be used in conjunction with
- * NE_AUTH_DIGEST to enable support for the older, weaker version of
- * the Digest algorithm specified in RFC 2069. */
-#define NE_AUTH_WEAK_DIGEST (0x0002)
+/* NE_AUTH_LEGACY_DIGEST: Using this flag together with NE_AUTH_DIGEST
+ * enables support for the weaker, legacy version of the Digest
+ * algorithm specified in RFC 2069 (obsoleted by RFC 2617, which was
+ * published in June 1999).  */
+#define NE_AUTH_LEGACY_DIGEST (0x0002)
 
 /* NE_AUTH_NEGOTIATE: Negotiate uses GSSAPI/SSPI, or NTLM, to
  * authenticate the user; an active attacker can modify any of the

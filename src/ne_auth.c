@@ -847,8 +847,8 @@ static int digest_challenge(auth_session *sess, int attempt,
         return -1;
     }
     else if (!parms->got_qop
-             && (parms->handler->protomask & NE_AUTH_WEAK_DIGEST) == 0) {
-        challenge_error(errmsg, _("weak Digest challenge not supported"));
+             && (parms->handler->protomask & NE_AUTH_LEGACY_DIGEST) == 0) {
+        challenge_error(errmsg, _("legacy Digest challenge not supported"));
         return -1;
     }
 
@@ -1674,10 +1674,10 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
     }
 
     /* For backwards-compatibility with older releases where DIGEST
-     * used to be defined as WEAKEST, if only WEAK_DIGEST is given,
-     * that implies DIGEST|WEAK_DIGEST. */
-    if ((protomask & (NE_AUTH_WEAK_DIGEST|NE_AUTH_DIGEST)) == NE_AUTH_WEAK_DIGEST) {
-        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Weak Digest support compatibility mode.\n");
+     * used to be defined as WEAKEST, if only LEGACY_DIGEST is given,
+     * that implies DIGEST|LEGACY_DIGEST. */
+    if ((protomask & (NE_AUTH_LEGACY_DIGEST|NE_AUTH_DIGEST)) == NE_AUTH_LEGACY_DIGEST) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Legacy Digest support compatibility mode.\n");
         protomask |= NE_AUTH_DIGEST;
     }
 
