@@ -28,7 +28,7 @@ NE_BEGIN_DECLS
 
 /* Size of username/password buffers passed to ne_auth_creds
  * callback. */
-#define NE_ABUFSIZ (256)
+#define NE_ABUFSIZ (512)
 
 /* The callback used to request the username and password in the given
  * realm. The username and password must be copied into the buffers
