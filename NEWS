@@ -2,8 +2,8 @@ Changes in release 0.32.0:
 * Interface changes:
  - API and ABI backwards-compatible with 0.27.x and later
  - NE_AUTH_DIGEST now only enables RFC 2617/7616 auth by default;
-   to enable weaker RFC 2069 Digest, use NE_AUTH_WEAK_DIGEST
-   (this is not treated as an API/ABI break)
+   to enable weaker RFC 2069 Digest, use NE_AUTH_LEGACY_DIGEST
+   (this is a security enhancement, not an API/ABI break)
 * API clarification:
  - for ne_auth.h, the character encoding of the username provided
    by a credentials callback was unspecified.  Callers providing
