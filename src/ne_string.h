@@ -46,7 +46,8 @@ char *ne_shave(char *str, const char *whitespace);
 
 /* Cleanse 'str' of non-printable (e.g. control) characters.  'str' is
  * modified in-place, and returned. */
-char *ne_strclean(char *str);
+char *ne_strclean(char *str)
+    ne_attribute((nonnull));
 
 /* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
  * NUL-terminated buffer which the caller must free(). */
@@ -142,7 +143,8 @@ strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 /* Return a malloc-allocated copy of 'data', of length 'len', with all
  * non-ASCII bytes, and ASCII control characters escaped.  (Note that
  * the escaping includes the NUL byte). */
-char *ne_strnqdup(const unsigned char *data, size_t len);
+char *ne_strnqdup(const unsigned char *data, size_t len)
+    ne_attribute_malloc;
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL pointer. */
