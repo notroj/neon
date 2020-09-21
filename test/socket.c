@@ -566,7 +566,8 @@ static int read_expect(ne_socket *sock, const char *str, size_t len)
 {
     ssize_t ret = ne_sock_read(sock, buffer, len);
     ONV((ssize_t)len != ret,
-	("read got %" NE_FMT_SSIZE_T " bytes not %" NE_FMT_SIZE_T, ret, len));
+	("read got %" NE_FMT_SSIZE_T " bytes (%s) not %" NE_FMT_SIZE_T,
+         ret, ne_sock_error(sock), len));
     ONV(memcmp(str, buffer, len),
 	("read mismatch: `%.*s' not `%.*s'", 
 	 (int)len, buffer, (int)len, str));    
