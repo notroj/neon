@@ -371,16 +371,27 @@ ne_cv_libsfor_$1="not found"
 for lib in $2; do
     # The w32api libraries link using the stdcall calling convention.
     case ${lib}-${ne_cv_os_uname} in
-    ws2_32-MINGW*) ne__code="__stdcall $1();" ;;
-    *) ne__code="$1();" ;;
+    ws2_32-MINGW*)
+      ne__prologue="#include <winsock2.h>"
+      case $1 in
+      socket) ne__code="socket(0,0,0);" ;;
+      gethostbyname) ne__code="gethostbyname(\"\")" ;;
+      *) ne__code="$1();" ;;
+      esac
+      ;;
+    *)
+      ne__prologue=""
+      ne__code="$1();"
+      ;;
     esac
 
+
     LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [$ne__code])],
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
                    [ne_cv_libsfor_$1="-l$lib"; break])
     m4_if($3, [], [], dnl If $3 is specified, then...
               [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
-               AC_LINK_IFELSE([AC_LANG_PROGRAM([], [$ne__code])], 
+               AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
                               [ne_cv_libsfor_$1="-l$lib $3"; break])])
 done
 LIBS=$ne_sl_save_LIBS])])
