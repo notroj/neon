@@ -895,7 +895,7 @@ static int fail_wrongCN(void)
 
 #define SRCDIR(s) ne_concat(srcdir, "/" s, NULL)
 
-#ifndef HAVE_GNUTLS
+#if 0
 static int fail_nul_cn(void)
 {
     char *key = SRCDIR("nulsrv.key"), *ca = SRCDIR("nulca.pem");
@@ -1945,8 +1945,9 @@ ne_test tests[] = {
     T(fail_ca_expired),
 
     T(nulcn_identity),
-#ifndef HAVE_GNUTLS
-    /* These certs were created with a SHA#1 digest so are rejected by GnuTLS. */
+#if 0
+    /* These certs were created with a SHA#1 digest so are rejected by
+     * modern TLS libraries. */
     T(fail_nul_cn),
     T(fail_nul_san),
 #endif
