@@ -33,15 +33,8 @@ NE_BEGIN_DECLS
 /* The callback used to request the username and password in the given
  * realm. The username and password must be copied into the buffers
  * which are both of size NE_ABUFSIZ.  The 'attempt' parameter is zero
- * on the first call to the callback, and increases by one each time
- * an attempt to authenticate fails.
- *
- * With Basic and Digest authentication, a non-alphanumeric username
- * can be provided as a UTF-8-encoded string only if the NE_AUTH_UTF8
- * flag is used in the protocol mask to configure the callback via
- * ne_add_*_auth.  Otherwise the username must be an alphanumeric
- * ASCII username string.  Non-alphanumeric usernames are only
- * accepted in some cases.
+ * on the first call to the callback, and increases by one for each
+ * invocation of the callback during an attempt to authenticate.
  *
  * The callback must return zero to indicate that authentication
  * should be attempted with the username/password, or non-zero to
@@ -126,10 +119,9 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * flag may change across versions. */
 #define NE_AUTH_ALL (0x2000)
 
-/* This flag may be used in combination with another auth protocol
- * specifier. If present, it indicates that the username passed back
- * by the credentials callback is in UTF-8 encoding. */
-#define NE_AUTH_UTF8 (0x4000)
+/* If present in the protocol mask passed to ne_auth_provide,
+ * indicates that proxy authentication is requested. */
+#define NE_AUTH_PROXY (0x4000)
 
 /* Add a callback to provide credentials for server and proxy
  * authentication using a particular auth protocol or set of
@@ -156,6 +148,43 @@ void ne_add_server_auth(ne_session *sess, unsigned protocol,
                         ne_auth_creds creds, void *userdata);
 void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
                        ne_auth_creds creds, void *userdata);
+
+/* Alternative credentials provider callback, invoked when credentials
+ * are required to authenticate the client to either a server or
+ * proxy.  'protocol' is the authentication protocol number
+ * (NE_AUTH_*) of the challenge, bitwise-ORed with NE_AUTH_PROXY when
+ * the auth challenge is made by an HTTP proxy.
+ *
+ * 'realm' is the realm name.  The 'attempt' counter reflects the
+ * number of attempts to provide credentials to the server
+ * (i.e. retried requests sent with a challenge response), NOT the
+ * number of times the callback is invoked, unlike the ne_auth_creds
+ * callback.
+ *
+ * The callback must return zero to indicate that authentication
+ * should be attempted with the username/password, or non-zero to
+ * cancel the request. (if non-zero, username and password are
+ * ignored.)
+ *
+ * The username and password buffers have length 'buflen', which is
+ * guaranteed to be >= NE_ABUFSIZ.  The username must be provided as a
+ * NUL-terminated UTF-8 encoding only.  The password must be provided
+ * as a NUL-terminated string.  Additional protocol-specific
+ * restrictions apply, e.g. username cannot contain a colon for Basic
+ * auth.
+ *
+ * IMPORTANT NOTE: The callback will be invoked repeatedly until
+ * either it returns non-zero, or authentication is successful.
+ *
+ * Hint: if you just wish to attempt authentication just once (even if
+ * the user gets the username/password wrong), have the callback
+ * function use 'attempt' value as the function return value. */
+typedef int (*ne_auth_provide)(void *userdata, int attempt,
+                               unsigned protocol, const char *realm,
+                               char *username, char *password, size_t buflen);
+
+void ne_add_auth(ne_session *sess, unsigned protocol,
+                 ne_auth_provide creds, void *userdata);
 
 /* Clear any cached authentication credentials for the given
  * session. */

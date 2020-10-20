@@ -63,6 +63,19 @@ static int auth_cb(void *userdata, const char *realm, int tries,
     return tries;
 }		   
 
+static int auth_provide_cb(void *userdata, int attempt,
+                           unsigned protocol, const char *realm,
+                           char *un, char *pw, size_t buflen)
+{
+    if (strcmp(realm, "WallyWorld")) {
+        NE_DEBUG(NE_DBG_HTTP, "Got wrong realm '%s'!\n", realm);
+        return -1;
+    }
+    strcpy(un, alt_username);
+    strcpy(pw, password);
+    return attempt;
+}
+
 static void auth_hdr(char *value)
 {
 #define B "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
@@ -888,12 +901,9 @@ static int serve_digest(ne_socket *sock, void *userdata)
 static int test_digest(struct digest_parms *parms)
 {
     ne_session *sess;
-    void *auth_userdata = (parms->flags & PARM_ALTUSER) ? (void *)alt_username : NULL;
     unsigned proto = NE_AUTH_DIGEST;
 
-    if ((parms->flags & PARM_ALTUSER))
-        proto |= NE_AUTH_UTF8;
-    else if ((parms->flags & PARM_LEGACY))
+    if ((parms->flags & PARM_LEGACY))
         proto |= NE_AUTH_LEGACY_DIGEST;
     else if ((parms->flags & PARM_LEGACY_ONLY))
         proto = NE_AUTH_LEGACY_DIGEST;
@@ -907,11 +917,14 @@ static int test_digest(struct digest_parms *parms)
     if ((parms->flags & PARM_PROXY)) {
         CALL(proxied_session_server(&sess, "http", "www.example.com", 80,
                                     serve_digest, parms));
-        ne_set_proxy_auth(sess, auth_cb, auth_userdata);
+        ne_set_proxy_auth(sess, auth_cb, NULL);
     } 
     else {
         CALL(session_server(&sess, serve_digest, parms));
-        ne_add_server_auth(sess, proto, auth_cb, auth_userdata);
+        if ((parms->flags & PARM_ALTUSER))
+            ne_add_auth(sess, proto, auth_provide_cb, NULL);
+        else
+            ne_add_server_auth(sess, proto, auth_cb, NULL);
     }
 
     do {
@@ -1321,6 +1334,90 @@ static int multi_rfc7616(void)
     return await_server();
 }
 
+static int multi_provider_cb(void *userdata, int attempt,
+                             unsigned protocol, const char *realm,
+                             char *un, char *pw, size_t buflen)
+{
+    ne_buffer *buf = userdata;
+
+    if (buflen == NE_ABUFSIZ) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: FAILED for short buffer length.\n");
+        return -1;
+    }
+
+    ne_buffer_snprintf(buf, 128, "[proto=%u, realm=%s, attempt=%d]",
+                       protocol, realm, attempt);
+
+    ne_strnzcpy(un, "foo", buflen);
+    ne_strnzcpy(pw, "bar", buflen);
+
+    return protocol == NE_AUTH_BASIC ? 0 : -1;
+}
+
+static int serve_provider(ne_socket *s, void *userdata)
+{
+    CALL(serve_response(s,
+                        "HTTP/1.1 401 Auth Denied\r\n"
+                        "WWW-Authenticate: "
+                        "  Digest realm='sha512-realm', algorithm=SHA-512-256, qop=auth, nonce=gaga, "
+                        "  Basic realm='basic-realm', "
+                        "  Digest realm='md5-realm', algorithm=MD5, qop=auth, nonce=gaga, "
+                        "  Digest realm='sha256-realm', algorithm=SHA-256, qop=auth, nonce=gaga\r\n"
+                        "Content-Length: 0\r\n" "\r\n"));
+    CALL(serve_response(s,
+                        "HTTP/1.1 401 Auth Denied\r\n"
+                        "WWW-Authenticate: "
+                        "  Digest realm='sha512-realm', algorithm=SHA-512-256, qop=auth, nonce=gaga, "
+                        "  Basic realm='basic-realm'\r\n"
+                        "Content-Length: 0\r\n" "\r\n"));
+    return serve_response(s,
+                          "HTTP/1.1 200 OK\r\n"
+                          "Content-Length: 0\r\n" "\r\n");
+}
+
+static int multi_provider(void)
+{
+    ne_session *sess;
+    ne_buffer *buf = ne_buffer_create(), *exp;
+
+    CALL(make_session(&sess, serve_provider, NULL));
+
+    ne_add_auth(sess, NE_AUTH_DIGEST|NE_AUTH_BASIC, multi_provider_cb, buf);
+
+    ONREQ(any_request(sess, "/fish"));
+
+    exp = ne_buffer_create();
+    if (has_sha512_256)
+        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha512-realm, attempt=0]",
+                           NE_AUTH_DIGEST);
+    if (has_sha256)
+        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha256-realm, attempt=0]",
+                           NE_AUTH_DIGEST);
+    ne_buffer_snprintf(exp, 100,
+                       "[proto=%u, realm=md5-realm, attempt=0]"
+                       "[proto=%u, realm=basic-realm, attempt=0]",
+                       NE_AUTH_DIGEST, NE_AUTH_BASIC);
+
+    if (has_sha512_256)
+        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha512-realm, attempt=1]",
+                           NE_AUTH_DIGEST);
+    ne_buffer_snprintf(exp, 100, "[proto=%u, realm=basic-realm, attempt=1]",
+                       NE_AUTH_BASIC);
+
+    ONV(strcmp(exp->data, buf->data),
+        ("unexpected callback ordering.\n"
+         "expected: %s\n"
+         "actual:   %s\n",
+         exp->data, buf->data));
+
+    ne_session_destroy(sess);
+    ne_buffer_destroy(buf);
+    ne_buffer_destroy(exp);
+
+    return await_server();
+}
+
+
 static int domains(void)
 {
     ne_session *sess;
@@ -1465,6 +1562,7 @@ ne_test tests[] = {
     T(fail_challenge),
     T(multi_handler),
     T(multi_rfc7616),
+    T(multi_provider),
     T(domains),
     T(defaults),
     T(CVE_2008_3746),

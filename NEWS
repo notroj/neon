@@ -4,18 +4,19 @@ Changes in release 0.32.0:
  - NE_AUTH_DIGEST now only enables RFC 2617/7616 auth by default;
    to enable weaker RFC 2069 Digest, use NE_AUTH_LEGACY_DIGEST
    (this is a security enhancement, not an API/ABI break)
-* API clarification:
- - for ne_auth.h, the character encoding of the username provided
-   by a credentials callback was unspecified.  Callers providing
-   non-alphanumeric usernames for Basic and Digest challenges must
-   now use the NE_AUTH_UTF8 flag, or the auth challenge will fail
-   if the username cannot be sent safely.
+* Interface clarifications:
+ - ne_auth.h: use of non-ASCII usernames with the ne_auth_creds
+   callback type is now rejected for Digest auth since the
+   encoding is not known.  ne_add_auth() can be used instead.
 * New interfaces and features:
- - ne_string.h: added ne_strhash, ne_vstrhash, ne_strparam
+ - ne_string.h: added ne_strhash(), ne_vstrhash(), ne_strparam()
  - ne_auth.h: added RFC 7616 (Digest authentication) support,
    including userhash=, username*= and SHA-2-256/512-256 algorithms
    (SHA-2 requires GnuTLS/OpenSSL).  added NE_AUTH_WEAK_DIGEST
    to re-enable RFC 2069 Digest support
+ - ne_auth.h: added ne_add_auth() unified auth callback interface,
+   accepts (only) UTF-8 usernames, uses a larger password buffer,
+   and has different/improved attempt counter semantics.
 
 Changes in release 0.31.0:
 * Interface changes:

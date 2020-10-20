@@ -29,6 +29,8 @@
 
 int single_serve_string(ne_socket *s, void *userdata);
 
+int serve_response(ne_socket *s, const char *response);
+
 struct many_serve_args {
     int count;
     const char *str;
