@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2011, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2020, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -129,7 +129,8 @@ typedef enum {
 struct auth_handler {
     unsigned protomask; 
 
-    ne_auth_creds creds;
+    ne_auth_creds old_creds;
+    ne_auth_provide new_creds;
     void *userdata;
     int attempt; /* number of invocations of this callback for
                   * current request. */
@@ -168,6 +169,9 @@ static const struct auth_class {
     N_("Could not authenticate to proxy server: %s")
 };
 
+/* Internal buffer size, which must be >= NE_ABUFSIZ. */
+#define ABUFSIZE (NE_ABUFSIZ * 2)
+
 /* Authentication session state. */
 typedef struct {
     ne_session *sess;
@@ -190,7 +194,7 @@ typedef struct {
     /*** Session details ***/
 
     /* The username and password we are using to authenticate with */
-    char username[NE_ABUFSIZ];
+    char username[ABUFSIZE];
 
     /* This used for Basic auth */
     char *basic; 
@@ -397,19 +401,29 @@ static char *get_cnonce(void)
 
 /* Callback to retrieve user credentials for given session on given
  * attempt (pre request) for given challenge.  Password is written to
- * pwbuf (of size NE_ABUFSIZ.  On error, challenge_error() is used
+ * pwbuf (of size ABUFSIZE).  On error, challenge_error() is used
  * with errmsg. */
 static int get_credentials(auth_session *sess, ne_buffer **errmsg, int attempt,
-                           struct auth_challenge *chall, char *pwbuf) 
+                           struct auth_challenge *chall, char *pwbuf)
 {
-    if (chall->handler->creds(chall->handler->userdata, sess->realm, 
-                              chall->handler->attempt++, sess->username, pwbuf) == 0) {
+    int rv;
+
+    if (chall->handler->new_creds)
+        rv = chall->handler->new_creds(chall->handler->userdata,
+                                       attempt,
+                                       chall->protocol->id, sess->realm,
+                                       sess->username, pwbuf,
+                                       ABUFSIZE);
+    else
+        rv = chall->handler->old_creds(chall->handler->userdata, sess->realm,
+                                       chall->handler->attempt++, sess->username, pwbuf);
+
+    if (rv == 0)
         return 0;
-    } else {
-        challenge_error(errmsg, _("rejected %s challenge"), 
-                        chall->protocol->name);
-        return -1;
-    }
+
+    challenge_error(errmsg, _("rejected %s challenge"),
+                    chall->protocol->name);
+    return -1;
 }
 
 /* Examine a Basic auth challenge.
@@ -418,7 +432,7 @@ static int basic_challenge(auth_session *sess, int attempt,
                            struct auth_challenge *parms,
                            ne_buffer **errmsg) 
 {
-    char *tmp, password[NE_ABUFSIZ];
+    char *tmp, password[ABUFSIZE];
 
     /* Verify challenge... must have a realm */
     if (parms->realm == NULL) {
@@ -795,7 +809,7 @@ static int ntlm_challenge(auth_session *sess, int attempt,
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: NTLM challenge.\n");
     
     if (!parms->opaque && (!sess->ntlm_context || (attempt > 1))) {
-        char password[NE_ABUFSIZ];
+        char password[ABUFSIZE];
 
         if (get_credentials(sess, errmsg, attempt, parms, password)) {
             /* Failed to get credentials */
@@ -825,7 +839,7 @@ static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms,
                             ne_buffer **errmsg) 
 {
-    char password[NE_ABUFSIZ];
+    char password[ABUFSIZE];
     unsigned int hash;
     char *p;
 
@@ -907,7 +921,7 @@ static int digest_challenge(auth_session *sess, int attempt,
 
             if (esc) {
                 if (parms->userhash == userhash_none
-                    || (parms->handler->protomask & NE_AUTH_UTF8) == 0) {
+                    || parms->handler->new_creds == NULL) {
                     ne_free(esc);
                     challenge_error(errmsg, _("could not handle non-ASCII "
                                               "username in Digest challenge"));
@@ -1661,8 +1675,9 @@ static void free_auth(void *cookie)
 }
 
 static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
-			  const struct auth_class *ahc, const char *id, 
-			  ne_auth_creds creds, void *userdata) 
+                          const struct auth_class *ahc, const char *id,
+                          ne_auth_creds old_creds, ne_auth_provide new_creds,
+                          void *userdata)
 {
     auth_session *ahs;
     struct auth_handler **hdl;
@@ -1757,7 +1772,8 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
         
     *hdl = ne_malloc(sizeof **hdl);
     (*hdl)->protomask = protomask;
-    (*hdl)->creds = creds;
+    (*hdl)->old_creds = old_creds;
+    (*hdl)->new_creds = new_creds;
     (*hdl)->userdata = userdata;
     (*hdl)->next = NULL;
     (*hdl)->attempt = 0;
@@ -1766,27 +1782,37 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
     auth_register(sess, 0, NE_AUTH_DEFAULT, &ah_server_class, HOOK_SERVER_ID,
-                  creds, userdata);
+                  creds, NULL, userdata);
 }
 
 void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
     auth_register(sess, 1, NE_AUTH_DEFAULT, &ah_proxy_class, HOOK_PROXY_ID,
-                  creds, userdata);
+                  creds, NULL, userdata);
 }
 
 void ne_add_server_auth(ne_session *sess, unsigned protocol, 
                         ne_auth_creds creds, void *userdata)
 {
     auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
-                  creds, userdata);
+                  creds, NULL, userdata);
 }
 
 void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
                        ne_auth_creds creds, void *userdata)
 {
     auth_register(sess, 1, protocol, &ah_proxy_class, HOOK_PROXY_ID,
-                  creds, userdata);
+                  creds, NULL, userdata);
+}
+
+void ne_add_auth(ne_session *sess, unsigned protocol,
+                 ne_auth_provide new_creds, void *userdata)
+{
+    if (protocol & NE_AUTH_PROXY)
+        auth_register(sess, 0, protocol, &ah_proxy_class, HOOK_PROXY_ID,
+                      NULL, new_creds, userdata);
+    auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
+                  NULL, new_creds, userdata);
 }
 
 void ne_forget_auth(ne_session *sess)

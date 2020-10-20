@@ -34,7 +34,7 @@
 #include "tests.h"
 #include "utils.h"
 
-static int serve_response(ne_socket *s, const char *response)
+int serve_response(ne_socket *s, const char *response)
 {
     CALL(discard_request(s));
     CALL(discard_body(s));
