@@ -7,7 +7,7 @@ Changes in release 0.32.0:
 * Interface clarifications:
  - ne_auth.h: use of non-ASCII usernames with the ne_auth_creds
    callback type is now rejected for Digest auth since the
-   encoding is not known.  ne_add_auth() can be used instead.
+   encoding is not specified.  ne_add_auth() can be used instead.
 * New interfaces and features:
  - ne_string.h: added ne_strhash(), ne_vstrhash(), ne_strparam()
  - ne_auth.h: added RFC 7616 (Digest authentication) support,
