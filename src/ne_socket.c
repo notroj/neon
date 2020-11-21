@@ -536,6 +536,12 @@ static ssize_t read_raw(ne_socket *sock, char *buffer, size_t len)
 #define MAP_ERR(e) (NE_ISCLOSED(e) ? NE_SOCK_CLOSED : \
                     (NE_ISRESET(e) ? NE_SOCK_RESET : NE_SOCK_ERROR))
 
+#ifdef MSG_NOSIGNAL
+#define SEND_FLAGS MSG_NOSIGNAL
+#else
+#define SEND_FLAGS (0)
+#endif
+
 static ssize_t write_raw(ne_socket *sock, const char *data, size_t length) 
 {
     ssize_t ret;
@@ -547,7 +553,7 @@ static ssize_t write_raw(ne_socket *sock, const char *data, size_t length)
 #endif
 
     do {
-	ret = send(sock->fd, data, length, 0);
+	ret = send(sock->fd, data, length, SEND_FLAGS);
     } while (ret == -1 && NE_ISINTR(ne_errno));
 
     if (ret < 0) {
@@ -576,6 +582,17 @@ static ssize_t writev_raw(ne_socket *sock, const struct ne_iovec *vector, int co
         ret = total;
     
     ne_free(wasvector);
+#elif defined(MSG_NOSIGNAL) && defined(HAVE_SENDMSG)
+    struct msghdr m;
+
+    memset(&m, 0, sizeof m);
+    m.msg_iov = (struct iovec *)vector;
+    m.msg_iovlen = count;
+
+    do {
+	ret = sendmsg(sock->fd, &m, MSG_NOSIGNAL);
+    } while (ret == -1 && NE_ISINTR(ne_errno));
+
 #else
     const struct iovec *vec = (const struct iovec *) vector;
 
