@@ -1545,6 +1545,65 @@ static int forget(void)
     return await_server();
 }
 
+static int serve_basic_scope_checker(ne_socket *sock, void *userdata)
+{
+    /* --- GET /fish/0.txt -- first request */
+    digest_hdr = NULL;
+    got_header = dup_header;
+    want_header = "Authorization";
+    CALL(discard_request(sock));
+    if (digest_hdr) {
+        t_context("Got WWW-Auth header on initial request");
+        return error_response(sock, FAIL);
+    }
+
+    send_response(sock, CHAL_WALLY, 401, 0);
+
+    /* Retry of GET /fish/0 - expect Basic creds */
+    auth_failed = 0;
+    got_header = auth_hdr;
+    CALL(discard_request(sock));
+    if (auth_failed) {
+        t_context("bad Basic Auth on first request");
+        return error_response(sock, FAIL);
+    }
+    send_response(sock, CHAL_WALLY, 200, 0);
+    
+    /* --- GET /not/inside -- second request */
+    got_header = dup_header;
+    CALL(discard_request(sock));
+    if (digest_hdr) {
+        t_context("Basic auth sent outside of credentials scope");
+        return error_response(sock, FAIL);
+    }
+    send_response(sock, CHAL_WALLY, 200, 0);
+
+    /* --- GET /fish/1 -- third request */
+    got_header = auth_hdr;
+    CALL(discard_request(sock));
+    send_response(sock, NULL, auth_failed?500:200, 1);
+    
+    return 0;    
+}
+
+/* Check that Basic auth follows the RFC7617 rules around scope. */
+static int basic_scope(void)
+{
+    ne_session *sess;
+
+    CALL(make_session(&sess, serve_basic_scope_checker, NULL));
+
+    ne_set_server_auth(sess, auth_cb, NULL);
+    
+    CALL(any_2xx_request(sess, "/fish/0.txt")); /* must use auth */
+    CALL(any_2xx_request(sess, "/not/inside")); /* must NOT use auth credentials */
+    CALL(any_2xx_request(sess, "/fish/1")); /* must use auth credentials */
+
+    ne_session_destroy(sess);
+
+    return await_server();
+}
+
 /* proxy auth, proxy AND origin */
 
 ne_test tests[] = {
@@ -1567,5 +1626,6 @@ ne_test tests[] = {
     T(defaults),
     T(CVE_2008_3746),
     T(forget),
+    T(basic_scope),
     T(NULL)
 };

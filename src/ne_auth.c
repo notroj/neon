@@ -267,7 +267,8 @@ struct auth_protocol {
      * On failure, challenge_error() should be used to append an error
      * message to the error buffer 'errmsg'. */
     int (*challenge)(auth_session *sess, int attempt,
-                     struct auth_challenge *chall, ne_buffer **errmsg);
+                     struct auth_challenge *chall,
+                     const char *uri, ne_buffer **errmsg);
 
     /* Return the string to send in the -Authenticate request header:
      * (ne_malloc-allocated, NUL-terminated string) */
@@ -287,6 +288,8 @@ struct auth_protocol {
  * allocated if necessary.  errmsg must be non-NULL. */
 static void challenge_error(ne_buffer **errmsg, const char *fmt, ...)
     ne_attribute((format(printf, 2, 3)));
+
+static int inside_domain(auth_session *sess, const char *req_uri);
 
 /* Free the domains array, precondition sess->ndomains > 0. */
 static void free_domains(auth_session *sess)
@@ -426,11 +429,37 @@ static int get_credentials(auth_session *sess, ne_buffer **errmsg, int attempt,
     return -1;
 }
 
+/* Return the scope of the Basic authentication domain following rule
+ * in RFC 7617.  Malloc-allocated path is returned. */
+static char *get_scope_path(const char *uri)
+{
+    ne_uri base, udot, parent;
+    char *s;
+
+    memset(&udot, 0, sizeof udot);
+    udot.path = ".";
+
+    if (strcmp(uri, "*") == 0 || ne_uri_parse(uri, &base) != 0) {
+        /* Assume scope is whole origin. */
+        return ne_strdup("/");
+    }
+
+    ne_uri_resolve(&base, &udot, &parent);
+
+    s = parent.path;
+    parent.path = NULL;
+
+    ne_uri_free(&parent);
+    ne_uri_free(&base);
+
+    return s;
+}
+
 /* Examine a Basic auth challenge.
  * Returns 0 if an valid challenge, else non-zero. */
 static int basic_challenge(auth_session *sess, int attempt,
                            struct auth_challenge *parms,
-                           ne_buffer **errmsg) 
+                           const char *uri, ne_buffer **errmsg)
 {
     char *tmp, password[ABUFSIZE];
 
@@ -459,6 +488,13 @@ static int basic_challenge(auth_session *sess, int attempt,
     sess->basic = ne_base64((unsigned char *)tmp, strlen(tmp));
     ne_free(tmp);
 
+    if (sess->ndomains != 1) {
+        sess->domains = ne_realloc(sess->domains, sizeof(*sess->domains));
+        sess->ndomains = 1;
+    }
+    sess->domains[0] = get_scope_path(uri);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Basic auth scope is: %s\n", sess->domains[0]);
+
     /* Paranoia. */
     memset(password, 0, sizeof password);
 
@@ -468,6 +504,10 @@ static int basic_challenge(auth_session *sess, int attempt,
 /* Add Basic authentication credentials to a request */
 static char *request_basic(auth_session *sess, struct auth_request *req) 
 {
+    if (!inside_domain(sess, req->uri)) {
+        return NULL;
+    }
+
     return ne_concat("Basic ", sess->basic, "\r\n", NULL);
 }
 
@@ -598,7 +638,7 @@ static int continue_negotiate(auth_session *sess, const char *token,
  * if challenge is accepted. */
 static int negotiate_challenge(auth_session *sess, int attempt,
                                struct auth_challenge *chall,
-                               ne_buffer **errmsg) 
+                               const char *uri, ne_buffer **errmsg)
 {
     const char *token = chall->opaque;
 
@@ -695,7 +735,7 @@ static int continue_sspi(auth_session *sess, int ntlm, const char *hdr)
 
 static int sspi_challenge(auth_session *sess, int attempt,
                           struct auth_challenge *parms,
-                          ne_buffer **errmsg) 
+                          const char *uri, ne_buffer **errmsg)
 {
     int ntlm = ne_strcasecmp(parms->protocol->name, "NTLM") == 0;
 
@@ -802,7 +842,7 @@ static char *request_ntlm(auth_session *sess, struct auth_request *request)
 
 static int ntlm_challenge(auth_session *sess, int attempt,
                           struct auth_challenge *parms,
-                          ne_buffer **errmsg) 
+                          const char *uri, ne_buffer **errmsg)
 {
     int status;
     
@@ -837,7 +877,7 @@ static int ntlm_challenge(auth_session *sess, int attempt,
  * else non-zero. */
 static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms,
-                            ne_buffer **errmsg) 
+                            const char *uri, ne_buffer **errmsg)
 {
     char password[ABUFSIZE];
     unsigned int hash;
@@ -1349,7 +1389,7 @@ static void challenge_error(ne_buffer **errbuf, const char *fmt, ...)
 /* Passed the value of a "(Proxy,WWW)-Authenticate: " header field.
  * Returns 0 if valid challenge was accepted; non-zero if no valid
  * challenge was found. */
-static int auth_challenge(auth_session *sess, int attempt,
+static int auth_challenge(auth_session *sess, int attempt, const char *uri,
                           const char *value) 
 {
     char *pnt, *key, *val, *hdr, sep;
@@ -1484,7 +1524,7 @@ static int auth_challenge(auth_session *sess, int attempt,
     for (chall = challenges; chall != NULL; chall = chall->next) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Trying %s challenge...\n",
                  chall->protocol->name);
-        if (chall->protocol->challenge(sess, attempt, chall, &errmsg) == 0) {
+        if (chall->protocol->challenge(sess, attempt, chall, uri, &errmsg) == 0) {
             NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Accepted %s challenge.\n", 
                      chall->protocol->name);
             sess->protocol = chall->protocol;
@@ -1615,7 +1655,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got challenge (code %d).\n", status->code);
-	if (!auth_challenge(sess, areq->attempt++, auth_hdr)) {
+	if (!auth_challenge(sess, areq->attempt++, areq->uri, auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
 	    clean_session(sess);
