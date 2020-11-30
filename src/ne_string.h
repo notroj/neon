@@ -51,7 +51,8 @@ char *ne_strclean(char *str)
 
 /* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
  * NUL-terminated buffer which the caller must free(). */
-char *ne_base64(const unsigned char *text, size_t len);
+char *ne_base64(const unsigned char *text, size_t len)
+    ne_attribute_malloc;
 
 /* Decode NUL-terminated base64-encoded string 'data', placing
  * malloc-allocated raw decoder output in '*out'.  Returns length, or
@@ -151,20 +152,23 @@ char *ne_strnqdup(const unsigned char *data, size_t len)
 char *ne_concat(const char *str, ...)
     ne_attribute_sentinel;
 
+/* Hash algorithms. */
+#define NE_HASH_MD5        (0x0001) /* MD5 */
+#define NE_HASH_SHA256     (0x0002) /* SHA-2-256 */
+#define NE_HASH_SHA512_256 (0x0003) /* SHA-2-512 */
+
 /* Calculate hash over concatenation of NUL-terminated const char *
  * string arguments, up to a terminating NULL pointer, and return as a
  * malloc-allocated ASCII hex string.  Uses hash type specified by
- * 'flags', which must equal exactly one of the NE_HASH_ values below.
+ * 'flags', which must equal exactly one of the NE_HASH_ values above.
  * Returns NULL if the hash type is not supported or an internal error
  * occurs. */
-#define NE_HASH_MD5        (0x0001)
-#define NE_HASH_SHA256     (0x0002)
-#define NE_HASH_SHA512_256 (0x0003)
 char *ne_strhash(unsigned int flags, ...)
-    ne_attribute_sentinel;
+    ne_attribute_sentinel ne_attribute_malloc;
 /* Equivalent of ne_strhash(), taking va_list argument; the behaviour
  * is otherwise identical. */
-char *ne_vstrhash(unsigned int flags, va_list ap);
+char *ne_vstrhash(unsigned int flags, va_list ap)
+    ne_attribute_malloc;
 
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
@@ -208,7 +212,7 @@ const unsigned char *ne_tolower_array(void) ne_attribute((const));
  * be non-NULL, but the language value can be NULL. */
 char *ne_strparam(const char *charset, const char *lang,
                   const unsigned char *value)
-    ne_attribute((nonnull (1, 3)));
+    ne_attribute((nonnull (1, 3))) ne_attribute_malloc;
 
 NE_END_DECLS
 
