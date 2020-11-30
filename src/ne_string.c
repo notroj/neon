@@ -35,6 +35,7 @@
 #endif
 
 #include <stdio.h>
+#include <assert.h>
 
 #include "ne_alloc.h"
 #include "ne_string.h"
@@ -636,11 +637,11 @@ char *ne_strhash(unsigned int flags, ...)
 #ifdef NEED_VSTRHASH
 char *ne_vstrhash(unsigned int flags, va_list ap)
 {
-    char ret[33];
     const char *arg;
     struct ne_md5_ctx *ctx;
+    unsigned int resbuf[4];
 
-    if (flags != NE_HASH_MD5) return NULL;
+    if ((flags & NE_HASH_ALGMASK) != NE_HASH_MD5) return NULL;
 
     ctx = ne_md5_create_ctx();
     if (!ctx) return NULL;
@@ -648,24 +649,43 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     while ((arg = va_arg(ap, const char *)) != NULL)
         ne_md5_process_bytes(arg, strlen(arg), ctx);
 
-    ne_md5_finish_ascii(ctx, ret);
+    ne_md5_finish_ctx(ctx, resbuf);
     ne_md5_destroy_ctx(ctx);
 
-    return ne_strdup(ret);
+    return ne__strhash2hex((void *)&resbuf, sizeof resbuf, flags);
 }
 #endif
 
-char *ne__strhash2hex(unsigned char *digest, size_t len)
+char *ne__strhash2hex(const unsigned char *digest, size_t len,
+                      unsigned int flags)
 {
-    char *rv = ne_malloc(len * 2 + 1);
+    unsigned char sep = '\0';
+    size_t step = 2;
+    char *rv, *p;
     size_t n;
 
-    for (n = 0; n < len; n++) {
-	rv[n*2] = NE_HEX2ASC(digest[n] >> 4);
-	rv[n*2+1] = NE_HEX2ASC(digest[n] & 0x0f);
+    assert(len > 0);
+
+    if ((flags & NE_HASH_COLON)) {
+        step = 3;
+        sep = ':';
+    }
+    else if ((flags & NE_HASH_SPACE)) {
+        step = 3;
+        sep = ' ';
     }
 
-    rv[len*2] = '\0';
+    p = rv = ne_malloc(len * step + 1);
+
+    for (n = 0; n < len; n++) {
+        *p++ = NE_HEX2ASC(digest[n] >> 4);
+        *p++ = NE_HEX2ASC(digest[n] & 0x0f);
+        if (sep) *p++ = sep;
+    }
+
+    if (sep) p--;
+
+    *p = '\0';
     return rv;
 }
 

@@ -83,8 +83,10 @@
 #endif
 #endif /* NE_LFS */
 
+#define NE_HASH_ALGMASK (0x000f)
+
 /* Return malloc-allocated ASCII hexadecimal representation of
  * input. */
-NE_PRIVATE char *ne__strhash2hex(unsigned char *digest, size_t len);
+NE_PRIVATE char *ne__strhash2hex(const unsigned char *digest, size_t len, unsigned int flags);
 
 #endif /* NE_INTERNAL_H */

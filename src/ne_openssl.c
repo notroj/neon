@@ -1147,7 +1147,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     unsigned int vlen;
     const char *arg;
 
-    switch (flags) {
+    switch (flags & NE_HASH_ALGMASK) {
     case NE_HASH_MD5: md = EVP_md5(); break;
     case NE_HASH_SHA256: md = EVP_sha256(); break;
 #ifdef HAVE_OPENSSL11
@@ -1165,7 +1165,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     EVP_DigestFinal_ex(ctx, v, &vlen);
     EVP_MD_CTX_free(ctx);
 
-    return ne__strhash2hex(v, vlen);
+    return ne__strhash2hex(v, vlen, flags);
 }
 
 #if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L

@@ -672,9 +672,13 @@ static int strhash(void)
 {
     ONN("zero flags must return NULL", ne_strhash(0, "", NULL) != NULL);
     ONN("zero flags must return NULL for vstrhash", test_vstrhash(0, "", NULL) != NULL);
+
+    ONN("no alg flags must return NULL", ne_strhash(NE_HASH_COLON, "", NULL) != NULL);
+    ONN("no alg flags must return NULL", ne_strhash(NE_HASH_SPACE, "", NULL) != NULL);
     
     ONVEC((NE_HASH_MD5, "", NULL), "d41d8cd98f00b204e9800998ecf8427e");
     ONVEC((NE_HASH_MD5, "foo", "ba", "r", NULL), "3858f62230ac3c915f300c664312c63f");
+    ONVEC((NE_HASH_MD5|NE_HASH_SPACE, "foo", "ba", "r", NULL), "38 58 f6 22 30 ac 3c 91 5f 30 0c 66 43 12 c6 3f");
 
     return OK;
 }
@@ -701,6 +705,7 @@ static int strhash_sha_256(void)
 #define TEST2_512_256_1 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijkl"
 #define TEST2_512_256_2 "mnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
 #define TEST2_512_256_MD "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a"
+#define TEST2_512_256_MDC "39:28:e1:84:fb:86:90:f8:40:da:39:88:12:1d:31:be:65:cb:9d:3e:f8:3e:e6:14:6f:ea:c8:61:e1:9b:56:3a"
 
 static int strhash_sha_512_256(void)
 {
@@ -714,6 +719,8 @@ static int strhash_sha_512_256(void)
 
     ONVEC((NE_HASH_SHA512_256, TEST1_512_256, NULL), TEST1_512_256_MD);
     ONVEC((NE_HASH_SHA512_256, TEST2_512_256_1, TEST2_512_256_2, NULL), TEST2_512_256_MD);
+    ONVEC((NE_HASH_SHA512_256|NE_HASH_COLON, TEST2_512_256_1, TEST2_512_256_2, NULL),
+          TEST2_512_256_MDC);
 
     return OK;
 }

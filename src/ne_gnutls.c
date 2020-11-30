@@ -1516,7 +1516,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     unsigned len;
     char *rv;
 
-    switch (flags) {
+    switch (flags & NE_HASH_ALGMASK) {
     case NE_HASH_MD5: alg = GNUTLS_DIG_MD5; break;
     case NE_HASH_SHA256: alg = GNUTLS_DIG_SHA256; break;
     default: return NULL;
@@ -1532,7 +1532,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     out = ne_malloc(len);
     gnutls_hash_deinit(hd, out);
 
-    rv = ne__strhash2hex(out, len);
+    rv = ne__strhash2hex(out, len, flags);
     ne_free(out);
     return rv;
 }
