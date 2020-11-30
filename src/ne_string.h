@@ -152,16 +152,21 @@ char *ne_strnqdup(const unsigned char *data, size_t len)
 char *ne_concat(const char *str, ...)
     ne_attribute_sentinel;
 
-/* Hash algorithms. */
+/* Hash algorithms: */
 #define NE_HASH_MD5        (0x0001) /* MD5 */
 #define NE_HASH_SHA256     (0x0002) /* SHA-2-256 */
 #define NE_HASH_SHA512_256 (0x0003) /* SHA-2-512 */
 
+/* Optional hash output formatting options: */
+#define NE_HASH_COLON      (0x1000) /* Colon-separated pairs */
+#define NE_HASH_SPACE      (0x2000) /* Space-separated pairs */
+
 /* Calculate hash over concatenation of NUL-terminated const char *
  * string arguments, up to a terminating NULL pointer, and return as a
- * malloc-allocated ASCII hex string.  Uses hash type specified by
- * 'flags', which must equal exactly one of the NE_HASH_ values above.
- * Returns NULL if the hash type is not supported or an internal error
+ * malloc-allocated ASCII hex string.  'flags' comprises exactly one
+ * of the algorithms indicated by the NE_HASH_* values above, which
+ * may optionally be combined with the formatting options.  Returns
+ * NULL if the hash type is not supported or an internal error
  * occurs. */
 char *ne_strhash(unsigned int flags, ...)
     ne_attribute_sentinel ne_attribute_malloc;
