@@ -13,10 +13,27 @@ Changes in release 0.32.0:
  - ne_auth.h: added RFC 7616 (Digest authentication) support,
    including userhash=, username*= and SHA-2-256/512-256 algorithms
    (SHA-2 requires GnuTLS/OpenSSL).  added NE_AUTH_WEAK_DIGEST
-   to re-enable RFC 2069 Digest support
+   to re-enable RFC 2069 Digest support.
  - ne_auth.h: added ne_add_auth() unified auth callback interface,
    accepts (only) UTF-8 usernames, uses a larger password buffer,
    and has different/improved attempt counter semantics.
+ - RFC 7617 scoping rules are now applied for Basic authentication.
+
+Changes in release 0.31.2:
+* Fix ne_md5_read_ctx() with OpenSSL on big-endian architectures.
+* Fix GCC 10 warning in PKCS#11 build.
+* Fix OpenSSL build w/o deprecated APIs (Rosen Penev).
+* Fix unnecessary MD5 test for non-Digest auth (Sebastian Reschke).
+* Fix hang on SSL connection close with IIS (issue #11).
+* Fix ar, ranlib detection when cross-compiling (Sergei Trofimovich).
+
+Changes in release 0.31.1:
+* ADMIN: The neon website has moved to https://notroj.github.io/neon/
+* Restore ne_md5_read_ctx() in OpenSSL build.
+* Fix gcc warnings on Ubuntu (Jan-Marek Glogowski).
+* Fix various spelling mistakes in docs and headers (thanks to FOSSIES).
+* Fix ne_asctime_parse() (Eugenij-W).
+* Fix build with LibreSSL (Juan RP).
 
 Changes in release 0.31.0:
 * Interface changes:
