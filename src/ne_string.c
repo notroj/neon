@@ -281,7 +281,7 @@ static const unsigned char ascii_quote[256] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
 };
 
-static const char hex_chars[16] = "0123456789ABCDEF";
+static const char hex_chars[16] = "0123456789abcdef";
 
 /* Return the expected number of bytes needed to append the string
  * beginning at byte 's', where 'send' points to the last byte after
@@ -656,12 +656,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
 }
 #endif
 
-static const char hexmap[16] = {
-    '0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-};
-
-#define HEX2ASC(a) (hexmap[((unsigned)(a)) & 0xf])
+#define HEX2ASC(a) (hex_chars[((unsigned char)(a)) & 0xf])
 
 char *ne__strhash2hex(const unsigned char *digest, size_t len,
                       unsigned int flags)

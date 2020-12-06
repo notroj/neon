@@ -622,6 +622,7 @@ static int qappend(void)
         { "b", 2, "b\\x00" },
         { "alpha\0alpha", 11, "alpha\\x00alpha" },
         { "a\tb", 3, "a\\x09b" },
+        { "foo\x7f" "bar", 7, "foo\\x7fbar" },
         { NULL }
     };
     unsigned n;
