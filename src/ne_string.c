@@ -661,7 +661,7 @@ static const char hexmap[16] = {
     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
-#define HEX2ASC(a) (hexmap[(unsigned)a & 0xf])
+#define HEX2ASC(a) (hexmap[((unsigned)(a)) & 0xf])
 
 char *ne__strhash2hex(const unsigned char *digest, size_t len,
                       unsigned int flags)
