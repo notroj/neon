@@ -656,6 +656,13 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
 }
 #endif
 
+static const char hexmap[16] = {
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+};
+
+#define HEX2ASC(a) (hexmap[(unsigned)a & 0xf])
+
 char *ne__strhash2hex(const unsigned char *digest, size_t len,
                       unsigned int flags)
 {
@@ -678,8 +685,8 @@ char *ne__strhash2hex(const unsigned char *digest, size_t len,
     p = rv = ne_malloc(len * step + 1);
 
     for (n = 0; n < len; n++) {
-        *p++ = NE_HEX2ASC(digest[n] >> 4);
-        *p++ = NE_HEX2ASC(digest[n] & 0x0f);
+        *p++ = HEX2ASC(digest[n] >> 4);
+        *p++ = HEX2ASC(digest[n] & 0x0f);
         if (sep) *p++ = sep;
     }
 
@@ -748,8 +755,8 @@ char *ne_strparam(const char *charset, const char *lang,
         }
         else {
             *rp++ = '%';
-            *rp++ = NE_HEX2ASC(*p >> 4);
-            *rp++ = NE_HEX2ASC(*p & 0x0f);
+            *rp++ = HEX2ASC(*p >> 4);
+            *rp++ = HEX2ASC(*p & 0x0f);
         }
     }
 
