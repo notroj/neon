@@ -16,24 +16,18 @@ env:
 matrix:
   include:
     - name: Static
-      compiler: gcc
       env: CONF="--enable-static"
     - name: Shared
-      compiler: gcc
       env: CONF="--enable-shared"
     - name: Disable-all
-      compiler: gcc
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav"
     - name: Memleak
-      compiler: gcc
       env: CONF="--enable-memleak"
     - name: Libxml2
-      compiler: gcc
       env: CONF="--with-libxml2"
     - name: Static UBSan w/OpenSSL
       env: CONF="--enable-static --with-ssl=openssl" CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" LIBS=-lubsan NEON_LIBS=-lubsan
     - name: Static 32-bit w/OpenSSL
-      compiler: gcc
       env: CONF="--enable-static --with-ssl=openssl" CC='gcc -m32'
       addons:
         apt:
@@ -44,7 +38,6 @@ matrix:
             - libssl-dev:i386
             - lib32z1-dev
     - name: OpenSSL
-      compiler: gcc
       env: CONF="--with-ssl=openssl"
     - name: OpenSSL on arm64
       arch: arm64
@@ -60,11 +53,12 @@ matrix:
       env: CONF="--with-ssl=openssl --enable-shared --disable-static --enable-threadsafe-ssl=posix"
            CC="gcc -pthread"
     - name: OpenSSL on bionic
-      compiler: gcc
       dist: bionic
       env: CONF="--with-ssl=openssl"
+    - name: OpenSSL on focal
+      dist: focal
+      env: CONF="--with-ssl=openssl"
     - name: OpenSSL memleak
-      compiler: gcc
       env: CONF="--with-ssl=openssl --enable-memleak"
     - name: GnuTLS
       env: CONF="--with-ssl=gnutls"
@@ -74,10 +68,12 @@ matrix:
     - name: GnuTLS on trusty
       dist: trusty
       env: CONF="--with-ssl=gnutls"
+    - name: GnuTLS on focal
+      dist: focal
+      env: CONF="--with-ssl=gnutls"
     - name: GnuTLS memleak
       env: CONF="--with-ssl=gnutls --enable-memleak"
     - name: Copyright check
-      compiler: gcc
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
   allow_failures:
     # s390x builds currently flaky
