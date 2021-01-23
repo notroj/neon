@@ -1,6 +1,6 @@
 /* 
    Date manipulation routines
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004 Jiang Lei <tristone@deluxe.ocn.ne.jp>
 
    This library is free software; you can redistribute it and/or

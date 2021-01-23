@@ -1,6 +1,6 @@
 /* 
    String utility functions
-   Copyright (C) 1999-2007, 2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
    strcasecmp/strncasecmp implementations are:
    Copyright (C) 1991, 1992, 1995, 1996, 1997 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
