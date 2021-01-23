@@ -1519,6 +1519,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     switch (flags & NE_HASH_ALGMASK) {
     case NE_HASH_MD5: alg = GNUTLS_DIG_MD5; break;
     case NE_HASH_SHA256: alg = GNUTLS_DIG_SHA256; break;
+    case NE_HASH_SHA512: alg = GNUTLS_DIG_SHA512; break;
     default: return NULL;
     }
 

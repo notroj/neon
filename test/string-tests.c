@@ -700,6 +700,14 @@ static int strhash_sha_256(void)
     return OK;
 }
 
+/* NIST examples from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA512.pdf */
+#define TEST1_512 "abc"
+#define TEST1_512_MDC "dd:af:35:a1:93:61:7a:ba:cc:41:73:49:ae:20:41:31:12:e6:fa:4e:89:a9:7e:a2:0a:9e:ee:e6:4b:55:d3:9a:21:92:99:2a:27:4f:c1:a8:36:ba:3c:23:a3:fe:eb:bd:45:4d:44:23:64:3c:e8:0e:2a:9a:c9:4f:a5:4c:a4:9f"
+#define TEST2_512_1 "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrl"
+#define TEST2_512_2 "mnopqrsmnopqrstnopqrstu"
+#define TEST2_512_MD "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909"
+
+
 /* NIST examples from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA512_256.pdf */
 #define TEST1_512_256 "abc"
 #define TEST1_512_256_MD "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23"
@@ -707,6 +715,22 @@ static int strhash_sha_256(void)
 #define TEST2_512_256_2 "mnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
 #define TEST2_512_256_MD "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a"
 #define TEST2_512_256_MDC "39:28:e1:84:fb:86:90:f8:40:da:39:88:12:1d:31:be:65:cb:9d:3e:f8:3e:e6:14:6f:ea:c8:61:e1:9b:56:3a"
+
+static int strhash_sha_512(void)
+{
+    char *p = ne_strhash(NE_HASH_SHA512, "", NULL);
+
+    if (p == NULL) {
+        t_context("SHA-2-512 not supported");
+        return SKIP;
+    }
+    ne_free(p);
+
+    ONVEC((NE_HASH_SHA512|NE_HASH_COLON, TEST1_512, NULL), TEST1_512_MDC);
+    ONVEC((NE_HASH_SHA512, TEST2_512_1, TEST2_512_2, NULL), TEST2_512_MD);
+
+    return OK;
+}
 
 static int strhash_sha_512_256(void)
 {
@@ -757,7 +781,6 @@ static int strparam(void)
     return OK;
 }
 
-
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -788,6 +811,7 @@ ne_test tests[] = {
     T(qappend),
     T(strhash),
     T(strhash_sha_256),
+    T(strhash_sha_512),
     T(strhash_sha_512_256),
     T(strparam),
     T(NULL)

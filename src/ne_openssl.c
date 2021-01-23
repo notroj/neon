@@ -1151,6 +1151,7 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     case NE_HASH_MD5: md = EVP_md5(); break;
     case NE_HASH_SHA256: md = EVP_sha256(); break;
 #ifdef HAVE_OPENSSL11
+    case NE_HASH_SHA512: md = EVP_sha512(); break;
     case NE_HASH_SHA512_256: md = EVP_sha512_256(); break;
 #endif
     default: return NULL;
