@@ -155,17 +155,18 @@ static const struct auth_class {
     const char *id, *req_hdr, *resp_hdr, *resp_info_hdr;
     int status_code; /* Response status-code to trap. */
     int fail_code;   /* NE_* request to fail with. */
+    unsigned protomask; /* protocol mask */
     const char *error_noauth; /* Error message template use when
                                * giving up authentication attempts. */
 } ah_server_class = {
     HOOK_SERVER_ID,
     "Authorization", "WWW-Authenticate", "Authentication-Info",
-    401, NE_AUTH,
+    401, NE_AUTH, 0,
     N_("Could not authenticate to server: %s")
 }, ah_proxy_class = {
     HOOK_PROXY_ID,
     "Proxy-Authorization", "Proxy-Authenticate", "Proxy-Authentication-Info",
-    407, NE_PROXYAUTH,
+    407, NE_PROXYAUTH, NE_AUTH_PROXY,
     N_("Could not authenticate to proxy server: %s")
 };
 
@@ -409,12 +410,12 @@ static char *get_cnonce(void)
 static int get_credentials(auth_session *sess, ne_buffer **errmsg, int attempt,
                            struct auth_challenge *chall, char *pwbuf)
 {
+    unsigned mask = chall->protocol->id | sess->spec->protomask;
     int rv;
 
     if (chall->handler->new_creds)
         rv = chall->handler->new_creds(chall->handler->userdata,
-                                       attempt,
-                                       chall->protocol->id, sess->realm,
+                                       attempt, mask, sess->realm,
                                        sess->username, pwbuf,
                                        ABUFSIZE);
     else
@@ -1848,9 +1849,8 @@ void ne_add_proxy_auth(ne_session *sess, unsigned protocol,
 void ne_add_auth(ne_session *sess, unsigned protocol,
                  ne_auth_provide new_creds, void *userdata)
 {
-    if (protocol & NE_AUTH_PROXY)
-        auth_register(sess, 0, protocol, &ah_proxy_class, HOOK_PROXY_ID,
-                      NULL, new_creds, userdata);
+    auth_register(sess, 0, protocol, &ah_proxy_class, HOOK_PROXY_ID,
+                  NULL, new_creds, userdata);
     auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
                   NULL, new_creds, userdata);
 }

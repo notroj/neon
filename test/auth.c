@@ -1339,14 +1339,23 @@ static int multi_provider_cb(void *userdata, int attempt,
                              char *un, char *pw, size_t buflen)
 {
     ne_buffer *buf = userdata;
+    const char *ctx;
 
     if (buflen == NE_ABUFSIZ) {
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: FAILED for short buffer length.\n");
         return -1;
     }
 
-    ne_buffer_snprintf(buf, 128, "[proto=%u, realm=%s, attempt=%d]",
-                       protocol, realm, attempt);
+    if ((protocol & NE_AUTH_PROXY) == NE_AUTH_PROXY) {
+        ctx = "proxy";
+        protocol ^= NE_AUTH_PROXY;
+    }
+    else {
+        ctx = "server";
+    }
+
+    ne_buffer_snprintf(buf, 128, "[%s: proto=%u, realm=%s, attempt=%d]",
+                       ctx, protocol, realm, attempt);
 
     ne_strnzcpy(un, "foo", buflen);
     ne_strnzcpy(pw, "bar", buflen);
@@ -1356,6 +1365,10 @@ static int multi_provider_cb(void *userdata, int attempt,
 
 static int serve_provider(ne_socket *s, void *userdata)
 {
+    CALL(serve_response(s,
+                        "HTTP/1.1 407 Proxy Auth Plz\r\n"
+                        "Proxy-Authenticate: Basic realm='proxy-realm'\r\n"
+                        "Content-Length: 0\r\n" "\r\n"));
     CALL(serve_response(s,
                         "HTTP/1.1 401 Auth Denied\r\n"
                         "WWW-Authenticate: "
@@ -1387,21 +1400,24 @@ static int multi_provider(void)
     ONREQ(any_request(sess, "/fish"));
 
     exp = ne_buffer_create();
+    ne_buffer_snprintf(exp, 100,
+                       "[proxy: proto=%u, realm=proxy-realm, attempt=0]",
+                       NE_AUTH_BASIC);
     if (has_sha512_256)
-        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha512-realm, attempt=0]",
+        ne_buffer_snprintf(exp, 100, "[server: proto=%u, realm=sha512-realm, attempt=0]",
                            NE_AUTH_DIGEST);
     if (has_sha256)
-        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha256-realm, attempt=0]",
+        ne_buffer_snprintf(exp, 100, "[server: proto=%u, realm=sha256-realm, attempt=0]",
                            NE_AUTH_DIGEST);
     ne_buffer_snprintf(exp, 100,
-                       "[proto=%u, realm=md5-realm, attempt=0]"
-                       "[proto=%u, realm=basic-realm, attempt=0]",
+                       "[server: proto=%u, realm=md5-realm, attempt=0]"
+                       "[server: proto=%u, realm=basic-realm, attempt=0]",
                        NE_AUTH_DIGEST, NE_AUTH_BASIC);
 
     if (has_sha512_256)
-        ne_buffer_snprintf(exp, 100, "[proto=%u, realm=sha512-realm, attempt=1]",
+        ne_buffer_snprintf(exp, 100, "[server: proto=%u, realm=sha512-realm, attempt=1]",
                            NE_AUTH_DIGEST);
-    ne_buffer_snprintf(exp, 100, "[proto=%u, realm=basic-realm, attempt=1]",
+    ne_buffer_snprintf(exp, 100, "[server: proto=%u, realm=basic-realm, attempt=1]",
                        NE_AUTH_BASIC);
 
     ONV(strcmp(exp->data, buf->data),
