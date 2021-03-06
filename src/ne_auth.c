@@ -883,15 +883,65 @@ static int ntlm_challenge(auth_session *sess, int attempt,
 }
 #endif /* HAVE_NTLM */
 
+/* Returns the H(username:realm:password) used in the Digest H(A1)
+ * calculation. */
+static char *get_digest_h_urp(auth_session *sess, ne_buffer **errmsg,
+                              unsigned int hash, int attempt,
+                              struct auth_challenge *parms)
+{
+    char password[ABUFSIZE], *h_urp;
+
+    if (get_credentials(sess, errmsg, attempt, parms, password)) {
+        /* Failed to get credentials */
+        return NULL;
+    }
+
+    /* Calculate userhash for this (realm, username) if required.
+     * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
+    if (parms->userhash == userhash_true) {
+        sess->userhash = ne_strhash(hash, sess->username, ":",
+                                    sess->realm, NULL);
+    }
+    else {
+        /* Without userhash, for usernames which need some kind of
+         * escaping, either: a) username* must be supported, which
+         * is known if the server sent userhash=false, *and* the
+         * caller has indicated the username really is UTF-8; or
+         * else b) the challenge is an error since the username
+         * cannot be sent safely. */
+        char *esc = ne_strparam("UTF-8", NULL, (unsigned char *)sess->username);
+
+        if (esc) {
+            if (parms->userhash == userhash_none
+                || parms->handler->new_creds == NULL) {
+                ne_free(esc);
+                challenge_error(errmsg, _("could not handle non-ASCII "
+                                          "username in Digest challenge"));
+                ne__strzero(password, sizeof password);
+                return NULL;
+            }
+            sess->username_star = esc;
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using username* => %s\n", esc);
+        }
+    }
+
+    /* H(A1) calculation identical for 2069 or 2617/7616:
+     * https://tools.ietf.org/html/rfc7616#section-3.4.2 */
+    h_urp = ne_strhash(hash, sess->username, ":", sess->realm, ":",
+                       password, NULL);
+    ne__strzero(password, sizeof password);
+
+    return h_urp;
+}
+
 /* Examine a digest challenge: return 0 if it is a valid Digest challenge,
  * else non-zero. */
 static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms,
                             const char *uri, ne_buffer **errmsg)
 {
-    char password[ABUFSIZE];
     unsigned int hash;
-    char *p;
+    char *p, *h_urp = NULL;
 
     if (parms->alg == auth_alg_unknown) {
         challenge_error(errmsg, _("unknown algorithm in Digest challenge"));
@@ -948,38 +998,9 @@ static int digest_challenge(auth_session *sess, int attempt,
         sess->alg = parms->alg;
         sess->cnonce = get_cnonce();
 
-        if (get_credentials(sess, errmsg, attempt, parms, password)) {
-            /* Failed to get credentials */
+        h_urp = get_digest_h_urp(sess, errmsg, hash, attempt, parms);
+        if (h_urp == NULL) {
             return -1;
-        }
-
-        /* Calculate userhash for this (realm, username) if required.
-         * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
-        if (parms->userhash == userhash_true) {
-            sess->userhash = ne_strhash(hash, sess->username, ":",
-                                        sess->realm, NULL);
-        }
-        else {
-            /* Without userhash, for usernames which need some kind of
-             * escaping, either: a) username* must be supported, which
-             * is known if the server sent userhash=false, *and* the
-             * caller has indicated the username really is UTF-8; or
-             * else b) the challenge is an error since the username
-             * cannot be sent safely. */
-            char *esc = ne_strparam("UTF-8", NULL,
-                                    (unsigned char *)sess->username);
-
-            if (esc) {
-                if (parms->userhash == userhash_none
-                    || parms->handler->new_creds == NULL) {
-                    ne_free(esc);
-                    challenge_error(errmsg, _("could not handle non-ASCII "
-                                              "username in Digest challenge"));
-                    return -1;
-                }
-                sess->username_star = esc;
-                NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using username* => %s\n", esc);
-            }
         }
     }
     else {
@@ -1002,15 +1023,8 @@ static int digest_challenge(auth_session *sess, int attempt,
 	/* No qop at all/ */
 	sess->qop = auth_qop_none;
     }
-    
-    if (!parms->stale) {
-        /* H(A1) calculation identical for 2069 or 2617/7616:
-         * https://tools.ietf.org/html/rfc7616#section-3.4.2 */
-        char *h_urp;
 
-        h_urp = ne_strhash(hash, sess->username, ":", sess->realm,
-                           ":", password, NULL);
-
+    if (h_urp) {
         if (sess->alg == auth_alg_md5_sess || sess->alg == auth_alg_sha256_sess
             || sess->alg == auth_alg_sha512_256_sess) {
             sess->h_a1 = ne_strhash(hash, h_urp, ":", sess->nonce, ":",
