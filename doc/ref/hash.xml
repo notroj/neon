@@ -6,7 +6,8 @@
       </refmeta>
 
       <refnamediv>
-	<refname id="ne_strash">ne_strhash</refname>
+	<refname id="ne_strhash">ne_strhash</refname>
+	<refname id="ne_vstrhash">ne_vstrhash</refname>
 	<refpurpose>string hash interface</refpurpose>
       </refnamediv>
       
