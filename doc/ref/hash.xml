@@ -40,7 +40,9 @@
 	char *</type> strings followed by a &null; terminator.  The
 	<parameter>flags</parameter> argument must select exactly one
 	hash algorithm from the list below, which can be optionally
-	bitwise-ORed with one of the formatting option.</para>
+	bitwise-ORed with one of the formatting option.  The hash is
+	calculated for the concatenation of the argument list, without
+	separators.</para>
 
         <refsect2>
           <title>Hash algorithms</title>
