@@ -489,15 +489,23 @@ static int basic_challenge(auth_session *sess, int attempt,
     sess->basic = ne_base64((unsigned char *)tmp, strlen(tmp));
     ne_free(tmp);
 
+    /* Paranoia. */
+    memset(password, 0, sizeof password);
+
+    if (sess->context == AUTH_CONNECT) {
+        /* For proxy auth w/TLS, auth is limited to handling CONNECT
+         * request, no need to derive the "scope" path. */
+        return 0;
+    }
+
     if (sess->ndomains != 1) {
         sess->domains = ne_realloc(sess->domains, sizeof(*sess->domains));
         sess->ndomains = 1;
     }
-    sess->domains[0] = get_scope_path(uri);
-    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Basic auth scope is: %s\n", sess->domains[0]);
 
-    /* Paranoia. */
-    memset(password, 0, sizeof password);
+    sess->domains[0] = get_scope_path(uri);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Basic auth scope is: %s\n",
+             sess->domains[0]);
 
     return 0;
 }
