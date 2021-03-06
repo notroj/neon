@@ -214,8 +214,8 @@ const unsigned char *ne_tolower_array(void) ne_attribute((const));
 /* Encodes a extended parameter value for HTTP headers, as defined in
  * RFC 5987.  Returns a malloc-allocated string if the parameter
  * 'value' needs to be encoded as an extended parameter, or NULL if it
- * can be used as a regular parameter.  The charset of the string must
- * be non-NULL, but the language value can be NULL. */
+ * can be used as a regular parameter.  The charset must be either
+ * "UTF-8" or "ISO-8859-1", but the language value can be NULL. */
 char *ne_strparam(const char *charset, const char *lang,
                   const unsigned char *value)
     ne_attribute((nonnull (1, 3))) ne_attribute_malloc;
