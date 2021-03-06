@@ -444,9 +444,7 @@ static int pk11_login(ne_ssl_pkcs11_provider *prov, ck_slot_id_t slot_id,
 
         rv = pakchois_login(pks, CKU_USER, (unsigned char *)pin, strlen(pin));
         
-        /* Try to scrub the pin off the stack.  Clever compilers will
-         * probably optimize this away, oh well. */
-        memset(pin, 0, sizeof pin);
+        ne__strzero(pin, sizeof pin);
     } while (rv == CKR_PIN_INCORRECT);
 
     NE_DEBUG(NE_DBG_SSL, "pk11: Login result = %lu\n", rv);

@@ -89,4 +89,10 @@
  * input. */
 NE_PRIVATE char *ne__strhash2hex(const unsigned char *digest, size_t len, unsigned int flags);
 
+#ifdef HAVE_EXPLICIT_BZERO
+#define ne__strzero(s, n) explicit_bzero(s, n)
+#else
+#define ne__strzero(s, n) memset(s, 0, n)
+#endif
+
 #endif /* NE_INTERNAL_H */

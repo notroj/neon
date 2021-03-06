@@ -489,8 +489,7 @@ static int basic_challenge(auth_session *sess, int attempt,
     sess->basic = ne_base64((unsigned char *)tmp, strlen(tmp));
     ne_free(tmp);
 
-    /* Paranoia. */
-    memset(password, 0, sizeof password);
+    ne__strzero(password, sizeof password);
 
     if (sess->context == AUTH_CONNECT) {
         /* For proxy auth w/TLS, auth is limited to handling CONNECT
@@ -871,6 +870,8 @@ static int ntlm_challenge(auth_session *sess, int attempt,
         }
 
         sess->ntlm_context = ne__ntlm_create_context(sess->username, password);
+
+        ne__strzero(password, sizeof password);
     }
 
     status = ne__ntlm_authenticate(sess->ntlm_context, parms->opaque);
