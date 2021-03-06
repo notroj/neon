@@ -1158,7 +1158,12 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     }
 
     ctx = EVP_MD_CTX_new();
-    if (EVP_DigestInit(ctx, md) != 1) return NULL;
+    if (!ctx) return NULL;
+
+    if (EVP_DigestInit(ctx, md) != 1) {
+        EVP_MD_CTX_free(ctx);
+        return NULL;
+    }
 
     while ((arg = va_arg(ap, const char *)) != NULL)
         EVP_DigestUpdate(ctx, arg, strlen(arg));
