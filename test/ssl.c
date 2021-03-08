@@ -1434,6 +1434,52 @@ static int cert_fingerprint(void)
     return OK;
 }
 
+static int cert_hdigests(void)
+{
+    static const struct {
+        unsigned int flags;
+        const char *digest;
+    } ts[] = {
+        { NE_HASH_MD5|NE_HASH_COLON, "76:26:eb:db:09:e8:53:5c:79:61:0c:30:3d:77:ed:65" },
+        { NE_HASH_MD5, "7626ebdb09e8535c79610c303d77ed65" },
+        { NE_HASH_SHA256, "ea4a4f4f08a91a83e841e772171a2befa3f6e576b5cd9f5cd6d12e9683fe89b3" },
+        { NE_HASH_SHA512, "35373c533f4000ee9b6173a45eedae732f6c953dcf76f5fba5ffb7be380de559893d0679e94051950be2a5917fa7922fbf50ef10222d5be4eea53ba948cf7703" },
+        { 0, NULL }
+    };
+    unsigned int n, passed = 0;
+    char *fn = ne_concat(srcdir, "/notvalid.pem", NULL);
+    ne_ssl_certificate *cert = ne_ssl_cert_read(fn);
+
+    ONN("could not load notvalid.pem", cert == NULL);
+
+    for (n = 0; ts[n].flags; n++) {
+        char *dig = ne_ssl_cert_hdigest(cert, ts[n].flags);
+
+        /* Can reasonably for almost any hash (either too modern or
+         * too old), so what can you do? */
+        if (dig == NULL) {
+            t_warning("failed to htdigest with flags %u", ts[n].flags);
+            continue;
+        }
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: hDigest %u got %s, expected %s\n",
+                 ts[n].flags, dig, ts[n].digest);
+
+        ONV(strcmp(dig, ts[n].digest),
+            ("digest was %s not %s", dig, ts[n].digest));
+
+        passed++;
+        ne_free(dig);
+    }
+
+    ONN("no algorithms supported for ne_ssl_cert_hdigest", passed == 0);
+
+    ne_ssl_cert_free(cert);
+    ne_free(fn);
+
+    return OK;
+}
+
 /* verify that identity of certificate in filename 'fname' is 'identity' */
 static int check_identity(const char *fname, const char *identity)
 {
@@ -1883,6 +1929,7 @@ ne_test tests[] = {
     T(trust_default_ca),
 
     T(cert_fingerprint),
+    T(cert_hdigests),
     T(cert_identities),
     T(cert_validity),
     T(cert_compare),

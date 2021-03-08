@@ -17,6 +17,7 @@ Changes in release 0.32.0:
    accepts (only) UTF-8 usernames, uses a larger password buffer,
    and has different/improved attempt counter semantics.
  - RFC 7617 scoping rules are now applied for Basic authentication.
+ - ne_ssl.h: add ne_ssl_cert_hdigest()
 
 Changes in release 0.31.2:
 * Fix ne_md5_read_ctx() with OpenSSL on big-endian architectures.
