@@ -31,4 +31,5 @@ NEON_0_32 {
     ne_vstrhash;
     ne_strparam;
     ne_add_auth;
+    ne_ssl_cert_hdigest;
 };

@@ -107,6 +107,11 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char digest[60])
     return -1;
 }
 
+char *ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags)
+{
+    return NULL;
+}
+
 void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
                                time_t *from, time_t *until) {}
 

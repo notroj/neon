@@ -93,6 +93,12 @@ const ne_ssl_dname *ne_ssl_cert_subject(const ne_ssl_certificate *cert);
  * NE_SSL_DIGESTLEN bytes in length. */
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest);
 
+/* Calculate the certificate digest ("fingerprint") and format it as a
+ * NUL-terminated hex string using the hash algorithm and formatting
+ * flags exactly as if flags was passed to ne_strhash().  Returns NULL
+ * on error. */
+char *ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags);
+
 /* Copy the validity times for the certificate 'cert' into 'from' and
  * 'until' (either may be NULL).  If the time cannot be represented by
  * a time_t value, then (time_t)-1 will be written. */

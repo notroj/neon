@@ -1114,9 +1114,39 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
     return ret;
 }
 
+static const EVP_MD *hash_to_md(unsigned int flags)
+{
+    switch (flags & NE_HASH_ALGMASK) {
+    case NE_HASH_MD5: return EVP_md5();
+    case NE_HASH_SHA256: return EVP_sha256();
+#ifdef HAVE_OPENSSL11
+    case NE_HASH_SHA512: return EVP_sha512();
+    case NE_HASH_SHA512_256: return EVP_sha512_256();
+#endif
+    default: break;
+    }
+    return NULL;
+}
+
 #if SHA_DIGEST_LENGTH != 20
 # error SHA digest length is not 20 bytes
 #endif
+
+char *ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags)
+{
+    const EVP_MD *md = hash_to_md(flags);
+    unsigned char dig[EVP_MAX_MD_SIZE];
+    unsigned int len;
+
+    if (!md) return NULL;
+
+    if (!X509_digest(cert->subject, md, dig, &len)) {
+        ERR_clear_error();
+        return NULL;
+    }
+
+    return ne__strhash2hex(dig, len, flags);
+}
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
@@ -1142,20 +1172,10 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 char *ne_vstrhash(unsigned int flags, va_list ap)
 {
     EVP_MD_CTX *ctx;
-    const EVP_MD *md;
+    const EVP_MD *md = hash_to_md(flags);
     unsigned char v[EVP_MAX_MD_SIZE];
     unsigned int vlen;
     const char *arg;
-
-    switch (flags & NE_HASH_ALGMASK) {
-    case NE_HASH_MD5: md = EVP_md5(); break;
-    case NE_HASH_SHA256: md = EVP_sha256(); break;
-#ifdef HAVE_OPENSSL11
-    case NE_HASH_SHA512: md = EVP_sha512(); break;
-    case NE_HASH_SHA512_256: md = EVP_sha512_256(); break;
-#endif
-    default: return NULL;
-    }
 
     ctx = EVP_MD_CTX_new();
     if (!ctx) return NULL;
