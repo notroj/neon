@@ -87,7 +87,7 @@ struct field {
 #define HH_HV_TRANSFER_ENCODING (0x07)
 
 struct ne_request_s {
-    char *method, *uri; /* method and Request-URI */
+    char *method, *target; /* method and request-target */
 
     ne_buffer *headers; /* request headers */
 
@@ -526,17 +526,18 @@ ne_request *ne_request_create(ne_session *sess,
     /* Only use an absoluteURI here when we might be using an HTTP
      * proxy, and SSL is in use: some servers can't parse them. */
     if (sess->any_proxy_http && !req->session->use_ssl && path[0] == '/')
-	req->uri = ne_concat(req->session->scheme, "://", 
-                             req->session->server.hostport, path, NULL);
+        req->target = ne_concat(req->session->scheme, "://",
+                                req->session->server.hostport,
+                                path, NULL);
     else
-	req->uri = ne_strdup(path);
+        req->target = ne_strdup(path);
 
     {
 	struct hook *hk;
 
 	for (hk = sess->create_req_hooks; hk != NULL; hk = hk->next) {
 	    ne_create_request_fn fn = (ne_create_request_fn)hk->fn;
-	    fn(req, hk->userdata, req->method, req->uri);
+	    fn(req, hk->userdata, req->method, req->target);
 	}
     }
 
@@ -724,7 +725,7 @@ void ne_request_destroy(ne_request *req)
     struct body_reader *rdr, *next_rdr;
     struct hook *hk, *next_hk;
 
-    ne_free(req->uri);
+    ne_free(req->target);
     ne_free(req->method);
 
     for (rdr = req->body_readers; rdr != NULL; rdr = next_rdr) {
@@ -885,7 +886,8 @@ static ne_buffer *build_request(ne_request *req)
     ne_buffer *buf = ne_buffer_create();
 
     /* Add Request-Line and headers: */
-    ne_buffer_concat(buf, req->method, " ", req->uri, " HTTP/1.1" EOL, NULL);
+    ne_buffer_concat(buf, req->method, " ", req->target, " HTTP/1.1" EOL,
+                     NULL);
 
     /* Add custom headers: */
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
