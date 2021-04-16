@@ -1043,8 +1043,8 @@ static int send_request(ne_request *req, const ne_buffer *request)
     
     NE_DEBUG(NE_DBG_HTTP, "Request sent; retry is %d.\n", retry);
 
-    /* Loop eating interim 1xx responses (RFC2616 says these MAY be
-     * sent by the server, even if 100-continue is not used). */
+    /* Loop eating interim 1xx responses; RFC 7231§6.2 says clients
+     * MUST be able to parse unsolicited interim responses. */
     while ((ret = read_status_line(req, status, retry)) == NE_OK 
 	   && status->klass == 1) {
 	NE_DEBUG(NE_DBG_HTTP, "Interim %d response.\n", status->code);
@@ -1114,8 +1114,8 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
 	
 	/* assert(buf[0] == ch), which implies len(buf) > 0.
 	 * Otherwise the TCP stack is lying, but we'll be paranoid.
-	 * This might be a \t, so replace it with a space to be
-	 * friendly to applications (2616 says we MAY do this). */
+	 * This might be a \t, so replace it with a space for ease of
+	 * parsing; this is permitted by RFC 7230§3.5. */
 	if (n) buf[0] = ' ';
 
 	/* ready for the next header. */
@@ -1325,23 +1325,22 @@ int ne_begin_request(ne_request *req)
     }
 
     /* Decide which method determines the response message-length per
-     * 2616§4.4 (multipart/byteranges is not supported): */
+     * RFC 7230§3.3.3, method cases follow: */
 
 #ifdef NE_HAVE_SSL
-    /* Special case for CONNECT handling: the response has no body,
-     * and the connection can persist. */
+    /* Case (2) is special-cased first for CONNECT: the response has
+     * no body, and the connection can persist. */
     if (req->session->in_connect && st->klass == 2) {
 	req->resp.mode = R_NO_BODY;
 	req->can_persist = 1;
     } else
 #endif
-    /* HEAD requests and 204, 304 responses have no response body,
-     * regardless of what headers are present. */
+    /* Case (1), HEAD requests and 204, 304 responses have no response
+     * body, regardless of what headers are present. */
     if (req->method_is_head || st->code == 204 || st->code == 304) {
     	req->resp.mode = R_NO_BODY;
     }
-    /* Broken intermediaries exist which use "transfer-encoding: identity"
-     * to mean "no transfer-coding".  So that case must be ignored. */
+    /* Case (3), chunked transer-encoding.. */
     else if ((value = get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
                                              "transfer-encoding")) != NULL
              && ne_strcasecmp(value, "identity") != 0) {
@@ -1353,7 +1352,8 @@ int ne_begin_request(ne_request *req)
         else {
             return aborted(req, _("Unknown transfer-coding in response"), 0);
         }
-    } 
+    }
+    /* Case (4) and (5), content-length delimited. */
     else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
                                              "content-length")) != NULL) {
         char *endptr = NULL;
@@ -1362,11 +1362,14 @@ int ne_begin_request(ne_request *req)
         if (*value && len != NE_OFFT_MAX && len >= 0 && endptr && *endptr == '\0') {
             req->resp.mode = R_CLENGTH;
             req->resp.body.clen.total = req->resp.body.clen.remain = len;
-        } else {
-            /* fail for an invalid content-length header. */
+        }
+        else {
+            /* Per case (4), an invalid C-L must be treated as an error. */
             return aborted(req, _("Invalid Content-Length in response"), 0);
         }
-    } else {
+    }
+    /* Case (7), response delimieted by EOF. */
+    else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
     
