@@ -1,14 +1,20 @@
-name: Test workflow
+name: Build and test
 
 on: [push, pull_request]
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        conf-shared: [--enable-static, --enable-shared ]
+        conf-xml: [--with-expat, --with-libxml2, ]
+        conf-ssl: [--without-ssl, --with-ssl=openssl]
+        conf-memleak: [--disable-memleak, --enable-memleak ]
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
-    - run: ./configure
+    - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}} ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
     - run: make
     - run: make check
