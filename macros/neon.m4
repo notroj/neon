@@ -1077,21 +1077,29 @@ dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
 AC_ARG_WITH(gssapi, AS_HELP_STRING(--without-gssapi, disable GSSAPI support))
 if test "$with_gssapi" != "no"; then
-  AC_PATH_PROG([KRB5_CONFIG], krb5-config, none, $PATH:/usr/kerberos/bin)
+  ne_save_CFLAGS=$CFLAGS
+  ne_save_LIBS=$NEON_LIBS
+  NE_PKG_CONFIG(NE_GSSAPI, [krb5-gssapi],
+    [AC_MSG_NOTICE(using GSSAPI configuration from pkg-config)
+     KRB5_CONF_TOOL=pkgconf],
+    [AC_PATH_PROG([KRB5_CONF_TOOL], krb5-config, none, $PATH:/usr/kerberos/bin)
+     if test "x$KRB5_CONF_TOOL" != "xnone"; then
+        NE_GSSAPI_LIBS="`${KRB5_CONF_TOOL} --libs gssapi`"
+        NE_GSSAPI_CFLAGS="`${KRB5_CONF_TOOL} --cflags gssapi`"
+        NE_GSSAPI_VERSION="`${KRB5_CONF_TOOL} --version`"
+     fi])
 else
-  KRB5_CONFIG=none
+  KRB5_CONF_TOOL=none
 fi
-if test "x$KRB5_CONFIG" != "xnone"; then
-   ne_save_CPPFLAGS=$CPPFLAGS
-   ne_save_LIBS=$NEON_LIBS
-   NEON_LIBS="$NEON_LIBS `${KRB5_CONFIG} --libs gssapi`"
-   CPPFLAGS="$CPPFLAGS `${KRB5_CONFIG} --cflags gssapi`"
+if test "x$KRB5_CONF_TOOL" != "xnone"; then
+   CFLAGS="$CFLAGS ${NE_GSSAPI_CFLAGS}"
+   NEON_LIBS="${NEON_LIBS} ${NE_GSSAPI_LIBS}"
    # MIT and Heimdal put gssapi.h in different places
    AC_CHECK_HEADERS(gssapi/gssapi.h gssapi.h, [
      NE_CHECK_FUNCS(gss_init_sec_context, [
-      ne_save_CPPFLAGS=$CPPFLAGS
+      ne_save_CFLAGS=$CFLAGS
       ne_save_LIBS=$NEON_LIBS
-      AC_MSG_NOTICE([GSSAPI authentication support enabled])
+      AC_MSG_NOTICE([GSSAPI authentication support enabled, using $NE_GSSAPI_VERSION])
       AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
       AC_CHECK_HEADERS(gssapi/gssapi_generic.h)
       # Older versions of MIT Kerberos lack GSS_C_NT_HOSTBASED_SERVICE
@@ -1105,7 +1113,7 @@ if test "x$KRB5_CONFIG" != "xnone"; then
 #endif])])
      break
    ])
-   CPPFLAGS=$ne_save_CPPFLAGS
+   CFLAGS=$ne_save_CPPFLAGS
    NEON_LIBS=$ne_save_LIBS
 fi])
 
