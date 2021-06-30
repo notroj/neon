@@ -15,16 +15,8 @@ env:
     - MARGS="-j2 check"
 matrix:
   include:
-    - name: Static
-      env: CONF="--enable-static"
-    - name: Shared
-      env: CONF="--enable-shared"
     - name: Disable-all
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav"
-    - name: Memleak
-      env: CONF="--enable-memleak"
-    - name: Libxml2
-      env: CONF="--with-libxml2"
     - name: Static UBSan w/OpenSSL
       env: CONF="--enable-static --with-ssl=openssl" CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" LIBS=-lubsan NEON_LIBS=-lubsan
     - name: Static 32-bit w/OpenSSL
@@ -37,8 +29,6 @@ matrix:
             - libexpat1-dev:i386
             - libssl-dev:i386
             - lib32z1-dev
-    - name: OpenSSL
-      env: CONF="--with-ssl=openssl"
     - name: OpenSSL on arm64
       arch: arm64
       env: CONF="--with-ssl=openssl"
@@ -58,8 +48,6 @@ matrix:
     - name: OpenSSL on focal
       dist: focal
       env: CONF="--with-ssl=openssl"
-    - name: OpenSSL memleak
-      env: CONF="--with-ssl=openssl --enable-memleak"
     - name: GnuTLS
       env: CONF="--with-ssl=gnutls"
     - name: GnuTLS on bionic
@@ -71,8 +59,6 @@ matrix:
     - name: GnuTLS on focal
       dist: focal
       env: CONF="--with-ssl=gnutls"
-    - name: GnuTLS memleak
-      env: CONF="--with-ssl=gnutls --enable-memleak"
     - name: Copyright check
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
   allow_failures:
