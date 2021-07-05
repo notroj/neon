@@ -471,7 +471,7 @@ ne_xml_parser *ne_xml_create(void)
     p->current = p->root = ne_calloc(sizeof *p->root);
     p->root->default_ns = "";
     p->root->state = 0;
-    strcpy(p->error, _("Unknown error"));
+    ne_strnzcpy(p->error, _("Unknown error"), sizeof p->error);
 #ifdef HAVE_EXPAT
     p->parser = XML_ParserCreate(NULL);
     if (p->parser == NULL) {
