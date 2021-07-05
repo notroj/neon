@@ -344,7 +344,7 @@ void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len)
 char *ne_strnqdup(const unsigned char *data, size_t len)
 {
     const unsigned char *dend = data + len;
-    char *dest = malloc(qappend_count(data, dend) + 1);
+    char *dest = ne_malloc(qappend_count(data, dend) + 1);
 
     quoted_append(dest, data, dend);
 
