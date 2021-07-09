@@ -363,38 +363,67 @@ AC_DEFUN([NE_SEARCH_LIBS], [
 AC_REQUIRE([NE_CHECK_OS])
 
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
-AC_LINK_IFELSE(
-  [AC_LANG_PROGRAM([], [[$1();]])], 
-  [ne_cv_libsfor_$1="none needed"], [
-ne_sl_save_LIBS=$LIBS
-ne_cv_libsfor_$1="not found"
-for lib in $2; do
-    # The w32api libraries link using the stdcall calling convention.
-    case ${lib}-${ne_cv_os_uname} in
-    ws2_32-MINGW*)
-      ne__prologue="#include <winsock2.h>"
-      case $1 in
-      socket) ne__code="socket(0,0,0);" ;;
-      gethostbyname) ne__code="gethostbyname(\"\")" ;;
-      *) ne__code="$1();" ;;
-      esac
+  case $ne_cv_os_uname in
+  MINGW*)
+    ;;
+  *)
+    case $1 in
+    getaddrinfo)
+      ne__prologue="#include <netdb.h>"
+      ne__code="getaddrinfo(0,0,0,0);"
+      ;;
+    socket)
+      ne__prologue="#include <sys/socket.h>"
+      ne__code="socket(0,0,0);"
       ;;
     *)
       ne__prologue=""
       ne__code="$1();"
       ;;
     esac
-
-
-    LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
-                   [ne_cv_libsfor_$1="-l$lib"; break])
-    m4_if($3, [], [], dnl If $3 is specified, then...
-              [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
-               AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
-                              [ne_cv_libsfor_$1="-l$lib $3"; break])])
-done
-LIBS=$ne_sl_save_LIBS])])
+    ;;
+  esac
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])], [ne_cv_libsfor_$1="none needed"], [
+    ne_sl_save_LIBS=$LIBS
+    ne_cv_libsfor_$1="not found"
+    for lib in $2; do
+      case $ne_cv_os_uname in
+      MINGW*)
+        case $lib in
+        ws2_32)
+          ne__prologue="#include <winsock2.h>"
+          case $1 in
+          gethostbyname)
+            ne__code="gethostbyname(\"\")"
+            ;;
+          socket)
+            ne__code="socket(0,0,0);"
+            ;;
+          *)
+            ne__code="$1();"
+            ;;
+          esac
+          ;;
+        *)
+          ne__prologue=""
+          ne__code=""
+          ;;
+        esac
+        ;;
+      *)
+        ;;
+      esac
+      LIBS="$ne_sl_save_LIBS -l$lib $NEON_LIBS"
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
+                     [ne_cv_libsfor_$1="-l$lib"; break])
+      m4_if($3, [], [], dnl If $3 is specified, then...
+                [LIBS="$ne_sl_save_LIBS -l$lib $3 $NEON_LIBS"
+                 AC_LINK_IFELSE([AC_LANG_PROGRAM([$ne__prologue], [$ne__code])],
+                                [ne_cv_libsfor_$1="-l$lib $3"; break])])
+    done
+    LIBS=$ne_sl_save_LIBS
+  ])
+])
 
 if test "$ne_cv_libsfor_$1" = "not found"; then
    m4_if([$4], [], [AC_MSG_ERROR([could not find library containing $1])], [$4])
