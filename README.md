@@ -1,5 +1,6 @@
 
 [![Travis CI Build Status](https://travis-ci.com/notroj/neon.svg?branch=master)](https://travis-ci.com/github/notroj/neon)
+[![Build and test](https://github.com/notroj/neon/actions/workflows/ci.yml/badge.svg)](https://github.com/notroj/neon/actions/workflows/ci.yml)
 
 # neon
 
