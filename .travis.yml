@@ -8,8 +8,6 @@ addons:
       - libxml2-dev
       - libnss3-tools
       - libproxy-dev
-      - gnutls-bin
-      - libgnutls28-dev
 env:
   global:
     - MARGS="-j2 check"
@@ -35,30 +33,6 @@ matrix:
     - name: OpenSSL on s390x
       arch: s390x
       env: CONF="--with-ssl=openssl"
-    - name: OpenSSL on trusty
-      dist: trusty
-      env: CONF="--with-ssl=openssl"
-    - name: OpenSSL on trusty, shared w/thread-safety
-      dist: trusty
-      env: CONF="--with-ssl=openssl --enable-shared --disable-static --enable-threadsafe-ssl=posix"
-           CC="gcc -pthread"
-    - name: OpenSSL on bionic
-      dist: bionic
-      env: CONF="--with-ssl=openssl"
-    - name: OpenSSL on focal
-      dist: focal
-      env: CONF="--with-ssl=openssl"
-    - name: GnuTLS
-      env: CONF="--with-ssl=gnutls"
-    - name: GnuTLS on bionic
-      dist: bionic
-      env: CONF="--with-ssl=gnutls"
-    - name: GnuTLS on trusty
-      dist: trusty
-      env: CONF="--with-ssl=gnutls"
-    - name: GnuTLS on focal
-      dist: focal
-      env: CONF="--with-ssl=gnutls"
     - name: Copyright check
       env: CONF="--without-libproxy --without-gssapi --without-zlib --disable-nls --disable-debug --disable-webdav" MARGS="update-copyright"
   allow_failures:
