@@ -2005,7 +2005,7 @@ static int icy_protocol(void)
     
     ONREQ(any_request(sess, "/foo"));
 
-    return await_server();
+    return destroy_and_wait(sess);
 }
 
 static void status_cb(void *userdata, ne_session_status status,
