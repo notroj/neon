@@ -345,6 +345,11 @@ int dead_server(void)
     return OK;
 }
 
+int destroy_and_wait(ne_session *sess)
+{
+    ne_session_destroy(sess);
+    return await_server();
+}
 
 int await_server(void)
 {

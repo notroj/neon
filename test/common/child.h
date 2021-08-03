@@ -28,6 +28,7 @@
 #endif
 
 #include "ne_socket.h"
+#include "ne_session.h"
 
 /* Test which does DNS lookup on "localhost": this must be the first
  * named test. */
@@ -70,6 +71,9 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
 
 /* Blocks until child process exits, and gives return code of 'fn'. */
 int await_server(void);
+
+/* Destroys session 'sess' and then is equivalent to await_server. */
+int destroy_and_wait(ne_session *sess);
 
 /* Kills child process. */
 int reap_server(void);
