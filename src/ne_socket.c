@@ -817,6 +817,10 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
         ret = NE_SOCK_TRUNC;
         set_error(sock, _("Secure connection truncated"));
         break;
+    case GNUTLS_E_INVALID_SESSION:
+        ret = NE_SOCK_RESET;
+        set_error(sock, ("SSL socket terminated"));
+        break;
     case GNUTLS_E_PUSH_ERROR:
         ret = NE_SOCK_RESET;
         set_error(sock, ("SSL socket write failed"));
