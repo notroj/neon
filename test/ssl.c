@@ -243,7 +243,6 @@ static int make_ssl_request(struct ssl_server_args *args,
                             ne_ssl_verify_fn verify_fn, void *verify_ud)
 {
     ne_session *sess;
-    int ret;
 
     CALL(make_ssl_session(&sess, hostname, ssl_server, args));
 
@@ -251,10 +250,9 @@ static int make_ssl_request(struct ssl_server_args *args,
     
     if (verify_fn) ne_ssl_set_verify(sess, verify_fn, verify_ud);
 
-    ret = any_2xx_request(sess, "/foo");
-    CALL(await_server());
-    ne_session_destroy(sess);
-    return ret;
+    CALL(any_2xx_request(sess, "/foo"));
+
+    return destroy_and_wait(sess);
 }
 
 /* Run a request in the given session. */
@@ -262,8 +260,6 @@ static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
 			   char *ca_cert,
 			   ne_ssl_verify_fn verify_fn, void *verify_ud)
 {
-    int ret;
-    
     if (ca_cert) {
         CALL(load_and_trust_cert(sess, ca_cert));
     }
@@ -273,13 +269,9 @@ static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
     if (verify_fn)
 	ne_ssl_set_verify(sess, verify_fn, verify_ud);
 
-    ret = any_request(sess, "/foo");
+    ONREQ(any_request(sess, "/foo"));
 
-    CALL(await_server());
-    
-    ONREQ(ret);
-
-    return OK;
+    return await_server();
 }
 
 static int init(void)
@@ -541,12 +533,9 @@ static int fail_not_ssl(void)
     
     CALL(make_ssl_session(&sess, NULL, just_serve_string, "Hello, world.\n"));
     ret = any_request(sess, "/bar");
-    CALL(await_server());
-
     ONN("request did not fail", ret != NE_ERROR);
 
-    ne_session_destroy(sess);
-    return OK;
+    return destroy_and_wait(sess);
 }
 
 static int wildcard_match(void)
@@ -1038,9 +1027,8 @@ static int session_cache(void)
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
-    ne_session_destroy(sess);
 
-    return await_server();
+    return destroy_and_wait(sess);
 }
 #endif
 
@@ -1351,11 +1339,9 @@ static int auth_proxy_tunnel(void)
     /* run two requests over the tunnel. */
     ret = any_2xx_request(sess, "/foobar");
     if (!ret) ret = any_2xx_request(sess, "/foobar2");
-    CALL(await_server());
     CALL(ret);
 
-    ne_session_destroy(sess);
-    return 0;
+    return destroy_and_wait(sess);
 }
 
 /* Regression test to check that server credentials aren't sent to the
@@ -1363,7 +1349,7 @@ static int auth_proxy_tunnel(void)
 static int auth_tunnel_creds(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 443);
-    int ret, code = 401;
+    int code = 401;
     struct ssl_server_args args = {SERVER_CERT, 0};
     
     ne_session_proxy(sess, "localhost", 7777);
@@ -1376,12 +1362,9 @@ static int auth_tunnel_creds(void)
         "Server: Python\r\n" "Content-Length: 0\r\n" "\r\n";
     
     CALL(spawn_server(7777, serve_tunnel, &args));
-    ret = any_2xx_request(sess, "/foobar");
-    CALL(await_server());
-    CALL(ret);
+    CALL(any_2xx_request(sess, "/foobar"));
 
-    ne_session_destroy(sess);
-    return OK;    
+    return destroy_and_wait(sess);
 }
 
 static int auth_tunnel_fail(void)
@@ -1405,9 +1388,7 @@ static int auth_tunnel_fail(void)
     ONV(strstr(ne_get_error(sess), "GaBoogle") == NULL,
         ("bad error string for tunnel failure: %s", ne_get_error(sess)));
 
-    ne_session_destroy(sess);
-
-    return await_server();
+    return destroy_and_wait(sess);
 }
 
 /* compare against known digest of notvalid.pem.  Via:
