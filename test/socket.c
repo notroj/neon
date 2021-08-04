@@ -513,6 +513,8 @@ static int finish(ne_socket *sock, int eof)
 {
     if (eof)
 	CALL(expect_close(sock));
+    else
+	ne_sock_shutdown(sock, NE_SOCK_SEND);
     CALL(good_close(sock));
     return await_server();
 }
@@ -1037,14 +1039,50 @@ static int echo_lines(void)
 }
 
 #ifdef SOCKET_SSL
-/* harder to simulate closure cases for an SSL connection, since it
- * may be doing multiple read()s or write()s per ne_sock_* call. */
+static int serve_wait_close(ne_socket *sock, void *ud)
+{
+    ONV(ne_sock_read(sock, buffer, 1) != NE_SOCK_CLOSED,
+        ("failed waiting for TLS closure: %s", ne_sock_error(sock)));
+
+    return 0;
+}
+
+static int ssl_shutdown(void)
+{
+    ne_socket *sock;
+    int ret;
+
+    CALL(begin(&sock, serve_wait_close, NULL));
+
+    ONV(ne_sock_shutdown(sock, NE_SOCK_RECV) != NE_SOCK_RETRY,
+        ("TLS socket closed too early"));
+
+    ret = ne_sock_shutdown(sock, NE_SOCK_SEND);
+    if (ret == NE_SOCK_RETRY) {
+        /* Wait for closure. */
+        ret = ne_sock_read(sock, buffer, 0);
+        ONV(ret != NE_SOCK_CLOSED,
+            ("read for closure didn't get closure: %d/%s",
+             ret, ne_sock_error(sock)));
+    }
+    else {
+        ONV(ret, ("socket shutdown unexpected state: %d/%s",
+                  ret, ne_sock_error(sock)));
+    }
+
+    CALL(await_server());
+    ne_sock_close(sock);
+
+    return OK;
+}
+
 static int ssl_closure(void)
 {
     ne_socket *sock;
     ssize_t ret;
     CALL(begin(&sock, serve_close, NULL));
     CALL(full_write(sock, "a", 1));
+    ne_sock_shutdown(sock, NE_SOCK_SEND);
     CALL(await_server());
     do {
         ret = ne_sock_fullwrite(sock, "a", 1);
@@ -1174,6 +1212,32 @@ static int block_timeout(void)
     TO_OP(ne_sock_block(sock, 1));
     TO_FINISH;
 }
+
+#ifndef SOCKET_SSL
+/* Waits for EOF from read-side and then sends "abcd". */
+static int serve_shutdown(ne_socket *sock, void *userdata)
+{
+    ONV(ne_sock_read(sock, buffer, 1) != NE_SOCK_CLOSED,
+        ("expected to get closure"));
+    CALL(full_write(sock, "abcd", 4));
+    return 0;
+}
+
+static int bidi(void)
+{
+    ne_socket *sock;
+    
+    CALL(begin(&sock, serve_shutdown, NULL));
+
+    CALL(expect_block_timeout(sock, 1, "read should timeout before closure"));
+
+    ONV(ne_sock_shutdown(sock, NE_SOCK_SEND) != 0,
+	("shutdown failed: `%s'", ne_sock_error(sock)));
+    FULLREAD("abcd");
+
+    return finish(sock, 1);
+}
+#endif
 
 static int ssl_session_id(void)
 {
@@ -1526,11 +1590,13 @@ ne_test tests[] = {
     T(prebind),
     T(error),
 #ifdef SOCKET_SSL
+    T(ssl_shutdown),
     T(ssl_closure),
     T(ssl_truncate),
 #else
     T(write_reset),
     T(read_reset),
+    T(bidi),
 #endif
 #if TEST_CONNECT_TIMEOUT
     T(connect_timeout),
