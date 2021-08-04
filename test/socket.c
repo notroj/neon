@@ -1124,7 +1124,10 @@ static int ssl_truncate(void)
 /* use W Richard Stevens' SO_LINGER trick to elicit a TCP RST */
 static int serve_reset(ne_socket *sock, void *ud)
 {
-    minisleep();
+    ONV(ne_sock_read(sock, buffer, 1) != 1,
+	("socket read error `%s'", ne_sock_error(sock)));
+    ONV(buffer[0] != 'R',
+        ("got unexpected byte %c from client", buffer[0]));
     reset_socket(sock);
     exit(0);
     return 0;
@@ -1135,7 +1138,7 @@ static int write_reset(void)
     ne_socket *sock;
     int ret;
     CALL(begin(&sock, serve_reset, NULL));
-    CALL(full_write(sock, "a", 1));
+    CALL(full_write(sock, "R", 1));
     CALL(await_server());
     ret = ne_sock_fullwrite(sock, "a", 1);
     if (ret == 0) {
@@ -1156,7 +1159,7 @@ static int read_reset(void)
     ne_socket *sock;
     ssize_t ret;
     CALL(begin(&sock, serve_reset, NULL));
-    CALL(full_write(sock, "a", 1));
+    CALL(full_write(sock, "R", 1));
     CALL(await_server());
     ret = ne_sock_read(sock, buffer, 1);
     if (ret == NE_SOCK_CLOSED) {
