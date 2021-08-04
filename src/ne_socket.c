@@ -684,6 +684,25 @@ static int error_ossl(ne_socket *sock, int sret)
     
     /* for all other errors, look at the OpenSSL error stack */
     err = ERR_get_error();
+    NE_DEBUG(NE_DBG_SSL, "ssl: Got OpenSSL error stack %lu\n", err);
+
+    if (ERR_GET_LIB(err) == ERR_LIB_SSL) {
+	int reason = ERR_GET_REASON(err);
+
+#ifdef SSL_R_UNEXPECTED_EOF_WHILE_READING
+        /* OpenSSL 3 signals truncation this way. */
+	if (reason == SSL_R_UNEXPECTED_EOF_WHILE_READING) {
+	    set_error(sock, _("Secure connection truncated"));
+	    return NE_SOCK_TRUNC;
+	}
+        else
+#endif
+	if (reason == SSL_R_PROTOCOL_IS_SHUTDOWN) {
+	    set_error(sock, _("Secure connection reset"));
+	    return NE_SOCK_RESET;
+	}
+    }
+
     if (err == 0) {
         /* Empty error stack, presume this is a system call error: */
         if (sret == 0) {
