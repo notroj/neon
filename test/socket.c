@@ -100,6 +100,15 @@ static int do_connect(ne_socket **sock, ne_sock_addr *addr, unsigned int port)
     return FAIL;
 }
 
+static int close_and_wait(ne_socket *sock)
+{
+    int ret = ne_sock_close(sock);
+
+    ONV(ret, ("failed closing socket: %d", ret));
+
+    return await_server();
+}
+
 #ifdef SOCKET_SSL
 
 static int init_ssl(void)
@@ -431,8 +440,8 @@ static int just_connect(void)
     ne_socket *sock;
     
     CALL(begin(&sock, serve_close, NULL));
-    ne_sock_close(sock);
-    return await_server();
+
+    return close_and_wait(sock);
 }
 
 /* Connect to an address crafted using ne_iaddr_make rather than from
@@ -448,11 +457,9 @@ static int addr_connect(void)
     
     CALL(new_spawn_server(1, serve_close, NULL, &port));
     ONN("could not connect", ne_sock_connect(sock, ia, port));
-    ne_sock_close(sock);
-    CALL(await_server());
-
     ne_iaddr_free(ia);
-    return OK;
+
+    return close_and_wait(sock);
 }
 
 static int addr_peer(void)
@@ -1003,7 +1010,11 @@ static int echo_server(ne_socket *sock, void *ud)
 	NE_DEBUG(NE_DBG_SOCKET, "Wrote line.\n");
     }
 
-    ONN("readline failed", ret != NE_SOCK_CLOSED);
+    ONV(ret != NE_SOCK_CLOSED, ("unexpected readline failure: %s",
+				ne_sock_error(sock)));
+
+    NE_DEBUG(NE_DBG_SOCKET, "ssl: Readline got closure\n");
+
     return 0;
 }
 
