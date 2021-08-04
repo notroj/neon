@@ -2059,7 +2059,7 @@ int ne_sock_shutdown(ne_socket *sock, unsigned int flags)
         }
 
         ret = gnutls_bye(sock->ssl,
-                         flags == NE_SOCK_SEND ? GNUTLS_SHUT_WR :GNUTLS_SHUT_RDRW);
+                         flags == NE_SOCK_SEND ? GNUTLS_SHUT_WR : GNUTLS_SHUT_RDWR);
         if (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN) {
             return NE_SOCK_RETRY;
         }
