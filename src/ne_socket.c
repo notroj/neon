@@ -2070,9 +2070,12 @@ int ne_sock_shutdown(ne_socket *sock, unsigned int flags)
     }
 #endif
 
-    ret = shutdown(sock->fd,
-                   flags == NE_SOCK_RECV ? SHUT_RD :
-		   (flags == NE_SOCK_SEND ? SHUT_WR : SHUT_RDWR));
+#ifdef _WIN32
+    int how = flags == NE_SOCK_RECV ? SD_RECEIVE : (flags == NE_SOCK_SEND ? SD_SEND : SD_BOTH);
+#else
+    int how = flags == NE_SOCK_RECV ? SHUT_RD : (flags == NE_SOCK_SEND ? SHUT_WR : SHUT_RDWR);
+#endif
+    ret = shutdown(sock->fd, how);
     if (ret < 0) {
 	int errnum = ne_errno;
 	set_strerror(sock, errnum);
