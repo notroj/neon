@@ -66,7 +66,12 @@ static ne_ssl_client_cert *def_cli_cert;
 static char *nul_cn_fn;
 
 static int check_dname(const ne_ssl_dname *dn, const char *expected,
-                       const char *which);
+                       const char *which)
+    ne_attribute((nonnull));
+
+static int check_cert_dnames(const ne_ssl_certificate *cert,
+                             const char *subject, const char *issuer)
+    ne_attribute((nonnull (2)));
 
 /* Arguments for running the SSL server */
 struct ssl_server_args {
@@ -617,7 +622,7 @@ static int check_dname(const ne_ssl_dname *dn, const char *expected,
 
     NE_DEBUG(NE_DBG_SSL, "Got dname `%s', expecting `%s'\n", dname, expected);
 
-    ONV(strcmp(dname, expected), 
+    ONV(!dname || strcmp(dname, expected),
         ("certificate %s dname was `%s' not `%s'", which, dname, expected));
 
     ne_free(dname);
@@ -1612,7 +1617,7 @@ static int dname_readable(void)
         { "bmpsubj.cert", I18N_DNAME, NULL },
         { "utf8subj.cert", I18N_DNAME, NULL },
         { "twoou.cert", "First OU Dept, Second OU Dept, Neon Hackers Ltd, "
-          "Cambridge, Cambridgeshire, GB" }
+          "Cambridge, Cambridgeshire, GB", NULL }
     };
     size_t n;
 
