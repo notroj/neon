@@ -107,7 +107,7 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * this must not be used over an unsecured channel. */
 #define NE_AUTH_GSSAPI_ONLY (0x0040)
 
-/* 0x0080 used for NE_AUTH_DIGEST */
+/* 0x0080: legacy definition of NE_AUTH_DIGEST in 0.31 and earlier */
 
 /* The default set of supported protocols, as deemed appropriate for
  * the given session scheme.  The interpretation of this flag may
