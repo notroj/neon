@@ -72,6 +72,8 @@ struct field {
     struct field *next;
 };
 
+/* Maximum number of interim responses. */
+#define MAX_INTERIM_RESPONSES (128)
 /* Maximum number of header fields per response: */
 #define MAX_HEADER_FIELDS (100)
 /* Size of hash table; 43 is the smallest prime for which the common
@@ -1015,6 +1017,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     ne_status *const status = &req->status;
     int sentbody = 0; /* zero until body has been sent. */
     int ret, retry; /* retry non-zero whilst the request should be retried */
+    unsigned count;
     ssize_t sret;
 
     /* Send the Request-Line and headers */
@@ -1045,9 +1048,11 @@ static int send_request(ne_request *req, const ne_buffer *request)
 
     /* Loop eating interim 1xx responses; RFC 7231§6.2 says clients
      * MUST be able to parse unsolicited interim responses. */
-    while ((ret = read_status_line(req, status, retry)) == NE_OK 
-	   && status->klass == 1) {
-	NE_DEBUG(NE_DBG_HTTP, "Interim %d response.\n", status->code);
+    for (count = 0; count < MAX_INTERIM_RESPONSES
+             && (ret = read_status_line(req, status, retry)) == NE_OK
+             && status->klass == 1; count++) {
+	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response %d.\n",
+                 status->code, count);
 	retry = 0; /* successful read() => never retry now. */
 	/* Discard headers with the interim response. */
 	if ((ret = discard_headers(req)) != NE_OK) break;
@@ -1058,6 +1063,10 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
 	    sentbody = 1;
 	}
+    }
+
+    if (count == MAX_INTERIM_RESPONSES) {
+        return aborted(req, _("Too many interim responses"), 0);
     }
 
     return ret;

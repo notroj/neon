@@ -2345,6 +2345,13 @@ static int safe_flags(void)
     return OK;
 }
 
+static int fail_excess_1xx(void)
+{
+    struct s1xx_args args = {200, 0};
+    return fail_request_with_error(0, serve_1xx, &args, 0,
+                                   "Too many interim responses");
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2439,5 +2446,6 @@ ne_test tests[] = {
     T(fail_lookup),
     T(fail_double_lookup),
     T(safe_flags),
+    T(fail_excess_1xx),
     T(NULL)
 };
