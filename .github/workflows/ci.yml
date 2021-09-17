@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
     - run: case ${{matrix.conf-ssl}} in
-           *gnutls) sudo apt-get -y install libgnutls28-dev gnutls-bin xmlto ;;
+           *gnutls) sudo apt-get update && sudo apt-get -y install libgnutls28-dev gnutls-bin xmlto ;;
            esac
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
