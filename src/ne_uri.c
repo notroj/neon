@@ -140,7 +140,7 @@ int ne_path_has_trailing_slash(const char *uri)
 
 unsigned int ne_uri_defaultport(const char *scheme)
 {
-    /* RFC2616/3.2.3 says use case-insensitive comparisons here. */
+    /* Scheme matching is case-insensitive per RFC 3986§3.1 */
     if (ne_strcasecmp(scheme, "http") == 0)
 	return 80;
     else if (ne_strcasecmp(scheme, "https") == 0)
