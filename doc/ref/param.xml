@@ -7,7 +7,7 @@
 
       <refnamediv>
 	<refname id="ne_strparam">ne_strparam</refname>
-	<refpurpose>HTTP extended paramater value encoding</refpurpose>
+	<refpurpose>HTTP extended parameter value encoding</refpurpose>
       </refnamediv>
 
       <refsynopsisdiv>

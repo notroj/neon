@@ -55,7 +55,7 @@ int spawn_server(int port, server_fn fn, void *userdata);
 
 /* Like spawn_server; if bind_local is non-zero, binds server to
  * localhost, otherwise, binds server to real local hostname.  (must
- * have called lookup_localhost or lookup_hostname as approprate
+ * have called lookup_localhost or lookup_hostname as appropriate
  * beforehand).  */
 int spawn_server_addr(int bind_local, int port, server_fn fn, void *userdata);
 

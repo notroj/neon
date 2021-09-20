@@ -1,5 +1,6 @@
 Changes in release 0.32.1:
 * Fix configure CFLAGS handling in Kerberos detection.
+* Various spelling fixes.
 
 Changes in release 0.32.0:
 * Interface changes:

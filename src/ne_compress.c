@@ -349,7 +349,7 @@ static int gz_reader(void *ud, const char *buf, size_t len)
 	}
 
 	NE_DEBUG(NE_DBG_HTTP,
-		 "compresss: skipped %" NE_FMT_SIZE_T " header bytes.\n", 
+		 "compress: skipped %" NE_FMT_SIZE_T " header bytes.\n", 
 		 zbuf - buf);
 	/* found end of string. */
 	len -= (1 + zbuf - buf);
