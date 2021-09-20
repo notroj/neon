@@ -538,6 +538,14 @@ static int read_close(void)
     return await_server();
 }
 
+/* Test that just does an open then a close. */
+static int open_close(void)
+{
+    ONN("close of newly opened socket failed", ne_sock_close(ne_sock_create()));
+
+    return OK;
+}
+
 /* Test that just does a connect then a close (but gets the close via
  * ne_sock_peek). */
 static int peek_close(void)
@@ -1570,6 +1578,7 @@ ne_test tests[] = {
     T(addr_canonical),
     T(read_close),
     T(peek_close),
+    T(open_close),
     T(single_read),
     T(single_peek),
     T(small_reads),

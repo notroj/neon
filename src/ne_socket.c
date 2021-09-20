@@ -2087,7 +2087,12 @@ int ne_sock_shutdown(ne_socket *sock, unsigned int flags)
 
 int ne_sock_close(ne_socket *sock)
 {
-    int ret = ne_sock_shutdown(sock, NE_SOCK_SEND);
+    int ret;
+
+    if (sock->fd != -1) {
+        /* Ignore errors. */
+        (void) ne_sock_shutdown(sock, NE_SOCK_SEND);
+    }
 
 #if defined(HAVE_OPENSSL)
     if (sock->ssl) {
@@ -2099,11 +2104,7 @@ int ne_sock_close(ne_socket *sock)
     }
 #endif
 
-    if (sock->fd < 0)
-        ret = 0;
-    else
-        ret = ne_close(sock->fd);
-    sock->fd = -1;
+    ret = sock->fd < 0 ? 0 : ne_close(sock->fd);
 
     ne_free(sock);
     return ret;
