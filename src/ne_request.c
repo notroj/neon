@@ -1377,7 +1377,7 @@ int ne_begin_request(ne_request *req)
             return aborted(req, _("Invalid Content-Length in response"), 0);
         }
     }
-    /* Case (7), response delimieted by EOF. */
+    /* Case (7), response delimited by EOF. */
     else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
