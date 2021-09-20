@@ -1142,7 +1142,7 @@ if test "x$KRB5_CONF_TOOL" != "xnone"; then
 #endif])])
      break
    ])
-   CFLAGS=$ne_save_CPPFLAGS
+   CFLAGS=$ne_save_CFLAGS
    NEON_LIBS=$ne_save_LIBS
 fi])
 
