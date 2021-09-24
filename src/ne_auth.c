@@ -440,7 +440,7 @@ static char *get_scope_path(const char *uri)
     memset(&udot, 0, sizeof udot);
     udot.path = ".";
 
-    if (strcmp(uri, "*") == 0 || ne_uri_parse(uri, &base) != 0) {
+    if (ne_uri_parse(uri, &base) != 0) {
         /* Assume scope is whole origin. */
         return ne_strdup("/");
     }
@@ -491,18 +491,18 @@ static int basic_challenge(auth_session *sess, int attempt,
 
     ne__strzero(password, sizeof password);
 
-    if (sess->context == AUTH_CONNECT) {
-        /* For proxy auth w/TLS, auth is limited to handling CONNECT
-         * request, no need to derive the "scope" path. */
+    if (sess->ndomains) free_domains(sess); /* is this really needed? */
+
+    if (strcmp(uri, "*") == 0) {
+        /* If the request-target is "*" the auth scope is explicitly
+         * the whole server. */
         return 0;
     }
 
-    if (sess->ndomains != 1) {
-        sess->domains = ne_realloc(sess->domains, sizeof(*sess->domains));
-        sess->ndomains = 1;
-    }
-
+    sess->domains = ne_realloc(sess->domains, sizeof(*sess->domains));
     sess->domains[0] = get_scope_path(uri);
+    sess->ndomains = 1;
+
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Basic auth scope is: %s\n",
              sess->domains[0]);
 
@@ -512,7 +512,7 @@ static int basic_challenge(auth_session *sess, int attempt,
 /* Add Basic authentication credentials to a request */
 static char *request_basic(auth_session *sess, struct auth_request *req) 
 {
-    if (!inside_domain(sess, req->uri)) {
+    if (sess->ndomains && !inside_domain(sess, req->uri)) {
         return NULL;
     }
 
