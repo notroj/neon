@@ -176,13 +176,13 @@ dnl Usage:
 dnl    NEON_CHECK_VERSION(ACTIONS-IF-OKAY, ACTIONS-IF-FAILURE)
 dnl
 AC_DEFUN([NEON_CHECK_VERSION], [
+ne_libver=`$NEON_CONFIG --version | sed -e "s/neon //g"`
 m4_ifdef([ne_require_major], [
     # Check whether the library is of required version
     ne_save_LIBS="$LIBS"
     ne_save_CFLAGS="$CFLAGS"
     CFLAGS="$CFLAGS `$NEON_CONFIG --cflags`"
     LIBS="$LIBS `$NEON_CONFIG --libs`"
-    ne_libver=`$NEON_CONFIG --version | sed -e "s/neon //g"`
     # Check whether it's possible to link against neon
     AC_CACHE_CHECK([linking against neon], [ne_cv_lib_neon],
     [AC_LINK_IFELSE(
@@ -202,7 +202,6 @@ m4_ifdef([ne_require_major], [
 ], [
    # NE_REQUIRE_VERSIONS not used; presume all versions OK!
     ne_goodver=yes
-    ne_libver="(version unknown)"
 ])
 
 if test "$ne_goodver" = "yes"; then
