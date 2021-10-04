@@ -375,6 +375,10 @@ AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
       ne__prologue="#include <sys/socket.h>"
       ne__code="socket(0,0,0);"
       ;;
+    bindtextdomain)
+      ne__prologue="#include <libintl.h>"
+      ne__code="bindtextdomain(\"\",\"\");"
+      ;;
     *)
       ne__prologue=""
       ne__code="$1();"
