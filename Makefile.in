@@ -130,16 +130,18 @@ install-docs: install-man install-html
 install-html:
 	$(INSTALL) -d $(DESTDIR)$(docdir)/html
 	for d in doc/html/*.html; do \
-		$(INSTALL_DATA) $$d $(DESTDIR)$(docdir)/html; \
+		test ! -f $$d || $(INSTALL_DATA) $$d $(DESTDIR)$(docdir)/html; \
 	done
 
 install-man:
 	$(INSTALL) -d $(DESTDIR)$(man3dir)
 	$(INSTALL) -d $(DESTDIR)$(man1dir)
 	for m in doc/man/*.3; do \
-	 $(INSTALL_DATA) $$m $(DESTDIR)$(man3dir); done
+		test ! -f $$m || $(INSTALL_DATA) $$m $(DESTDIR)$(man3dir); \
+	done
 	for m in doc/man/*.1; do \
-	 $(INSTALL_DATA) $$m $(DESTDIR)$(man1dir); done
+		test ! -f $$m || $(INSTALL_DATA) $$m $(DESTDIR)$(man1dir); \
+	done
 
 install: install-@ALLOW_INSTALL@
 
