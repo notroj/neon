@@ -960,13 +960,9 @@ yes|openssl)
    AC_CHECK_HEADERS(openssl/ssl.h openssl/opensslv.h,,
    [AC_MSG_ERROR([OpenSSL headers not found, cannot enable SSL support])])
 
+   # Enable EGD support if using 0.9.7 or newer
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
-   NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
-   if test "$ne_cv_lib_ssl110" = "yes"; then
-      NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
-      AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])
-   elif test "$ne_cv_lib_ssl097" = "yes"; then
-      # Enable EGD support if using 0.9.7 or newer
+   if test "$ne_cv_lib_ssl097" = "yes"; then
       AC_MSG_NOTICE([OpenSSL >= 0.9.7; EGD support not needed in neon])
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       NE_CHECK_FUNCS(CRYPTO_set_idptr_callback SSL_SESSION_cmp)
@@ -1074,11 +1070,8 @@ CC/CFLAGS/LIBS must be used to make the POSIX library interfaces
 available]),,
 enable_threadsafe_ssl=no)
 
-case ${enable_threadsafe_ssl}X${ne_cv_lib_ssl110} in
-*Xyes)
-  NE_ENABLE_SUPPORT(TS_SSL, [OpenSSL is natively thread-safe])
-  ;;
-posixX*|yesX*)
+case $enable_threadsafe_ssl in
+posix|yes)
   ne_pthr_ok=yes
   AC_CHECK_FUNCS([pthread_mutex_init pthread_mutex_lock],,[ne_pthr_ok=no])
   if test "${ne_pthr_ok}" = "no"; then
