@@ -8,6 +8,10 @@ NULL=
 NULL=nul
 !ENDIF
 
+!IF "$(BUILD_DLL)" == "yes"
+USE_DLL = 1
+!endif
+
 ########
 # Debug vs. Release build
 !IF "$(DEBUG_BUILD)" == ""
@@ -21,6 +25,11 @@ TARGET = .\libneonD.lib
 !ENDIF
 
 NE_DEP_LIBS =
+
+!IFDEF USE_DLL
+CFLAGS = $(CFLAGS) /D NE_DLL
+NE_DEP_LIBS = $(NE_DEP_LIBS) ws2_32.lib
+!ENDIF
 
 # Silence deprecation warnings on later Visual Studio versions, which
 # actually can be ignored
@@ -138,9 +147,11 @@ IPV6_FLAGS = /D USE_GETADDRINFO
 WIN32_DEFS = /D WIN32_LEAN_AND_MEAN /D NOUSER /D NOGDI /D NONLS /D NOCRYPT
 
 CPP=cl.exe
-CPP_PROJ = /c /nologo $(CFLAGS) $(WIN32_DEFS) $(NE_XML_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(TARGET)"
+CPP_PROJ = /c /nologo $(CFLAGS) $(WIN32_DEFS) $(NE_XML_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /D BUILDING_NEON /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
+LINK=link.exe
+LIB32=$(LINK) -lib
+LIB32_FLAGS=/nologo /out:$@
+LINK_DLL_FLAGS=$(LIB32_FLAGS) /DLL /DEBUG /def:src\neon.def
 
 LIB32_OBJS= \
 	"$(INTDIR)\ne_alloc.obj" \
@@ -204,7 +215,6 @@ LIB32_OBJS = $(LIB32_OBJS) $(ZLIB_LIBS)
 NE_DEP_LIBS = $(NE_DEP_LIBS) $(ZLIB_LIBS)
 !ENDIF
 
-
 ALL: ".\src\config.h" "$(TARGET)"
 
 CLEAN: $(ZLIB_CLEAN)
@@ -234,14 +244,29 @@ CLEAN: $(ZLIB_CLEAN)
 	-@erase "$(INTDIR)\ne_utils.obj"
 	-@erase "$(INTDIR)\ne_xml.obj"
 	-@erase "$(INTDIR)\ne_xmlreq.obj"
+	-@erase "$(TARGET:.lib=.dll)"
+	-@erase "$(TARGET:.lib=.pdb)"
+	-@erase "$(TARGET:.lib=.exp)"
+	-@erase "$(TARGET:.lib=.ilk)"
 	-@erase "$(TARGET)"
 	-@erase ".\src\config.h"
 
+!IFDEF USE_DLL
+"$(TARGET)": "$(TARGET:.lib=.dll)"
+
+"$(TARGET:.lib=.dll)": $(LIB32_OBJS)
+	-@if not exist "$(INTDIR)/$(NULL)" mkdir "$(INTDIR)"
+	$(LINK) @<<
+$(LINK_DLL_FLAGS) $(LIB32_OBJS)	$(NE_DEP_LIBS)
+<<
+
+!ELSE
 "$(TARGET)": $(DEF_FILE) $(LIB32_OBJS)
 	-@if not exist "$(INTDIR)/$(NULL)" mkdir "$(INTDIR)"
 	$(LIB32) @<<
   $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS) $(NE_DEP_LIBS)
 <<
+!ENDIF
 
 {src}.c{$(INTDIR)}.obj::
 	-@if not exist "$(INTDIR)/$(NULL)" mkdir "$(INTDIR)"
