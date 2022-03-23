@@ -88,4 +88,16 @@ typedef off_t ne_off_t;
 #define NE_BUFSIZ 8192
 #endif
 
+#ifndef NE_VAR
+# if defined(_MSC_VER) && defined(NE_DLL)
+#  ifdef BUILDING_NEON
+#   define NE_VAR extern __declspec(dllexport)
+#  else
+#   define NE_VAR extern __declspec(dllimport)
+#  endif
+# else
+#  define NE_VAR extern
+# endif
+#endif
+
 #endif /* NE_DEFS_H */
