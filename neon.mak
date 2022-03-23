@@ -20,6 +20,8 @@ CFLAGS = /MDd /W3 /Gm /EHsc /Zi /Od /D "_DEBUG"
 TARGET = .\libneonD.lib
 !ENDIF
 
+NE_DEP_LIBS =
+
 # Silence deprecation warnings on later Visual Studio versions, which
 # actually can be ignored
 CFLAGS = $(CFLAGS) /D _CRT_SECURE_NO_WARNINGS /D _CRT_NONSTDC_NO_WARNINGS /D _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -197,7 +199,7 @@ CLEAN: $(ZLIB_CLEAN)
 "$(TARGET)": $(DEF_FILE) $(LIB32_OBJS)
 	-@if not exist "$(INTDIR)/$(NULL)" mkdir "$(INTDIR)"
 	$(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS) $(NE_DEP_LIBS)
 <<
 
 {src}.c{$(INTDIR)}.obj::
