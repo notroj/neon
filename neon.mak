@@ -33,34 +33,29 @@ CFLAGS = $(CFLAGS) /D HAVE_SSPI
 !ENDIF
 
 ########
-# Support for Expat integration
+# Support for Expat or libxml2 integration
 #
-# If EXPAT_SRC or EXPAT_INC are set, then assume compiling against a
-# pre-built binary Expat 1.95.X.  You can use either EXPAT_SRC 
-# to specify the top-level Expat directory, or EXPAT_INC to directly
-# specify the Expat include directory.  (If both are set, EXPAT_SRC
-# is ignored).
-#
-# If EXPAT_SRC and EXPAT_INC are not set, then the user can
-# still set EXPAT_FLAGS to specify very specific compile behavior.
-#
-# If none of EXPAT_SRC, EXPAT_INC and EXPAT_FLAGS are set, disable
-# WebDAV support.
+# If USE_EXPAT or USE_LIBXML are set, then assume compiling against a
+# pre-built binary Expat or libxml2.  Note that if both are set, USE_EXPAT is
+# assumed and USE_LIBXML is ignored.  If neither of USE_EXPAT or USE_LIBXML are
+# set, disable WebDAV support.
 
-!IF "$(EXPAT_INC)" == ""
-!IF "$(EXPAT_SRC)" != ""
-EXPAT_INC = $(EXPAT_SRC)\Source\Lib
-!ENDIF
+!IF DEFINED (USE_EXPAT) && DEFINED (USE_LIBXML)
+!MESSAGE Expat is preferred over LibXML2
 !ENDIF
 
-BUILD_EXPAT = 1
-!IF "$(EXPAT_INC)" == ""
-!IFNDEF EXPAT_FLAGS
-EXPAT_FLAGS = 
-BUILD_EXPAT =
+!IFDEF USE_EXPAT
+BUILD_XML_SUPPORT = 1
+NE_XML_FLAGS = /D HAVE_EXPAT /D NE_HAVE_DAV
+EXPAT_LIBS = libexpat.lib
+NE_DEP_LIBS = $(NE_DEP_LIBS) $(EXPAT_LIBS)
 !ENDIF
-!ELSE
-EXPAT_FLAGS = /I "$(EXPAT_INC)" /D HAVE_EXPAT /D HAVE_EXPAT_H /D NE_HAVE_DAV
+
+!IF DEFINED(USE_LIBXML) && !DEFINED(USE_EXPAT)
+BUILD_XML_SUPPORT = 1
+NE_XML_FLAGS = /D HAVE_LIBXML /D NE_HAVE_DAV
+LIBXML_LIBS = libxml2.lib
+NE_DEP_LIBS = $(NE_DEP_LIBS) $(LIBXML_LIBS)
 !ENDIF
 
 ########
@@ -134,7 +129,7 @@ IPV6_FLAGS = /D USE_GETADDRINFO
 WIN32_DEFS = /D WIN32_LEAN_AND_MEAN /D NOUSER /D NOGDI /D NONLS /D NOCRYPT
 
 CPP=cl.exe
-CPP_PROJ = /c /nologo $(CFLAGS) $(WIN32_DEFS) $(EXPAT_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
+CPP_PROJ = /c /nologo $(CFLAGS) $(WIN32_DEFS) $(NE_XML_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
 LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(TARGET)"
 
@@ -157,7 +152,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ne_uri.obj" \
 	"$(INTDIR)\ne_utils.obj"
 
-!IF "$(BUILD_EXPAT)" != ""
+!IF "$(BUILD_XML_SUPPORT)" != ""
 LIB32_OBJS= \
 	$(LIB32_OBJS) \
 	"$(INTDIR)\ne_207.obj" \
