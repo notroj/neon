@@ -97,9 +97,8 @@
 
 #ifndef USE_GETADDRINFO
 #define in_addr_t                       unsigned int
-#endif
-
 typedef int socklen_t;
+#endif
 
 #include <io.h>
 
