@@ -20,6 +20,10 @@ CFLAGS = /MDd /W3 /Gm /EHsc /Zi /Od /D "_DEBUG"
 TARGET = .\libneonD.lib
 !ENDIF
 
+# Silence deprecation warnings on later Visual Studio versions, which
+# actually can be ignored
+CFLAGS = $(CFLAGS) /D _CRT_SECURE_NO_WARNINGS /D _CRT_NONSTDC_NO_WARNINGS /D _WINSOCK_DEPRECATED_NO_WARNINGS
+
 ########
 # Whether to build SSPI
 !IF "$(SSPI_BUILD)" != ""
