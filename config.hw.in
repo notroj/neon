@@ -93,6 +93,5 @@
 typedef int socklen_t;
 
 #include <io.h>
-#define read _read
 
 #endif
