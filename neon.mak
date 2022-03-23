@@ -73,23 +73,47 @@ OPENSSL_FLAGS = /I "$(OPENSSL_SRC)\inc32" /D NE_HAVE_SSL /D HAVE_OPENSSL
 
 ########
 # Support for zlib integration
-!IF "$(ZLIB_SRC)" == ""
-ZLIB_FLAGS =
-ZLIB_LIBS =
-ZLIB_CLEAN =
-!ELSE
-ZLIB_CLEAN = ZLIB_CLEAN
 !IF "$(DEBUG_BUILD)" == ""
 ZLIB_STATICLIB = zlib.lib
 ZLIB_SHAREDLIB = zlib1.dll
+!IF "$(ZLIB_SRC)" == ""
+!IF "$(ZLIB_IMPLIB)" == ""
+ZLIB_IMPLIB    = zlib1.lib
+!ENDIF
+!ELSE
 ZLIB_IMPLIB    = zdll.lib
+!ENDIF
 ZLIB_LDFLAGS   = /nologo /release
 !ELSE
 ZLIB_STATICLIB = zlib_d.lib
 ZLIB_SHAREDLIB = zlib1_d.dll
+!IF "$(ZLIB_SRC)" == ""
+!IF "$(ZLIB_IMPLIB)" == ""
+ZLIB_IMPLIB    = zlib1d.lib
+!ENDIF
+!ELSE
 ZLIB_IMPLIB    = zdll_d.lib
+!ENDIF
 ZLIB_LDFLAGS   = /nologo /debug
 !ENDIF
+
+!IF "$(ZLIB_SRC)" == ""
+ZLIB_CLEAN =
+!IF "$(USE_ZLIB)" == ""
+ZLIB_FLAGS =
+ZLIB_LIBS =
+!ELSE
+ZLIB_FLAGS = /D NE_HAVE_ZLIB
+!IFNDEF ZLIB_LIBS
+!IF "$(ZLIB_DLL)" == ""
+ZLIB_LIBS = $(ZLIB_STATICLIB)
+!ELSE
+ZLIB_LIBS = $(ZLIB_IMPLIB)
+!ENDIF
+!ENDIF
+!ENDIF
+!ELSE
+ZLIB_CLEAN = ZLIB_CLEAN
 ZLIB_FLAGS = /I "$(ZLIB_SRC)" /D NE_HAVE_ZLIB
 !IF "$(ZLIB_DLL)" == ""
 ZLIB_LIBS = "$(ZLIB_SRC)\$(ZLIB_STATICLIB)"
@@ -161,6 +185,9 @@ LIB32_OBJS = $(LIB32_OBJS) "$(INTDIR)\ne_stubssl.obj"
 !ENDIF
 !IF "$(ZLIB_SRC)" != ""
 LIB32_OBJS = $(LIB32_OBJS) $(ZLIB_LIBS)
+!ENDIF
+!IF "$(USE_ZLIB)" != ""
+NE_DEP_LIBS = $(NE_DEP_LIBS) $(ZLIB_LIBS)
 !ENDIF
 
 
