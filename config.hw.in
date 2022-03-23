@@ -59,7 +59,10 @@
 #define SIZEOF_LONG 4
 
 /* Win32 uses a underscore, so we use a macro to eliminate that. */
+/* VS2015 has this already defined */
+#if (_MSC_VER < 1900)
 #define snprintf			_snprintf
+#endif
 /* VS2008 has this already defined */
 #if (_MSC_VER < 1500)
 #define vsnprintf			_vsnprintf
@@ -77,7 +80,10 @@
 #define strtoll				_strtoi64
 #endif
 #define ssize_t				int
+/* VS2015 has this already defined */
+#if defined (_MSC_VER) && (_MSC_VER < 1900)
 #define inline                          __inline
+#endif
 #if defined(NE_LFS)
 #define lseek64				_lseeki64
 #define fstat64				_fstat64
