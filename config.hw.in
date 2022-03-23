@@ -77,7 +77,10 @@
 #endif
 #if defined(_MSC_VER) && _MSC_VER >= 1300
 #define HAVE_STRTOLL
+/* VS2013 has this already defined */
+#if _MSC_VER < 1800
 #define strtoll				_strtoi64
+#endif
 #endif
 #define ssize_t				int
 /* VS2015 has this already defined */
