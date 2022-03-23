@@ -12,11 +12,11 @@ NULL=nul
 # Debug vs. Release build
 !IF "$(DEBUG_BUILD)" == ""
 INTDIR = Release
-CFLAGS = /MD /W3 /GX /O2 /D "NDEBUG"
+CFLAGS = /MD /W3 /EHsc /O2 /D "NDEBUG"
 TARGET = .\libneon.lib
 !ELSE
 INTDIR = Debug
-CFLAGS = /MDd /W3 /Gm /GX /Zi /Od /D "_DEBUG"
+CFLAGS = /MDd /W3 /Gm /EHsc /Zi /Od /D "_DEBUG"
 TARGET = .\libneonD.lib
 !ENDIF
 
