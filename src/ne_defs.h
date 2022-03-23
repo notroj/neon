@@ -45,7 +45,11 @@ typedef off_t ne_off_t;
 
 /* define ssize_t for Win32 */
 #if defined(WIN32) && !defined(ssize_t)
+#ifdef _WIN64
+#define ssize_t __int64
+#else
 #define ssize_t int
+#endif
 #endif
 
 #ifdef __NETWARE__
