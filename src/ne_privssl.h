@@ -86,9 +86,11 @@ struct ne_ssl_context_s {
 
 typedef gnutls_session_t ne_ssl_socket;
 
+#ifdef HAVE_GNUTLS_PRIVKEY_IMPORT_EXT
 NE_PRIVATE ne_ssl_client_cert *
 ne__ssl_clicert_exkey_import(const unsigned char *der, size_t der_len,
                              gnutls_privkey_sign_func sign_func, void *userdata);
+#endif
 
 #endif /* HAVE_GNUTLS */
 
