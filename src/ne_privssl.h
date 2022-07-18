@@ -108,9 +108,11 @@ typedef struct ne_ssl_socket_s {
     int cc_requested;
 } ne_ssl_socket;
 
+#ifdef HAVE_GNUTLS_PRIVKEY_IMPORT_EXT
 NE_PRIVATE ne_ssl_client_cert *
 ne__ssl_clicert_exkey_import(const unsigned char *der, size_t der_len,
                              gnutls_privkey_sign_func sign_func, void *userdata);
+#endif
 
 ne_ssl_certificate *ne__ssl_make_chain(gnutls_session_t sock,
                                        gnutls_certificate_credentials_t crd);
