@@ -335,8 +335,9 @@ static void clean_session(auth_session *sess)
 /* Returns client nonce string. */
 static char *get_cnonce(void) 
 {
+#ifdef NE_HAVE_SSL
     unsigned char data[32];
-
+#endif
 #ifdef HAVE_GNUTLS
     if (1) {
 #if LIBGNUTLS_VERSION_NUMBER < 0x020b00
@@ -357,7 +358,6 @@ static char *get_cnonce(void)
         /* Fallback sources of random data: all bad, but no good sources
          * are available. */
         ne_buffer *buf = ne_buffer_create();
-        char *ret;
 
         {
 #ifdef HAVE_GETTIMEOFDAY
@@ -378,7 +378,7 @@ static char *get_cnonce(void)
             ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
         }
 
-        ret = ne_strhash(NE_HASH_MD5, buf->data);
+        return ne_strhash(NE_HASH_MD5, buf->data, NULL);
     }
 }
 
