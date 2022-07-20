@@ -358,6 +358,7 @@ static char *get_cnonce(void)
         /* Fallback sources of random data: all bad, but no good sources
          * are available. */
         ne_buffer *buf = ne_buffer_create();
+        char *ret;
 
         {
 #ifdef HAVE_GETTIMEOFDAY
@@ -378,7 +379,9 @@ static char *get_cnonce(void)
             ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
         }
 
-        return ne_strhash(NE_HASH_MD5, buf->data, NULL);
+        ret = ne_strhash(NE_HASH_MD5, buf->data, NULL);
+        ne_buffer_destroy(buf);
+        return ret;
     }
 }
 
