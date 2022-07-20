@@ -50,7 +50,6 @@
 #include "ne_string.h"
 #include "ne_session.h"
 #include "ne_internal.h"
-#include "ne_md5.h"
 #include "ne_private.h"
 #include "ne_privssl.h"
 

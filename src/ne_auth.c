@@ -57,7 +57,6 @@
 #include <errno.h>
 #include <time.h>
 
-#include "ne_md5.h"
 #include "ne_dates.h"
 #include "ne_request.h"
 #include "ne_auth.h"
@@ -357,23 +356,17 @@ static char *get_cnonce(void)
     {
         /* Fallback sources of random data: all bad, but no good sources
          * are available. */
-        struct ne_md5_ctx *hash;
-        char ret[33];
+        ne_buffer *buf = ne_buffer_create();
+        char *ret;
 
-        hash = ne_md5_create_ctx();
-        
-        /* Uninitialized stack data; yes, happy valgrinders, this is
-         * supposed to be here. */
-        ne_md5_process_bytes(data, sizeof data, hash);
-        
         {
 #ifdef HAVE_GETTIMEOFDAY
             struct timeval tv;
             if (gettimeofday(&tv, NULL) == 0)
-                ne_md5_process_bytes(&tv, sizeof tv, hash);
+                ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
+                                   tv.tv_sec, (long)tv.tv_usec);
 #else /* HAVE_GETTIMEOFDAY */
-            time_t t = time(NULL);
-            ne_md5_process_bytes(&t, sizeof t, hash);
+            ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
 #endif
         }
         {
@@ -382,13 +375,10 @@ static char *get_cnonce(void)
 #else
             pid_t pid = getpid();
 #endif
-            ne_md5_process_bytes(&pid, sizeof pid, hash);
+            ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
         }
 
-        ne_md5_finish_ascii(hash, ret);
-        ne_md5_destroy_ctx(hash);
-
-        return ne_strdup(ret);
+        ret = ne_strhash(NE_HASH_MD5, buf->data);
     }
 }
 

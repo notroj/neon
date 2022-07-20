@@ -29,7 +29,6 @@
 #include <unistd.h>
 #endif
 
-#include "ne_md5.h"
 #include "ne_string.h"
 #include "ne_request.h"
 #include "ne_auth.h"
