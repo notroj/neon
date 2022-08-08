@@ -471,14 +471,18 @@ AC_CACHE_CHECK([for uname], ne_cv_os_uname, [
  esac
 ])
 
-if test "$ne_cv_os_uname" = "Darwin"; then
+AS_CASE([x"$ne_cv_os_uname"],
+[x"Darwin"], [
   CPPFLAGS="$CPPFLAGS -no-cpp-precomp"
   LDFLAGS="$LDFLAGS -flat_namespace" 
   # poll has various issues in various Darwin releases
   if test x${ac_cv_func_poll+set} != xset; then
     ac_cv_func_poll=no
   fi
-fi
+],
+[xMINGW*|xMSYS*],
+  [NEON_LIBS="$NEON_LIBS -lws2_32"]
+)dnl AS_CASE
 ])
 
 AC_DEFUN([NEON_COMMON_CHECKS], [
