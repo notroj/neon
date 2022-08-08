@@ -549,7 +549,12 @@ else
      NEON_FORMAT(off64_t)
      ne_lfsok=no
      AC_CHECK_FUNCS([strtoll strtoq], [ne_lfsok=yes; break])
-     AC_CHECK_FUNCS([lseek64 fstat64], [], [ne_lfsok=no; break])
+     AS_CASE([$ne_cv_os_uname],
+       [MINGW*|MSYS_NT*],
+         [AC_CHECK_FUNCS([lseek64], [], [ne_lfsok=no; break])],
+       dnl Default:
+         [AC_CHECK_FUNCS([lseek64 fstat64], [], [ne_lfsok=no; break])]
+     )
      if test x$ne_lfsok = xyes; then
        NE_ENABLE_SUPPORT(LFS, [LFS (large file) support enabled])
        NEON_CFLAGS="$NEON_CFLAGS -D_LARGEFILE64_SOURCE -DNE_LFS"
