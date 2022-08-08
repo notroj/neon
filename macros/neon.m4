@@ -363,7 +363,7 @@ AC_REQUIRE([NE_CHECK_OS])
 
 AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
   case $ne_cv_os_uname in
-  MINGW*)
+  MINGW*|MSYS_NT*)
     ;;
   *)
     case $1 in
@@ -391,7 +391,7 @@ AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
     ne_cv_libsfor_$1="not found"
     for lib in $2; do
       case $ne_cv_os_uname in
-      MINGW*)
+      MINGW*|MSYS_NT*)
         case $lib in
         ws2_32)
           ne__prologue="#include <winsock2.h>"
