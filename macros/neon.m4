@@ -465,7 +465,7 @@ AC_CACHE_CHECK([for uname], ne_cv_os_uname, [
  dnl # NOTE: Quick-and-dirty approach to handle building libneon
  dnl # for Windows using Linux environments with mingw packages:
  dnl # other code in this script checks for "MINGW*" matches.
- dnl #  ./configure --prefix=/usr/i686-w64-mingw32 --host=i686-w64-mingw32
+ dnl #  ./configure --prefix=/usr/i686-w64-mingw32 --host=i686-w64-mingw32 PKG_CONFIG_PATH=/usr/i686-w64-mingw32/lib/pkgconfig
  case x"$host" in
     x*mingw*) ne_cv_os_uname="MINGW-$host" ;;
  esac
