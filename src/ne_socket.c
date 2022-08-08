@@ -60,8 +60,8 @@
 #ifdef WIN32
 #include <winsock2.h>
 #include <stddef.h>
-#ifdef USE_GETADDRINFO
 #include <ws2tcpip.h>
+#ifdef HAVE_WSPIAPI_H
 #include <wspiapi.h>
 #endif
 #endif
