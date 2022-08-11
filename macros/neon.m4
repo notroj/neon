@@ -901,8 +901,8 @@ AC_DEFUN([NE_PKG_CONFIG], [
 
 m4_define([ne_cvar], m4_translit(ne_cv_pkg_[$2], [.-], [__]))dnl
 
-AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-if test "$PKG_CONFIG" = "no"; then
+AC_PATH_TOOL(PKG_CONFIG, pkg-config, no)
+if test "x$PKG_CONFIG" = "xno"; then
    : Not using pkg-config
    $4
 else
