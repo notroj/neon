@@ -1037,9 +1037,9 @@ static int digest_username_star(void)
     } ts[] = {
         { "Aladdin", NULL },
         { "aladdin@cave.example.com", NULL },
+        { "foo bar", NULL },
         { "Ałâddín", "UTF-8''A%c5%82%c3%a2dd%c3%adn" },
         { "Jäsøn Doe", "UTF-8''J%c3%a4s%c3%b8n%20Doe" },
-        { "foo bar",  "UTF-8''foo%20bar"},
         { "foo\"bar", "UTF-8''foo%22bar" },
         { NULL, NULL }
     };

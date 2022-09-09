@@ -63,6 +63,21 @@ static unsigned char decode_b64(unsigned char ch)
     return DECODE_B64(ch);
 }
 
+/* Username safety lookup table; "SF" for characters which are safe to
+ * include in 2617-style username parameter values, else "NS" for
+ * non-safe characters.  Determined from RFC7230§3.2.6 - everything in
+ * qdtext EXCEPT obs-text (which is "non-ASCII") is treated as safe to
+ * include in a quoted username:
+      qdtext         = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+     obs-text       = %x80-FF
+*/
+static unsigned char safe_username(unsigned char ch)
+{
+    return (ch == '\t' || ch == ' ' || ch == 0x21
+            || (ch >= 0x23 && ch <= 0x7E && ch != 0x5C))
+            ? 0 : 1;
+}
+
 #define QT 3
 #define NQ 1
 
@@ -91,6 +106,7 @@ static const struct {
     { "decodeb64", decode_b64, 0 },
     { "quote", gen_quote, FLAG_DECIMAL | FLAG_SHORT },
     { "extparam", gen_extparam, FLAG_DECIMAL | FLAG_SHORT },
+    { "safe_username", safe_username, FLAG_DECIMAL | FLAG_SHORT },
 };
 
 static void fail(const char *err, const char *arg)
