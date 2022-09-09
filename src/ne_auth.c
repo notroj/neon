@@ -961,18 +961,15 @@ static int digest_challenge(auth_session *sess, int attempt,
 {
     char *p, *h_urp = NULL;
 
-    /* Handle 2069 legacy Digest case. */
-    if (parms->alg == NULL && !parms->got_qop) {
-        if ((parms->handler->protomask & NE_AUTH_LEGACY_DIGEST) == 0) {
-            challenge_error(errmsg, _("legacy Digest challenge not supported"));
-            return -1;
-        }
-        /* It can only be MD5. */
-        parms->alg = HASHALG_MD5;
-    }
-
     if (parms->alg == NULL) {
         challenge_error(errmsg, _("unknown algorithm in Digest challenge"));
+        return -1;
+    }
+
+    /* qop= is mandatory from 2617 onward, fail w/o LEGACY_DIGEST */
+    if (!parms->got_qop
+        && ((parms->handler->protomask & NE_AUTH_LEGACY_DIGEST) == 0)) {
+        challenge_error(errmsg, _("legacy Digest challenge not supported"));
         return -1;
     }
     else if (parms->alg->sess && !parms->qop_auth) {
@@ -1483,6 +1480,7 @@ static int auth_challenge(auth_session *sess, int attempt, const char *uri,
             chall = ne_calloc(sizeof *chall);
             chall->protocol = proto;
             chall->handler = hdl;
+            chall->alg = HASHALG_MD5; /* RFC default is MD5 */
 
             if ((proto->flags & AUTH_FLAG_OPAQUE_PARAM) && sep == ' ') {
                 /* Cope with the fact that the unquoted base64
@@ -1515,13 +1513,16 @@ static int auth_challenge(auth_session *sess, int attempt, const char *uri,
 	} else if (ne_strcasecmp(key, "algorithm") == 0) {
             unsigned int n;
 
-            chall->alg = NULL;
+            chall->alg = NULL; /* left unset for unknown algorithm. */
             for (n = 0; n < NUM_HASHALGS; n++) {
                 if (ne_strcasecmp(val, hashalgs[n].name) == 0) {
                     chall->alg = &hashalgs[n];
                     break;
                 }
             }
+
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Mapped '%s' to algorithm %s\n", val,
+                     chall->alg ? chall->alg->name : "[unknown]");
 	} else if (ne_strcasecmp(key, "qop") == 0) {
             /* iterate over each token in the value */
             do {
