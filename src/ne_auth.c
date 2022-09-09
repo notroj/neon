@@ -865,34 +865,25 @@ static int ntlm_challenge(auth_session *sess, int attempt,
 }
 #endif /* HAVE_NTLM */
 
-/* Username safety lookup table; "SF" for characters which are safe to
- * include in 2617-style username parameter values, else "NS" for
- * non-safe characters.  Determined from RFC7230§3.2.6 - everything in
- * qdtext EXCEPT obs-text (which is "non-ASCII") is treated as safe to
- * include in a quoted username. */
-#define SF 0
-#define NS 1
-static const signed char safe_username_table[256] = {
-/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
-/*   0x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   1x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   2x */ NS, SF, NS, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
-/*   3x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
-/*   4x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
-/*   5x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, NS, SF, SF, SF,
-/*   4x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
-/*   7x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, NS,
-/*   8x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   9x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Ax */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Bx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Cx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Dx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Ex */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
-/*   Fx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS
-};
-#undef NS
-#undef SF
+/* Generated with 'mktable safe_username', do not alter here -- */
+static const unsigned char table_safe_username[256] = {
+/* x00 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+/* x10 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* x20 */ 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* x30 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* x40 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* x50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+/* x60 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* x70 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+/* x80 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* x90 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xA0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xB0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xC0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xD0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xE0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* xF0 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+}; /* -- Generated code from 'mktable safe_username' ends. */
 
 /* Returns non-zero if 'username' is unsafe to use without quoting. */
 static int unsafe_username(const char *username)
@@ -901,7 +892,7 @@ static int unsafe_username(const char *username)
     int rv = 0;
 
     for (p = username; *p; p++)
-        rv |= safe_username_table[(const unsigned char)*p];
+        rv |= table_safe_username[(const unsigned char)*p];
 
     return rv;
 }
