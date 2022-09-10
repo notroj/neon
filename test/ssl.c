@@ -1823,6 +1823,7 @@ static int nonssl_trust(void)
     ne_session *sess = ne_session_create("http", "www.example.com", 80);
     
     ne_ssl_trust_cert(sess, def_ca_cert);
+    ne_ssl_trust_default_ca(sess);
     
     ne_session_destroy(sess);
 
