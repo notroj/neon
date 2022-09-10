@@ -1034,6 +1034,7 @@ gnutls)
                   gnutls_certificate_get_x509_cas \
                   gnutls_x509_crt_sign2 \
                   gnutls_certificate_set_retrieve_function2 \
+                  gnutls_certificate_set_x509_system_trust \
                   gnutls_privkey_import_ext])
 
    # fail if gnutls_x509_crt_sign2 is not found (it was introduced in 1.2.0, which is required)
