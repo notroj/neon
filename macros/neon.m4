@@ -427,7 +427,7 @@ AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
     LIBS=$ne_sl_save_LIBS
   ])
 ])
-AC_CHECK_HEADER(wspiapi.h)
+AC_CHECK_HEADERS([wspiapi.h])
 
 if test "$ne_cv_libsfor_$1" = "not found"; then
    m4_if([$4], [], [AC_MSG_ERROR([could not find library containing $1])], [$4])
