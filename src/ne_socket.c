@@ -60,7 +60,9 @@
 #ifdef WIN32
 #include <winsock2.h>
 #include <stddef.h>
+#if (defined USE_GETADDRINFO) || (HAVE_SOCKLEN_T)
 #include <ws2tcpip.h>
+#endif
 #ifdef HAVE_WSPIAPI_H
 #include <wspiapi.h>
 #endif
