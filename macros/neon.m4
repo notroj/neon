@@ -13,8 +13,8 @@
 # LGPL, see COPYING.LIB for more details
 
 # This file is part of the neon HTTP/WebDAV client library.
-# See http://www.webdav.org/neon/ for the latest version. 
-# Please send any feedback to <neon@lists.manyfish.co.uk>
+# See https://notroj.github.io/neon/ for the latest version. 
+# Please report feedback via <https://github.com/notroj/neon/>
 
 #
 # Usage:
