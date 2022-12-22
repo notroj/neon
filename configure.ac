@@ -4,9 +4,9 @@ dnl Extract the version (sans LF) from .version, created at release-time.
 m4_define(ne_version, [m4_translit(m4_include(.version), [
 ])])
 
-AC_INIT(neon, ne_version, [neon@lists.manyfish.co.uk])
+AC_INIT(neon, ne_version,,,[https://notroj.github.io/neon/])
 
-AC_COPYRIGHT([Copyright 2000-2010 Joe Orton and others
+AC_COPYRIGHT([Copyright 2000-2022 Joe Orton and others
 This configure script may be copied, distributed and modified under the 
 terms of the GNU Library General Public license; see src/COPYING.LIB for
 more details.])
