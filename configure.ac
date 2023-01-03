@@ -11,7 +11,7 @@ This configure script may be copied, distributed and modified under the
 terms of the GNU Library General Public license; see src/COPYING.LIB for
 more details.])
 
-AC_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR(src/ne_request.c)
 
 NEON_WITH_LIBS

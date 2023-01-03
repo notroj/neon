@@ -503,8 +503,6 @@ AC_REQUIRE([NE_CHECK_OS])
 
 AC_REQUIRE([AC_PROG_MAKE_SET])
 
-AC_REQUIRE([AC_HEADER_STDC])
-
 AC_CHECK_HEADERS([errno.h stdarg.h string.h stdlib.h sys/uio.h])
 
 NEON_FORMAT(size_t,,u) dnl size_t is unsigned; use %u formats
