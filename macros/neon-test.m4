@@ -30,7 +30,6 @@ AC_REQUIRE([NEON_COMMON_CHECKS])
 AC_REQUIRE([NE_FORMAT_TIMET])
 
 AC_REQUIRE([AC_TYPE_PID_T])
-AC_REQUIRE([AC_HEADER_TIME])
 
 dnl NEON_XML_PARSER may add things (e.g. -I/usr/local/include) to 
 dnl CPPFLAGS which make "gcc -Werror" fail in NEON_FORMAT; suggest
