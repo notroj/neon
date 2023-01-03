@@ -172,7 +172,7 @@ if test x${enable_shared} = xno; then
 fi
 
 # Bundled language catalogs
-ALL_LINGUAS="cs de fr ja nn pl ru tr zh_CN"
+ALL_LINGUAS="cs de fr ja ka nn pl ru tr zh_CN"
 AC_SUBST(ALL_LINGUAS)
 
 AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
