@@ -199,6 +199,7 @@ AC_MSG_NOTICE([Configured to build AC_PACKAGE_STRING:
   XML Parser:      ${neon_xml_parser_message}
   SSL library:     ${ne_SSL_message}
   zlib support:    ${ne_ZLIB_message}
+  GSSAPI support:  ${ne_GSSAPI_message}
   Build libraries: Shared=${enable_shared}, Static=${enable_static}
 ])
 
