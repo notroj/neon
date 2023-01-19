@@ -1128,7 +1128,8 @@ esac
 
 dnl Check for Kerberos installation
 AC_DEFUN([NEON_GSSAPI], [
-AC_ARG_WITH(gssapi, AS_HELP_STRING(--without-gssapi, disable GSSAPI support))
+AC_ARG_WITH(gssapi, AS_HELP_STRING(--without-gssapi, disable GSSAPI support),
+            [need_gssapi=$withval], [need_gssapi=no])
 if test "$with_gssapi" != "no"; then
   ne_save_CFLAGS=$CFLAGS
   ne_save_LIBS=$NEON_LIBS
@@ -1152,7 +1153,7 @@ if test "x$KRB5_CONF_TOOL" != "xnone"; then
      NE_CHECK_FUNCS(gss_init_sec_context, [
       ne_save_CFLAGS=$CFLAGS
       ne_save_LIBS=$NEON_LIBS
-      AC_MSG_NOTICE([GSSAPI authentication support enabled, using $NE_GSSAPI_VERSION])
+      NE_ENABLE_SUPPORT(GSSAPI, [GSSAPI support enabled, using library ${NE_GSSAPI_LIBS} version ${NE_GSSAPI_VERSION}])
       AC_DEFINE(HAVE_GSSAPI, 1, [Define if GSSAPI support is enabled])
       AC_CHECK_HEADERS(gssapi/gssapi_generic.h)
       # Older versions of MIT Kerberos lack GSS_C_NT_HOSTBASED_SERVICE
@@ -1168,6 +1169,14 @@ if test "x$KRB5_CONF_TOOL" != "xnone"; then
    ])
    CFLAGS=$ne_save_CFLAGS
    NEON_LIBS=$ne_save_LIBS
+fi
+
+if test x$NE_FLAG_GSSAPI != xyes; then
+  if test $need_gssapi = yes; then
+    # Fail if --with-gssapi was specified but no library support found
+    AC_MSG_ERROR([could not enable GSSAPI support])
+  fi
+  NE_DISABLE_SUPPORT(GSSAPI, [GSSAPI authentication is not supported])
 fi])
 
 AC_DEFUN([NEON_LIBPROXY], [
