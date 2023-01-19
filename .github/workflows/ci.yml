@@ -14,14 +14,19 @@ jobs:
         conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls]
         conf-memleak: [--disable-memleak, --enable-memleak]
         conf-debug: [--enable-debug, --disable-debug]
+        conf-gssapi: [--with-gssapi, --without-gssapi]
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
     - run: case ${{matrix.conf-ssl}} in
            *gnutls) sudo apt-get update && sudo apt-get -y install libgnutls28-dev gnutls-bin xmlto ;;
            esac
+    - run: case ${{matrix.conf-gssapi}} in
+           *with-gssapi) sudo apt-get update && sudo apt-get -y install krb5-multidev ;
+                         export KRB5_CONF_TOOL=/usr/bin/krb5-config.mit ;;
+           esac
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
-                       ${{matrix.conf-debug}}
+                       ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make
     - run: make check
