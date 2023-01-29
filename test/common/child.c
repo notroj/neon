@@ -50,6 +50,8 @@
 #include "tests.h"
 #include "child.h"
 
+#ifndef NEON_NO_TEST_CHILD
+
 static pid_t child = 0;
 
 int clength;
@@ -537,3 +539,5 @@ int serve_file(ne_socket *sock, void *ud)
 
     return OK;
 }
+
+#endif /* NEON_NO_TEST_CHILD */
