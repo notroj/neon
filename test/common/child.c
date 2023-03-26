@@ -67,6 +67,7 @@ struct server_addr {
     int family;
     union {
 	struct sockaddr_in in;
+	struct sockaddr_in6 in6;
     } sockaddr;
     char name[NI_MAXHOST];
 };
@@ -87,12 +88,64 @@ char *local_hostname = NULL;
 
 int lookup_localhost(void)
 {
-    /* this will break if a system is set up so that `localhost' does
-     * not resolve to 127.0.0.1, but... */
-    lh.family = AF_INET;
-    strcpy(lh.name, "127.0.0.1");
-    lh.sockaddr.in.sin_family = lh.family;
-    lh.sockaddr.in.sin_addr.s_addr = inet_addr(lh.name);
+#ifdef USE_GETADDRINFO
+    struct addrinfo hints = {}, *results, *rp;
+#endif
+
+    if (lh.family != AF_UNSPEC)
+	return OK;
+
+#ifdef USE_GETADDRINFO
+
+#ifdef USE_GAI_ADDRCONFIG
+    hints.ai_flags = AI_ADDRCONFIG;
+#endif
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (getaddrinfo("localhost", NULL, &hints, &results) != 0)
+	goto err_use_ipv4;
+
+    for (rp = results; rp != NULL; rp = rp->ai_next) {
+	int sock, rv;
+
+	if (rp->ai_family != AF_INET &&
+	    rp->ai_family != AF_INET6)
+	    continue;
+
+	sock = socket(rp->ai_family, rp->ai_socktype, 0);
+	if (sock < 0)
+	    continue;
+	rv = bind(sock, rp->ai_addr, rp->ai_addrlen);
+	close(sock);
+	if (rv < 0)
+	    continue;
+
+	if (getnameinfo(rp->ai_addr, rp->ai_addrlen,
+			lh.name, sizeof lh.name, NULL, 0,
+			NI_NUMERICHOST))
+	    continue;
+
+	lh.family = rp->ai_family;
+	memcpy(&lh.sockaddr, rp->ai_addr, rp->ai_addrlen);
+	break;
+    }
+
+    freeaddrinfo(results);
+
+err_use_ipv4:
+
+#endif
+
+    if (lh.family == AF_UNSPEC) {
+	/* this will break if a system is set up so that `localhost' does
+	 * not resolve to 127.0.0.1, but... */
+	lh.family = AF_INET;
+	strcpy(lh.name, "127.0.0.1");
+	lh.sockaddr.in.sin_family = lh.family;
+	lh.sockaddr.in.sin_addr.s_addr = inet_addr(lh.name);
+    }
+
     return OK;
 }
 
@@ -123,20 +176,59 @@ get_lh_inet_addr(void)
     if (lh.family == AF_UNSPEC)
         lookup_localhost();
 
-    type = ne_iaddr_ipv4;
-    raw = (unsigned char *) &lh.sockaddr.in.sin_addr.s_addr;
+    if (lh.family == AF_INET) {
+	type = ne_iaddr_ipv4;
+	raw = (unsigned char *) &lh.sockaddr.in.sin_addr.s_addr;
+    } else {
+	type = ne_iaddr_ipv6;
+	raw = lh.sockaddr.in6.sin6_addr.s6_addr;
+    }
 
     return ne_iaddr_make(type, raw);
 }
 
 int lookup_hostname(void)
 {
-    char buf[BUFSIZ];
+    char buf[NI_MAXHOST];
+#ifdef USE_GETADDRINFO
+    struct addrinfo hints = {}, *results, *rp;
+    int rv;
+#else
     struct hostent *ent;
+#endif
 
     local_hostname = NULL;
-    ONV(gethostname(buf, BUFSIZ) < 0,
+    ONV(gethostname(buf, sizeof buf) < 0,
 	("gethostname failed: %s", strerror(errno)));
+
+#ifdef USE_GETADDRINFO
+
+#ifdef USE_GAI_ADDRCONFIG
+    hints.ai_flags = AI_ADDRCONFIG;
+#endif
+    hints.ai_flags |= AI_CANONNAME;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    rv = getaddrinfo(buf, NULL, &hints, &results);
+    ONV(rv != 0, ("getaddrinfo failed: %s", gai_strerror(rv)));
+
+    for (rp = results; rp != NULL; rp = rp->ai_next) {
+	if (rp == results)
+	    snprintf(hn.name, sizeof hn.name, "%s", rp->ai_canonname);
+
+	if (rp->ai_family != AF_INET &&
+	    rp->ai_family != AF_INET6)
+	    continue;
+
+	hn.family = rp->ai_family;
+	memcpy(&hn.sockaddr, rp->ai_addr, rp->ai_addrlen);
+	break;
+    }
+
+    freeaddrinfo(results);
+
+#else
 
     ent = gethostbyname(buf);
 #ifdef HAVE_HSTRERROR
@@ -152,6 +244,8 @@ int lookup_hostname(void)
     memcpy(&hn.sockaddr.in.sin_addr, ent->h_addr,
 	   sizeof hn.sockaddr.in.sin_addr);
 
+#endif
+
     local_hostname = hn.name;
 
     return OK;
@@ -160,14 +254,23 @@ int lookup_hostname(void)
 static int do_listen(struct server_addr *addr, int port)
 {
     int ls = socket(addr->family, SOCK_STREAM, 0);
-    struct sockaddr_in saddr = addr->sockaddr.in;
+    struct sockaddr *saddr;
+    socklen_t saddrlen;
     int val = 1;
 
     setsockopt(ls, SOL_SOCKET, SO_REUSEADDR, (void *)&val, sizeof(int));
 
-    saddr.sin_port = htons(port);
+    if (addr->family == AF_INET) {
+	addr->sockaddr.in.sin_port = htons(port);
+	saddr = (struct sockaddr *) &addr->sockaddr.in;
+	saddrlen = sizeof addr->sockaddr.in;
+    } else {
+	addr->sockaddr.in6.sin6_port = htons(port);
+	saddr = (struct sockaddr *) &addr->sockaddr.in6;
+	saddrlen = sizeof addr->sockaddr.in6;
+    }
 
-    if (bind(ls, (struct sockaddr *)&saddr, sizeof(saddr))) {
+    if (bind(ls, saddr, saddrlen)) {
 	printf("bind failed: %s\n", strerror(errno));
 	return -1;
     }
@@ -338,25 +441,34 @@ int new_spawn_server(int count, server_fn fn, void *userdata,
 int new_spawn_server2(int count, server_fn fn, void *userdata,
                       ne_inet_addr **addr, unsigned int *port)
 {
-    struct sockaddr_in sa;
+    union {
+	struct sockaddr_in  in;
+	struct sockaddr_in6 in6;
+    } sa;
     socklen_t salen = sizeof sa;
     int ls;
-    
+
     if (lh.family == AF_UNSPEC)
         lookup_localhost();
 
     ls = do_listen(&lh, 0);
     ONN("could not bind/listen fd for server", ls < 0);
 
-    ONV(getsockname(ls, &sa, &salen) != 0,
+    ONV(getsockname(ls, (struct sockaddr *) &sa, &salen) != 0,
         ("could not get socket name for listening fd: %s",
          strerror(errno)));
-    
-    *port = ntohs(sa.sin_port);
-    *addr = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&lh.sockaddr.in.sin_addr.s_addr);
+
+    if (salen == sizeof sa.in) {
+	*port = ntohs(sa.in.sin_port);
+	*addr = ne_iaddr_make(ne_iaddr_ipv4,
+			      (unsigned char *) &sa.in.sin_addr.s_addr);
+    } else {
+	*port = ntohs(sa.in6.sin6_port);
+	*addr = ne_iaddr_make(ne_iaddr_ipv6, sa.in6.sin6_addr.s6_addr);
+    }
 
     NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
-    
+
     NE_DEBUG(NE_DBG_SOCKET, "child forking now...\n");
 
     child = fork();
