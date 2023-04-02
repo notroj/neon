@@ -204,7 +204,8 @@ int multi_session_server(ne_session **sess,
 
 int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
-    return multi_session_server(sess, "http", "127.0.0.1", 1, fn, userdata);
+    return multi_session_server(sess, "http", get_lh_addr(), 1,
+                                fn, userdata);
 }
 
 int proxied_session_server(ne_session **sess, const char *scheme,
@@ -219,7 +220,7 @@ int proxied_session_server(ne_session **sess, const char *scheme,
 
     NE_DEBUG(NE_DBG_HTTP, "test: Using proxied session to port %u.\n", port);
 
-    ne_session_proxy(*sess, "127.0.0.1", port);
+    ne_session_proxy(*sess, get_lh_addr(), port);
 
     return OK;
 }

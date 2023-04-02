@@ -40,6 +40,10 @@ int lookup_hostname(void);
 /* set to local hostname if lookup_hostname succeeds. */
 extern char *local_hostname;
 
+int get_lh_family(void);
+const char *get_lh_addr(void);
+ne_inet_addr *get_lh_inet_addr(void);
+
 /* Callback for spawn_server. */
 typedef int (*server_fn)(ne_socket *sock, void *userdata);
 

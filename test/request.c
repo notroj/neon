@@ -2049,17 +2049,19 @@ static int status(void)
 {
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
+    const char *lh_addr = get_lh_addr();
     char expect[1024];
 
     ne_snprintf(expect, sizeof expect,
-                "lookup(127.0.0.1)-"
-                "connecting(127.0.0.1,127.0.0.1)-"
-                "connected(127.0.0.1)-"
+                "lookup(%s)-"
+                "connecting(%s,%s)-"
+                "connected(%s)-"
                 "send(0,5000)-"
                 "send(5000,5000)-"
                 "recv(0,5)-"
                 "recv(5,5)-"
-                "disconnected(127.0.0.1)-");
+                "disconnected(%s)-",
+                lh_addr, lh_addr, lh_addr, lh_addr, lh_addr);
 
     CALL(make_session(&sess, single_serve_string, RESP200
                       "Content-Length: 5\r\n\r\n" "abcde"));
@@ -2084,14 +2086,15 @@ static int status_chunked(void)
 {
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
+    const char *lh_addr = get_lh_addr();
     char expect[1024];
 
     /* This sequence is not exactly guaranteed by the API, but it's
      * what the current implementation should do. */
     ne_snprintf(expect, sizeof expect,
-                "lookup(127.0.0.1)-"
-                "connecting(127.0.0.1,127.0.0.1)-"
-                "connected(127.0.0.1)-"
+                "lookup(%s)-"
+                "connecting(%s,%s)-"
+                "connected(%s)-"
                 "send(0,5000)-"
                 "send(5000,5000)-"
                 "recv(0,-1)-"
@@ -2100,7 +2103,8 @@ static int status_chunked(void)
                 "recv(3,-1)-"
                 "recv(4,-1)-"
                 "recv(5,-1)-"
-                "disconnected(127.0.0.1)-");
+                "disconnected(%s)-",
+                lh_addr, lh_addr, lh_addr, lh_addr, lh_addr);
 
     CALL(make_session(&sess, single_serve_string, 
                       RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
@@ -2121,12 +2125,10 @@ static int status_chunked(void)
     return OK;
 }
 
-static const unsigned char raw_127[4] = "\x7f\0\0\01"; /* 127.0.0.1 */
-
 static int local_addr(void)
 {
     ne_session *sess;
-    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    ne_inet_addr *ia = get_lh_inet_addr();
 
     CALL(make_session(&sess, single_serve_string, RESP200 
                       "Connection: close\r\n\r\n"));
@@ -2160,7 +2162,7 @@ static int dereg_progress(void)
 static int addrlist(void)
 {
     ne_session *sess;
-    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
+    ne_inet_addr *ia = get_lh_inet_addr();
     const ne_inet_addr *ial[1];
     unsigned int port;
 
