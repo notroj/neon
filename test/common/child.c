@@ -96,6 +96,39 @@ int lookup_localhost(void)
     return OK;
 }
 
+int
+get_lh_family(void)
+{
+    if (lh.family == AF_UNSPEC)
+        lookup_localhost();
+
+    return lh.family;
+}
+
+const char *
+get_lh_addr(void)
+{
+    if (lh.family == AF_UNSPEC)
+        lookup_localhost();
+
+    return lh.name;
+}
+
+ne_inet_addr *
+get_lh_inet_addr(void)
+{
+    ne_iaddr_type type;
+    unsigned char *raw;
+
+    if (lh.family == AF_UNSPEC)
+        lookup_localhost();
+
+    type = ne_iaddr_ipv4;
+    raw = (unsigned char *) &lh.sockaddr.in.sin_addr.s_addr;
+
+    return ne_iaddr_make(type, raw);
+}
+
 int lookup_hostname(void)
 {
     char buf[BUFSIZ];

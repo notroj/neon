@@ -971,7 +971,7 @@ static int fail_missing_CN(void)
 /* test for a bad ipAddress altname */
 static int fail_bad_ipaltname(void)
 {
-    return fail_ssl_request("altname6.cert", CA_CERT, "127.0.0.1",
+    return fail_ssl_request("altname6.cert", CA_CERT, get_lh_addr(),
                             "bad IP altname cert", NE_SSL_IDMISMATCH);
 }
 
@@ -997,7 +997,7 @@ static int fail_wildcard(void)
 
 static int fail_wildcard_ip(void)
 {
-    return fail_ssl_request("wildip.cert", CA_CERT, "127.0.0.1",
+    return fail_ssl_request("wildip.cert", CA_CERT, get_lh_addr(),
                             "wildcard IP", NE_SSL_IDMISMATCH);
 }
 
