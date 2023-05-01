@@ -38,6 +38,9 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -52,13 +55,23 @@
 
 #ifndef NEON_NO_TEST_CHILD
 
+#ifndef NI_MAXHOST
+#define NI_MAXHOST 1025
+#endif
+
 static pid_t child = 0;
 
 int clength;
 
-static struct in_addr lh_addr, hn_addr;
+struct server_addr {
+    int family;
+    union {
+	struct sockaddr_in in;
+    } sockaddr;
+    char name[NI_MAXHOST];
+};
 
-static int have_lh_addr;
+struct server_addr lh, hn;
 
 const char *want_header = NULL;
 got_header_fn got_header = NULL;
@@ -76,8 +89,10 @@ int lookup_localhost(void)
 {
     /* this will break if a system is set up so that `localhost' does
      * not resolve to 127.0.0.1, but... */
-    lh_addr.s_addr = inet_addr("127.0.0.1");
-    have_lh_addr = 1;
+    lh.family = AF_INET;
+    strcpy(lh.name, "127.0.0.1");
+    lh.sockaddr.in.sin_family = lh.family;
+    lh.sockaddr.in.sin_addr.s_addr = inet_addr(lh.name);
     return OK;
 }
 
@@ -98,22 +113,26 @@ int lookup_hostname(void)
     ONV(ent == NULL, ("could not resolve `%s'", buf));
 #endif
 
-    local_hostname = ne_strdup(ent->h_name);
+    hn.family = AF_INET;
+    strcpy(hn.name, ent->h_name);
+    hn.sockaddr.in.sin_family = hn.family;
+    memcpy(&hn.sockaddr.in.sin_addr, ent->h_addr,
+	   sizeof hn.sockaddr.in.sin_addr);
+
+    local_hostname = hn.name;
 
     return OK;
 }
 
-static int do_listen(struct in_addr addr, int port)
+static int do_listen(struct server_addr *addr, int port)
 {
-    int ls = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in saddr = {0};
+    int ls = socket(addr->family, SOCK_STREAM, 0);
+    struct sockaddr_in saddr = addr->sockaddr.in;
     int val = 1;
 
     setsockopt(ls, SOL_SOCKET, SO_REUSEADDR, (void *)&val, sizeof(int));
-    
-    saddr.sin_addr = addr;
+
     saddr.sin_port = htons(port);
-    saddr.sin_family = AF_INET;
 
     if (bind(ls, (struct sockaddr *)&saddr, sizeof(saddr))) {
 	printf("bind failed: %s\n", strerror(errno));
@@ -173,7 +192,7 @@ static int close_socket(ne_socket *sock)
 }
 
 /* This runs as the child process. */
-static int server_child(int readyfd, struct in_addr addr, int port,
+static int server_child(int readyfd, struct server_addr *addr, int port,
 			server_fn callback, void *userdata)
 {
     ne_socket *s = ne_sock_create();
@@ -207,9 +226,17 @@ int spawn_server(int port, server_fn fn, void *ud)
 int spawn_server_addr(int bind_local, int port, server_fn fn, void *ud)
 {
     int fds[2];
-    struct in_addr addr;
+    struct server_addr *addr;
 
-    addr = bind_local?lh_addr:hn_addr;
+    if (bind_local) {
+	addr = &lh;
+    } else {
+	if (hn.family == AF_UNSPEC) {
+	    hn.family = AF_INET;
+	    hn.sockaddr.in.sin_family = hn.family;
+	}
+	addr = &hn;
+    }
 
 #ifdef USE_PIPE
     if (pipe(fds)) {
@@ -282,10 +309,10 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
     socklen_t salen = sizeof sa;
     int ls;
     
-    if (!have_lh_addr)
+    if (lh.family == AF_UNSPEC)
         lookup_localhost();
 
-    ls = do_listen(lh_addr, 0);
+    ls = do_listen(&lh, 0);
     ONN("could not bind/listen fd for server", ls < 0);
 
     ONV(getsockname(ls, &sa, &salen) != 0,
@@ -293,7 +320,7 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
          strerror(errno)));
     
     *port = ntohs(sa.sin_port);
-    *addr = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&lh_addr.s_addr);
+    *addr = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)&lh.sockaddr.in.sin_addr.s_addr);
 
     NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
     
