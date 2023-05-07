@@ -123,15 +123,15 @@ csr_fields "Self-Signed" | \
 ${MKCERT} -key server.key -out ssigned.pem
 
 # default => T61String
-csr_fields "`echo -e 'H\0350llo World'`" localhost |
+csr_fields "$(printf 'H%bllo World\n' '\0350')" localhost |
 ${REQ} -new -key server.key -out t61subj.csr
 
 STRMASK=pkix # => BMPString
-csr_fields "`echo -e 'H\0350llo World'`" localhost |
+csr_fields "$(printf 'H%bllo World\n' '\0350')" localhost |
 ${REQ} -new -key server.key -out bmpsubj.csr
 
 STRMASK=utf8only # => UTF8String
-csr_fields "`echo -e 'H\0350llo World'`" localhost |
+csr_fields "$(printf 'H%bllo World\n' '\0350')" localhost |
 ${REQ} -new -key server.key -out utf8subj.csr
 
 STRMASK=default
