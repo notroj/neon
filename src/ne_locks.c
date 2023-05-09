@@ -827,6 +827,9 @@ int ne_lock_refresh(ne_session *sess, struct ne_lock *lock)
     ne_print_request_header(req, "If", "(<%s>)", lock->token);
     add_timeout_header(req, lock->timeout);
 
+    /* LOCK is not idempotent. */
+    ne_set_request_flag(req, NE_REQFLAG_IDEMPOTENT, 0);
+
     ret = ne_xml_dispatch_request(req, parser);
 
     if (ret == NE_OK) {
