@@ -1122,7 +1122,7 @@ static const EVP_MD *hash_to_md(unsigned int flags)
     case NE_HASH_SHA256: return EVP_sha256();
 #ifdef HAVE_OPENSSL11
     case NE_HASH_SHA512: return EVP_sha512();
-#ifndef LIBRESSL_VERSION_NUMBER
+#if !defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER >= 0x3080000fL
     case NE_HASH_SHA512_256: return EVP_sha512_256();
 #endif
 #endif
