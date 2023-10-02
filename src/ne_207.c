@@ -305,11 +305,9 @@ static void handle_error(struct context *ctx, const ne_status *status,
 			 const char *description)
 {
     if (status && status->klass != 2 && status->code != 424) {
-	char buf[50];
 	ctx->is_error = 1;
-	sprintf(buf, "%d", status->code);
-	ne_buffer_concat(ctx->buf, ctx->href, ": ", 
-			 buf, " ", status->reason_phrase, "\n", NULL);
+	ne_buffer_snprintf(ctx->buf, 512, "%s: %d %s\n",
+                           ctx->href, status->code, status->reason_phrase);
 	if (description != NULL) {
 	    /* TODO: these can be multi-line. Would be good to
 	     * word-wrap this at col 80. */
