@@ -506,7 +506,7 @@ char *ne_path_escapef(const char *path, unsigned int flags)
     for (pnt = (const unsigned char *)path; *pnt != '\0'; pnt++) {
 	if (path_escape_ch(*pnt, mask)) {
 	    /* Escape it - %<hex><hex> */
-	    sprintf(p, "%%%02x", (unsigned char) *pnt);
+	    ne_snprintf(p, 4, "%%%02x", (unsigned char) *pnt);
 	    p += 3;
 	} else {
 	    *p++ = *pnt;
