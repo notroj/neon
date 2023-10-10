@@ -44,11 +44,12 @@ typedef struct ne_request_s ne_request;
 
 /***** Request Handling *****/
 
-/* Create a request in session 'sess', with given method and path.
- * 'path' must conform to the 'abs_path' grammar in RFC2396, with an
- * optional "? query" part, and MUST be URI-escaped by the caller. */
-ne_request *ne_request_create(ne_session *sess,
-                              const char *method, const char *path)
+/* Create a request in session 'sess', with given method and target.
+ * 'target' is used to form the request-target (per RFC 7230ẞ5.3), and
+ * may be an absolute-path (with optional query-string), an
+ * absolute-URI, or an asterisk. */
+ne_request *ne_request_create(ne_session *sess, const char *method,
+                              const char *target)
     ne_attribute((nonnull));
 
 /* The request body will be taken from 'size' bytes of 'buffer'. */

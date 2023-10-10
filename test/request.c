@@ -2354,6 +2354,47 @@ static int fail_excess_1xx(void)
                                    "Too many interim responses");
 }
 
+static int serve_check_reqline(ne_socket *sock, void *userdata)
+{
+    const char *expect = userdata;
+
+    ONN("failed to read request-line",
+        ne_sock_readline(sock, buffer, BUFSIZ) <= 0);
+
+    NE_DEBUG(NE_DBG_HTTP, "child: got request-line %s\n", buffer);
+
+    ONCMP(expect, buffer, "request-line", "check for absolute URI");
+
+    return single_serve_string(sock, RESP200 "Connection: close\r\n\r\n");
+}
+
+/* Test that various request target forms are allowed. */
+static int target_forms(void)
+{
+    static const struct {
+        const char *uri, *reqline;
+    } ts[] = {
+        { "/foo", "GET /foo HTTP/1.1\r\n" },
+        { "/foo?bar", "GET /foo?bar HTTP/1.1\r\n" },
+        { "ftp://www.example.com/foo", "GET ftp://www.example.com/foo HTTP/1.1\r\n" },
+        { "*", "GET * HTTP/1.1\r\n" },
+        { NULL, NULL }
+    };
+    unsigned n;
+
+    for (n = 0; ts[n].uri; n++) {
+        ne_session *sess;
+
+        CALL(make_session(&sess, serve_check_reqline, (void *)ts[n].reqline));
+
+        ONREQ(any_request(sess, ts[n].uri));
+
+        CALL(destroy_and_wait(sess));
+    }
+
+    return OK;
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2449,5 +2490,6 @@ ne_test tests[] = {
     T(fail_double_lookup),
     T(safe_flags),
     T(fail_excess_1xx),
+    T(target_forms),
     T(NULL)
 };

@@ -506,8 +506,8 @@ int ne_accept_2xx(void *userdata, ne_request *req, const ne_status *st)
     return (st->klass == 2);
 }
 
-ne_request *ne_request_create(ne_session *sess,
-			      const char *method, const char *path) 
+ne_request *ne_request_create(ne_session *sess, const char *method,
+                              const char *target)
 {
     ne_request *req = ne_calloc(sizeof *req);
 
@@ -527,12 +527,12 @@ ne_request *ne_request_create(ne_session *sess,
 
     /* Only use an absoluteURI here when we might be using an HTTP
      * proxy, and SSL is in use: some servers can't parse them. */
-    if (sess->any_proxy_http && !req->session->use_ssl && path[0] == '/')
+    if (sess->any_proxy_http && !req->session->use_ssl && target[0] == '/')
         req->target = ne_concat(req->session->scheme, "://",
                                 req->session->server.hostport,
-                                path, NULL);
+                                target, NULL);
     else
-        req->target = ne_strdup(path);
+        req->target = ne_strdup(target);
 
     {
 	struct hook *hk;
