@@ -66,6 +66,12 @@ struct body_reader {
     struct body_reader *next;
 };
 
+struct interim_handler {
+    ne_interim_response_fn fn;
+    void *userdata;
+    struct interim_handler *next;
+};
+
 struct field {
     char *name, *value;
     size_t vlen;
@@ -151,6 +157,7 @@ struct ne_request_s {
 
     /* List of callbacks which are passed response body blocks */
     struct body_reader *body_readers;
+    struct interim_handler *interim_handler;
 
     /*** Miscellaneous ***/
     unsigned int method_is_head;
@@ -163,6 +170,7 @@ struct ne_request_s {
 };
 
 static int open_connection(ne_session *sess);
+static int read_response_headers(ne_request *req, int clear);
 
 /* Returns hash value for header 'name', converting it to lower-case
  * in-place. */
@@ -722,9 +730,21 @@ void ne_add_response_body_reader(ne_request *req, ne_accept_response acpt,
     req->body_readers = new;
 }
 
+void ne_add_interim_handler(ne_request *req, ne_interim_response_fn fn,
+                            void *userdata)
+{
+    struct interim_handler *new = ne_malloc(sizeof *new);
+
+    new->fn = fn;
+    new->userdata = userdata;
+    new->next = req->interim_handler;
+    req->interim_handler = new;
+}
+
 void ne_request_destroy(ne_request *req) 
 {
     struct body_reader *rdr, *next_rdr;
+    struct interim_handler *ih, *next_ih;
     struct hook *hk, *next_hk;
 
     ne_free(req->target);
@@ -733,6 +753,11 @@ void ne_request_destroy(ne_request *req)
     for (rdr = req->body_readers; rdr != NULL; rdr = next_rdr) {
 	next_rdr = rdr->next;
 	ne_free(rdr);
+    }
+
+    for (ih = req->interim_handler; ih; ih = next_ih) {
+        next_ih = ih->next;
+        ne_free(ih);
     }
 
     free_response_headers(req);
@@ -991,18 +1016,6 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     return 0;
 }
 
-/* Discard a set of message headers. */
-static int discard_headers(ne_request *req)
-{
-    do {
-	SOCK_ERR(req, ne_sock_readline(req->session->socket, req->respbuf, 
-				       sizeof req->respbuf),
-		 _("Could not read interim response headers"));
-	NE_DEBUG(NE_DBG_HTTP, "[discard] < %s", req->respbuf);
-    } while (strcmp(req->respbuf, EOL) != 0);
-    return NE_OK;
-}
-
 /* Send the request, and read the response Status-Line. Returns:
  *   NE_RETRY   connection closed by server; persistent connection
  *		timeout
@@ -1051,11 +1064,19 @@ static int send_request(ne_request *req, const ne_buffer *request)
     for (count = 0; count < MAX_INTERIM_RESPONSES
              && (ret = read_status_line(req, status, retry)) == NE_OK
              && status->klass == 1; count++) {
+        struct interim_handler *ih;
+
 	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response %d.\n",
                  status->code, count);
 	retry = 0; /* successful read() => never retry now. */
+
 	/* Discard headers with the interim response. */
-	if ((ret = discard_headers(req)) != NE_OK) break;
+	if ((ret = read_response_headers(req, 1)) != NE_OK) break;
+
+        /* Run interim handlers. */
+        for (ih = req->interim_handler; ih; ih = ih->next) {
+            ih->fn(ih->userdata, req, status);
+        }
 
 	if (req->flags[NE_REQFLAG_EXPECT100] && (status->code == 100)
             && req->body_length && !sentbody) {
@@ -1170,10 +1191,14 @@ static void add_response_header(ne_request *req, unsigned int hash,
 
 /* Read response headers.  Returns NE_* code, sets session error and
  * closes connection on error. */
-static int read_response_headers(ne_request *req) 
+static int read_response_headers(ne_request *req, int clear)
 {
     char hdr[MAX_HEADER_LEN];
     int ret, count = 0;
+
+    /* Clear any response headers from previous invocations
+     * (e.g. retired requests, interim responses. */
+    if (clear) free_response_headers(req);
     
     while ((ret = read_message_header(req, hdr, sizeof hdr)) == NE_RETRY 
 	   && ++count < MAX_HEADER_FIELDS) {
@@ -1280,13 +1305,9 @@ int ne_begin_request(ne_request *req)
     if (req->session->is_http11) req->can_persist = 1;
 
     ne_set_error(req->session, "%d %s", st->code, st->reason_phrase);
-    
-    /* Empty the response header hash, in case this request was
-     * retried: */
-    free_response_headers(req);
 
     /* Read the headers */
-    ret = read_response_headers(req);
+    ret = read_response_headers(req, 1);
     if (ret) return ret;
 
     /* check the Connection header */
@@ -1408,9 +1429,10 @@ int ne_end_request(ne_request *req)
     struct hook *hk;
     int ret;
 
-    /* Read headers in chunked trailers */
     if (req->resp.mode == R_CHUNKED) {
-	ret = read_response_headers(req);
+        /* Read headers in chunked trailers WITHOUT clearing existing
+         * header hash. */
+	ret = read_response_headers(req, 0);
         if (ret) return ret;
     } else {
         ret = NE_OK;
