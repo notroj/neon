@@ -235,6 +235,16 @@ void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value);
  * flag is not supported. */
 int ne_get_request_flag(ne_request *req, ne_request_flag flag);
 
+/* Callback to handle an interim (1xx) response. The status-code of
+ * the response is passed as 'status'; interim response headers can be
+ * accessed via ne_get_response_header. */
+typedef void (*ne_interim_response_fn)(void *userdata, ne_request *req,
+                                       const ne_status *status);
+
+/* Add a interim response callback handler for the request. */
+void ne_add_interim_handler(ne_request *req, ne_interim_response_fn fn,
+                            void *userdata);
+
 /**** Request hooks handling *****/
 
 typedef void (*ne_free_hooks)(void *cookie);

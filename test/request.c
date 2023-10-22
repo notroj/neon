@@ -2363,7 +2363,7 @@ static int serve_check_reqline(ne_socket *sock, void *userdata)
 
     NE_DEBUG(NE_DBG_HTTP, "child: got request-line %s\n", buffer);
 
-    ONCMP(expect, buffer, "request-line", "check for absolute URI");
+    ONCMPN(expect, buffer, "request-line", "check for absolute URI");
 
     return single_serve_string(sock, RESP200 "Connection: close\r\n\r\n");
 }
@@ -2392,6 +2392,52 @@ static int target_forms(void)
         CALL(destroy_and_wait(sess));
     }
 
+    return OK;
+}
+
+/* Interim response callback. */
+static void test_interim(void *userdata, ne_request *req, const ne_status *st)
+{
+    ne_buffer *buf = userdata;
+    const char *val;
+
+    ne_buffer_snprintf(buf, 15, "[code=%d]", st->code);
+
+    val = ne_get_response_header(req, "X-Interim");
+
+    ne_buffer_concat(buf, "[hdr=", val ? val : "null", "]", NULL);
+}
+
+/* Test for interim response headers. */
+static int interims(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    ne_buffer *buf = ne_buffer_create();
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 103 Early Stuff\r\n"
+                      "X-Interim: foobar\r\n" "\r\n"
+
+                      "HTTP/1.1 102 Stuff Is Happening\r\n"
+                      "X-Interim: bar, foo\r\n" "\r\n"
+
+                      "HTTP/1.1 200 Thank you kindly\r\n"
+                      "Content-Length: 0\r\n"
+                      "X-Not-Interim: finally\r\n" "\r\n"));
+
+    req = ne_request_create(sess, "GET", "/");
+    ne_add_interim_handler(req, test_interim, buf);
+    ONREQ(ne_request_dispatch(req));
+    ONN("interim header leaked to final response",
+        ne_get_response_header(req, "X-Interim") != NULL);
+    ne_request_destroy(req);
+    CALL(destroy_and_wait(sess));
+
+    ONCMPN("[code=103][hdr=foobar][code=102][hdr=bar, foo]", buf->data,
+           "interim responses", "trace");
+
+    ne_buffer_destroy(buf);
     return OK;
 }
 
@@ -2491,5 +2537,6 @@ ne_test tests[] = {
     T(safe_flags),
     T(fail_excess_1xx),
     T(target_forms),
+    T(interims),
     T(NULL)
 };
