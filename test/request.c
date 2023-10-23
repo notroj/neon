@@ -89,7 +89,7 @@ static ne_request *construct_get(ne_session *sess, void *userdata)
     ne_request *r = ne_request_create(sess, "GET", "/");
     ne_buffer *buf = userdata;
 
-    ne_add_response_body_reader(r, ne_accept_2xx, collector, buf);
+    if (buf) ne_add_response_body_reader(r, ne_accept_2xx, collector, buf);
 
     return r;
 }
@@ -2360,6 +2360,44 @@ static int interims(void)
     return OK;
 }
 
+static int retry_408(void)
+{
+    ne_session *sess;
+
+    /* Serve two responses down a single persistent connection, the
+     * second of which is invalid and will cause the request to be
+     * aborted. */
+    CALL(multi_session_server(&sess, "http", "localhost",
+                              2, single_serve_string,
+                              EMPTY_RESP
+                              "HTTP/1.1 408 Request Timeout\r\n"
+                              "Server: neon-test-server\r\n"
+                              "Content-Length: 0\r\n\r\n"));
+
+    CALL(any_2xx_request(sess, "/first408"));
+    CALL(any_2xx_request(sess, "/second408"));
+
+    return destroy_and_wait(sess);
+}
+
+/* Ensure that only a 408 on a persisted connection is
+ * retried. Otherwise it should just be handled as a final
+ * response. */
+static int dont_retry_408(void)
+{
+    ne_session *sess;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 408 Request Timeout\r\n"
+                      "Server: neon-test-server\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+
+    /* Run any request, ensure it gets a 408 response. */
+    CALL(run_request(sess, 408, construct_get, NULL));
+
+    return destroy_and_wait(sess);
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2444,5 +2482,7 @@ ne_test tests[] = {
     T(fail_excess_1xx),
     T(target_forms),
     T(interims),
+    T(retry_408),
+    T(dont_retry_408),
     T(NULL)
 };
