@@ -1,5 +1,5 @@
 # Georgian translation for neon
-# Copyright (C) 2022, neon authors
+# Copyright (C) 2022, Temuri Doghonadze
 # This file is distributed under the same license as the neon package.
 # Temuri Doghonadze <temuri.doghonadze@gmail.com>, 2022.
 #
