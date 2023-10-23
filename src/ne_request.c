@@ -1090,6 +1090,14 @@ static int send_request(ne_request *req, const ne_buffer *request)
         return aborted(req, _("Too many interim responses"), 0);
     }
 
+    /* Per RFC 9110ẞ15.5.9 a client MAY retry an outstanding request
+     * after a 408. Some modern servers generate this. */
+    if (sess->persisted && status->code == 408) {
+        NE_DEBUG(NE_DBG_HTTP, "req: Retrying after 408.\n");
+        ne_close_connection(sess);
+        return NE_RETRY;
+    }
+
     return ret;
 }
 
@@ -1291,7 +1299,7 @@ int ne_begin_request(ne_request *req)
     ret = send_request(req, data);
     /* Retry this once after a persistent connection timeout. */
     if (ret == NE_RETRY) {
-	NE_DEBUG(NE_DBG_HTTP, "Persistent connection timed out, retrying.\n");
+	NE_DEBUG(NE_DBG_HTTP, "req: Persistent connection timed out, retrying.\n");
 	ret = send_request(req, data);
     }
     ne_buffer_destroy(data);
