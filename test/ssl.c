@@ -66,8 +66,7 @@ static ne_ssl_client_cert *def_cli_cert;
 static char *nul_cn_fn;
 
 static int check_dname(const ne_ssl_dname *dn, const char *expected,
-                       const char *which)
-    ne_attribute((nonnull));
+                       const char *which);
 
 static int check_cert_dnames(const ne_ssl_certificate *cert,
                              const char *subject, const char *issuer)
