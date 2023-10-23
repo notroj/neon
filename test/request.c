@@ -1333,12 +1333,13 @@ static int fail_noserver(const char *hostname, unsigned int port, int code)
 {
      ne_session *sess = ne_session_create("http", hostname, port);
      int ret = any_request(sess, "/foo");
+     ne_session_destroy(sess);
 
      ONV(ret == NE_OK,
 	 ("request to server at %s:%u succeeded?!", hostname, port));
      ONV(ret != code, ("request failed with %d not %d", ret, code));
 
-     return destroy_and_wait(sess);
+     return OK;
 }
 
 static int fail_lookup(void)
