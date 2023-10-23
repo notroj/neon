@@ -153,8 +153,7 @@ static int expect_response(const char *expect, server_fn fn, void *userdata)
 
     CALL(session_server(&sess, fn, userdata));
     CALL(run_request(sess, 200, construct_get, buf));
-    ne_session_destroy(sess);
-    CALL(await_server());
+    CALL(destroy_and_wait(sess));
 
     ONN("response body match", strcmp(buf->data, expect));
 
@@ -433,8 +432,7 @@ static int test_persist_p(const char *response, const char *body, int proxy)
     /* Run it again. */
     ne_buffer_clear(buf);
     CALL(run_request(sess, 200, construct_get, buf));
-    ne_session_destroy(sess);
-    ON(await_server());
+    CALL(destroy_and_wait(sess));
 
     ONV(strcmp(buf->data, body),
 	("response #2 mismatch: [%s] not [%s]", buf->data, body));
@@ -628,10 +626,9 @@ static int persist_timeout(void)
 	}
     }
 
-    ne_session_destroy(sess);
     ne_buffer_destroy(buf);
 
-    return OK;
+    return destroy_and_wait(sess);
 }   
 
 /* Test that an HTTP/1.0 server is not presumed to support persistent
@@ -722,6 +719,7 @@ static int response_headers(void)
         { "X-Header", "foo", single_serve_string,
           RESP200 TE_CHUNKED "X-Header: foo\r\n\r\n"
           CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
+        /* Test that merging between trailers and main response headers works. */
         { "X-Trailer", "fooish, barish", single_serve_string,
           RESP200 TE_CHUNKED "X-Trailer: fooish\r\n\r\n"
           CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
@@ -1335,13 +1333,12 @@ static int fail_noserver(const char *hostname, unsigned int port, int code)
 {
      ne_session *sess = ne_session_create("http", hostname, port);
      int ret = any_request(sess, "/foo");
-     ne_session_destroy(sess);
 
      ONV(ret == NE_OK,
 	 ("request to server at %s:%u succeeded?!", hostname, port));
      ONV(ret != code, ("request failed with %d not %d", ret, code));
 
-     return OK;
+     return destroy_and_wait(sess);
 }
 
 static int fail_lookup(void)
@@ -1571,9 +1568,7 @@ static int versions(void)
     ONN("did not detect lack of HTTP/1.1 compliance",
 	ne_version_pre_http11(sess) == 0);
 
-    ne_session_destroy(sess);
-
-    return OK;
+    return destroy_and_wait(sess);
 }
 
 struct cr_args {
@@ -1636,9 +1631,7 @@ static int hook_create_req(void)
 
     ne_free(u);
 
-    ne_session_destroy(sess);
-
-    return OK;    
+    return destroy_and_wait(sess);
 }
 
 static int serve_check_method(ne_socket *sock, void *ud)
@@ -1999,8 +1992,7 @@ static int status(void)
 
     CALL(any_2xx_request_body(sess, "/status"));
 
-    ne_session_destroy(sess);
-    CALL(await_server());
+    CALL(destroy_and_wait(sess));
 
     ONV(strcmp(expect, buf->data),
         ("status event sequence mismatch: got [%s] not [%s]",
@@ -2042,8 +2034,7 @@ static int status_chunked(void)
 
     CALL(any_2xx_request_body(sess, "/status"));
 
-    ne_session_destroy(sess);
-    CALL(await_server());
+    CALL(destroy_and_wait(sess));
     
     ONV(strcmp(expect, buf->data),
         ("status event sequence mismatch: got [%s] not [%s]",
@@ -2223,10 +2214,9 @@ static int send_length(void)
     ONCMP("foo", buf->data, "response body", "match");
 
     ne_request_destroy(req);
-    ne_session_destroy(sess);
     ne_buffer_destroy(buf);
     close(fd);
-    return await_server();
+    return destroy_and_wait(sess);
 }
 
 /* Test for error code for a SOCKS proxy failure, bug in <= 0.29.3. */
