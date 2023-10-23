@@ -12,6 +12,8 @@ Changes in release 0.33.0:
    libproxy by default for new sessions (Jan-Michael Brummer)
  - ne_locks.h: added DAV:lockroot support per RFC 4918
  - ne_ssl.h: ne_ssl_trust_default_ca() now a no-op for non-SSL sessions
+ - ne_request.h: add ne_add_interim_handler() to handle interim
+   (1xx) responses; headers in interim responses are now accessible
 * Bug fixes:
  - test suite now works correctly on IPv6-only hosts (Jeremy Sowden)
  - fixes for building against LibreSSL (orbea)
