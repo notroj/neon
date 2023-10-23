@@ -663,148 +663,77 @@ static int no_persist_http10(void)
     return OK;
 }
 
-static int ignore_bad_headers(void)
-{
-    return expect_response("abcde", single_serve_string,
-			   RESP200 
-			   "Stupid Header\r\n"
-			   "ReallyStupidHeader\r\n"
-			   "Content-Length: 5\r\n"
-			   "\r\n"
-			   "abcde");
-}
-
-static int fold_headers(void)
-{
-    return expect_response("abcde", single_serve_string,
-			   RESP200 "Content-Length: \r\n   5\r\n"
-			   "\r\n"
-			   "abcde");
-}
-
-static int fold_many_headers(void)
-{
-    return expect_response("abcde", single_serve_string,
-			   RESP200 "Content-Length: \r\n \r\n \r\n \r\n  5\r\n"
-			   "\r\n"
-			   "abcde");
-}
-
 #define NO_BODY "Content-Length: 0\r\n\r\n"
 
-static int empty_header(void)
+static int response_bodies(void)
 {
-    return expect_header_value("ranDom-HEader", "",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr:\r\n"
-			       NO_BODY);
+    struct {
+        const char *expect;
+        server_fn fn;
+        const char *response;
+    } ts[] = {
+        { "abcde", single_serve_string, RESP200 "Stupid Header\r\n" "ReallyStupidHeader\r\n"
+          "Content-Length: 5\r\n" "\r\n" "abcde" },
+        { "abcde", single_serve_string, RESP200 "Content-Length: \r\n   5\r\n" "\r\n" "abcde" },
+        { "abcde", single_serve_string, RESP200 "Content-Length: \r\n \r\n \r\n \r\n  5\r\n" "\r\n" "abcde" },
+        { NULL, NULL, NULL }
+    };
+    unsigned n;
+
+    for (n = 0; ts[n].expect != NULL; n++ ){
+        CALL(expect_response(ts[n].expect, ts[n].fn, (void *)ts[n].response));
+    }
+
+    return OK;
 }
 
-static int ignore_header_case(void)
+static int response_headers(void)
 {
-    return expect_header_value("ranDom-HEader", "noddy",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr: noddy\r\n"
-			       NO_BODY);
-}
+    struct {
+        const char *name, *value;
+        server_fn fn;
+        const char *response;
+    } ts[] = {
+        { "ranDom-HEader", "", single_serve_string,      RESP200 "RANDom-HeADEr:\r\n" NO_BODY },
+        { "ranDom-HEader", "noddy", single_serve_string, RESP200 "RANDom-HeADEr: noddy\r\n" NO_BODY },
+        { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr:    fishy\r\n" NO_BODY },
+        { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr \t :    fishy\r\n" NO_BODY},
+        { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr: fishy  \r\n" NO_BODY },
+        { "ranDom-HEader", "geezer", single_serve_string, RESP200 "RANDom-HeADEr: \t \tgeezer\r\n" NO_BODY },
+        { "gONe", "fishing", single_serve_string,
+          RESP200 TE_CHUNKED "\r\n0\r\n" "Hello: world\r\n" "GONE: fishing\r\n" "\r\n" },
+        { "hello", "w o r l d", single_serve_string,
+          RESP200 "Hello:  \n\tw\r\n\to r l\r\n\td  \r\n" NO_BODY },
+        { "X-Header", "jim, jab, jar", single_serve_string,
+          RESP200 "X-Header: jim\r\n" "x-header: jab\r\n" "x-Header: jar\r\n" NO_BODY },
+        { "X-Header", "jim, jab, jar", single_serve_string,
+          RESP200 "X-Header: jim  \r\n" "x-header: jab  \r\n" "x-Header: jar  \r\n" NO_BODY },
+        /* RFC 2616 14.10: headers listed in Connection must be stripped on
+         * receiving an HTTP/1.0 message in case there was a pre-1.1 proxy
+         * somewhere. */
+        { "X-Widget", NULL, single_serve_string,
+          "HTTP/1.0 200 OK\r\n" "Connection: x-widget\r\n" "x-widget: blah\r\n" NO_BODY },
+        { "X-Widget", NULL, single_serve_string,
+          "HTTP/1.0 200 OK\r\n" "Connection: connection, x-fish, x-widget\r\n" "x-widget: blah\r\n" NO_BODY },
+        /* Test trailer header handling. */
+        { "X-Trailer", "foo", single_serve_string,
+          RESP200 TE_CHUNKED "X-Header: bar\r\n\r\n"
+          CHUNK(6, "foobar") "0\r\nX-Trailer: foo\r\n\r\n" },
+        { "X-Header", "foo", single_serve_string,
+          RESP200 TE_CHUNKED "X-Header: foo\r\n\r\n"
+          CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
+        { "X-Trailer", "fooish, barish", single_serve_string,
+          RESP200 TE_CHUNKED "X-Trailer: fooish\r\n\r\n"
+          CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
+        { NULL, NULL, NULL, NULL }
+    };
+    unsigned n;
 
-static int ignore_header_ws(void)
-{
-    return expect_header_value("ranDom-HEader", "fishy",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr:    fishy\r\n"
-			       NO_BODY);
-}
+    for (n = 0; ts[n].name != NULL; n++ ){
+        CALL(expect_header_value(ts[n].name, ts[n].value, ts[n].fn, (void *)ts[n].response));
+    }
 
-static int ignore_header_ws2(void)
-{
-    return expect_header_value("ranDom-HEader", "fishy",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr \t :    fishy\r\n"
-			       NO_BODY);
-}
-
-static int ignore_header_ws3(void)
-{
-    return expect_header_value("ranDom-HEader", "fishy",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr: fishy  \r\n"
-			       NO_BODY);
-}
-
-static int ignore_header_tabs(void)
-{
-    return expect_header_value("ranDom-HEader", "geezer",
-			       single_serve_string,
-			       RESP200 "RANDom-HeADEr: \t \tgeezer\r\n"
-			       NO_BODY);
-}
-
-static int trailing_header(void)
-{
-    return expect_header_value("gONe", "fishing",
-			       single_serve_string,
-			       RESP200 TE_CHUNKED
-			       "\r\n0\r\n"
-			       "Hello: world\r\n"
-			       "GONE: fishing\r\n"
-			       "\r\n");
-}
-
-static int continued_header(void)
-{
-    return expect_header_value("hello", "w o r l d", single_serve_string,
-			       RESP200 "Hello:  \n\tw\r\n\to r l\r\n\td  \r\n"
-			       NO_BODY);
-}
-
-/* check headers callbacks are working correctly. */
-static int multi_header(void)
-{
-    return expect_header_value("X-Header", "jim, jab, jar",
-                               single_serve_string,
-                               RESP200 
-                               "X-Header: jim\r\n" 
-                               "x-header: jab\r\n"
-                               "x-Header: jar\r\n"
-                               "Content-Length: 0\r\n\r\n");
-}
-
-/* check headers callbacks are working correctly. */
-static int multi_header2(void)
-{
-    return expect_header_value("X-Header", "jim, jab, jar",
-                               single_serve_string,
-                               RESP200 
-                               "X-Header: jim  \r\n" 
-                               "x-header: jab  \r\n"
-                               "x-Header: jar  \r\n"
-                               "Content-Length: 0\r\n\r\n");
-}
-
-/* RFC 2616 14.10: headers listed in Connection must be stripped on
- * receiving an HTTP/1.0 message in case there was a pre-1.1 proxy
- * somewhere. */
-static int strip_http10_connhdr(void)
-{
-    return expect_header_value("X-Widget", NULL,
-                               single_serve_string,
-                               "HTTP/1.0 200 OK\r\n"
-                               "Connection: x-widget\r\n"
-                               "x-widget: blah\r\n"
-                               "Content-Length: 0\r\n"
-                               "\r\n");
-}
-
-static int strip_http10_connhdr2(void)
-{
-    return expect_header_value("X-Widget", NULL,
-                               single_serve_string,
-                               "HTTP/1.0 200 OK\r\n"
-                               "Connection: connection, x-fish, x-widget\r\n"
-                               "x-widget: blah\r\n"
-                               "Content-Length: 0\r\n"
-                               "\r\n");
+    return OK;
 }
 
 static int post_send_retry(ne_request *req, void *userdata, 
@@ -2474,21 +2403,8 @@ ne_test tests[] = {
     T(closed_connection),
     T(close_not_retried),
     T(send_progress),
-    T(ignore_bad_headers),
-    T(fold_headers),
-    T(fold_many_headers),
-    T(multi_header),
-    T(multi_header2),
-    T(empty_header),
-    T(trailing_header),
-    T(ignore_header_case),
-    T(ignore_header_ws),
-    T(ignore_header_ws2),
-    T(ignore_header_ws3),
-    T(ignore_header_tabs),
-    T(strip_http10_connhdr),
-    T(strip_http10_connhdr2),
-    T(continued_header),
+    T(response_bodies),
+    T(response_headers),
     T(reset_headers),
     T(iterate_none),
     T(iterate_many),
