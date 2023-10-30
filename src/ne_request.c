@@ -1197,8 +1197,9 @@ static void add_response_header(ne_request *req, unsigned int hash,
     (*nextf)->next = NULL;
 }
 
-/* Read response headers.  Returns NE_* code, sets session error and
- * closes connection on error. */
+/* Read response headers. If 'clear' is non-zero, clears existing
+ * response header hash first. Returns NE_* code, sets session error
+ * and closes connection on error. */
 static int read_response_headers(ne_request *req, int clear)
 {
     char hdr[MAX_HEADER_LEN];

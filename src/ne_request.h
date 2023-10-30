@@ -83,8 +83,13 @@ typedef ssize_t (*ne_provide_body)(void *userdata,
  * request body, a block at a time.  The total size of the request
  * body is 'length'; the callback must ensure that it returns no more
  * than 'length' bytes in total.  If 'length' is set to -1, then the
- * total size of the request is unknown by the caller and chunked 
- * transfer will be used. */
+ * total size of the request is unknown by the caller and chunked
+ * transfer will be used.
+ *
+ * The caller MUST determine that the server can accept chunked
+ * encoding (i.e. advertises HTTP/1.1 support) before using chunked
+ * encoding. This can be done by testing that ne_version_pre_http11()
+ * returns zero after performing an OPTIONS or HEAD request. */
 void ne_set_request_body_provider(ne_request *req, ne_off_t length,
                                   ne_provide_body provider, void *userdata)
     ne_attribute((nonnull (1)));
