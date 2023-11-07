@@ -35,3 +35,15 @@ jobs:
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make
     - run: make check
+
+  centos:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/centos/centos:stream9
+    steps:
+      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel krb5-devel libtool
+      - uses: actions/checkout@v3
+      - run: ./autogen.sh
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
+      - run: make
+      - run: make check
