@@ -119,6 +119,29 @@ int ne_put(ne_session *sess, const char *uri, int fd)
     return ret;
 }
 
+int ne_putbuf(ne_session *sess, const char *path,
+              const char *buf, size_t buflen)
+{
+    ne_request *req = ne_request_create(sess, "PUT", path);
+    int ret;
+
+#ifdef NE_HAVE_DAV
+    ne_lock_using_resource(req, path, 0);
+    ne_lock_using_parent(req, path);
+#endif
+
+    ne_set_request_body_buffer(req, buf, buflen);
+
+    ret = ne_request_dispatch(req);
+
+    if (ret == NE_OK && ne_get_status(req)->klass != 2)
+	ret = NE_ERROR;
+
+    ne_request_destroy(req);
+
+    return ret;
+}
+
 /* Dispatch a GET request REQ, writing the response body to FD fd.  If
  * RANGE is non-NULL, then it is the value of the Range request
  * header, e.g. "bytes=1-5".  Returns an NE_* error code. */
