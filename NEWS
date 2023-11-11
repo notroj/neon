@@ -14,6 +14,7 @@ Changes in release 0.33.0:
  - ne_ssl.h: ne_ssl_trust_default_ca() now a no-op for non-SSL sessions
  - ne_request.h: add ne_add_interim_handler() to handle interim
    (1xx) responses; headers in interim responses are now accessible
+ - ne_basic.h: add ne_putbuf()
 * Bug fixes:
  - test suite now works correctly on IPv6-only hosts (Jeremy Sowden)
  - fixes for building against LibreSSL (orbea)
