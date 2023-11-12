@@ -1405,6 +1405,9 @@ void ne_ssl_cert_free(ne_ssl_certificate *cert)
 
 int ne_ssl_cert_cmp(const ne_ssl_certificate *c1, const ne_ssl_certificate *c2)
 {
+#ifdef HAVE_GNUTLS_X509_CRT_EQUALS
+    return !gnutls_x509_crt_equals(c1->subject, c2->subject);
+#else
     char digest1[NE_SSL_DIGESTLEN], digest2[NE_SSL_DIGESTLEN];
 
     if (ne_ssl_cert_digest(c1, digest1) || ne_ssl_cert_digest(c2, digest2)) {
@@ -1412,6 +1415,7 @@ int ne_ssl_cert_cmp(const ne_ssl_certificate *c1, const ne_ssl_certificate *c2)
     }
 
     return strcmp(digest1, digest2);
+#endif
 }
 
 /* The certificate import/export format is the base64 encoding of the
