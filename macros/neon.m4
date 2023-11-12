@@ -1053,6 +1053,7 @@ gnutls)
                   gnutls_certificate_get_issuer \
                   gnutls_certificate_get_x509_cas \
                   gnutls_x509_crt_sign2 \
+                  gnutls_x509_crt_equals \
                   gnutls_certificate_set_retrieve_function2 \
                   gnutls_certificate_set_x509_system_trust \
                   gnutls_privkey_import_ext])
