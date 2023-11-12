@@ -252,8 +252,6 @@ void ne_add_interim_handler(ne_request *req, ne_interim_response_fn fn,
 
 /**** Request hooks handling *****/
 
-typedef void (*ne_free_hooks)(void *cookie);
-
 /* Hook called when a request is created; passed the method and
  * request-target as used in the request-line (RFC7230§5.3).  The
  * create_request hook is called exactly once per request. */

@@ -7,6 +7,7 @@ Changes in release 0.33.0:
    support for RFC 4918 "lockroot" in lock discovery
  - ne_request.h: ne_request_create() takes a "target" rather
    than a path and this can also be an absolute-URI
+ - ne_request.h: never-used ne_free_hooks typedef removed
 * New interfaces and features:
  - added new configure flag --enable-auto-libproxy which enables
    libproxy by default for new sessions (Jan-Michael Brummer)
