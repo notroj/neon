@@ -142,6 +142,35 @@ int ne_putbuf(ne_session *sess, const char *path,
     return ret;
 }
 
+int ne_getbuf(ne_session *sess, const char *path,
+              char *buf, size_t *buflen)
+{
+    ne_request *req = ne_request_create(sess, "GET", path);
+    int ret, is_2xx;
+
+    do {
+        ret = ne_begin_request(req);
+        if (ret != NE_OK) break;
+
+        is_2xx = ne_get_status(req)->klass == 2;
+        if (is_2xx)
+            ret = ne_read_response_to_buffer(req, buf, buflen);
+        else
+            ret = ne_discard_response(req);
+
+        if (ret == NE_OK) ret = ne_end_request(req);
+    } while (ret == NE_RETRY);
+
+    if (ret != NE_OK)
+        ne_close_connection(sess);
+    else if (!is_2xx)
+        ret = NE_ERROR;
+
+    ne_request_destroy(req);
+
+    return ret;
+}
+
 /* Dispatch a GET request REQ, writing the response body to FD fd.  If
  * RANGE is non-NULL, then it is the value of the Range request
  * header, e.g. "bytes=1-5".  Returns an NE_* error code. */
