@@ -296,6 +296,50 @@ static int getbuf(void)
     return destroy_and_wait(sess);
 }
 
+static int getbuf_fail(void)
+{
+    ne_session *sess;
+    char buffer[16];
+    size_t buflen = sizeof buffer;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 302 OK\r\n" "Server: neon-test-server\r\n"
+                      "Transfer-Encoding: chunked\r\n"
+                      "\r\n"
+                      ABCDE_CHUNKS));
+
+    ret = ne_getbuf(sess, "/", buffer, &buflen);
+    ONN("success for non-2xx response", ret != NE_ERROR);
+
+    ONV(buflen != sizeof buffer,
+        ("buffer length adjusted to %" NE_FMT_SIZE_T, buflen));
+
+    return destroy_and_wait(sess);
+}
+
+static int getbuf_fill(void)
+{
+    ne_session *sess;
+    char buffer[5];
+    size_t buflen = sizeof buffer;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                      "Transfer-Encoding: chunked\r\n"
+                      "\r\n"
+                      ABCDE_CHUNKS));
+
+    ONREQ(ne_getbuf(sess, "/", buffer, &buflen));
+
+    ONV(buflen != 5, ("unexpected buffer length %" NE_FMT_SIZE_T, buflen));
+
+    ONV(memcmp("abcde", buffer, 5) != 0,
+        ("mismatched chunked response: [%5s]", buffer));
+
+    return destroy_and_wait(sess);
+}
+
 static int getbuf2(void)
 {
     ne_session *sess;
@@ -427,6 +471,8 @@ ne_test tests[] = {
     T(dav_capabilities),
     T(get),
     T(getbuf),
+    T(getbuf_fail),
+    T(getbuf_fill),
     T(getbuf2),
     T(getbuf_retry),
     T(options2),
