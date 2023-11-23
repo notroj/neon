@@ -675,7 +675,7 @@ NE_LARGEFILE
 AC_REPLACE_FUNCS(strcasecmp)
 
 AC_CHECK_FUNCS([signal setvbuf setsockopt stpcpy poll fcntl getsockopt \
-                explicit_bzero sendmsg gettimeofday])
+                explicit_bzero sendmsg gettimeofday gmtime_r])
 
 if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
   AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
