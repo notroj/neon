@@ -99,17 +99,27 @@ time_t gmt_to_local_win32(void)
 #endif
 
 char *ne_rfc1123_date(time_t anytime) {
-    struct tm *gmt;
+    struct tm gmt;
+    struct tm *rv;
     char *ret;
-    gmt = gmtime(&anytime);
-    if (gmt == NULL)
-	return NULL;
+
+#ifdef HAVE_GMTIME_R
+#warning fish
+    if ((rv = gmtime_r(&anytime, &gmt)) == NULL)
+        return NULL;
+#else
+    if ((rv = gmtime(&anytime)) == NULL)
+        return NULL;
+
+    gmt = *rv;
+#endif
+
     ret = ne_malloc(29 + 1); /* dates are 29 chars long */
     ne_snprintf(ret, 30, IMFFIX_FORMAT,
-		rfc1123_weekdays[gmt->tm_wday], gmt->tm_mday, 
-		short_months[gmt->tm_mon], 1900 + gmt->tm_year, 
-		gmt->tm_hour, gmt->tm_min, gmt->tm_sec);
-    
+		rfc1123_weekdays[gmt.tm_wday], gmt.tm_mday,
+		short_months[gmt.tm_mon], 1900 + gmt.tm_year,
+		gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
+
     return ret;
 }
 
