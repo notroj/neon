@@ -436,7 +436,7 @@ static int copy_or_move(ne_session *sess, int is_move, int overwrite,
 {
     ne_request *req = ne_request_create( sess, is_move?"MOVE":"COPY", src );
 
-    /* 2518 S8.9.2 says only use Depth: infinity with MOVE. */
+    /* RFC4918ẞ9.9.2 - "Depth: infinity" is implicit for MOVE. */
     if (!is_move) {
 	ne_add_depth_header(req, depth);
     }
@@ -476,7 +476,6 @@ int ne_move(ne_session *sess, int overwrite,
     return copy_or_move(sess, 1, overwrite, 0, src, dest);
 }
 
-/* Deletes the specified resource. (and in only two lines of code!) */
 int ne_delete(ne_session *sess, const char *path)
 {
     ne_request *req = ne_request_create(sess, "DELETE", path);
@@ -486,14 +485,7 @@ int ne_delete(ne_session *sess, const char *path)
     ne_lock_using_parent(req, path);
 #endif
     
-    /* joe: I asked on the DAV WG list about whether we might get a
-     * 207 error back from a DELETE... conclusion, you shouldn't if
-     * you don't send the Depth header, since we might be an HTTP/1.1
-     * client and a 2xx response indicates success to them.  But
-     * it's all a bit unclear. In any case, DAV servers today do
-     * return 207 to DELETE even if we don't send the Depth header.
-     * So we handle 207 errors appropriately. */
-
+    /* Per RFC4918ẞ9.6.1 DELETE can get a 207 response. */
     return ne_simple_request(sess, req);
 }
 
