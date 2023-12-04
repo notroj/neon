@@ -181,7 +181,7 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
 
         s = pa = s + 2; /* => s = authority */
 
-        while (*pa != '/' && *pa != '\0')
+        while (*pa != '/' && *pa != '?' && *pa != '#' && *pa != '\0')
             pa++;
         /* => pa = path-abempty */
         
@@ -223,11 +223,7 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
         }
         parsed->host = ne_strndup(s, p - s);
         
-        s = pa;        
-
-        if (*s == '\0') {
-            s = "/"; /* FIXME: scheme-specific. */
-        }
+        s = pa;
     }
 
     /* => s = path-abempty / path-absolute / path-rootless
@@ -240,7 +236,10 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
 
     /* => p = [ "?" query ] [ "#" fragment ] */
 
-    parsed->path = ne_strndup(s, p - s);
+    if (p != s || parsed->host == NULL)
+        parsed->path = ne_strndup(s, p - s);
+    else
+        parsed->path = ne_strdup("/");  /* FIXME: scheme-specific. */
 
     if (*p != '\0') {
         s = p++;
