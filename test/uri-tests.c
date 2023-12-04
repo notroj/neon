@@ -373,12 +373,14 @@ static int parse(void)
 static int failparse(void)
 {
     static const char *uris[] = {
-	"http://[::1/",
-	"http://[::1]f:80/",
-	"http://[::1]]:80/",
+        "http://[::1/",
+        "http://[::1]f:80/",
+        "http://[::1]]:80/",
         "http://foo/bar asda",
         "http://fish/[foo]/bar",
-	NULL
+        "http://foo:80bar",
+        "http://foo:80:80/bar",
+        NULL
     };
     int n;
     

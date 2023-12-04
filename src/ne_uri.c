@@ -217,8 +217,21 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
 
         parsed->host = ne_strndup(s, p - s);
 
-        if (p != pa && p + 1 != pa)
-            parsed->port = atoi(p + 1);
+        if (p != pa && p + 1 != pa) {
+            p++;
+
+            s = p;
+            /* => s = port */
+
+            while (p < pa) {
+                if (!(uri_lookup(*p) & URI_DIGIT))
+                    return -1;
+
+                p++;
+            }
+
+            parsed->port = atoi(s);
+        }
         
         s = pa;
     }
