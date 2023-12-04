@@ -209,19 +209,16 @@ int ne_uri_parse(const char *uri, ne_uri *parsed)
             p++; /* => p = colon */
         } else {
             /* Find the colon. */
-            p = pa;
-            while (*p != ':' && p > s)
-                p--;
+            p = s;
+            while (*p != ':' && p < pa)
+                p++;
         }
+        /* => p = colon */
 
-        if (p == s) {
-            p = pa;
-            /* No colon; => p = path-abempty */
-        } else if (p + 1 != pa) {
-            /* => p = colon */
-            parsed->port = atoi(p + 1);
-        }
         parsed->host = ne_strndup(s, p - s);
+
+        if (p != pa && p + 1 != pa)
+            parsed->port = atoi(p + 1);
         
         s = pa;
     }
