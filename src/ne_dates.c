@@ -104,7 +104,6 @@ char *ne_rfc1123_date(time_t anytime) {
     char *ret;
 
 #ifdef HAVE_GMTIME_R
-#warning fish
     if ((rv = gmtime_r(&anytime, &gmt)) == NULL)
         return NULL;
 #else
