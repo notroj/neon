@@ -8,6 +8,7 @@ Changes in release 0.33.0:
  - ne_request.h: ne_request_create() takes a "target" rather
    than a path and this can also be an absolute-URI
  - ne_request.h: never-used ne_free_hooks typedef removed
+ - ne_dates.h: clarified error cases (behaviour unchanged)
 * New interfaces and features:
  - added new configure flag --enable-auto-libproxy which enables
    libproxy by default for new sessions (Jan-Michael Brummer)
@@ -16,10 +17,16 @@ Changes in release 0.33.0:
  - ne_request.h: add ne_add_interim_handler() to handle interim
    (1xx) responses; headers in interim responses are now accessible
  - ne_basic.h: add ne_putbuf()
+ - ne_strhash: SHA-512/256 now supported for LibreSSL 3.8+ (orbea)
 * Bug fixes:
  - test suite now works correctly on IPv6-only hosts (Jeremy Sowden)
  - fixes for building against LibreSSL (orbea)
- - retry request after a 408 response on a persisted connection
+ - ne_uri_parse() fixes for handling URI with no path and catch
+   some invalid URIs which were allowed (fasticc)
+ - retry requests after a 408 response on a persisted connection
+ - 207 error strings are cleaned and compressed to a single line
+ - fixed thread-safety in ne_rfc1123_date where gmtime_r is available
+ - ne_lock_refresh() fixed to use a non-idempotent request
 
 Changes in release 0.32.5:
 * NOTE: Since 0.32.0 the "$KRB5_CONFIG" environment variable is ignored
