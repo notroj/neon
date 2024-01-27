@@ -1057,6 +1057,10 @@ static int fail_request_with_error(int with_body, server_fn fn, void *ud,
 
     CALL(new_spawn_server(forever ? 100 : 1, fn, ud, &port));
     sess = ne_session_create("http", "localhost", port);
+
+    /* Set default timeout, required by e.g. fail_excess_1xx. */
+    ne_set_read_timeout(sess, 2);
+
     req = ne_request_create(sess, "GET", "/");
 
     if (with_body) {
@@ -2267,11 +2271,12 @@ static int safe_flags(void)
     return OK;
 }
 
+/* Hit the timeout (2 seconds) for reading interim responses. */
 static int fail_excess_1xx(void)
 {
-    struct s1xx_args args = {200, 0};
+    struct s1xx_args args = {2000000, 0};
     return fail_request_with_error(0, serve_1xx, &args, 0,
-                                   "Too many interim responses");
+                                   "Timed out reading interim responses");
 }
 
 static int serve_check_reqline(ne_socket *sock, void *userdata)

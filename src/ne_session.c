@@ -199,6 +199,7 @@ ne_session *ne_session_create(const char *scheme,
 
     /* Set flags which default to on: */
     sess->flags[NE_SESSFLAG_PERSIST] = 1;
+    sess->flags[NE_SESSFLAG_1XXTIMEOUT] = 1;
 
 #ifdef NE_ENABLE_AUTO_LIBPROXY
     ne_session_system_proxy(sess, 0);
