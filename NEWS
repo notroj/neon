@@ -10,6 +10,10 @@ Changes in release 0.33.0:
  - ne_request.h: never-used ne_free_hooks typedef removed
  - ne_dates.h: clarified error cases (behaviour unchanged)
 * New interfaces and features:
+ - ne_session.h: add NE_SESSFLAG_1XXTIMEOUT
+ - response handling no longer applies a maximum limit on 1xx interim
+   responses; an overall timeout equal to the read timeout is now
+   applied if a read timeout is configured and 1XXTIMEOUT is enabled
  - added new configure flag --enable-auto-libproxy which enables
    libproxy by default for new sessions (Jan-Michael Brummer)
  - ne_locks.h: added DAV:lockroot support per RFC 4918
