@@ -41,6 +41,7 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#include <time.h>
 
 #include "ne_internal.h"
 
@@ -78,8 +79,6 @@ struct field {
     struct field *next;
 };
 
-/* Maximum number of interim responses. */
-#define MAX_INTERIM_RESPONSES (128)
 /* Maximum number of header fields per response: */
 #define MAX_HEADER_FIELDS (100)
 /* Size of hash table; 43 is the smallest prime for which the common
@@ -1016,6 +1015,10 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     return 0;
 }
 
+#define INTERIM_TIMEOUT(sess_) \
+    (((sess_)->flags[NE_SESSFLAG_1XXTIMEOUT] && (sess_)->rdtimeout)     \
+     ? time(NULL) + (sess_)->rdtimeout : 0)
+
 /* Send the request, and read the response Status-Line. Returns:
  *   NE_RETRY   connection closed by server; persistent connection
  *		timeout
@@ -1030,7 +1033,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     ne_status *const status = &req->status;
     int sentbody = 0; /* zero until body has been sent. */
     int ret, retry; /* retry non-zero whilst the request should be retried */
-    unsigned count;
+    time_t timeout = INTERIM_TIMEOUT(sess);
     ssize_t sret;
 
     /* Send the Request-Line and headers */
@@ -1061,13 +1064,11 @@ static int send_request(ne_request *req, const ne_buffer *request)
 
     /* Loop eating interim 1xx responses; RFC 7231§6.2 says clients
      * MUST be able to parse unsolicited interim responses. */
-    for (count = 0; count < MAX_INTERIM_RESPONSES
-             && (ret = read_status_line(req, status, retry)) == NE_OK
-             && status->klass == 1; count++) {
+    while ((ret = read_status_line(req, status, retry)) == NE_OK
+           && status->klass == 1) {
         struct interim_handler *ih;
 
-	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response %d.\n",
-                 status->code, count);
+	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response.\n", status->code);
 	retry = 0; /* successful read() => never retry now. */
 
 	/* Discard headers with the interim response. */
@@ -1083,11 +1084,14 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	    /* Send the body after receiving the first 100 Continue */
 	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
 	    sentbody = 1;
+            /* Reset read timeout. */
+            timeout = INTERIM_TIMEOUT(sess);
 	}
-    }
-
-    if (count == MAX_INTERIM_RESPONSES) {
-        return aborted(req, _("Too many interim responses"), 0);
+        else if (sess->flags[NE_SESSFLAG_1XXTIMEOUT] && sess->rdtimeout
+                 && time(NULL) > timeout) {
+            NE_DEBUG(NE_DBG_HTTP, "[req] Timeout after %d\n", sess->rdtimeout);
+            return aborted(req, _("Timed out reading interim responses"), 0);
+        }
     }
 
     /* Per RFC 9110ẞ15.5.9 a client MAY retry an outstanding request

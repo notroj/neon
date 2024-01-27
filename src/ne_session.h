@@ -104,6 +104,10 @@ typedef enum ne_session_flag_e {
                              * to improve interoperability with
                              * SharePoint */
 
+    NE_SESSFLAG_1XXTIMEOUT, /* disable this flag to apply no overall
+                             * timeout when reading interim
+                             * responses. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 
