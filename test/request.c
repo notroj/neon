@@ -2274,7 +2274,7 @@ static int safe_flags(void)
 /* Hit the timeout (2 seconds) for reading interim responses. */
 static int fail_excess_1xx(void)
 {
-    struct s1xx_args args = {2000000, 0};
+    struct s1xx_args args = {20000000, 0};
     return fail_request_with_error(0, serve_1xx, &args, 0,
                                    "Timed out reading interim responses");
 }
