@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #endif
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "ne_session.h"
 
@@ -204,8 +206,22 @@ int multi_session_server(ne_session **sess,
 
 int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
-    return multi_session_server(sess, "http", get_lh_addr(), 1,
-                                fn, userdata);
+    char *host6 = NULL;
+    const char *host;
+    int ret;
+
+    if (get_lh_family() == AF_INET6) {
+        host = host6 = ne_concat("[", get_lh_addr(), "]", NULL);
+    }
+    else {
+        host = get_lh_addr();
+    }
+
+    ret = multi_session_server(sess, "http", host, 1, fn, userdata);
+
+    if (host6) ne_free(host6);
+
+    return ret;
 }
 
 int proxied_session_server(ne_session **sess, const char *scheme,
@@ -250,6 +266,9 @@ int fakeproxied_multi_session_server(int count,
     const ne_inet_addr *alist[1];
     
     CALL(new_spawn_server2(count, fn, userdata, &addr, &port));
+
+    NE_DEBUG(NE_DBG_HTTP, "test: Using fake proxied '%s' session for %s using port %u.\n",
+             scheme, host, port);
     
     alist[0] = addr;
 
