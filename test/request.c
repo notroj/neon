@@ -1976,11 +1976,15 @@ static int status(void)
 {
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
-    const char *lh_addr = get_lh_addr();
+    const char *host, *addr = get_lh_addr();
     char expect[1024];
 
+    CALL(make_session(&sess, single_serve_string, RESP200
+                      "Content-Length: 5\r\n\r\n" "abcde"));
+
+    host = get_session_host();
+
     ne_snprintf(expect, sizeof expect,
-                "lookup(%s)-"
                 "connecting(%s,%s)-"
                 "connected(%s)-"
                 "send(0,5000)-"
@@ -1988,10 +1992,7 @@ static int status(void)
                 "recv(0,5)-"
                 "recv(5,5)-"
                 "disconnected(%s)-",
-                lh_addr, lh_addr, lh_addr, lh_addr, lh_addr);
-
-    CALL(make_session(&sess, single_serve_string, RESP200
-                      "Content-Length: 5\r\n\r\n" "abcde"));
+                host, addr, host, host);
 
     ne_set_notifier(sess, status_cb, buf);
 
@@ -2012,13 +2013,17 @@ static int status_chunked(void)
 {
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
-    const char *lh_addr = get_lh_addr();
+    const char *host, *addr = get_lh_addr();
     char expect[1024];
+
+    CALL(make_session(&sess, single_serve_string,
+                      RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
+
+    host = get_session_host();
 
     /* This sequence is not exactly guaranteed by the API, but it's
      * what the current implementation should do. */
     ne_snprintf(expect, sizeof expect,
-                "lookup(%s)-"
                 "connecting(%s,%s)-"
                 "connected(%s)-"
                 "send(0,5000)-"
@@ -2030,10 +2035,7 @@ static int status_chunked(void)
                 "recv(4,-1)-"
                 "recv(5,-1)-"
                 "disconnected(%s)-",
-                lh_addr, lh_addr, lh_addr, lh_addr, lh_addr);
-
-    CALL(make_session(&sess, single_serve_string, 
-                      RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS));
+                host, addr, host, host);
 
     ne_set_notifier(sess, status_cb, buf);
 
