@@ -36,6 +36,8 @@
 #include "tests.h"
 #include "utils.h"
 
+static char session_host[128];
+
 int serve_response(ne_socket *s, const char *response)
 {
     CALL(discard_request(s));
@@ -204,24 +206,21 @@ int multi_session_server(ne_session **sess,
     return OK;
 }
 
+const char *get_session_host(void)
+{
+    return session_host;
+}
+
 int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
-    char *host6 = NULL;
-    const char *host;
-    int ret;
-
     if (get_lh_family() == AF_INET6) {
-        host = host6 = ne_concat("[", get_lh_addr(), "]", NULL);
+        ne_snprintf(session_host, sizeof session_host, "[%s]", get_lh_addr());
     }
     else {
-        host = get_lh_addr();
+        ne_strnzcpy(session_host, get_lh_addr(), sizeof session_host);
     }
 
-    ret = multi_session_server(sess, "http", host, 1, fn, userdata);
-
-    if (host6) ne_free(host6);
-
-    return ret;
+    return multi_session_server(sess, "http", session_host, 1, fn, userdata);
 }
 
 int proxied_session_server(ne_session **sess, const char *scheme,
