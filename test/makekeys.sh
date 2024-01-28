@@ -196,7 +196,7 @@ ${CA} -startdate `asn1date "2 days ago"` -enddate `asn1date "yesterday"` -in exp
 
 ${CA} -startdate `asn1date "tomorrow"` -enddate `asn1date "2 days"` -in notyet.csr -out notyet.cert
 
-for n in 1 2 3 4 5 6 7 8 9; do
+for n in 1 2 3 4 5 6 9; do
  ${CA} -extensions altExt${n} -days 900 \
      -in altname${n}.csr -out altname${n}.cert
 done
