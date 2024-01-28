@@ -1606,6 +1606,8 @@ static int do_connect(ne_session *sess, struct host_info *host)
     if (sess->local_addr)
         ne_sock_prebind(sess->socket, sess->local_addr, 0);
 
+    /* Pick the first address, or if the address was pre-determined
+       (e.g. an IP-literal passed to ne_session_create) fetch that. */
     if (host->current == NULL)
 	host->current = resolve_first(host);
 

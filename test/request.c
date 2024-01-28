@@ -2404,6 +2404,53 @@ static int dont_retry_408(void)
     return destroy_and_wait(sess);
 }
 
+static const char *ipv6_check_result = "500 Something Went Wrong";
+
+#define V6_EXAMPLE_HOST "[2001:db8::cafe]"
+
+static void ipv6_host_checker(char *value)
+{
+    NE_DEBUG(NE_DBG_HTTP, "child: header value [%s]\n", value);
+    if (strcmp(value, V6_EXAMPLE_HOST) == 0)
+        ipv6_check_result = "200 Good Header";
+    else
+        ipv6_check_result = "400 Bad Header";
+}
+
+/* Server which acts as a proxy accepting a CONNECT request. */
+static int serve_v6_check(ne_socket *sock, void *ud)
+{
+    char resp[512];
+
+    got_header = ipv6_host_checker;
+    want_header = "Host";
+
+    CALL(discard_request(sock));
+
+    ne_snprintf(resp, sizeof resp, "HTTP/1.1 %s\r\n"
+                "Content-Length: 0\r\n"
+                "Server: serve_v6_check\r\n\r\n",
+                ipv6_check_result);
+
+    SEND_STRING(sock, resp);
+
+    return 0;
+}
+
+static int ipv6_literal(void)
+{
+    ne_session *sess;
+
+    CALL(fakeproxied_session_server(&sess, "http", V6_EXAMPLE_HOST,
+                                    80, serve_v6_check,
+                                    RESP200 "Content-Length: 2\r\n"
+                                    "ok"));
+
+    CALL(any_2xx_request(sess, "/ipv6ish"));
+
+    return destroy_and_wait(sess);
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2490,5 +2537,6 @@ ne_test tests[] = {
     T(interims),
     T(retry_408),
     T(dont_retry_408),
+    T(ipv6_literal),
     T(NULL)
 };
