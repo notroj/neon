@@ -230,6 +230,10 @@ typedef enum ne_request_flag_e {
     NE_REQFLAG_IDEMPOTENT, /* disable this flag if the request uses a
                             * non-idempotent method such as POST. */
 
+    NE_REQFLAG_1XXTIMEOUT, /* disable this flag to apply no overall
+                             * timeout when reading interim
+                             * responses. */
+
     NE_REQFLAG_LAST /* enum sentinel value */
 } ne_request_flag;
 

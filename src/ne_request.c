@@ -524,6 +524,8 @@ ne_request *ne_request_create(ne_session *sess, const char *method,
     req->flags[NE_REQFLAG_IDEMPOTENT] = 1;
     /* Expect-100 default follows the corresponding session flag. */
     req->flags[NE_REQFLAG_EXPECT100] = sess->flags[NE_SESSFLAG_EXPECT100];
+    /* 1xx timeouts default to on. */
+    req->flags[NE_REQFLAG_1XXTIMEOUT] = 1;
 
     /* Add in the fixed headers */
     req->headers = initial_request_headers(req);
@@ -1015,9 +1017,9 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     return 0;
 }
 
-#define INTERIM_TIMEOUT(sess_) \
-    (((sess_)->flags[NE_SESSFLAG_1XXTIMEOUT] && (sess_)->rdtimeout)     \
-     ? time(NULL) + (sess_)->rdtimeout : 0)
+#define INTERIM_TIMEOUT(req_) \
+    (((req_)->flags[NE_REQFLAG_1XXTIMEOUT] && (req_)->session->rdtimeout) \
+      ? time(NULL) + (req_)->session->rdtimeout : 0)
 
 /* Send the request, and read the response Status-Line. Returns:
  *   NE_RETRY   connection closed by server; persistent connection
@@ -1033,7 +1035,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     ne_status *const status = &req->status;
     int sentbody = 0; /* zero until body has been sent. */
     int ret, retry; /* retry non-zero whilst the request should be retried */
-    time_t timeout = INTERIM_TIMEOUT(sess);
+    time_t timeout = INTERIM_TIMEOUT(req);
     ssize_t sret;
 
     /* Send the Request-Line and headers */
@@ -1085,9 +1087,9 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
 	    sentbody = 1;
             /* Reset read timeout. */
-            timeout = INTERIM_TIMEOUT(sess);
+            timeout = INTERIM_TIMEOUT(req);
 	}
-        else if (sess->flags[NE_SESSFLAG_1XXTIMEOUT] && sess->rdtimeout
+        else if (req->flags[NE_REQFLAG_1XXTIMEOUT] && sess->rdtimeout
                  && time(NULL) > timeout) {
             NE_DEBUG(NE_DBG_HTTP, "[req] Timeout after %d\n", sess->rdtimeout);
             return aborted(req, _("Timed out reading interim responses"), 0);
