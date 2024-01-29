@@ -9,11 +9,9 @@ Changes in release 0.33.0:
    than a path and this can also be an absolute-URI
  - ne_request.h: never-used ne_free_hooks typedef removed
  - ne_dates.h: clarified error cases (behaviour unchanged)
+ - ne_session.h: ne_session_create() 'host' must match RFC 3986
+   syntax; IPv6 literal addresses must use [] brackets
 * New interfaces and features:
- - ne_session.h: add NE_SESSFLAG_1XXTIMEOUT
- - response handling no longer applies a maximum limit on 1xx interim
-   responses; an overall timeout equal to the read timeout is now
-   applied if a read timeout is configured and 1XXTIMEOUT is enabled
  - added new configure flag --enable-auto-libproxy which enables
    libproxy by default for new sessions (Jan-Michael Brummer)
  - ne_locks.h: added DAV:lockroot support per RFC 4918
@@ -22,6 +20,10 @@ Changes in release 0.33.0:
    (1xx) responses; headers in interim responses are now accessible
  - ne_basic.h: add ne_putbuf()
  - ne_strhash: SHA-512/256 now supported for LibreSSL 3.8+ (orbea)
+ - response handling no longer applies a maximum limit on 1xx interim
+   responses; an overall timeout equal to the read timeout is now
+   applied if a read timeout is configured and 1XXTIMEOUT is enabled
+ - ne_request.h: add NE_REQFLAG_1XXTIMEOUT
 * Bug fixes:
  - test suite now works correctly on IPv6-only hosts (Jeremy Sowden)
  - fixes for building against LibreSSL (orbea)
@@ -31,6 +33,8 @@ Changes in release 0.33.0:
  - 207 error strings are cleaned and compressed to a single line
  - fixed thread-safety in ne_rfc1123_date where gmtime_r is available
  - ne_lock_refresh() fixed to use a non-idempotent request
+ - TLS name verification updated to match RFC 9110/6125, added strict
+   handling of IP literals vs DNS names
 
 Changes in release 0.32.5:
 * NOTE: Since 0.32.0 the "$KRB5_CONFIG" environment variable is ignored
