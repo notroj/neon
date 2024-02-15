@@ -1,0 +1,26 @@
+name: Generate Docs
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get update && sudo apt-get install build-essential autoconf automake libxml2-dev xmlto git
+      - uses: actions/checkout@v2
+
+      - run: ./autogen.sh
+
+      - run: mkdir -p ${GITHUB_WORKSPACE}/prefix && ./configure --prefix=${GITHUB_WORKSPACE}/prefix
+
+      - run: make docs
+
+      - name: Publish generated content to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: doc/html
+          git-config-user: "gh-runner"
+          git-config-email: "gh@example.com"
