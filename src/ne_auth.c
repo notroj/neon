@@ -332,57 +332,65 @@ static void clean_session(auth_session *sess)
     sess->protocol = NULL;
 }
 
-/* Returns client nonce string. */
-static char *get_cnonce(void) 
+/* Returns client nonce string using given hash algorithm. Returns
+ * NULL on error, in which case challenge_error(errmsg) is called. */
+static char *get_cnonce(const struct hashalg *alg, ne_buffer **errmsg)
 {
 #ifdef NE_HAVE_SSL
     unsigned char data[32];
-#endif
+
 #ifdef HAVE_GNUTLS
-    if (1) {
 #if LIBGNUTLS_VERSION_NUMBER < 0x020b00
-        gcry_create_nonce(data, sizeof data);
+    gcry_create_nonce(data, sizeof data);
 #else
-        gnutls_rnd(GNUTLS_RND_NONCE, data, sizeof data);
+    gnutls_rnd(GNUTLS_RND_NONCE, data, sizeof data);
 #endif
-        return ne_base64(data, sizeof data);
-    }
-    else
-#elif defined(HAVE_OPENSSL)
+    return ne_base64(data, sizeof data);
+
+#else /* !HAVE_GNUTLS */
     if (RAND_status() == 1 && RAND_bytes(data, sizeof data) >= 0) {
         return ne_base64(data, sizeof data);
     } 
-    else 
-#endif /* HAVE_OPENSSL */
-    {
-        /* Fallback sources of random data: all bad, but no good sources
-         * are available. */
-        ne_buffer *buf = ne_buffer_create();
-        char *ret;
-
-        {
-#ifdef HAVE_GETTIMEOFDAY
-            struct timeval tv;
-            if (gettimeofday(&tv, NULL) == 0)
-                ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
-                                   tv.tv_sec, (long)tv.tv_usec);
-#else /* HAVE_GETTIMEOFDAY */
-            ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
-#endif
-        }
-        {
-#ifdef WIN32
-            DWORD pid = GetCurrentThreadId();
-#else
-            pid_t pid = getpid();
-#endif
-            ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
-        }
-
-        ret = ne_strhash(NE_HASH_MD5, buf->data, NULL);
-        ne_buffer_destroy(buf);
-        return ret;
+    else {
+        challenge_error(errmsg,
+                        _("cannot create client nonce for Digest challenge, "
+                          "OpenSSL PRNG not seeded"));
+        return NULL;
     }
+#endif /* HAVE_GNUTLS */
+
+#else /* !NE_HAVE_SSL */
+    /* Fallback sources of random data: all bad, but no good sources
+     * are available. */
+    ne_buffer *buf = ne_buffer_create();
+    char *ret;
+
+#ifdef HAVE_GETTIMEOFDAY
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == 0)
+        ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
+                           tv.tv_sec, (long)tv.tv_usec);
+#else /* !HAVE_GETTIMEOFDAY */
+    ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
+#endif
+
+    {
+#ifdef WIN32
+        DWORD pid = GetCurrentThreadId();
+#else
+        pid_t pid = getpid();
+#endif
+        ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
+    }
+
+    ret = ne_strhash(alg->hash, buf->data, NULL);
+    if (!ret)
+        challenge_error(errmsg, _("%s hash failed for Digest challenge"),
+                        alg->name);
+
+    ne_buffer_destroy(buf);
+    return ret;
+#endif
 }
 
 /* Callback to retrieve user credentials for given session on given
@@ -1002,9 +1010,15 @@ static int digest_challenge(auth_session *sess, int attempt,
             return -1;
         }
 
+        /* The hash alg from parameters already tested to work above,
+           so re-use it. */
+        if ((sess->cnonce = get_cnonce(parms->alg, errmsg)) == NULL) {
+            /* challenge_error() called by get_cnonce(). */
+            return -1;
+        }
+
         sess->realm = ne_strdup(parms->realm);
         sess->alg = parms->alg;
-        sess->cnonce = get_cnonce();
 
         h_urp = get_digest_h_urp(sess, errmsg, attempt, parms);
         if (h_urp == NULL) {
