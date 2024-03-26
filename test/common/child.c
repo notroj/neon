@@ -415,7 +415,12 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
                 exit(FAIL);
             }
 
-            NE_DEBUG(NE_DBG_HTTP, "child got connection, invoking server\n");
+            NE_DEBUG(NE_DBG_HTTP, "child: got connection, invoking server\n");
+            if (iter == count) {
+                close(ls);
+                NE_DEBUG(NE_DBG_HTTP, "child: closed listening socket.\n");
+            }
+
             ret = fn(sock, userdata);
             NE_DEBUG(NE_DBG_HTTP, "child iteration #%d returns %d\n",
                      iter, ret);

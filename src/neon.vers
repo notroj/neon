@@ -38,4 +38,5 @@ NEON_0_32 {
 NEON_0_33 {
     ne_add_interim_handler;
     ne_putbuf;
+    ne_getbuf;
 };
