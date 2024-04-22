@@ -14,6 +14,7 @@
 <!-- date/version stamp files created as release tarball is rolled -->
 <!ENTITY date SYSTEM "date.xml">
 <!ENTITY version SYSTEM "version.xml">
+<!ENTITY copyright "<copyright><year>2001-2024</year><holder>Joe Orton</holder></copyright>">
 
 <!ENTITY neon "neon">
 
@@ -88,7 +89,7 @@
         <firstname>Joe</firstname><surname>Orton</surname>
       </personname>
     </author>
-    <copyright><year>2001-2022</year><holder>Joe Orton</holder></copyright>
+    &copyright;
 
     <legalnotice>
 
@@ -158,6 +159,7 @@ ignoring the WebDAV support if desired.</para>
       <date>&date;</date>
       <productname>neon</productname>
       <productnumber>&version;</productnumber>
+      &copyright;
     </referenceinfo>
     
     <title>neon API reference</title>
