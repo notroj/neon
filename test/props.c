@@ -264,7 +264,6 @@ static int run_207_response(char *resp, const char *expected)
     ctx.p207 = p207;
     ne_xml_push_handler(p, tos_startprop, tos_cdata, tos_endprop, &ctx);
 
-
     ONREQ(ne_request_dispatch(req));
 
     CALL(await_server());
@@ -318,10 +317,10 @@ static int two_oh_seven(void)
 
         /* test multiple responses */
         { MULTI_207(RESP_207("/hello/world", STAT_207("200 OK"))
-                    RESP_207("/foo/bar", STAT_207("999 French Fries"))), 
+                    RESP_207("/foo/bar", STAT_207("599 French Fries"))),
           "start-resp[/hello/world];end-resp[/hello/world]-status={200 OK};"
           "start-resp[/foo/bar];end-resp[/foo/bar]"
-          "-status={999 French Fries};" 
+          "-status={599 French Fries};"
         },
 
         /* test multiple propstats in multiple responses */
@@ -330,16 +329,16 @@ static int two_oh_seven(void)
                              PSTAT_207(STAT_207("432 Deux"))
                              PSTAT_207(STAT_207("543 Trois")))
                     RESP_207("/be/ta",
-                             PSTAT_207(STAT_207("787 Quatre"))
-                             PSTAT_207(STAT_207("878 Cinq")))),
+                             PSTAT_207(STAT_207("587 Quatre"))
+                             PSTAT_207(STAT_207("578 Cinq")))),
           "start-resp[/al/pha];"
           "start-pstat[/al/pha-1];end-pstat[/al/pha-1]-status={321 Une};"
           "start-pstat[/al/pha-2];end-pstat[/al/pha-2]-status={432 Deux};"
           "start-pstat[/al/pha-3];end-pstat[/al/pha-3]-status={543 Trois};"
           "end-resp[/al/pha];"
           "start-resp[/be/ta];"
-          "start-pstat[/be/ta-1];end-pstat[/be/ta-1]-status={787 Quatre};"
-          "start-pstat[/be/ta-2];end-pstat[/be/ta-2]-status={878 Cinq};"
+          "start-pstat[/be/ta-1];end-pstat[/be/ta-1]-status={587 Quatre};"
+          "start-pstat[/be/ta-2];end-pstat[/be/ta-2]-status={578 Cinq};"
           "end-resp[/be/ta];"
         },
 
@@ -355,9 +354,9 @@ static int two_oh_seven(void)
 
         /* tests for propstat status */
         { MULTI_207(RESP_207("/pstat",
-                            PSTAT_207("<D:prop/>" STAT_207("666 Doomed")))),
+                            PSTAT_207("<D:prop/>" STAT_207("466 Doomed")))),
           "start-resp[/pstat];start-pstat[/pstat-1];"
-          "end-pstat[/pstat-1]-status={666 Doomed};end-resp[/pstat];" },
+          "end-pstat[/pstat-1]-status={466 Doomed};end-resp[/pstat];" },
 
         { MULTI_207(RESP_207("/pstat", PSTAT_207("<D:status/>"))),
           "start-resp[/pstat];start-pstat[/pstat-1];"
@@ -382,7 +381,7 @@ static int two_oh_seven(void)
         { MULTI_207("<D:fish-food/>blargl" 
                     RESP_207("/b<ping-pong/>ar", "<D:sausages/>"
                              PSTAT_207("<D:hello-mum/>blergl") 
-                             STAT_207("200 <pong-ping/> OK") "foop"
+                             STAT_207("200 OK") "<D:blah>foop</D:blah>"
                              DESCR_207(DESCR_REM) "carroon") 
                     "carapi"), 
           "start-resp[/bar];start-pstat[/bar-1];end-pstat[/bar-1];"
