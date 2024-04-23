@@ -96,7 +96,7 @@ void ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
 typedef struct {
     int major_version;
     int minor_version;
-    int code; /* Status-Code value */
+    int code; /* Status-Code value (100..599 inclusive) */
     int klass; /* Class of Status-Code (1-5) */
     char *reason_phrase;
 } ne_status;

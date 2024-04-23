@@ -92,6 +92,28 @@ static unsigned char gen_extparam(unsigned char ch)
     }
 }
 
+/*
+ * Map: '0'-'9' => 0-9
+ * reason-phrase characters => 0-10
+ * bad things => 99
+ *  
+ * RFC 9112: reason-phrase  = 1*( HTAB / SP / VCHAR / obs-text )
+ * RFC 5234: VCHAR          = %x21-7E
+ * RFC 9110: obs-text       = %x80-FF
+ */
+static unsigned char gen_status_line(unsigned char ch)
+{
+    if (ch >= '0' && ch <= '9')
+        return ch - '0';
+
+    if (ch == '\t' || ch == ' ' 
+        || (ch >= 0x21 && ch != 0x7F)) {
+        return 10;
+    }
+
+    return 99;
+}
+
 #define FLAG_DECIMAL (0x01)
 #define FLAG_SHORT   (0x02)
 
@@ -105,6 +127,7 @@ static const struct {
     { "validb64", valid_b64, FLAG_DECIMAL | FLAG_SHORT },
     { "decodeb64", decode_b64, 0 },
     { "quote", gen_quote, FLAG_DECIMAL | FLAG_SHORT },
+    { "status_line", gen_status_line, FLAG_DECIMAL | FLAG_SHORT },
     { "extparam", gen_extparam, FLAG_DECIMAL | FLAG_SHORT },
     { "safe_username", safe_username, FLAG_DECIMAL | FLAG_SHORT },
 };
