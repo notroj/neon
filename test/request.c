@@ -2290,9 +2290,10 @@ static int serve_check_reqline(ne_socket *sock, void *userdata)
 
     NE_DEBUG(NE_DBG_HTTP, "child: got request-line %s\n", buffer);
 
-    ONCMPN(expect, buffer, "request-line", "check for absolute URI");
-
-    return single_serve_string(sock, RESP200 "Connection: close\r\n\r\n");
+    if (strcmp(expect, buffer) != 0)
+        return single_serve_string(sock, "HTTP/1.1 400 Bad Request-Line\r\n" EMPTY_RESP);
+    else
+        return single_serve_string(sock, RESP200 "Connection: close\r\n\r\n");
 }
 
 /* Test that various request target forms are allowed. */
@@ -2314,7 +2315,7 @@ static int target_forms(void)
 
         CALL(make_session(&sess, serve_check_reqline, (void *)ts[n].reqline));
 
-        ONREQ(any_request(sess, ts[n].uri));
+        ONREQ(any_2xx_request(sess, ts[n].uri));
 
         CALL(destroy_and_wait(sess));
     }
