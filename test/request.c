@@ -72,6 +72,10 @@ static int finish_request(void)
 
 #define RESP200 "HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
 #define TE_CHUNKED "Transfer-Encoding: chunked\r\n"
+#define CHUNK(len, data) #len "\r\n" data "\r\n"
+#define ABCDE_CHUNKS CHUNK(1, "a") CHUNK(1, "b") \
+ CHUNK(1, "c") CHUNK(1, "d") \
+ CHUNK(1, "e") CHUNK(0, "")
 
 /* takes response body chunks and appends them to a buffer. */
 static int collector(void *ud, const char *data, size_t len)
@@ -215,36 +219,6 @@ static int reason_phrase(void)
     return OK;    
 }
 
-static int single_get_eof(void)
-{
-    return expect_response("a", single_serve_string, 
-			   RESP200
-			   "Connection: close\r\n"
-			   "\r\n"
-			   "a");
-}
-
-static int single_get_clength(void)
-{
-    return expect_response("a", single_serve_string,
-			   RESP200
-			   "Content-Length: \t\t 1 \t\t\r\n"
-			   "\r\n"
-			   "a"
-			   "bbbbbbbbasdasd");
-}
-
-static int single_get_chunked(void) 
-{
-    return expect_response("a", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "\r\n"
-			   "1\r\n"
-			   "a\r\n"
-			   "0\r\n" "\r\n"
-			   "g;lkjalskdjalksjd");
-}
-
 static int no_body_304(void)
 {
     return expect_no_body("GET", "HTTP/1.1 304 Not Mfodified\r\n"
@@ -261,81 +235,6 @@ static int no_body_HEAD(void)
 {
     return expect_no_body("HEAD", "HTTP/1.1 200 OK\r\n"
 			  "Content-Length: 5\r\n\r\n");
-}
-
-static int no_headers(void)
-{
-    return expect_response("abcde", single_serve_string,
-			   "HTTP/1.1 200 OK\r\n\r\n"
-			   "abcde");
-}
-
-#define CHUNK(len, data) #len "\r\n" data "\r\n"
-
-#define ABCDE_CHUNKS CHUNK(1, "a") CHUNK(1, "b") \
- CHUNK(1, "c") CHUNK(1, "d") \
- CHUNK(1, "e") CHUNK(0, "")
-
-static int chunks(void)
-{
-    /* lots of little chunks. */
-    return expect_response("abcde", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "\r\n"
-			   ABCDE_CHUNKS);
-}
-
-static int te_header(void)
-{
-    return expect_response("abcde", single_serve_string,
-			   RESP200 "Transfer-Encoding: CHUNKED\r\n"
-			   "\r\n" ABCDE_CHUNKS);
-}
-
-static int te_identity(void)
-{
-    /* http://bugzilla.gnome.org/show_bug.cgi?id=310636 says privoxy
-     * uses the "identity" transfer-coding. */
-    return expect_response("abcde", single_serve_string,
-			   RESP200 "Transfer-Encoding: identity\r\n"
-                           "Content-Length: 5\r\n"
-			   "\r\n"
-                           "abcde");
-}
-
-static int chunk_numeric(void)
-{    
-    /* leading zero's */
-    return expect_response("0123456789abcdef", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "\r\n"
-			   "000000010\r\n" "0123456789abcdef\r\n"
-			   "000000000\r\n" "\r\n");
-}
-
-static int chunk_extensions(void)
-{
-    /* chunk-extensions. */
-    return expect_response("0123456789abcdef", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "\r\n"
-			   "000000010; foo=bar; norm=fish\r\n" 
-			   "0123456789abcdef\r\n"
-			   "000000000\r\n" "\r\n");
-}
-
-static int chunk_trailers(void)
-{
-    /* trailers. */
-    return expect_response("abcde", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "\r\n"
-			   "00000005; foo=bar; norm=fish\r\n" 
-			   "abcde\r\n"
-			   "000000000\r\n" 
-			   "X-Hello: world\r\n"
-			   "X-Another: header\r\n"
-			   "\r\n");
 }
 
 static int chunk_oversize(void)
@@ -362,27 +261,6 @@ static int chunk_oversize(void)
     ne_free(body);
 
     return OK;
-}
-
-static int te_over_clength(void)
-{   
-    /* T-E dominates over C-L. */
-    return expect_response("abcde", single_serve_string,
-			   RESP200 TE_CHUNKED
-			   "Content-Length: 300\r\n" 
-			   "\r\n"
-			   ABCDE_CHUNKS);
-}
-
-/* te_over_clength with the headers the other way round; check for
- * ordering problems. */
-static int te_over_clength2(void)
-{   
-    return expect_response("abcde", single_serve_string,
-			   RESP200 "Content-Length: 300\r\n" 
-			   TE_CHUNKED
-			   "\r\n"
-			   ABCDE_CHUNKS);
 }
 
 /* obscure case which is possibly a valid request by 2616, but should
@@ -669,10 +547,48 @@ static int response_bodies(void)
         server_fn fn;
         const char *response;
     } ts[] = {
+        { "a", single_serve_string, RESP200 "Connection: close\r\n" "\r\n" "a" },
+        { "a", single_serve_string, RESP200 "Content-Length: \t\t 1 \t\t\r\n"
+          "\r\n" "a" "bbbbbbbbasdasd" },
+        { "a", single_serve_string, RESP200 TE_CHUNKED "\r\n"
+			   "1\r\n" "a\r\n"
+			   "0\r\n" "\r\n"
+          "g;lkjalskdjalksjd" },
+        { "abcde", single_serve_string, "HTTP/1.1 200 OK\r\n\r\n" "abcde" }, /* no headers */
         { "abcde", single_serve_string, RESP200 "Stupid Header\r\n" "ReallyStupidHeader\r\n"
           "Content-Length: 5\r\n" "\r\n" "abcde" },
         { "abcde", single_serve_string, RESP200 "Content-Length: \r\n   5\r\n" "\r\n" "abcde" },
         { "abcde", single_serve_string, RESP200 "Content-Length: \r\n \r\n \r\n \r\n  5\r\n" "\r\n" "abcde" },
+        /* chunk tests */
+        { "abcde", single_serve_string, RESP200 TE_CHUNKED "\r\n" ABCDE_CHUNKS },
+        { "abcde", single_serve_string, RESP200 "Transfer-Encoding: CHUNKED\r\n" "\r\n" ABCDE_CHUNKS },
+        /* http://bugzilla.gnome.org/show_bug.cgi?id=310636 says privoxy
+         * uses the "identity" transfer-coding. */
+        { "abcde", single_serve_string, RESP200 "Transfer-Encoding: identity\r\n" "Content-Length: 5\r\n"
+          "\r\n" "abcde" },
+        /* leading zero's */
+        { "0123456789abcdef", single_serve_string, RESP200 TE_CHUNKED "\r\n"
+          "000000010\r\n" "0123456789abcdef\r\n"
+          "000000000\r\n" "\r\n" },
+        /* chunk-extensions. */
+        { "0123456789abcdef", single_serve_string, RESP200 TE_CHUNKED "\r\n"
+          "000000010; foo=bar; norm=fish\r\n"
+          "0123456789abcdef\r\n"
+          "000000000\r\n" "\r\n" },
+            /* trailers. */
+        { "abcde", single_serve_string, RESP200 TE_CHUNKED "\r\n"
+          "00000005; foo=bar; norm=fish\r\n"
+          "abcde\r\n"
+          "000000000\r\n"
+          "X-Hello: world\r\n"
+          "X-Another: header\r\n"
+          "\r\n" },
+        /* T-E dominates over C-L. */
+        { "abcde", single_serve_string, RESP200 TE_CHUNKED
+          "Content-Length: 300\r\n"
+          "\r\n" ABCDE_CHUNKS },
+        { "abcde", single_serve_string, RESP200 "Content-Length: 300\r\n"
+          TE_CHUNKED "\r\n" ABCDE_CHUNKS },
         { NULL, NULL, NULL }
     };
     unsigned n;
@@ -2458,23 +2374,12 @@ static int ipv6_literal(void)
 
 ne_test tests[] = {
     T(lookup_localhost),
-    T(single_get_clength),
-    T(single_get_eof),
-    T(single_get_chunked),
+    T(response_bodies),
     T(no_body_204),
     T(no_body_304),
     T(no_body_HEAD),
-    T(no_headers),
-    T(chunks),
-    T(te_header),
-    T(te_identity),
     T(reason_phrase),
-    T(chunk_numeric),
-    T(chunk_extensions),
-    T(chunk_trailers),
     T(chunk_oversize),
-    T(te_over_clength),
-    T(te_over_clength2),
     T(no_body_chunks),
     T(persist_http11),
     T(persist_chunked),
@@ -2487,7 +2392,6 @@ ne_test tests[] = {
     T(closed_connection),
     T(close_not_retried),
     T(send_progress),
-    T(response_bodies),
     T(response_headers),
     T(reset_headers),
     T(iterate_none),
