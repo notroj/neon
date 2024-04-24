@@ -61,7 +61,7 @@
 
 static pid_t child = 0;
 
-int clength;
+unsigned long clength;
 
 struct server_addr {
     int family;
@@ -512,8 +512,12 @@ int discard_request(ne_socket *sock)
 	ONV(ne_sock_readline(sock, buffer, 1024) < 0,
 	    ("error reading line: %s", ne_sock_error(sock)));
 	NE_DEBUG(NE_DBG_HTTP, "[req] %s", buffer);
-	if (strncasecmp(buffer, "content-length:", 15) == 0) {
-	    clength = atoi(buffer + 16);
+	if (strncasecmp(buffer, "content-length: ", 16) == 0) {
+            char *ptr = NULL;
+            errno = 0;
+            clength = strtoul(buffer + 16, &ptr, 10);
+            ONV(errno || *ptr != '\r',
+                ("invalid Content-Length request header: %s", buffer));
 	}
 	if (got_header != NULL && want_header != NULL && 
 	    strncasecmp(buffer, want_header, offset) == 0 &&

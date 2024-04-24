@@ -965,7 +965,7 @@ static int want_body(ne_socket *sock, void *userdata)
     CALL(discard_request(sock));
     ONN("request has c-l header", clength == 0);
     
-    ONN("request length", clength != (int)b->size);
+    ONN("request length", clength != b->size);
     
     NE_DEBUG(NE_DBG_HTTP, 
 	     "reading body of %" NE_FMT_SIZE_T " bytes...\n", b->size);
@@ -2175,15 +2175,15 @@ static int serve_mirror(ne_socket *sock, void *userdata)
 
     CALL(discard_request(sock));
 
-    ONV(clength == 0 || (size_t)clength > sizeof buffer, 
-        ("C-L out of bounds: %d", clength));
+    ONV(clength == 0 || clength > sizeof buffer,
+        ("C-L out of bounds: %lu", clength));
 
     ONV(ne_sock_fullread(sock, buffer, clength),
         ("read failed: %s", ne_sock_error(sock)));
     
     ne_snprintf(response, sizeof response,
                 "HTTP/1.0 200 OK\r\n"
-                "Content-Length: %d\r\n"
+                "Content-Length: %lu\r\n"
                 "\r\n", clength);
 
     ONN("send response header failed",
