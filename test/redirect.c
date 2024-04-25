@@ -37,8 +37,7 @@
 
 struct redir_args {
     int code;
-    const char *dest;
-    const char *path;
+    const char *location;
 };
 
 static int serve_redir(ne_socket *sock, void *ud)
@@ -52,7 +51,7 @@ static int serve_redir(ne_socket *sock, void *ud)
 		"HTTP/1.0 %d Get Ye Away\r\n"
 		"Content-Length: 0\r\n"
 		"Location: %s\r\n\n",
-		args->code, args->dest);
+		args->code, args->location);
 
     SEND_STRING(sock, buf);
 
@@ -72,7 +71,8 @@ static int process_redir(ne_session *sess, const char *path,
     return OK;
 }
 
-static int check_redir(struct redir_args *args, const char *expect)
+static int check_redir(struct redir_args *args, const char *target,
+                       const char *expect)
 {
     ne_session *sess;
     const ne_uri *loc;
@@ -92,7 +92,7 @@ static int check_redir(struct redir_args *args, const char *expect)
         ne_uri_free(&uri);
     }
 
-    CALL(process_redir(sess, args->path, &loc));
+    CALL(process_redir(sess, target, &loc));
     ONN("redirect location was NULL", loc == NULL);
 
     unp = ne_uri_unparse(loc);
@@ -107,61 +107,40 @@ static int check_redir(struct redir_args *args, const char *expect)
 #define DEST "http://foo.com/blah/blah/bar"
 #define PATH "/redir/me"
 
-static int simple(void)
+static int redirects(void)
 {
-    struct redir_args args[] = {
-        {301, DEST, PATH},
-        {302, DEST, PATH},
-        {303, DEST, PATH},
-        {307, DEST, PATH},
-        {0, NULL, NULL}
-    };
-    int n;
-    
-    for (n = 0; args[n].code; n++)
-        CALL(check_redir(&args[n], DEST));
-
-    return OK;
-}
-
-/* check that a non-absoluteURI is qualified properly */
-static int non_absolute(void)
-{
-    struct redir_args args = {302, "/foo/bar/blah", PATH};
-    return check_redir(&args, "/foo/bar/blah");
-}
-
-static int relative_1(void)
-{
-    struct redir_args args = {302, "norman", "/foo/bar"};
-    return check_redir(&args, "/foo/norman");
-}
-    
-static int relative_2(void)
-{
-    struct redir_args args = {302, "wishbone", "/foo/bar/"};
-    return check_redir(&args, "/foo/bar/wishbone");
-}    
+    const struct {
+        const char *target;
+        int code;
+        const char *location;
+        const char *expected;
+    } ts[] = {
+        {PATH, 301, DEST, DEST},
+        {PATH, 302, DEST, DEST},
+        {PATH, 303, DEST, DEST},
+        {PATH, 307, DEST, DEST},
+        /* Test for various URI-reference cases. */
+        {PATH, 302, "/foo/bar/blah", "/foo/bar/blah"},
+        {"/foo/bar", 302, "norman", "/foo/norman"},
+        {"/foo/bar/", 302, "wishbone", "/foo/bar/wishbone"},
 
 #if 0
-/* could implement failure on self-referential redirects, but
- * realistically, the application must implement a max-redirs count
- * check, so it's kind of redundant.  Mozilla takes this approach. */
-static int fail_loop(void)
-{
-    ne_session *sess;
+        /* all 3xx should really get NE_REDIRECT. */
+        {PATH, 399, DEST, DEST},
+         /* not yet working, needs to resolve URI-reference properly. */
+        {"/blah", 307, "//example.com:8080/fish#food", "http://example.com:8080/fish#food"},
+        {"/blah", 307, "#food", "/blah#food"},
+#endif
+    };
+    unsigned n;
     
-    CALL(make_session(&sess, serve_redir, "http://localhost:7777/foo/bar"));
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
+        struct redir_args args = { ts[n].code, ts[n].location };
+        CALL(check_redir(&args, ts[n].target, ts[n].expected));
+    }
 
-    ne_redirect_register(sess);
-
-    ONN("followed looping redirect", 
-	any_request(sess, "/foo/bar") != NE_ERROR);
-
-    ne_session_destroy(sess);
     return OK;
 }
-#endif
 
 #define RESP1 "HTTP/1.1 200 OK\r\n" "Content-Length: 0\r\n\r\n"
 #define RESP2 "HTTP/1.0 302 Get Ye Away\r\n" "Location: /blah\r\n" "\r\n"
@@ -195,10 +174,7 @@ static int no_redirect(void)
 
 ne_test tests[] = {
     T(lookup_localhost),
-    T(simple),
-    T(non_absolute),
-    T(relative_1),
-    T(relative_2),
+    T(redirects),
     T(no_redirect),
     T(NULL) 
 };
