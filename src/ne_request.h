@@ -1,6 +1,6 @@
 /* 
    HTTP Request Handling
-   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2024, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -165,6 +165,15 @@ void ne_add_request_header(ne_request *req, const char *name,
 void ne_print_request_header(ne_request *req, const char *name,
 			     const char *format, ...) 
     ne_attribute((format(printf, 3, 4)));
+
+/* If the response includes a Location header, this function parses
+ * and resolves the URI-references relative to the request target URI.
+ * If a fragment ("#fragment") is used for the request target, it can
+ * be passed as an argument to allow relative resolution. Returns a
+ * malloc-allocated ne_uri object, or NULL if the URI in the Location
+ * header could not be parsed, or the Location header was not
+ * present. */
+ne_uri *ne_get_response_location(ne_request *req, const char *fragment);
 
 /* ne_request_dispatch: Sends the given request, and reads the
  * response.  Returns:

@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2024, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -92,6 +92,7 @@ struct field {
 #define HH_HV_PROXY_CONNECTION  (0x1A)
 #define HH_HV_CONTENT_LENGTH    (0x13)
 #define HH_HV_TRANSFER_ENCODING (0x07)
+#define HH_HV_LOCATION          (0x05)
 
 struct ne_request_s {
     char *method, *target; /* method and request-target */
@@ -718,6 +719,43 @@ static void free_response_headers(ne_request *req)
             ne_free(f);
 	}
     }
+}
+
+ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
+{
+    const char *location;
+    ne_uri dest, base, *ret;
+
+    location = get_response_header_hv(req, HH_HV_LOCATION, "location");
+    if (location == NULL)
+	return NULL;
+
+    /* Parse the Location header */
+    if (ne_uri_parse(location, &dest) || !dest.path) {
+	ne_set_error(req->session, _("Could not parse redirect "
+                                     "destination URL"));
+        return NULL;
+    }
+
+    /* Location is a URI-reference (RFC9110ẞ10.2.2) relative to the
+     * request target URI; create that base URI: */
+    memset(&base, 0, sizeof base);
+    ne_fill_server_uri(req->session, &base);
+    base.path = req->target;
+
+    ret = ne_malloc(sizeof *ret);
+    ne_uri_resolve(&base, &dest, ret);
+
+    /* HTTP-specific fragment handling is a MUST in RFC9110ẞ10.2.2: */
+    if (fragment && !dest.fragment) {
+        ret->fragment = ne_strdup(fragment);
+    }
+
+    base.path = NULL; /* owned by ne_request object, don't free */
+    ne_uri_free(&base);
+    ne_uri_free(&dest);
+
+    return ret;
 }
 
 void ne_add_response_body_reader(ne_request *req, ne_accept_response acpt,
@@ -1459,7 +1497,16 @@ int ne_end_request(ne_request *req)
 	ne_post_send_fn fn = (ne_post_send_fn)hk->fn;
 	ret = fn(req, hk->userdata, &req->status);
     }
-    
+
+    if (ret == NE_OK && req->status.klass == 3) {
+        const char *dest;
+
+        dest = get_response_header_hv(req, HH_HV_LOCATION, "location");
+        if (dest) {
+            ne_set_error(req->session, _("Redirected to %s"), dest);
+        }
+    }
+
     /* Close the connection if persistent connections are disabled or
      * not supported by the server. */
     if (!req->session->flags[NE_SESSFLAG_PERSIST] || !req->can_persist)
