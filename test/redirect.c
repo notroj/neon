@@ -1,6 +1,6 @@
 /* 
    Tests for 3xx redirect interface (ne_redirect.h)
-   Copyright (C) 2002-2003, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2024, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,29 +35,6 @@
 #include "child.h"
 #include "utils.h"
 
-struct redir_args {
-    int code;
-    const char *location;
-};
-
-static int serve_redir(ne_socket *sock, void *ud)
-{
-    struct redir_args *args = ud;
-    char buf[BUFSIZ];
-
-    CALL(discard_request(sock));
-
-    ne_snprintf(buf, BUFSIZ, 
-		"HTTP/1.0 %d Get Ye Away\r\n"
-		"Content-Length: 0\r\n"
-		"Location: %s\r\n\n",
-		args->code, args->location);
-
-    SEND_STRING(sock, buf);
-
-    return OK;
-}
-
 /* Run a request to 'path' and retrieve the redirect destination to
  * *redir. */
 static int process_redir(ne_session *sess, const char *path,
@@ -71,33 +48,71 @@ static int process_redir(ne_session *sess, const char *path,
     return OK;
 }
 
-static int check_redir(struct redir_args *args, const char *target,
+static int check_redir(int status_code, const char *location,
+                       const char *target, const char *fragment,
                        const char *expect)
 {
+    char *unp, *full_expect = NULL, response[BUFSIZ];
     ne_session *sess;
-    const ne_uri *loc;
-    char *unp;
-    char *full_expect = NULL;
-    
-    CALL(make_session(&sess, serve_redir, args));
-    ne_redirect_register(sess);
-    
+    ne_uri *loc;
+    ne_request *req;
+
+    ne_snprintf(response, sizeof response,
+		"HTTP/1.0 %d Get Ye Away\r\n"
+		"Content-Length: 0\r\n"
+		"Location: %s\r\n\n",
+		status_code, location);
+
+    CALL(multi_session_server(&sess, "http", "localhost", 2,
+                              single_serve_string, response));
+
     if (expect[0] == '/') {
         ne_uri uri = {0};
         ne_fill_server_uri(sess, &uri);
         uri.path = (char *)expect;
+        uri.fragment = (char *)fragment;
         full_expect = ne_uri_unparse(&uri);
         expect = full_expect;
         uri.path = NULL;
+        uri.fragment = NULL;
         ne_uri_free(&uri);
     }
 
-    CALL(process_redir(sess, target, &loc));
-    ONN("redirect location was NULL", loc == NULL);
+    /* First test the ne_get_response_location() API directly. */
+    NE_DEBUG(NE_DBG_HTTP, "redirect: Target [%s ## %s]\n", target,
+             fragment ? fragment : "(no fragment)");
+    NE_DEBUG(NE_DBG_HTTP, "redirect: Location: [%s]\n", location);
+
+    req = ne_request_create(sess, "GET", target);
+    ONREQ(ne_request_dispatch(req));
+    loc = ne_get_response_location(req, fragment);
 
     unp = ne_uri_unparse(loc);
-    ONV(strcmp(unp, expect), ("redirected to `%s' not `%s'", unp, expect));
+    NE_DEBUG(NE_DBG_HTTP, "redirect: ne_get_response_location => [%s]\n", unp);
+    ONV(strcmp(unp, expect), ("first redirect to `%s' not `%s'", unp, expect));
     ne_free(unp);
+    ne_request_destroy(req);
+    ne_uri_free(loc);
+    ne_free(loc);
+
+    if (fragment) {
+        /* Can't handle fragments in the ne_redirect API, send a dummy request. */
+        CALL(any_request(sess, "/dummy"));
+    }
+    else {
+        const ne_uri *cloc;
+
+        /* Second, test the ne_redirect* API. */
+        ne_redirect_register(sess);
+
+        CALL(process_redir(sess, target, &cloc));
+        ONN("redirect location was NULL", cloc == NULL);
+
+        unp = ne_uri_unparse(cloc);
+        NE_DEBUG(NE_DBG_HTTP, "redirect: ne_redirect URI => [%s]\n", unp);
+        ONV(strcmp(unp, expect), ("second redirect to `%s' not `%s'", unp, expect));
+        ne_free(unp);
+    }
 
     if (full_expect) ne_free(full_expect);
 
@@ -114,29 +129,36 @@ static int redirects(void)
         int code;
         const char *location;
         const char *expected;
+        const char *fragment;
     } ts[] = {
-        {PATH, 301, DEST, DEST},
-        {PATH, 302, DEST, DEST},
-        {PATH, 303, DEST, DEST},
-        {PATH, 307, DEST, DEST},
-        /* Test for various URI-reference cases. */
-        {PATH, 302, "/foo/bar/blah", "/foo/bar/blah"},
-        {"/foo/bar", 302, "norman", "/foo/norman"},
-        {"/foo/bar/", 302, "wishbone", "/foo/bar/wishbone"},
+        {PATH, 301, DEST, DEST, NULL},
+        {PATH, 302, DEST, DEST, NULL},
+        {PATH, 303, DEST, DEST, NULL},
+        {PATH, 307, DEST, DEST, NULL},
 
-#if 0
-        /* all 3xx should really get NE_REDIRECT. */
-        {PATH, 399, DEST, DEST},
-         /* not yet working, needs to resolve URI-reference properly. */
-        {"/blah", 307, "//example.com:8080/fish#food", "http://example.com:8080/fish#food"},
-        {"/blah", 307, "#food", "/blah#food"},
-#endif
+        /* Simple relative URI cases: */
+        {PATH, 302, "/foo/bar/blah", "/foo/bar/blah", NULL},
+        {"/foo/bar", 302, "norman", "/foo/norman", NULL},
+        {"/foo/bar/", 302, "wishbone", "/foo/bar/wishbone", NULL},
+
+        /* all 3xx should get NE_REDIRECT. */
+        {PATH, 399, DEST, DEST, NULL},
+
+        /* More relative URIs: */
+        {"/blah", 307, "//example.com:8080/fish#food", "http://example.com:8080/fish#food", NULL},
+        {"/blah", 307, "#food", "/blah#food", NULL},
+
+        /* Fragment handling. */
+        {"/foo", 301, "http://example.com/redirect", "http://example.com/redirect#fragment",
+         "fragment" },
+        {"/foo", 301, "https://blah.example.com/redirect#override",
+         "https://blah.example.com/redirect#override", "fragment" },
     };
     unsigned n;
     
     for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
-        struct redir_args args = { ts[n].code, ts[n].location };
-        CALL(check_redir(&args, ts[n].target, ts[n].expected));
+        CALL(check_redir(ts[n].code, ts[n].location, ts[n].target, ts[n].fragment,
+                         ts[n].expected));
     }
 
     return OK;

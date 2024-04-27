@@ -1,6 +1,6 @@
 /* 
    HTTP request handling tests
-   Copyright (C) 2001-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2024, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -217,6 +217,26 @@ static int reason_phrase(void)
 
     ne_session_destroy(sess);
     return OK;    
+}
+
+static int redirect_error(void)
+{
+    ne_session *sess;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 301 Moved Permanently\r\n"
+                      "Location: http://example.com/redirected\r\n"
+		      "Connection: close\r\n\r\n"));
+    ONREQ(any_request(sess, "/foo"));
+    ne_close_connection(sess);
+    CALL(await_server());
+
+    ONV(strcmp(ne_get_error(sess), "Redirected to http://example.com/redirected"),
+	("error mismatch: got `%s' not redirect location",
+	 ne_get_error(sess)));
+
+    ne_session_destroy(sess);
+    return OK;
 }
 
 static int no_body_304(void)
@@ -2445,5 +2465,6 @@ ne_test tests[] = {
     T(retry_408),
     T(dont_retry_408),
     T(ipv6_literal),
+    T(redirect_error),
     T(NULL)
 };
