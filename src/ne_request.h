@@ -45,7 +45,7 @@ typedef struct ne_request_s ne_request;
 /***** Request Handling *****/
 
 /* Create a request in session 'sess', with given method and target.
- * 'target' is used to form the request-target (per RFC 7230ẞ5.3), and
+ * 'target' is used to form the request-target (per RFC 9112ẞ3.2), and
  * may be an absolute-path (with optional query-string), an
  * absolute-URI, or an asterisk. */
 ne_request *ne_request_create(ne_session *sess, const char *method,
@@ -266,7 +266,7 @@ void ne_add_interim_handler(ne_request *req, ne_interim_response_fn fn,
 /**** Request hooks handling *****/
 
 /* Hook called when a request is created; passed the method and
- * request-target as used in the request-line (RFC7230§5.3).  The
+ * request-target as used in the request-line (RFC 9112§3.2).  The
  * create_request hook is called exactly once per request. */
 typedef void (*ne_create_request_fn)(ne_request *req, void *userdata,
 				     const char *method, const char *target);
