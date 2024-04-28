@@ -1,6 +1,6 @@
 /* 
    Framework for testing with a server process
-   Copyright (C) 2001-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2024, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -386,9 +386,9 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
 	*addr = ne_iaddr_make(ne_iaddr_ipv6, sa.in6.sin6_addr.s6_addr);
     }
 
-    NE_DEBUG(NE_DBG_SOCKET, "child using port %u\n", *port);
+    NE_DEBUG(NE_DBG_SOCKET, "child: using port %u\n", *port);
 
-    NE_DEBUG(NE_DBG_SOCKET, "child forking now...\n");
+    NE_DEBUG(NE_DBG_SOCKET, "child: forking now...\n");
 
     child = fork();
     ONN("failed to fork server", child == -1);
@@ -406,7 +406,7 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
             char errbuf[256];            
             int cret;
 
-            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d (of %d), "
+            NE_DEBUG(NE_DBG_HTTP, "child: iteration #%d (of %d), "
                      "awaiting connection...\n", iter, count);
 
             if (ne_sock_accept(sock, ls)) {
@@ -415,19 +415,24 @@ int new_spawn_server2(int count, server_fn fn, void *userdata,
                 exit(FAIL);
             }
 
-            NE_DEBUG(NE_DBG_HTTP, "child got connection, invoking server\n");
+            NE_DEBUG(NE_DBG_HTTP, "child: got connection, invoking server\n");
+            if (iter == count) {
+                close(ls);
+                NE_DEBUG(NE_DBG_HTTP, "child: closed listening socket.\n");
+            }
+
             ret = fn(sock, userdata);
-            NE_DEBUG(NE_DBG_HTTP, "child iteration #%d returns %d\n",
+            NE_DEBUG(NE_DBG_HTTP, "child: iteration #%d returns %d\n",
                      iter, ret);
 
 	    cret = close_socket(sock);
-	    NE_DEBUG(NE_DBG_HTTP, "child closed connection, %d: %s.\n", cret,
+	    NE_DEBUG(NE_DBG_HTTP, "child: closed connection, %d: %s.\n", cret,
                      cret ? ne_strerror(cret, errbuf, sizeof errbuf) 
                      : "no error");
 
         } while (ret == 0 && ++iter <= count);
 
-        NE_DEBUG(NE_DBG_HTTP, "child terminating with %d\n", ret);
+        NE_DEBUG(NE_DBG_HTTP, "child: terminating with %d\n", ret);
         exit(ret);
     }
 
