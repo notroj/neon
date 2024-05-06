@@ -469,28 +469,6 @@ static int simple(void)
     return accept_signed_cert(SERVER_CERT);
 }
 
-#if 0 /* No longer works for modern SSL libraries, rightly so. */
-/* Test for SSL operation when server uses SSLv2 */
-static int simple_sslv2(void)
-{
-    ne_session *sess = ne_session_create("https", "localhost", 7777);
-    struct ssl_server_args args = {SERVER_CERT, 0};
-
-    args.use_ssl2 = 1;
-    ne_set_session_flag(sess, NE_SESSFLAG_SSLv2, 1);
-
-    if (ne_get_session_flag(sess, NE_SESSFLAG_SSLv2) != 1) {
-        t_context("no SSLv2 support in SSL library");
-        ne_session_destroy(sess);
-        return SKIP;
-    }
-
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
-}
-#endif
-
 /* Test read-til-EOF behaviour with SSL. */
 static int simple_eof(void)
 {
@@ -1899,9 +1877,6 @@ ne_test tests[] = {
     T(clicert_import),
 
     T(simple),
-#if 0
-    T(simple_sslv2),
-#endif
     T(simple_eof),
     T(empty_truncated_eof),
     T(fail_not_ssl),
