@@ -1241,27 +1241,42 @@ static int proxy_tunnel(void)
     return OK;
 }
 
-#define RESP_0LENGTH "HTTP/1.1 200 OK\r\n" "Content-Length: 0\r\n" "\r\n"
+struct tunnel_args {
+    int iteration;
+    const char *first_response; /* first CONNECT response. */
+    const char *second_response; /* second CONNECT response. */
+    struct ssl_server_args *args;
+};
 
-/* a tricky test which requires spawning a second server process in
- * time for a new connection after a 407. */
-static int apt_post_send(ne_request *req, void *ud, const ne_status *st)
+/* Server which acts as a proxy accepting a CONNECT request. */
+static int serve_auth_tunnel(ne_socket *sock, void *ud)
 {
-    int *code = ud;
-    if (st->code == *code) {
-        struct ssl_server_args args = {SERVER_CERT, NULL};
-    
-        if (*code == 407) args.numreqs = 2;
-        args.response = RESP_0LENGTH;
+    struct tunnel_args *args = ud;
 
-        NE_DEBUG(NE_DBG_HTTP, "Got challenge, awaiting server...\n");
-        CALL(await_server());
-        NE_DEBUG(NE_DBG_HTTP, "Spawning proper tunnel server...\n");
-        /* serve *two* 200 OK responses. */
-        CALL(spawn_server(7777, serve_tunnel, &args));
-        NE_DEBUG(NE_DBG_HTTP, "Spawned.\n");
+    /* check for a server auth function */
+    want_header = "Authorization";
+    got_header = tunnel_header;
+    got_server_auth = 0;
+
+    CALL(discard_request(sock));
+
+    if (got_server_auth) {
+        SEND_STRING(sock, "HTTP/1.1 500 Leaked Server Auth Creds\r\n"
+                    "Content-Length: 0\r\n" "Server: serve_tunnel\r\n\r\n");
+        return 0;
     }
-    return OK;
+    
+    if (args->iteration++ == 0) {
+        /* give the plaintext tunnel reply, acting as the proxy */
+
+        SEND_STRING(sock, args->first_response);
+
+        return OK;
+    }
+
+    SEND_STRING(sock, args->second_response);
+
+    return ssl_server(sock, args->args);
 }
 
 static int apt_creds(void *userdata, const char *realm, int attempt,
@@ -1277,23 +1292,27 @@ static int apt_creds(void *userdata, const char *realm, int attempt,
  * 0.24.0. */
 static int auth_proxy_tunnel(void)
 {
-    ne_session *sess = ne_session_create("https", "localhost", 443);
-    int ret, code = 407;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    struct tunnel_args tunnel;
+    ne_session *sess;
+
+    tunnel.first_response =
+        "HTTP/1.0 407 I WANT MORE BISCUITS\r\n"
+        "Server: auth_proxy_tunnel\r\n"
+        "Proxy-Authenticate: Basic realm=\"bigbluesea\"\r\n"
+        "Connection: close\r\n" "\r\n";
+    tunnel.second_response = "HTTP/1.1 200 OK\r\n"
+        "Server: auth_proxy_tunnel r2\r\n\r\n";
+    tunnel.iteration = 0;
+    tunnel.args = &args;
+
+    CALL(proxied_multi_session_server(2, &sess, "https", "localhost", 443,
+                                      serve_auth_tunnel, &tunnel));
     
-    ne_session_proxy(sess, "localhost", 7777);
-    ne_hook_post_send(sess, apt_post_send, &code);
     ne_set_proxy_auth(sess, apt_creds, NULL);
     ne_ssl_trust_cert(sess, def_ca_cert);
     
-    CALL(spawn_server(7777, single_serve_string,
-                      "HTTP/1.0 407 I WANT MORE BISCUITS\r\n"
-                      "Proxy-Authenticate: Basic realm=\"bigbluesea\"\r\n"
-                      "Connection: close\r\n" "\r\n"));
-    
-    /* run two requests over the tunnel. */
-    ret = any_2xx_request(sess, "/foobar");
-    if (!ret) ret = any_2xx_request(sess, "/foobar2");
-    CALL(ret);
+    CALL(any_2xx_request(sess, "/foobar"));
 
     return destroy_and_wait(sess);
 }
@@ -1302,20 +1321,27 @@ static int auth_proxy_tunnel(void)
  * proxy in a CONNECT request. */
 static int auth_tunnel_creds(void)
 {
-    ne_session *sess = ne_session_create("https", "localhost", 443);
-    int code = 401;
-    struct ssl_server_args args = {SERVER_CERT, 0};
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    struct tunnel_args tunnel;
+    ne_session *sess;
+
+    args.response = "HTTP/1.1 401 I want a Shrubbery\r\n"
+        "WWW-Authenticate: Basic realm=\"bigredocean\"\r\n"
+        "Server: auth_tunnel_creds\r\n" "Content-Length: 0\r\n" "\r\n"
+        ""
+        "HTTP/1.1 200 OK\r\n\r\n";
+
+    tunnel.second_response = "HTTP/1.1 200 OK\r\n\r\n";
+    tunnel.args = &args;
+    tunnel.iteration = 1;
+
+    CALL(proxied_multi_session_server(2, &sess, "https", "localhost", 443,
+                                      serve_auth_tunnel, &tunnel));
     
-    ne_session_proxy(sess, "localhost", 7777);
-    ne_hook_post_send(sess, apt_post_send, &code);
     ne_set_server_auth(sess, apt_creds, NULL);
     ne_ssl_trust_cert(sess, def_ca_cert);
     
-    args.response = "HTTP/1.1 401 I want a Shrubbery\r\n"
-        "WWW-Authenticate: Basic realm=\"bigredocean\"\r\n"
-        "Server: Python\r\n" "Content-Length: 0\r\n" "\r\n";
-    
-    CALL(spawn_server(7777, serve_tunnel, &args));
+    CALL(any_2xx_request(sess, "/foobar"));
     CALL(any_2xx_request(sess, "/foobar"));
 
     return destroy_and_wait(sess);
