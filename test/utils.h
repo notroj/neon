@@ -141,6 +141,11 @@ int proxied_session_server(ne_session **sess, const char *scheme,
                            const char *host, unsigned int fakeport,
                            server_fn fn, void *userdata);
 
+int proxied_multi_session_server(int count, ne_session **sess,
+                                 const char *scheme, const char *host,
+                                 unsigned int fakeport,
+                                 server_fn fn, void *userdata);
+
 /* As per proxied_session_server, but uses a "fake" (direct) TCP proxy
  * rather than an HTTP proxy. */
 int fakeproxied_session_server(ne_session **sess, const char *scheme,
