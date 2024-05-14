@@ -409,6 +409,7 @@ static void dup_header(char *header)
 #define PARM_LEGACY_ONLY (0x0100)
 #define PARM_QOP       (0x0200) /* use qop= */
 #define PARM_RFC2617   (0x0204) /* use algorithm= and qop= */
+#define PARM_OPTSTAR   (0x0400) /* use OPTIONS * */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -497,6 +498,8 @@ static char *make_digest(struct digest_state *state, struct digest_parms *parms,
         h_a1 = sess_h_a1;
     }
 
+    NE_DEBUG(NE_DBG_HTTP, "H(A2) from %s:%s\n",
+             !auth_info ? state->method : "", state->uri);
     h_a2 = hash(parms, !auth_info ? state->method : "", ":", state->uri, NULL);
 
     if (parms->flags & PARM_QOP) {
@@ -767,14 +770,20 @@ static int serve_digest(ne_socket *sock, void *userdata)
     struct digest_parms *parms = userdata;
     struct digest_state state;
     char resp[NE_BUFSIZ], *rspdigest;
+
+    state.method = "GET";
     
     if ((parms->flags & PARM_PROXY))
         state.uri = "http://www.example.com/fish";
     else if (parms->domain)
         state.uri = "/fish/0";
+    else if ((parms->flags & PARM_OPTSTAR)) {
+        state.method = "OPTIONS";
+        state.uri = "*";
+    }
     else
         state.uri = "/fish";
-    state.method = "GET";
+
     state.realm = parms->realm;
     state.nonce = parms->nonce;
     state.opaque = parms->opaque;
@@ -926,7 +935,10 @@ static int test_digest(struct digest_parms *parms)
     }
 
     do {
-        CALL(any_2xx_request(sess, "/fish"));
+        if (parms->flags & PARM_OPTSTAR)
+            CALL(any_2xx_request_method(sess, "OPTIONS", "*"));
+        else
+            CALL(any_2xx_request(sess, "/fish"));
     } while (--parms->num_requests);
     
     return destroy_and_wait(sess);
@@ -968,6 +980,9 @@ static int digest(void)
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROXY, 1, 0, fail_not },
         /* Proxy + nextnonce */
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_PROXY, 1, 0, fail_not },
+
+        /* OPTIONS * test */
+        { "WallyWorld", "options-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617|PARM_USERHASH|PARM_OPTSTAR, 1, 0, fail_not },
 
         { NULL }
     };
