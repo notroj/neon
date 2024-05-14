@@ -104,7 +104,7 @@
         <quote>chunked</quote>.</para></sect2>
 
         <sect2>
-        <title>RFC 2617, HTTP Authentication: Basic and Digest Access Authentication</title>
+        <title>RFC 7616, HTTP Digest Access Authentication</title>
 
         <para>&neon; is not strictly compliant with the quoting rules
         given in the grammar for the <literal>Authorization</literal>
@@ -114,7 +114,19 @@
         (Microsoft&reg; IIS 5) rejects the request if these parameters
         are not quoted.  &neon; sends these parameters with
         quotes&mdash;this is not known to cause any problems with
-        other server implementations.</para></sect2>
+        other server implementations.</para>
+
+        <para>RFC 7616 predates RFC 9112 and uses conflicting language
+        around URIs. &neon; uses the RFC 9112
+        <literal>request-target</literal> in both the
+        <literal>A2</literal> grammar and the <literal>uri=</literal>
+        parameter of the <literal>Authorization</literal>
+        header. &neon; will accept (and resolve) any URI-reference in
+        the <literal>domain=</literal> parameter for
+        <literal>WWW-Authenticate</literal> response header
+        field.</para>
+
+        </sect2>
 
 	<sect2>
         <title>Namespaces in XML</title>
