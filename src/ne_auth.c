@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2024, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -226,8 +226,8 @@ struct auth_request {
     /*** Per-request details. ***/
     ne_request *request; /* the request object. */
 
-    /* The method and URI we are using for the current request */
-    const char *uri;
+    /* The request-target and method for the current request, */
+    const char *target;
     const char *method;
     
     int attempt; /* number of times this request has been retries due
@@ -257,7 +257,7 @@ struct auth_protocol {
      * message to the error buffer 'errmsg'. */
     int (*challenge)(auth_session *sess, int attempt,
                      struct auth_challenge *chall,
-                     const char *uri, ne_buffer **errmsg);
+                     const char *target, ne_buffer **errmsg);
 
     /* Return the string to send in the -Authenticate request header:
      * (ne_malloc-allocated, NUL-terminated string) */
@@ -450,7 +450,7 @@ static char *get_scope_path(const char *uri)
  * Returns 0 if an valid challenge, else non-zero. */
 static int basic_challenge(auth_session *sess, int attempt,
                            struct auth_challenge *parms,
-                           const char *uri, ne_buffer **errmsg)
+                           const char *target, ne_buffer **errmsg)
 {
     char *tmp, password[ABUFSIZE];
 
@@ -481,14 +481,14 @@ static int basic_challenge(auth_session *sess, int attempt,
 
     ne__strzero(password, sizeof password);
 
-    if (strcmp(uri, "*") == 0) {
-        /* If the request-target is "*" the auth scope is explicitly
-         * the whole server. */
+    if (strcmp(target, "*") == 0 || sess->context == AUTH_CONNECT) {
+        /* For CONNECT, or if the request-target is "*", the auth
+         * scope is implicitly the whole server. */
         return 0;
     }
 
     sess->domains = ne_malloc(sizeof *sess->domains);
-    sess->domains[0] = get_scope_path(uri);
+    sess->domains[0] = get_scope_path(target);
     sess->ndomains = 1;
 
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Basic auth scope is: %s\n",
@@ -500,7 +500,7 @@ static int basic_challenge(auth_session *sess, int attempt,
 /* Add Basic authentication credentials to a request */
 static char *request_basic(auth_session *sess, struct auth_request *req) 
 {
-    if (sess->ndomains && !inside_domain(sess, req->uri)) {
+    if (sess->ndomains && !inside_domain(sess, req->target)) {
         return NULL;
     }
 
@@ -634,7 +634,7 @@ static int continue_negotiate(auth_session *sess, const char *token,
  * if challenge is accepted. */
 static int negotiate_challenge(auth_session *sess, int attempt,
                                struct auth_challenge *chall,
-                               const char *uri, ne_buffer **errmsg)
+                               const char *target, ne_buffer **errmsg)
 {
     const char *token = chall->opaque;
 
@@ -731,7 +731,7 @@ static int continue_sspi(auth_session *sess, int ntlm, const char *hdr)
 
 static int sspi_challenge(auth_session *sess, int attempt,
                           struct auth_challenge *parms,
-                          const char *uri, ne_buffer **errmsg)
+                          const char *target, ne_buffer **errmsg)
 {
     int ntlm = ne_strcasecmp(parms->protocol->name, "NTLM") == 0;
 
@@ -777,7 +777,7 @@ static int parse_domain(auth_session *sess, const char *domain)
     do {
         char *token = ne_token(&p, ' ');
         ne_uri rel, absolute;
-        
+
         if (ne_uri_parse(token, &rel) == 0) {
             /* Resolve relative to the Request-URI. */
             base.path = "/";
@@ -838,7 +838,7 @@ static char *request_ntlm(auth_session *sess, struct auth_request *request)
 
 static int ntlm_challenge(auth_session *sess, int attempt,
                           struct auth_challenge *parms,
-                          const char *uri, ne_buffer **errmsg)
+                          const char *target, ne_buffer **errmsg)
 {
     int status;
     
@@ -954,7 +954,7 @@ static char *get_digest_h_urp(auth_session *sess, ne_buffer **errmsg,
  * else non-zero. */
 static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms,
-                            const char *uri, ne_buffer **errmsg)
+                            const char *target, ne_buffer **errmsg)
 {
     char *p, *h_urp = NULL;
 
@@ -1064,9 +1064,9 @@ static int digest_challenge(auth_session *sess, int attempt,
     return 0;
 }
 
-/* Returns non-zero if given Request-URI is inside the authentication
- * domain defined for the session. */
-static int inside_domain(auth_session *sess, const char *req_uri)
+/* Returns non-zero if given request-target is inside the
+ * authentication domain defined for the session. */
+static int inside_domain(auth_session *sess, const char *target)
 {
     int inside = 0;
     size_t n;
@@ -1074,7 +1074,7 @@ static int inside_domain(auth_session *sess, const char *req_uri)
     
     /* Parse the Request-URI; it will be an absoluteURI if using a
      * proxy, and possibly '*'. */
-    if (strcmp(req_uri, "*") == 0 || ne_uri_parse(req_uri, &uri) != 0) {
+    if (strcmp(target, "*") == 0 || ne_uri_parse(target, &uri) != 0) {
         /* Presume outside the authentication domain. */
         return 0;
     }
@@ -1104,12 +1104,15 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 
     /* Do not submit credentials if an auth domain is defined and this
      * request-uri fails outside it. */
-    if (sess->ndomains && !inside_domain(sess, req->uri)) {
+    if (sess->ndomains && !inside_domain(sess, req->target)) {
         return NULL;
     }
 
-    /* H(A2): https://tools.ietf.org/html/rfc7616#section-3.4.3 */
-    h_a2 = ne_strhash(hash, req->method, ":", req->uri, NULL);
+    /* H(A2): https://tools.ietf.org/html/rfc7616#section-3.4.3 - Note
+     * that the RFC specifies that "request-uri" is used in the A2
+     * grammar, which matches the RFC 9112 'request-target', which is
+     * what was passed through by ah_create. */
+    h_a2 = ne_strhash(hash, req->method, ":", req->target, NULL);
     NE_DEBUG(NE_DBG_HTTPAUTH, "auth: H(A2): %s\n", h_a2);
 
     /* Calculate the 'response' to the Digest challenge to send the
@@ -1140,7 +1143,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     ne_buffer_concat(ret, 
                      "Digest realm=\"", sess->realm, "\", "
 		     "nonce=\"", sess->nonce, "\", "
-		     "uri=\"", req->uri, "\", "
+		     "uri=\"", req->target, "\", "
 		     "response=\"", response, "\", "
 		     "algorithm=\"", sess->alg->name, "\"",
 		     NULL);
@@ -1322,7 +1325,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
         char *h_a2, *response;
         unsigned int hash = sess->alg->hash;
 
-        h_a2 = ne_strhash(hash, ":", req->uri, NULL);
+        h_a2 = ne_strhash(hash, ":", req->target, NULL);
         response = ne_strhash(hash, sess->h_a1, ":", sess->response_rhs,
                               ":", h_a2, NULL);
         ne_free(h_a2);
@@ -1589,7 +1592,7 @@ static int auth_challenge(auth_session *sess, int attempt, const char *uri,
 }
 
 static void ah_create(ne_request *req, void *session, const char *method,
-		      const char *uri)
+		      const char *target)
 {
     auth_session *sess = session;
     int is_connect = strcmp(method, "CONNECT") == 0;
@@ -1603,7 +1606,7 @@ static void ah_create(ne_request *req, void *session, const char *method,
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Create for %s\n", sess->spec->resp_hdr);
         
         areq->method = method;
-        areq->uri = uri;
+        areq->target = target;
         areq->request = req;
         
         ne_set_request_private(req, sess->spec->id, areq);
@@ -1693,7 +1696,7 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
         /* note above: allow a 401 in response to a CONNECT request
          * from a proxy since some buggy proxies send that. */
 	NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Got challenge (code %d).\n", status->code);
-	if (!auth_challenge(sess, areq->attempt++, areq->uri, auth_hdr)) {
+	if (!auth_challenge(sess, areq->attempt++, areq->target, auth_hdr)) {
 	    ret = NE_RETRY;
 	} else {
 	    clean_session(sess);
