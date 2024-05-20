@@ -209,7 +209,7 @@ int ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector,
  * At most 'len' bytes are read (including the NUL terminator).
  * Returns:
  * NE_SOCK_* on error,
- * >0 number of bytes read (including NUL terminator)
+ * >0 number of bytes read (excluding NUL terminator)
  */
 ssize_t ne_sock_readline(ne_socket *sock, char *buffer, size_t len);
 

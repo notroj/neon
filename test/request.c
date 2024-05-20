@@ -129,6 +129,9 @@ static int expect_header_value(const char *name, const char *value,
 
     CALL(make_session(&sess, fn, userdata));
 
+    NE_DEBUG(NE_DBG_HTTP, "[test] Testing for expected header [%s] / [%s]\n",
+             name, value);
+
     req = ne_request_create(sess, "FOO", "/bar");
     ONREQ(ne_request_dispatch(req));
     ne_close_connection(sess);
@@ -595,6 +598,10 @@ static int response_bodies(void)
           "000000010; foo=bar; norm=fish\r\n"
           "0123456789abcdef\r\n"
           "000000000\r\n" "\r\n" },
+        { "0123456789abcdef", single_serve_string, RESP200 TE_CHUNKED "\r\n"
+          "10 \t ; foo=bar\r\n"
+          "0123456789abcdef\r\n"
+          "000000000\r\n" "\r\n" },
             /* trailers. */
         { "abcde", single_serve_string, RESP200 TE_CHUNKED "\r\n"
           "00000005; foo=bar; norm=fish\r\n"
@@ -659,6 +666,10 @@ static int response_headers(void)
         { "X-Trailer", "fooish, barish", single_serve_string,
           RESP200 TE_CHUNKED "X-Trailer: fooish\r\n\r\n"
           CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
+        /* Test that bare LFs are treated as a spaces. */
+        { "X-Test", "just plain spaces", single_serve_string,
+          RESP200 "X-Test: just\rplain\rspaces\r\n" NO_BODY },
+
         { NULL, NULL, NULL, NULL }
     };
     unsigned n;
@@ -1438,6 +1449,8 @@ static int fail_long_header(void)
     return invalid_response_gives_error(resp, "Line too long");
 }
 
+#define VALID_ABCDE "abcde\r\n" CHUNK(0, "")
+
 static int fail_on_invalid(void)
 {
     static const struct {
@@ -1455,9 +1468,26 @@ static int fail_on_invalid(void)
         /* chunk with CR then notLF */
         { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcde\rZZZ",
           "delimiter was invalid" },
+        /* chunk with CR then notLF */
+        { RESP200 TE_CHUNKED "\r\n" "5\r\n" "abcde\r\r\n",
+          "delimiter was invalid" },
+        /* chunk with non-hex character */
+        { RESP200 TE_CHUNKED "\r\n" "5Z\r\n" "abcde",
+          "Could not parse chunk size" },
         /* chunk size overflow */
         { RESP200 TE_CHUNKED "\r\n" "800000000\r\n" "abcde\r\n",
           "Could not parse chunk size" },
+        { RESP200 TE_CHUNKED "\r\n" "-8000\r\n" "abcde\r\n",
+          "Could not parse chunk size" },
+        { RESP200 TE_CHUNKED "\r\n" "0x5\r\n" VALID_ABCDE,
+          "Could not parse chunk size" },
+        { RESP200 TE_CHUNKED "\r\n" "+5\r\n" VALID_ABCDE,
+          "Could not parse chunk size" },
+        { RESP200 TE_CHUNKED "\r\n" "5 5\r\n" VALID_ABCDE,
+          "Could not parse chunk size" },
+        /* LF rather than CRLF in chunk-size is invalid. */
+        { RESP200 TE_CHUNKED "\r\n" "5\n" VALID_ABCDE,
+          "Invalid chunk-size line" },
         /* EOF at chunk size */
         { RESP200 TE_CHUNKED "\r\n", "Could not read chunk size" },
 
@@ -1480,10 +1510,12 @@ static int fail_on_invalid(void)
         
         { NULL, NULL }
     };
-    int n;
+    unsigned n;
 
-    for (n = 0; ts[n].resp; n++)
+    for (n = 0; ts[n].resp; n++) {
+        NE_DEBUG(NE_DBG_HTTP, "-- fail_on_invalid - test %u\n", n);
         CALL(invalid_response_gives_error(ts[n].resp, ts[n].error));
+    }
 
     return OK;
 }
@@ -2381,9 +2413,7 @@ static int ipv6_literal(void)
     ne_session *sess;
 
     CALL(fakeproxied_session_server(&sess, "http", V6_EXAMPLE_HOST,
-                                    80, serve_v6_check,
-                                    RESP200 "Content-Length: 2\r\n"
-                                    "ok"));
+                                    80, serve_v6_check, NULL));
 
     CALL(any_2xx_request(sess, "/ipv6ish"));
 

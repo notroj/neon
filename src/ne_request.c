@@ -822,6 +822,44 @@ void ne_request_destroy(ne_request *req)
     ne_free(req);
 }
 
+/* Read an HTTP message line following RFC 9112ẞ2.2, returning <0 on
+ * error, >= 0 for line length excluding trailing CRLF. Bare CR are
+ * converted to spaces. */
+static ssize_t read_message_line(ne_socket *sock, char *const buf, size_t buflen)
+{
+    ssize_t len = ne_sock_readline(sock, buf, buflen);
+
+    if (len <= 0) {
+        return len;
+    }
+
+    NE_DEBUG(NE_DBG_HTTP, "req: Line: %.*s\n", (int)len-1, buf);
+
+    if (len == 1) {
+        /* bare LF => empty line. */
+        return 0;
+    }
+    else /* len > 1 */ {
+        char *p = buf + len - 1;
+
+        *p-- = '\0';
+        len -= 1;
+
+        /* NUL terminate at the CR */
+        if (*p == '\r') {
+            *p-- = '\0';
+            len -= 1;
+        }
+
+        /* Replace any bare CRs. */
+        while (p >= buf) {
+            if (*p == '\r') *p = ' ';
+            p--;
+        }
+    }
+
+    return len;
+}
 
 /* Reads a block of the response into BUFFER, which is of size
  * *BUFLEN.  Returns zero on success or non-zero on error.  On
@@ -843,23 +881,45 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
          * chunk: "CHUNK CRLF 0 CRLF".  resp.chunk.remain contains the
          * number of bytes left to read in the current chunk. */
 	if (resp->body.chunk.remain == 0) {
-	    unsigned long chunk_len;
-	    char *ptr;
+            unsigned long chunk_len;
+            char *ptr;
 
-            /* Read the chunk size line into a temporary buffer. */
-            SOCK_ERR(req,
-                     ne_sock_readline(sock, req->respbuf, sizeof req->respbuf),
-                     _("Could not read chunk size"));
-            NE_DEBUG(NE_DBG_HTTP, "[chunk] < %s", req->respbuf);
+            /* Read chunk-size. */
+            readlen = ne_sock_readline(sock, req->respbuf, sizeof req->respbuf);
+            if (readlen < 0)
+                return aborted(req, _("Could not read chunk size"), readlen);
+            /* Minimum valid line is 0<CR><LF> */
+            if (readlen < 3 || req->respbuf[(size_t)readlen - 2] != '\r')
+                return aborted(req, _("Invalid chunk-size line"), 0);
+
+            /* chunk-size is followed by chunk-ext => *(BWS ";" ...)
+             * NUL-terminate here to make the sanity-check easier.*/
+            ptr = strchr(req->respbuf, ';');
+            if (ptr) {
+                /* Iterate backwards through any BWS, if present. */
+                while (ptr > req->respbuf
+                       && (ptr[-1] == ' ' || ptr[-1] == '\t'))
+                    ptr--;
+                *ptr = '\0';
+            }
+
+            /* Reject things strtoul would otherwise allow */
+            ptr = req->respbuf;
+            if (*ptr == '\0' || *ptr == '-' || *ptr == '+'
+                || (ptr[0] == '0' && ptr[1] == 'x')) {
+                return aborted(req, _("Could not parse chunk size"), 0);
+            }
+
+            /* Limit chunk size to <= UINT_MAX, for sanity; must have
+             * a following NUL due to chunk-ext handling above. */
+            errno = 0;
             chunk_len = strtoul(req->respbuf, &ptr, 16);
-	    /* limit chunk size to <= UINT_MAX, so it will probably
-	     * fit in a size_t. */
-	    if (ptr == req->respbuf || 
-		chunk_len == ULONG_MAX || chunk_len > UINT_MAX) {
-		return aborted(req, _("Could not parse chunk size"), 0);
-	    }
-	    NE_DEBUG(NE_DBG_HTTP, "Got chunk size: %lu\n", chunk_len);
-	    resp->body.chunk.remain = chunk_len;
+            if (errno || ptr == req->respbuf || (*ptr != '\0' && *ptr != '\r')
+                || chunk_len == ULONG_MAX || chunk_len > UINT_MAX) {
+                return aborted(req, _("Could not parse chunk size"), 0);
+            }
+            NE_DEBUG(NE_DBG_HTTP, "req: Chunk size: %lu\n", chunk_len);
+            resp->body.chunk.remain = chunk_len;
 	}
 	willread = resp->body.chunk.remain > *buflen
             ? *buflen : resp->body.chunk.remain;
@@ -997,18 +1057,6 @@ static void dump_request(const char *request)
 #define DEBUG_DUMP_REQUEST(x)
 #endif /* DEBUGGING */
 
-/* remove trailing EOL from 'buf', where strlen(buf) == *len.  *len is
- * adjusted in accordance with any changes made to the string to
- * remain equal to strlen(buf). */
-static inline void strip_eol(char *buf, ssize_t *len)
-{
-    char *pnt = buf + *len - 1;
-    while (pnt >= buf && (*pnt == '\r' || *pnt == '\n')) {
-	*pnt-- = '\0';
-	(*len)--;
-    }
-}
-
 #ifdef NE_HAVE_SSL
 #define SSL_CC_REQUESTED(_r) (_r->session->ssl_cc_requested)
 #else
@@ -1022,7 +1070,7 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     char *buffer = req->respbuf;
     ssize_t ret;
 
-    ret = ne_sock_readline(req->session->socket, buffer, sizeof req->respbuf);
+    ret = read_message_line(req->session->socket, buffer, sizeof req->respbuf);
     if (ret <= 0) {
         const char *errstr = SSL_CC_REQUESTED(req)
             ? _("Could not read status line (TLS client certificate was requested)")
@@ -1030,9 +1078,6 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
         int aret = aborted(req, errstr, ret);
         return RETRY_RET(retry, ret, aret);
     }
-    
-    NE_DEBUG(NE_DBG_HTTP, "[status-line] < %s", buffer);
-    strip_eol(buffer, &ret);
     
     if (status->reason_phrase) ne_free(status->reason_phrase);
     memset(status, 0, sizeof *status);
@@ -1157,21 +1202,20 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
     ssize_t n;
     ne_socket *sock = req->session->socket;
 
-    n = ne_sock_readline(sock, buf, buflen);
-    if (n <= 0)
-	return aborted(req, _("Error reading response headers"), n);
-    NE_DEBUG(NE_DBG_HTTP, "[hdr] %s", buf);
-
-    strip_eol(buf, &n);
-
-    if (n == 0) {
-	NE_DEBUG(NE_DBG_HTTP, "End of headers.\n");
-	return NE_OK;
+    n = read_message_line(sock, buf, buflen);
+    if (n < 0) {
+        return aborted(req, _("Error reading response headers"), n);
+    }
+    else if (n == 0) {
+        NE_DEBUG(NE_DBG_HTTP, "req: End of headers.\n");
+        return NE_OK;
     }
 
     buf += n;
     buflen -= n;
 
+    /* Per RFC9112ẞ5.2, append any folded headers extended over
+     * multiple lines. */
     while (buflen > 0) {
 	char ch;
 
@@ -1185,22 +1229,14 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
 	}
 
 	/* Otherwise, read the next line onto the end of 'buf'. */
-	n = ne_sock_readline(sock, buf, buflen);
+	n = read_message_line(sock, buf, buflen);
 	if (n <= 0) {
 	    return aborted(req, _("Error reading response headers"), n);
 	}
 
-	NE_DEBUG(NE_DBG_HTTP, "[cont] %s", buf);
+        buf[0] = ' '; /* replacing \t */
 
-	strip_eol(buf, &n);
-	
-	/* assert(buf[0] == ch), which implies len(buf) > 0.
-	 * Otherwise the TCP stack is lying, but we'll be paranoid.
-	 * This might be a \t, so replace it with a space for ease of
-	 * parsing; this is permitted by RFC 7230§3.5. */
-	if (n) buf[0] = ' ';
-
-	/* ready for the next header. */
+	/* ready for the next line. */
 	buf += n;
 	buflen -= n;
     }
