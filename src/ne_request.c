@@ -1408,8 +1408,7 @@ int ne_begin_request(ne_request *req)
     }
 
     /* Decide which method determines the response message-length per
-     * RFC 7230§3.3.3, method cases follow: */
-
+     * RFC 9112§6.3, cases follow: */
 #ifdef NE_HAVE_SSL
     /* Case (2) is special-cased first for CONNECT: the response has
      * no body, and the connection can persist. */
@@ -1423,11 +1422,12 @@ int ne_begin_request(ne_request *req)
     if (req->method_is_head || st->code == 204 || st->code == 304) {
     	req->resp.mode = R_NO_BODY;
     }
-    /* Case (3), chunked transer-encoding.. */
+    /* Case (3)/(4), chunked transfer-encoding. */
     else if ((value = get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
                                              "transfer-encoding")) != NULL
              && ne_strcasecmp(value, "identity") != 0) {
-        /* Otherwise, fail iff an unknown transfer-coding is used. */
+        /* Otherwise, fail if an unknown transfer-coding is used, no
+         * other transfer-codings are supported. */
         if (ne_strcasecmp(value, "chunked") == 0) {
             req->resp.mode = R_CHUNKED;
             req->resp.body.chunk.remain = 0;
@@ -1436,7 +1436,7 @@ int ne_begin_request(ne_request *req)
             return aborted(req, _("Unknown transfer-coding in response"), 0);
         }
     }
-    /* Case (4) and (5), content-length delimited. */
+    /* Case (5)/(6), content-length delimited. */
     else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
                                              "content-length")) != NULL) {
         char *endptr = NULL;
@@ -1447,11 +1447,11 @@ int ne_begin_request(ne_request *req)
             req->resp.body.clen.total = req->resp.body.clen.remain = len;
         }
         else {
-            /* Per case (4), an invalid C-L must be treated as an error. */
+            /* Per case (5), an invalid C-L MUST be treated as an error. */
             return aborted(req, _("Invalid Content-Length in response"), 0);
         }
     }
-    /* Case (7), response delimited by EOF. */
+    /* Case (8), response delimited by EOF. */
     else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
