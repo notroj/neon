@@ -107,6 +107,10 @@ typedef enum ne_session_flag_e {
                              * to improve interoperability with
                              * SharePoint */
 
+    NE_SESSFLAG_STRICT, /* disable this flag to parse HTTP/1.1
+                         * messages without strict requirements
+                         * introduced in RFC 7230 and later. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 

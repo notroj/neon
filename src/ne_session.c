@@ -182,7 +182,7 @@ ne_session *ne_session_create(const char *scheme,
     NE_DEBUG(NE_DBG_HTTP, "HTTP session to %s://%s:%d begins.\n",
 	     scheme, hostname, port);
 
-    strcpy(sess->error, "Unknown error.");
+    ne_strnzcpy(sess->error, _("Unknown error."), sizeof sess->error);
 
     /* use SSL if scheme is https */
     sess->use_ssl = !strcmp(scheme, "https");
@@ -209,6 +209,7 @@ ne_session *ne_session_create(const char *scheme,
 
     /* Set flags which default to on: */
     sess->flags[NE_SESSFLAG_PERSIST] = 1;
+    sess->flags[NE_SESSFLAG_STRICT] = 1;
 
 #ifdef NE_ENABLE_AUTO_LIBPROXY
     ne_session_system_proxy(sess, 0);
