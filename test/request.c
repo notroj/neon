@@ -1508,6 +1508,14 @@ static int fail_on_invalid(void)
           "\r\n" "abcde",
           "Invalid Content-Length" },
         
+        /* incompatible HTTP-version */
+        { "HTTP/2.0 200 OK\r\n"
+          "Content-Length: 0\r\n\r\n",
+          "Incompatible HTTP version" },
+        { "HTTP/0.9 200 OK\r\n"
+          "Content-Length: 0\r\n\r\n",
+          "Incompatible HTTP version" },
+
         { NULL, NULL }
     };
     unsigned n;
