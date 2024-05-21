@@ -114,6 +114,34 @@ static unsigned char gen_status_line(unsigned char ch)
     return 99;
 }
 
+/* https://www.rfc-editor.org/rfc/rfc9110#name-tokens
+ token          = 1*tchar
+
+ tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                   / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                   / DIGIT / ALPHA
+                   ; any VCHAR, except delimiters
+
+ VCHAR          =  %x21-7E
+ delimiters = (DQUOTE and "(),/:;<=>?@[\]{}")
+*/
+
+static unsigned char gen_token(unsigned char ch)
+{
+    switch (ch) {
+    case '!': case '#': case '$': case '%': case '&': case '\'': case '*':
+    case '+': case '-': case '.': case '^': case '_': case '`': case '|':
+    case '~':
+        return ch;
+    case '(': case ')': case ',': case '/': case ':': case ';': case '<':
+    case '=': case '>': case '?': case '@': case '[': case '\\': case ']':
+    case '{': case '}': case '"':
+        return 0;
+    default:
+        return ch >= 0x21 && ch <= 0x7E ? tolower(ch) : 0;
+    }
+}
+
 #define FLAG_DECIMAL (0x01)
 #define FLAG_SHORT   (0x02)
 
@@ -130,6 +158,7 @@ static const struct {
     { "status_line", gen_status_line, FLAG_DECIMAL | FLAG_SHORT },
     { "extparam", gen_extparam, FLAG_DECIMAL | FLAG_SHORT },
     { "safe_username", safe_username, FLAG_DECIMAL | FLAG_SHORT },
+    { "http_token", gen_token, 0 },
 };
 
 static void fail(const char *err, const char *arg)
