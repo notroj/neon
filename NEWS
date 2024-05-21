@@ -1,3 +1,15 @@
+Changes in release 0.34.0
+* Interface changes:
+ - API and ABI backwards-compatible with 0.27.x and later
+* New interfaces and features:
+ - ne_request.h: add ne_get_response_location()
+ - ne_redirect.h: support complete relative URI resolution
+ - ne_session.h: add NE_SESSFLAG_STRICT session flag
+ - HTTP strictness/compliance updated for RFC 9110/9112;
+   notably stricter in parsing header field line, chunked
+   transfer-encoding, status-line.
+* Documentation & header updates for RFC 9110/9112.
+
 Changes in release 0.33.0:
 * Interface changes:
  - API and ABI backwards-compatible with 0.27.x and later
