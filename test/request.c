@@ -637,7 +637,7 @@ static int response_headers(void)
         { "ranDom-HEader", "", single_serve_string,      RESP200 "RANDom-HeADEr:\r\n" NO_BODY },
         { "ranDom-HEader", "noddy", single_serve_string, RESP200 "RANDom-HeADEr: noddy\r\n" NO_BODY },
         { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr:    fishy\r\n" NO_BODY },
-        { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr \t :    fishy\r\n" NO_BODY},
+        { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr: \t    fishy\r\n" NO_BODY},
         { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr: fishy  \r\n" NO_BODY },
         { "ranDom-HEader", "geezer", single_serve_string, RESP200 "RANDom-HeADEr: \t \tgeezer\r\n" NO_BODY },
         { "gONe", "fishing", single_serve_string,
@@ -669,6 +669,11 @@ static int response_headers(void)
         /* Test that bare LFs are treated as a spaces. */
         { "X-Test", "just plain spaces", single_serve_string,
           RESP200 "X-Test: just\rplain\rspaces\r\n" NO_BODY },
+        /* Invalid vs valid header names */
+        { "Content\"Length", NULL, single_serve_string,
+          RESP200 "Content\"Length: foobar\r\n" NO_BODY },
+        { "Content!Length", "foobar", single_serve_string,
+          RESP200 "Content!Length: foobar\r\n" NO_BODY },
 
         { NULL, NULL, NULL, NULL }
     };
@@ -1488,6 +1493,8 @@ static int fail_on_invalid(void)
         /* LF rather than CRLF in chunk-size is invalid. */
         { RESP200 TE_CHUNKED "\r\n" "5\n" VALID_ABCDE,
           "Invalid chunk-size line" },
+        { RESP200 TE_CHUNKED "\r\n" ";5\r\n" VALID_ABCDE,
+          "Could not parse chunk size" },
         /* EOF at chunk size */
         { RESP200 TE_CHUNKED "\r\n", "Could not read chunk size" },
 
