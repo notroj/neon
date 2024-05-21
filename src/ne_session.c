@@ -162,10 +162,7 @@ static void set_hostinfo(struct host_info *hi, enum proxy_type type,
     ia = ne_iaddr_parse(hi->hostname, ne_iaddr_ipv4);
     if (!ia && hlen > 4
         && hi->hostname[0] == '[' && hi->hostname[hlen-1] == ']') {
-        char *v6lit = ne_strdup(hi->hostname + 1);
-
-        v6lit[hlen-2] = '\0';
-
+        char *v6lit = ne_strndup(hi->hostname + 1, hlen-2);
         ia = ne_iaddr_parse(v6lit, ne_iaddr_ipv6);
         ne_free(v6lit);
     }
