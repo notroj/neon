@@ -1093,8 +1093,14 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
         status->klass = buffer[4] - '0';
         NE_DEBUG(NE_DBG_HTTP, "[status-line] ICY protocol; code %d\n", 
                  status->code);
-    } else if (ne_parse_statusline(buffer, status)) {
+        return 0;
+    }
+
+    if (ne_parse_statusline(buffer, status)) {
 	return aborted(req, _("Could not parse response status line"), 0);
+    }
+    if (status->major_version != 1) {
+        return aborted(req, _("Incompatible HTTP version"), 0);
     }
 
     return 0;
@@ -1386,12 +1392,9 @@ int ne_begin_request(ne_request *req)
     ne_buffer_destroy(data);
     if (ret != NE_OK) return ret == NE_RETRY ? NE_ERROR : ret;
 
-    /* Determine whether server claims HTTP/1.1 compliance. */
-    req->session->is_http11 = (st->major_version == 1 && 
-                               st->minor_version > 0) || st->major_version > 1;
-
-    /* Persistent connections supported implicitly in HTTP/1.1 */
-    if (req->session->is_http11) req->can_persist = 1;
+    /* HTTP/1.x is assured by read_status_line() not failing.
+     * Persistent connections supported implicitly in HTTP/1.1. */
+    req->can_persist = req->session->is_http11 = st->minor_version > 0;
 
     ne_set_error(req->session, "%d %s", st->code, st->reason_phrase);
 
