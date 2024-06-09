@@ -167,9 +167,9 @@ void ne_print_request_header(ne_request *req, const char *name,
     ne_attribute((format(printf, 3, 4)));
 
 /* If the response includes a Location header, this function parses
- * and resolves the URI-references relative to the request target URI.
- * If a fragment ("#fragment") is used for the request target, it can
- * be passed as an argument to allow relative resolution. Returns a
+ * and resolves the URI-reference relative to the request target.  If
+ * a fragment ("#fragment") is used for the request target, it can be
+ * passed as an argument to allow relative resolution. Returns a
  * malloc-allocated ne_uri object, or NULL if the URI in the Location
  * header could not be parsed, or the Location header was not
  * present. */
