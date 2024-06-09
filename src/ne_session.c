@@ -137,11 +137,15 @@ int ne_version_pre_http11(ne_session *s)
 /* Stores the "hostname[:port]" segment */
 static void set_hostport(struct host_info *host, unsigned int defaultport)
 {
-    size_t len = strlen(host->hostname);
-    host->hostport = ne_malloc(len + 10);
-    strcpy(host->hostport, host->hostname);
-    if (host->port != defaultport)
-	ne_snprintf(host->hostport + len, 9, ":%u", host->port);
+    if (host->port == defaultport) {
+        host->hostport = ne_strdup(host->hostname);
+    }
+    else {
+        char buf[512];
+
+        ne_snprintf(buf, sizeof buf, "%s:%u", host->hostname, host->port);
+        host->hostport = ne_strdup(buf);
+    }
 }
 
 /* Stores the hostname/port in *info, setting up the "hostport"
@@ -442,13 +446,7 @@ void ne_set_connect_timeout(ne_session *sess, int timeout)
 void ne_set_useragent(ne_session *sess, const char *token)
 {
     if (sess->user_agent) ne_free(sess->user_agent);
-    sess->user_agent = ne_malloc(strlen(UAHDR) + strlen(AGENT) + 
-                                 strlen(token) + 1);
-#ifdef HAVE_STPCPY
-    strcpy(stpcpy(stpcpy(sess->user_agent, UAHDR), token), AGENT);
-#else
-    strcat(strcat(strcpy(sess->user_agent, UAHDR), token), AGENT);
-#endif
+    sess->user_agent = ne_concat(UAHDR, token, AGENT, NULL);
 }
 
 const char *ne_get_server_hostport(ne_session *sess)
