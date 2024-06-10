@@ -823,6 +823,7 @@ fi
 
 NEON_SSL()
 NEON_GSSAPI()
+NEON_NTLM()
 NEON_LIBPROXY()
 
 AC_SUBST(NEON_CFLAGS)
@@ -1061,8 +1062,6 @@ yes|openssl)
 
    AC_DEFINE([HAVE_OPENSSL], 1, [Define if OpenSSL support is enabled])
    NEON_EXTRAOBJS="$NEON_EXTRAOBJS ne_openssl"
-
-   AC_DEFINE([HAVE_NTLM], 1, [Define if NTLM is supported])
    ;;
 gnutls)
    NE_PKG_CONFIG(NE_SSL, gnutls,
@@ -1236,6 +1235,24 @@ else
    NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])
 fi
 ])   
+
+AC_DEFUN([NEON_NTLM], [
+AC_ARG_WITH(libntlm, AS_HELP_STRING(--without-libntlm, disable Libntlm support),
+            [need_ntlm=$withval], [need_ntlm=no])
+if test "$with_libntlm" != "no"; then
+  ne_save_CFLAGS=$CFLAGS
+  ne_save_LIBS=$NEON_LIBS
+  NE_PKG_CONFIG(NE_NTLM, [libntlm],
+    [NE_ENABLE_SUPPORT(NTLM, [NTLM support enabled using Libntlm $NE_NTLM_VERSION])
+     NEON_LIBS="$NEON_LIBS ${NE_NTLM_LIBS}"
+     CPPFLAGS="$CPPFLAGS $NE_NTLM_CFLAGS"
+    ],
+    [NE_DISABLE_SUPPORT(NTLM, [NTLM authentication is not supported])])
+else
+    NE_DISABLE_SUPPORT(NTLM, [NTLM authentication is not supported])
+fi
+])
+
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
 dnl compiler warnings
