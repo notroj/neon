@@ -49,6 +49,10 @@
 #include <expat.h>
 #endif
 
+#ifdef NE_HAVE_NTLM
+#include <ntlm.h>
+#endif
+
 #include "ne_utils.h"
 #include "ne_string.h" /* for ne_strdup */
 #include "ne_dates.h"
@@ -132,6 +136,9 @@ static const char version_string[] = "neon " NEON_VERSION ": "
 #endif
 #ifdef NE_HAVE_LIBPXY
     ", libproxy"
+#endif
+#ifdef NE_HAVE_NTLM
+    ", libntlm " NTLM_VERSION
 #endif
    "."
 ;
