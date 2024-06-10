@@ -1726,6 +1726,48 @@ static int clean_realm(void)
     return destroy_and_wait(sess);
 }
 
+static int ntlm_auth(void *userdata, const char *realm, int tries, 
+                     char *un, char *pw)
+{
+    strcpy(un, "ntlm");
+    strcpy(pw, "pass");
+    return tries;
+}		   
+
+static int serve_ntlm(ne_socket *sock, void *userdata)
+{
+    auth_failed = 1;
+
+    /* Register globals for discard_request. */
+    want_header = NULL;
+
+    discard_request(sock);
+    send_response(sock, "WWW-Authenticate: NTLM", 401, 0);
+    
+    discard_request(sock);
+    send_response(sock, 
+                  "WWW-Authenticate: NTLM "
+                  "TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==",
+                  401, 0);
+
+    discard_request(sock);
+    send_response(sock, NULL, 200, 1);
+
+    return 0;
+}
+
+static int ntlm(void)
+{
+    ne_session *sess;
+
+    CALL(make_session(&sess, serve_ntlm, NULL));
+
+    ne_add_server_auth(sess, NE_AUTH_NTLM, ntlm_auth, NULL);
+
+    CALL(any_2xx_request(sess, "/ntlmy"));
+
+    return destroy_and_wait(sess);
+}
 
 /* proxy auth, proxy AND origin */
 
@@ -1752,5 +1794,6 @@ ne_test tests[] = {
     T(basic_scope),
     T(star_scope),
     T(clean_realm),
+    T(ntlm),
     T(NULL)
 };
