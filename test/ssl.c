@@ -194,15 +194,6 @@ static int ssl_server(ne_socket *sock, void *userdata)
     return 0;
 }
 
-/* serve_ssl wrapper which ignores server failure and always succeeds */
-static int fail_serve(ne_socket *sock, void *ud)
-{
-    struct ssl_server_args args = {0};
-    args.cert = ud;
-    ssl_server(sock, &args);
-    return OK;
-}
-
 #define DEFSESS  (ne_session_create("https", "localhost", 7777))
 
 static int make_ssl_session_port(ne_session **sess,
@@ -741,6 +732,7 @@ static int get_failures(void *userdata, int fs, const ne_ssl_certificate *c)
 {
     int *out = userdata;
     *out = fs;
+    NE_DEBUG(NE_DBG_SSL, "test: fail_ssl_request verify callback - %d\n", fs);
     return -1;
 }
 
@@ -780,6 +772,9 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
     ne_ssl_set_verify(sess, get_failures, &gotf);
 
     ret = any_request(sess, "/expect-to-fail");
+
+    NE_DEBUG(NE_DBG_SSL, "test: fail_ssl_request - request code %d, error: %s\n",
+             ret, ne_get_error(sess));
 
     ONV(gotf == 0,
 	("no error in verification callback; request rv %d error string: %s",
@@ -910,18 +905,22 @@ static int fail_self_signed(void)
  * commonName (and no alt names either). */
 static int fail_missing_CN(void)
 {
-    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {0};
+    ne_session *sess;
+    int ret;
 
-    ONN("accepted server cert with missing commonName",
-        any_ssl_request(sess, fail_serve, "missingcn.cert", SERVER_CERT,
-                        NULL, NULL) == NE_OK);
-    
-    ONV(strstr(ne_get_error(sess), "missing commonName") == NULL,
-        ("unexpected session error `%s'", ne_get_error(sess)));
+    args.cert = "missingcn.cert";
 
-    ne_session_destroy(sess);
-    return OK;
-}                            
+    CALL(make_ssl_session(&sess, "localhost", ssl_server, &args));
+
+    ret = any_request(sess, "/fail-missing-cn");
+    ONN("request did not fail", ret != NE_ERROR);
+
+    ONV(strstr(ne_get_error(sess), "missing commonName attribute") == NULL,
+        ("error string unexpected: %s", ne_get_error(sess)));
+
+    return destroy_and_wait(sess);
+}
 
 /* test for a bad ipAddress altname */
 static int fail_bad_ipaltname(void)
