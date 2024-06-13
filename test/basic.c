@@ -267,6 +267,62 @@ static int get(void)
     return destroy_and_wait(sess);
 }
 
+
+#define CHUNK(len, data) #len "\r\n" data "\r\n"
+
+#define ABCDE_CHUNKS CHUNK(1, "a") CHUNK(1, "b") \
+ CHUNK(1, "c") CHUNK(1, "d") \
+ CHUNK(1, "e") CHUNK(0, "")
+
+static int getbuf(void)
+{
+    ne_session *sess;
+    char buffer[16];
+    size_t buflen = sizeof buffer;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                      "Transfer-Encoding: chunked\r\n"
+                      "\r\n"
+                      ABCDE_CHUNKS));
+
+    ONREQ(ne_getbuf(sess, "/", buffer, &buflen));
+
+    ONV(buflen != 5, ("unexpected buffer length %" NE_FMT_SIZE_T, buflen));
+
+    ONV(memcmp("abcde", buffer, 5) != 0,
+        ("mismatched chunked response: [%5s]", buffer));
+
+    return destroy_and_wait(sess);
+}
+
+static int getbuf2(void)
+{
+    ne_session *sess;
+    char buf;
+    size_t buflen = sizeof buf;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                      "Content-Length: 5\r\n"
+                      "\r\n"
+                      "abcde"
+                      "HTTP/1.1 200 OK\r\n" "Server: neon-test-server\r\n"
+                      "Content-Length: 5\r\n"
+                      "\r\n"
+                      "abcde"));
+
+    ret = ne_getbuf(sess, "/", &buf, &buflen);
+    ONV(ret != NE_FAILED, ("overflow case gave %d not FAILED", ret));
+    ONV(buflen != 1, ("buffer length returned as %" NE_FMT_SIZE_T, buflen));
+
+    ret = any_request(sess, "/closeme");
+    ONN("failed to close connection", ret != NE_CONNECT);
+
+    return destroy_and_wait(sess);
+}
+
 #define CLASS_12 (NE_CAP_DAV_CLASS1 | NE_CAP_DAV_CLASS2)
 
 static int options2(void)
@@ -335,6 +391,8 @@ ne_test tests[] = {
     T(fail_range_unsatify),
     T(dav_capabilities),
     T(get),
+    T(getbuf),
+    T(getbuf2),
     T(options2),
     T(put),
     T(NULL) 
