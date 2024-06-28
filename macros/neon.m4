@@ -258,6 +258,10 @@ NEON_CHECK_VERSION([
     NE_DEFINE_VERSIONS
     neon_library_message="library in ${neon_prefix} (${NEON_VERSION})"
     neon_xml_parser_message="using whatever neon uses"
+    NEON_CHECK_SUPPORT([i18n], [I18N], [Internationalization])
+    NEON_CHECK_SUPPORT([dav], [DAV], [WebDAV])
+    NEON_CHECK_SUPPORT([gssapi], [GSSAPI], [GSSAPI])
+    NEON_CHECK_SUPPORT([libpxy], [LIBPXY], [libproxy])
     NEON_CHECK_SUPPORT([ssl], [SSL], [SSL])
     NEON_CHECK_SUPPORT([zlib], [ZLIB], [zlib])
     NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
