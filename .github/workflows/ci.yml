@@ -41,8 +41,7 @@ jobs:
     strategy:
       matrix:
         image: ["quay.io/centos/centos:stream9",
-                "fedora:latest",
-                "fedora:rawhide"]
+                "fedora:latest"]
     container:
       image: ${{ matrix.image }}
     steps:
