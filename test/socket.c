@@ -1560,6 +1560,24 @@ static int fail_socks(void)
     return OK;
 }
 
+static int scopes(void)
+{
+    ne_inet_addr *ia;
+
+#ifdef TEST_IPV6
+    ia = ne_iaddr_parse("fe80::cafe", ne_iaddr_ipv6);
+#else
+    ia = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+#endif
+
+    (void) ne_iaddr_set_scope(ia, "foobar");
+    (void) ne_iaddr_get_scope(ia);
+
+    ne_iaddr_free(ia);
+    
+    return OK;
+}
+
 ne_test tests[] = {
     T(multi_init),
     T_LEAKY(resolve),
@@ -1620,5 +1638,6 @@ ne_test tests[] = {
     T(block_timeout),
     T(socks_proxy),
     T(fail_socks),
+    T(scopes),
     T(NULL)
 };
