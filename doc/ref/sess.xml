@@ -64,14 +64,18 @@ perform any global initialization needed by any libraries used by
 	linkend="ne_ssl_trust_default_ca"/>).</para>
 
         <para>The <parameter>host</parameter> parameter must follow
-        the definition of 'host' in <ulink
+        the definition of host <literal>host</literal> in <ulink
         url="https://www.rfc-editor.org/rfc/rfc3986">RFC 3986</ulink>,
         which can be an IP-literal or registered (DNS) hostname. Valid
         examples of each: <literal>"198.51.100.42"</literal> (IPv4
         literal address), <literal>"[2001:db8::42]"</literal> (IPv6
         literal, which <emphasis>MUST</emphasis> be enclosed in square
         brackets), or <literal>"www.example.com"</literal> (DNS
-        hostname).</para>
+        hostname). The <ulink
+        url="https://www.rfc-editor.org/rfc/rfc6874">RFC 6874</ulink>
+        syntax for scoped IPv6 link-local literal addresses is also
+        permitted, for example <literal>"[fe80::1%25eth0]"</literal>.
+        </para>
 
         <para>The <parameter>scheme</parameter> parameter is used to
         determine the URI for resources identified during request
