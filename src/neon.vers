@@ -42,4 +42,7 @@ NEON_0_33 {
 
 NEON_0_34 {
     ne_get_response_location;
+    ne_iaddr_set_scope;
+    ne_iaddr_get_scope;
 };
+
