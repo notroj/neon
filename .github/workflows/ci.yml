@@ -21,6 +21,11 @@ jobs:
         conf-memleak: [--disable-memleak, --enable-memleak]
         conf-debug: [--enable-debug, --disable-debug]
         conf-gssapi: [--with-gssapi, --without-gssapi]
+        exclude:
+            - conf-gssapi: --without-gssapi
+              conf-ssl: [--without-ssl, --with-ssl=gnutls]
+            - conf-xml: --with-libxml2
+              conf-gssapi: --without-gssapi
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
