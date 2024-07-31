@@ -25,6 +25,8 @@ for f in $*; do
     else
 	RETVAL=$?
         echo '->' ${HARNESS} failed ${RETVAL}
+        strace ${HARNESS} ./$f ${SRCDIR}
+        break
     fi
 done
 
