@@ -24,7 +24,10 @@ for f in $*; do
 	:
     else
 	RETVAL=$?
+        echo '->' ${HARNESS} failed ${RETVAL}
     fi
 done
+
+echo "-> Finished. $RETVAL"
 
 exit $RETVAL
