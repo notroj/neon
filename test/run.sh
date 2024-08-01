@@ -4,7 +4,7 @@ rm -f debug.log child.log
 
 ulimit -c unlimited
 ulimit -t 120
-sysctl -w kernel.core_pattern=core
+sudo sysctl -w kernel.core_pattern=core
 
 unset LANG
 unset LC_MESSAGES
