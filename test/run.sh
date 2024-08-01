@@ -4,6 +4,7 @@ rm -f debug.log child.log
 
 ulimit -c unlimited
 ulimit -t 120
+sysctl -w kernel.core_pattern=core
 
 unset LANG
 unset LC_MESSAGES
@@ -24,7 +25,7 @@ for f in $*; do
 	:
     else
 	RETVAL=$?
-        echo '->' ${HARNESS} failed ${RETVAL}
+        echo '->' ${f} failed ${RETVAL}
         if [ $RETVAL -eq 134 ]; then
             gdb --eval-command='bt full' --batch ./$f core*
         fi
