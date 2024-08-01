@@ -180,7 +180,7 @@ static void set_hostinfo(struct host_info *hi, enum proxy_type type,
     if (!ia && hlen >= V6_ADDR_MINLEN
         && hi->hostname[0] == '[' && hi->hostname[hlen-1] == ']') {
         const char *v6end, *v6start = hi->hostname + 1;
-        char *v6lit, *scope;
+        char *v6lit, *scope = NULL;
 
         /* Parse here, see if there is a Zone ID:
          *  IPv6addrzb => v6start = IPv6address "%25" ZoneID */
