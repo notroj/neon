@@ -25,7 +25,9 @@ for f in $*; do
     else
 	RETVAL=$?
         echo '->' ${HARNESS} failed ${RETVAL}
-        strace ${HARNESS} ./$f ${SRCDIR}
+        if [ $RETVAL -eq 134 ]; then
+            gdb --eval-command='bt full' --batch ./$f core.*
+        fi
         break
     fi
 done
