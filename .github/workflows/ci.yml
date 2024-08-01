@@ -29,7 +29,7 @@ jobs:
               conf-gssapi: --without-gssapi
     steps:
     - uses: actions/checkout@v2
-    - run: sudo apt-get update && sudo apt-get install gdb
+    - run: sudo apt-get update && sudo apt-get -y install gdb
     - run: ./autogen.sh
     - run: case ${{matrix.conf-ssl}} in
            *gnutls) sudo apt-get -y install libgnutls28-dev gnutls-bin xmlto ;;
