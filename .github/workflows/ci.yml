@@ -40,6 +40,8 @@ jobs:
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make
     - run: make check
+    - if: failure()
+      run: if test -f test/debug.log; then tail -n50 test/debug.log; fi
 
   containers:
     runs-on: ubuntu-latest
