@@ -4,6 +4,7 @@ rm -f debug.log child.log
 
 ulimit -c unlimited
 ulimit -t 120
+sudo sysctl -w kernel.core_pattern=core
 
 unset LANG
 unset LC_MESSAGES
@@ -24,7 +25,14 @@ for f in $*; do
 	:
     else
 	RETVAL=$?
+        echo '->' ${f} failed ${RETVAL}
+        if [ $RETVAL -eq 134 ]; then
+            gdb --eval-command='bt full' --batch ./$f core*
+        fi
+        break
     fi
 done
+
+echo "-> Finished. $RETVAL"
 
 exit $RETVAL
