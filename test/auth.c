@@ -160,6 +160,11 @@ static int basic(void)
         /* whitespace tests. */
         "WWW-Authenticate:   Basic realm=WallyWorld   ",
 
+#if 0
+        /* Domain error path test. */
+        "WWW-Authenticate: Basic realm=WallyWorld domain=\"http://[::1/\"",
+#endif
+
         /* nego test. */
         "WWW-Authenticate: Negotiate fish, Basic realm=WallyWorld",
 

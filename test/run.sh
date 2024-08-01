@@ -26,7 +26,7 @@ for f in $*; do
 	RETVAL=$?
         echo '->' ${HARNESS} failed ${RETVAL}
         if [ $RETVAL -eq 134 ]; then
-            gdb --eval-command='bt full' --batch ./$f core.*
+            gdb --eval-command='bt full' --batch ./$f core*
         fi
         break
     fi
