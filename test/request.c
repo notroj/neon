@@ -2435,6 +2435,48 @@ static int ipv6_literal(void)
     return destroy_and_wait(sess);
 }
 
+static int targets(void)
+{
+    struct {
+        const char *scheme;
+        const char *host;
+        int port;
+        const char *method;
+        const char *target;
+        const char *expected;
+    } ts[] = {
+        { "http", "example.com", 80, "GET", "/fish", "http://example.com/fish" },
+        { "http", "example.com", 8080, "GET", "/fish", "http://example.com:8080/fish" },
+        { "https", "example.com", 443, "GET", "/", "https://example.com/" },
+        { "http", "proxy.example.com", 80, "GET", "ftp://example.com/fishfood", "ftp://example.com/fishfood" },
+        { "https", "example.com", 443, "OPTIONS", "*", "https://example.com" },
+        { NULL }
+    };
+    unsigned n;
+
+    for (n = 0; ts[n].scheme != NULL; n++ ) {
+        ne_session *sess;
+        ne_request *req;
+        ne_uri *uri;
+        char *actual;
+
+        sess = ne_session_create(ts[n].scheme, ts[n].host, ts[n].port);
+        req = ne_request_create(sess, ts[n].method, ts[n].target);
+        uri = ne_get_request_target(req);
+        actual = uri ? ne_uri_unparse(uri) : NULL;
+
+        ONCMP(ts[n].expected, actual, "request target", "URI");
+
+        if (actual) ne_free(actual);
+        if (uri) ne_uri_free(uri);
+
+        ne_request_destroy(req);
+        ne_session_destroy(sess);
+    }
+
+    return OK;
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2511,5 +2553,6 @@ ne_test tests[] = {
     T(dont_retry_408),
     T(ipv6_literal),
     T(redirect_error),
+    T(targets),
     T(NULL)
 };

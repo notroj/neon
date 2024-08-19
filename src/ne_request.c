@@ -556,6 +556,44 @@ ne_request *ne_request_create(ne_session *sess, const char *method,
     return req;
 }
 
+/* Reconstruct the request target URI following RFC 9112ẞ3.3. Returns
+ * zero on success or non-zero on error. */
+static int get_request_target_uri(ne_request *req, ne_uri *uri)
+{
+    if (strcmp(req->target, "*") == 0
+        || strcmp(req->method, "CONNECT") == 0) {
+        /* asterisk-form or authority-form. Since neon only ever uses
+         * authority-form with a CONNECT to the origin server (which
+         * is the session host) there is no need to re-parse
+         * req->target to extract it. */
+        ne_fill_server_uri(req->session, uri);
+        uri->path = ne_strdup("");
+        return 0;
+    }
+    else if (req->target[0] == '/') {
+        /* origin-form. */
+        ne_fill_server_uri(req->session, uri);
+        uri->path = ne_strdup(req->target);
+        return 0;
+    }
+    else {
+        /* absolute-form */
+        return ne_uri_parse(req->target, uri);
+    }
+}
+
+ne_uri *ne_get_request_target(ne_request *req)
+{
+    ne_uri *rv = ne_calloc(sizeof *rv);
+
+    if (get_request_target_uri(req, rv)) {
+        ne_uri_free(rv);
+        return NULL;
+    }
+
+    return rv;
+}
+
 /* Set the request body length to 'length' */
 static void set_body_length(ne_request *req, ne_off_t length)
 {
