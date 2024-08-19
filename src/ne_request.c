@@ -762,24 +762,30 @@ static void free_response_headers(ne_request *req)
 ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
 {
     const char *location;
-    ne_uri dest, base, *ret;
+    ne_uri dest, base, *ret = NULL;
 
     location = get_response_header_hv(req, HH_HV_LOCATION, "location");
     if (location == NULL)
 	return NULL;
 
-    /* Parse the Location header */
-    if (ne_uri_parse(location, &dest) || !dest.path) {
-	ne_set_error(req->session, _("Could not parse redirect "
-                                     "destination URL"));
-        return NULL;
-    }
+    memset(&base, 0, sizeof base);
+    memset(&dest, 0, sizeof dest);
 
     /* Location is a URI-reference (RFC9110ẞ10.2.2) relative to the
-     * request target URI; create that base URI: */
-    memset(&base, 0, sizeof base);
-    ne_fill_server_uri(req->session, &base);
-    base.path = req->target;
+     * request target URI; determine each of these then resolve. */
+
+    /* Parse the Location header */
+    if (ne_uri_parse(location, &dest) || !dest.path) {
+        ne_set_error(req->session, _("Could not parse redirect "
+                                     "destination URL"));
+        goto fail;
+    }
+
+    if (get_request_target_uri(req, &base)) {
+        ne_set_error(req->session, _("Could not parse redirect "
+                                     "destination URL"));
+        goto fail;
+    }
 
     ret = ne_malloc(sizeof *ret);
     ne_uri_resolve(&base, &dest, ret);
@@ -789,7 +795,7 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
         ret->fragment = ne_strdup(fragment);
     }
 
-    base.path = NULL; /* owned by ne_request object, don't free */
+fail:
     ne_uri_free(&base);
     ne_uri_free(&dest);
 

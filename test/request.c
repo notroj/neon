@@ -2468,7 +2468,10 @@ static int targets(void)
         ONCMP(ts[n].expected, actual, "request target", "URI");
 
         if (actual) ne_free(actual);
-        if (uri) ne_uri_free(uri);
+        if (uri) {
+            ne_uri_free(uri);
+            ne_free(uri);
+        }
 
         ne_request_destroy(req);
         ne_session_destroy(sess);

@@ -144,6 +144,10 @@ static int redirects(void)
         /* all 3xx should get NE_REDIRECT. */
         {PATH, 399, DEST, DEST, NULL},
 
+        /* Handling of various request-target cases. */
+        {"*", 307, "/fish#food", "/fish#food", NULL},
+        {"ftp://example.com/fish", 307, "/fish#food", "ftp://example.com/fish#food", NULL},
+
         /* More relative URIs: */
         {"/blah", 307, "//example.com:8080/fish#food", "http://example.com:8080/fish#food", NULL},
         {"/blah", 307, "#food", "/blah#food", NULL},
