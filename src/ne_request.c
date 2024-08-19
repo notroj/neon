@@ -160,6 +160,7 @@ struct ne_request_s {
     struct interim_handler *interim_handler;
 
     /*** Miscellaneous ***/
+    ne_uri *target_uri;
     unsigned int method_is_head;
     unsigned int can_persist;
 
@@ -582,16 +583,21 @@ static int get_request_target_uri(ne_request *req, ne_uri *uri)
     }
 }
 
-ne_uri *ne_get_request_target(ne_request *req)
+const ne_uri *ne_get_request_target(ne_request *req)
 {
-    ne_uri *rv = ne_calloc(sizeof *rv);
+    if (req->target_uri == NULL) {
+        ne_uri *uri = ne_calloc(sizeof *uri);
 
-    if (get_request_target_uri(req, rv)) {
-        ne_uri_free(rv);
-        return NULL;
+        if (get_request_target_uri(req, uri) == 0) {
+            req->target_uri = uri;
+        }
+        else {
+            ne_uri_free(uri);
+            ne_free(uri);
+        }
     }
 
-    return rv;
+    return req->target_uri;
 }
 
 /* Set the request body length to 'length' */
@@ -762,13 +768,13 @@ static void free_response_headers(ne_request *req)
 ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
 {
     const char *location;
-    ne_uri dest, base, *ret = NULL;
+    ne_uri dest, *ret = NULL;
+    const ne_uri *base;
 
     location = get_response_header_hv(req, HH_HV_LOCATION, "location");
     if (location == NULL)
 	return NULL;
 
-    memset(&base, 0, sizeof base);
     memset(&dest, 0, sizeof dest);
 
     /* Location is a URI-reference (RFC9110ẞ10.2.2) relative to the
@@ -781,14 +787,14 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
         goto fail;
     }
 
-    if (get_request_target_uri(req, &base)) {
-        ne_set_error(req->session, _("Could not parse redirect "
-                                     "destination URL"));
+    if ((base = ne_get_request_target(req)) == NULL) {
+        ne_set_error(req->session, _("Could not parse request "
+                                     "target URI"));
         goto fail;
     }
 
     ret = ne_malloc(sizeof *ret);
-    ne_uri_resolve(&base, &dest, ret);
+    ne_uri_resolve(base, &dest, ret);
 
     /* HTTP-specific fragment handling is a MUST in RFC9110ẞ10.2.2: */
     if (fragment && !dest.fragment) {
@@ -796,7 +802,6 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
     }
 
 fail:
-    ne_uri_free(&base);
     ne_uri_free(&dest);
 
     return ret;
@@ -832,6 +837,10 @@ void ne_request_destroy(ne_request *req)
 
     ne_free(req->target);
     ne_free(req->method);
+    if (req->target_uri) {
+        ne_uri_free(req->target_uri);
+        ne_free(req->target_uri);
+    }
 
     for (rdr = req->body_readers; rdr != NULL; rdr = next_rdr) {
 	next_rdr = rdr->next;
