@@ -166,6 +166,11 @@ void ne_print_request_header(ne_request *req, const char *name,
 			     const char *format, ...) 
     ne_attribute((format(printf, 3, 4)));
 
+/* Returns the request target URI as a malloc-allocated ne_uri object,
+ * or NULL on error if the request target cannot be determined. The
+ * session error string is not changed on error. */
+ne_uri *ne_get_request_target(ne_request *req);
+
 /* If the response includes a Location header, this function parses
  * and resolves the URI-reference relative to the request target.  If
  * a fragment ("#fragment") is used for the request target, it can be
