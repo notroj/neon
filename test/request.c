@@ -2455,23 +2455,22 @@ static int targets(void)
     unsigned n;
 
     for (n = 0; ts[n].scheme != NULL; n++ ) {
+        const ne_uri *uri, *uri2;
         ne_session *sess;
         ne_request *req;
-        ne_uri *uri;
         char *actual;
 
         sess = ne_session_create(ts[n].scheme, ts[n].host, ts[n].port);
         req = ne_request_create(sess, ts[n].method, ts[n].target);
         uri = ne_get_request_target(req);
+        uri2 = ne_get_request_target(req);
         actual = uri ? ne_uri_unparse(uri) : NULL;
 
         ONCMP(ts[n].expected, actual, "request target", "URI");
 
+        ONN("caching failed, different rv on second call", uri != uri2);
+
         if (actual) ne_free(actual);
-        if (uri) {
-            ne_uri_free(uri);
-            ne_free(uri);
-        }
 
         ne_request_destroy(req);
         ne_session_destroy(sess);
