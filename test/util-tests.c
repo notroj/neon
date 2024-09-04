@@ -361,6 +361,20 @@ static int support(void)
     ONN("i18n SSL support advertised", 
         ne_has_support(NE_FEATURE_I18N));
 #endif
+#ifdef NE_HAVE_GSSAPI
+    ONN("GSSAPI support not advertised", 
+        !ne_has_support(NE_FEATURE_GSSAPI));
+#else
+    ONN("GSSAPI support advertised", 
+        ne_has_support(NE_FEATURE_GSSAPI));
+#endif
+#ifdef NE_HAVE_LIBPXY
+    ONN("libproxy support not advertised", 
+        !ne_has_support(NE_FEATURE_LIBPXY));
+#else
+    ONN("libproxy support advertised", 
+        ne_has_support(NE_FEATURE_LIBPXY));
+#endif
     return OK;
 }
 
