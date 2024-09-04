@@ -55,16 +55,17 @@ static void create(ne_request *req, void *userdata,
 static int post_send(ne_request *req, void *userdata, const ne_status *status)
 {
     struct redirect *red = userdata;
-    ne_uri *loc = ne_get_response_location(req, NULL);
+    ne_uri *loc;
 
     uri_free_clear(red);
 
-    if (status->klass != 3 || loc == NULL) {
-        return NE_OK;
+    if (status->klass == 3
+        && (loc = ne_get_response_location(req, NULL)) != NULL) {
+        red->uri = loc;
+        return NE_REDIRECT;
     }
 
-    red->uri = loc;
-    return NE_REDIRECT;
+    return NE_OK;
 }
 
 static void free_redirect(void *cookie)
