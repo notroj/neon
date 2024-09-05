@@ -71,6 +71,40 @@
 	parser search is used.</para>
 	
       </sect1>
+
+      <sect1 id="example">
+        <title>Example application</title>
+
+	<para>The code below is a simple example which sends a
+	<literal>PUT</literal> request, using the API from
+	<literal>&lt;ne_basic.h&gt;</literal>:
+
+<programlisting><![CDATA[
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <ne_basic.h>
+
+int main(int argc, char **argv)
+{
+    char data[] = "Example data.\n";
+    ne_session *sess;
+    int ec = EXIT_SUCCESS;
+
+    ne_sock_init(); /* Global library initialization. */
+
+    sess = ne_session_create("http", "localhost", 80);
+
+    if (ne_putbuf(sess, "/dav/data.txt", data, sizeof data)) {
+        fprintf(stderr, "nget: Request failed: %s\n", ne_get_error(sess));
+        ec = EXIT_FAILURE;
+    }
+
+    ne_session_destroy(sess);
+
+    return ec;
+}
+]]></programlisting></para></sect1>
       
       <sect1 id="compliance">
 	<title>Standards compliance</title>
@@ -106,7 +140,7 @@
         <sect2>
         <title><ulink url="https://datatracker.ietf.org/doc/html/rfc3986">RFC 3986</ulink> Uniform Resource Identifier (URI): Generic Syntax and <ulink url="https://datatracker.ietf.org/doc/html/rfc6874">RFC 6874</ulink>, Representing IPv6 Zone Identifiers in Address Literals and Uniform Resource Identifiers</title>
 
-        <para>&neon; parses and handles scoped IPv6 link local literal
+        <para>&neon; parses and handles scoped IPv6 link-local literal
         addresses passed to <xref linkend="refsess"/> since version
         <literal>0.34</literal>, following the syntax in RFC 6874. An
         example <literal>host</literal> argument would be
@@ -117,7 +151,7 @@
         IPv6 literals, and a scope ID has no meaningful interpretation
         outside of the client host, it is omitted from the
         <literal>Host</literal> header sent over the wire. So the
-        example URI used here translates to an HTTP/1.1 header field
+        example argument here translates to an HTTP/1.1 header field
         of <literal>Host: [fe80::cafe]</literal>.</para>
         </sect2>
 

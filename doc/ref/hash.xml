@@ -105,4 +105,10 @@
 
       </refsect1>
 
+      <refsect1>
+	<title>See also</title>
+
+        <para><function>ne_get_response_location</function> is
+        available in &neon; 0.32.0 and later.</para>
+      </refsect1>
     </refentry>
