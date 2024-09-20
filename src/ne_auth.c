@@ -402,15 +402,18 @@ static int get_credentials(auth_session *sess, ne_buffer **errmsg, int attempt,
 {
     unsigned mask = chall->protocol->id | sess->spec->protomask;
     int rv;
+    char *realm = ne_strclean(ne_strdup(sess->realm));
 
     if (chall->handler->new_creds)
         rv = chall->handler->new_creds(chall->handler->userdata,
-                                       attempt, mask, sess->realm,
+                                       attempt, mask, realm,
                                        sess->username, pwbuf,
                                        ABUFSIZE);
     else
-        rv = chall->handler->old_creds(chall->handler->userdata, sess->realm,
+        rv = chall->handler->old_creds(chall->handler->userdata, realm,
                                        chall->handler->attempt++, sess->username, pwbuf);
+
+    ne_free(realm);
 
     if (rv == 0)
         return 0;
