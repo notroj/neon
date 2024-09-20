@@ -410,6 +410,7 @@ static void dup_header(char *header)
 #define PARM_QOP       (0x0200) /* use qop= */
 #define PARM_RFC2617   (0x0204) /* use algorithm= and qop= */
 #define PARM_OPTSTAR   (0x0400) /* use OPTIONS * */
+#define PARM_PARSEQOP  (0x0800) /* use qop-value parsing test */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -692,7 +693,8 @@ static char *make_authinfo_header(struct digest_state *state,
 
     if ((parms->flags & PARM_QOP) == 0) {
         ne_buffer_concat(buf, "rspauth=\"", digest, "\"", NULL);
-    } else {
+    }
+    else {
         if (parms->failure != fail_ai_omit_nc) {
             ne_buffer_concat(buf, "nc=", ncval, ", ", NULL);
         }
@@ -734,7 +736,10 @@ static char *make_digest_header(struct digest_state *state,
         ne_buffer_concat(buf, "algorithm=\"", algorithm, "\", ", NULL);
     }
 
-    if (parms->flags & PARM_QOP) {
+    if (parms->flags & PARM_PARSEQOP) {
+        ne_buffer_czappend(buf, "qop=\"auth-int,fish, auth\", ");
+    }
+    else if (parms->flags & PARM_QOP) {
         ne_buffer_concat(buf, "qop=\"", state->qop, "\", ", NULL);
     }
 
@@ -959,6 +964,8 @@ static int digest(void)
         { "WallyWorld", "nonce-nonce-nonce", "opaque-string", NULL, ALG_MD5_SESS, PARM_RFC2617 | PARM_AINFO, 1, 0, fail_not },
         /* many requests, with changing nonces; tests for next-nonce handling bug. */
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO | PARM_NEXTNONCE, 20, 0, fail_not },
+        /* ... with qop parsing tests. */
+        { "WallyWorld", "qop-parsing-test", NULL, NULL, ALG_MD5, PARM_RFC2617 | PARM_PARSEQOP, 1, 0, fail_not },
 
         /* staleness. */
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO, 3, 2, fail_not },
