@@ -1679,6 +1679,54 @@ static int star_scope(void)
     return destroy_and_wait(sess);
 }
 
+/* Test for realm with non-readable characters. */
+static int serve_unclean_realm(ne_socket *sock, void *userdata)
+{
+    CALL(discard_request(sock));
+    send_response(sock, "WWW-Authenticate: Basic realm='Foo\tBar'", 401, 0);
+
+    CALL(discard_request(sock));
+    send_response(sock, NULL, 200, 0);
+
+    return 0;
+}
+
+static int get_realm_cb(void *userdata, const char *realm, int tries, 
+                        char *un, char *pw)
+{
+    char **rp = userdata;
+
+    *rp = ne_strdup(realm);
+
+    ne_strnzcpy(un, "foo", NE_ABUFSIZ);
+    ne_strnzcpy(pw, "bar", NE_ABUFSIZ);
+
+    return 0;
+}
+
+/* Test for the scope of "*". */
+static int clean_realm(void)
+{
+    ne_session *sess;
+    char *realm = NULL;
+
+    CALL(make_session(&sess, serve_unclean_realm, NULL));
+
+    ne_set_server_auth(sess, get_realm_cb, &realm);
+
+    ONREQ(any_request(sess, "/realm-test"));
+
+    ONN("no realm header found?", realm == NULL);
+
+    ONV(strchr(realm, '\t') != NULL,
+        ("realm header returned unclean: '%s'", realm));
+
+    ne_free(realm);
+
+    return destroy_and_wait(sess);
+}
+
+
 /* proxy auth, proxy AND origin */
 
 ne_test tests[] = {
@@ -1703,5 +1751,6 @@ ne_test tests[] = {
     T(forget),
     T(basic_scope),
     T(star_scope),
+    T(clean_realm),
     T(NULL)
 };
