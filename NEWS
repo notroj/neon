@@ -13,6 +13,9 @@ Changes in release 0.34.0
  - HTTP strictness/compliance updated for RFC 9110/9112;
    notably stricter in parsing header field line, chunked
    transfer-coding, status-line.
+* Bug fixes:
+ - auth: 'realm' string passed to credentials callback is now
+   cleaned of non-printable characters.
 * Documentation & header updates for RFC 9110/9112.
 
 Changes in release 0.33.0:
