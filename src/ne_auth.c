@@ -1394,29 +1394,23 @@ static const struct auth_protocol protocols[] = {
 /* Insert a new auth challenge 'chall' into list of challenges 'list'.
  * The challenge list is kept in sorted order of strength, with
  * highest strength first. */
-static void insert_challenge(struct auth_challenge **list, struct auth_challenge *chall)
+static void insert_challenge(struct auth_challenge **list,
+                             struct auth_challenge *chall)
 {
-    struct auth_challenge *cur, *prev;
+    struct auth_challenge **p;
 
-    for (cur = *list, prev = NULL; cur != NULL;
-         prev = cur, cur = cur->next) {
-        if (chall->protocol->strength > cur->protocol->strength
-            || (cur->protocol->id == NE_AUTH_DIGEST
+    for (p = list; *p != NULL; p = &(*p)->next) {
+        if (chall->protocol->strength > (*p)->protocol->strength
+            || ((*p)->protocol->id == NE_AUTH_DIGEST
                 && chall->protocol->id == NE_AUTH_DIGEST
-                && chall->alg && cur->alg
-                && chall->alg->hash > cur->alg->hash)) {
+                && chall->alg && (*p)->alg
+                && chall->alg->hash > (*p)->alg->hash)) {
             break;
         }
     }
 
-    if (prev) {
-        chall->next = prev->next;
-        prev->next = chall;
-    }
-    else {
-        chall->next = *list;
-        *list = chall;
-    }
+    chall->next = *p;
+    *p = chall;
 }
 
 static void challenge_error(ne_buffer **errbuf, const char *fmt, ...)
