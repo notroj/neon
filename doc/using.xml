@@ -85,9 +85,10 @@
 
 #include <ne_basic.h>
 
+static const char data[] = "Example data.\n";
+
 int main(int argc, char **argv)
 {
-    char data[] = "Example data.\n";
     ne_session *sess;
     int ec = EXIT_SUCCESS;
 
@@ -96,7 +97,7 @@ int main(int argc, char **argv)
     sess = ne_session_create("http", "localhost", 80);
 
     if (ne_putbuf(sess, "/dav/data.txt", data, sizeof data)) {
-        fprintf(stderr, "nget: Request failed: %s\n", ne_get_error(sess));
+        fprintf(stderr, "PUT Request failed: %s\n", ne_get_error(sess));
         ec = EXIT_FAILURE;
     }
 
