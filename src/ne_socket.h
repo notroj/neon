@@ -306,6 +306,10 @@ int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
  * freed by the caller. */
 char *ne_sock_cipher(ne_socket *sock);
 
+/* Return the SSL/TLS protocol version used for socket 'sock', or
+ * NE_SSL_PROTO_UNSPEC if SSL/TLS is not in use for the socket. */
+enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock);
+
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {
     NE_SOCK_SOCKSV4 = 0,

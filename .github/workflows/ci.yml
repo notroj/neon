@@ -26,6 +26,9 @@ jobs:
               conf-ssl: [--without-ssl, --with-ssl=gnutls]
             - conf-xml: --with-libxml2
               conf-gssapi: --without-gssapi
+            ### TEMPORARY ###
+            - conf-ssl: [--with-ssl=gnutls]
+            ###
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh

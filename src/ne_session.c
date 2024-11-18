@@ -582,6 +582,35 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 #endif
 }
 
+int ne_ssl_set_protovers(ne_session *sess, enum ne_ssl_protocol min,
+                         enum ne_ssl_protocol max)
+{
+#ifdef NE_HAVE_SSL
+    if (sess->ssl_context) {
+        if (ne_ssl_context_set_versions(sess->ssl_context, min, max) != 0) {
+            ne_set_error(sess, _("Could not set minimum/maximum SSL/TLS versions"));
+            return NE_ERROR;
+        }
+
+        return NE_OK;
+    }
+#endif
+    ne_set_error(sess, _("SSL/TLS not enabled for the session"));
+    return NE_ERROR;
+}
+
+static const char *const ssl_proto_names[] = { "unknown", "SSLv3",
+                                               "TLSv1.0", "TLSv1.1",
+                                               "TLSv1.2", "TLSv1.3" };
+
+const char *ne_ssl_proto_name(enum ne_ssl_protocol proto)
+{
+    if (proto < (sizeof(ssl_proto_names)/sizeof(ssl_proto_names[0])))
+        return ssl_proto_names[proto];
+    else
+        return ssl_proto_names[0];
+}
+
 void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *until)
 {
 #ifdef NE_HAVE_SSL

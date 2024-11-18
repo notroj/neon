@@ -75,7 +75,8 @@ static int check_cert_dnames(const ne_ssl_certificate *cert,
 /* Arguments for running the SSL server */
 struct ssl_server_args {
     char *cert; /* the server cert to present. */
-    const char *response; /* the response to send. */
+    const char *key; /* server key filename */
+    const char *response; /* the HTTP response message to send. */
     int numreqs; /* number of request/responses to handle over the SSL connection. */
 
     /* client cert handling: */
@@ -91,9 +92,8 @@ struct ssl_server_args {
     } session;
     int count; /* internal use. */
 
-    int use_ssl2; /* force use of SSLv2 only */
-
-    const char *key;
+    /* minimum, maximum version. */
+    enum ne_ssl_protocol minver, maxver;
 };
 
 /* default response string if args->response is NULL */
@@ -109,8 +109,7 @@ static int ssl_server(ne_socket *sock, void *userdata)
     static ne_ssl_context *ctx = NULL;
 
     if (ctx == NULL) {
-        ctx = ne_ssl_context_create(args->use_ssl2 ? NE_SSL_CTX_SERVERv2
-                                    : NE_SSL_CTX_SERVER);
+        ctx = ne_ssl_context_create(NE_SSL_CTX_SERVER);
     }
 
     ONV(ctx == NULL, ("could not create SSL context"));
@@ -162,6 +161,18 @@ static int ssl_server(ne_socket *sock, void *userdata)
         
     } while (--args->numreqs > 0);
 
+    if (args->minver || args->maxver) {
+        unsigned int vers = ne_sock_getproto(sock);
+        const char *name = ne_ssl_proto_name(vers);
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: TLS protocol version (%d): [%s]\n", 
+                 vers, name);
+
+        ONV((args->minver && vers < args->minver)
+            || (args->maxver && vers > args->maxver),
+            ("SSL protocol version %d (%s) outside range (%d, %d)",
+             vers, name, args->minver, args->maxver));
+    }
 
     if (args->cache) {
         unsigned char sessid[128];
@@ -173,7 +184,7 @@ static int ssl_server(ne_socket *sock, void *userdata)
 #ifdef NE_DEBUGGING
         {
             char *b64 = ne_base64(sessid, len);
-            NE_DEBUG(NE_DBG_SSL, "Session id retrieved (%d): [%s]\n", 
+            NE_DEBUG(NE_DBG_SSL, "ssl: Session id retrieved (%d): [%s]\n", 
                      args->count, b64);
             ne_free(b64);
         }
@@ -1867,6 +1878,23 @@ static int pkcs11_dsa(void)
     return nss_pkcs11_test("nssdb-dsa");
 }
 
+static int protovers(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+
+    args.minver = NE_SSL_PROTO_TLS_1_2;
+    args.maxver = NE_SSL_PROTO_TLS_1_2;
+
+    ONV(ne_ssl_set_protovers(sess, args.minver, args.maxver),
+        ("setting TLS protocol version failed: %s", ne_get_error(sess)));
+
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
+
+    ne_session_destroy(sess);
+    return OK;
+}
+
 /* TODO: code paths still to test in cert verification:
  * - server cert changes between connections: Mozilla gives
  * a "bad MAC decode" error for this; can do better?
@@ -1963,6 +1991,8 @@ ne_test tests[] = {
     T(auth_proxy_tunnel),
     T(auth_tunnel_creds),
     T(auth_tunnel_fail),
+
+    T(protovers),
 
     T(nonssl_trust),
 
