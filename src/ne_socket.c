@@ -2046,6 +2046,38 @@ char *ne_sock_cipher(ne_socket *sock)
     }    
 }
 
+enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock)
+{
+#ifdef NE_HAVE_SSL
+#if defined(HAVE_OPENSSL)
+    if (sock->ssl) {
+        switch (SSL_version(sock->ssl)) {
+        case SSL3_VERSION:
+            return NE_SSL_PROTO_SSL_3;
+        case TLS1_VERSION:
+            return NE_SSL_PROTO_TLS_1_0;
+        case TLS1_1_VERSION:
+            return NE_SSL_PROTO_TLS_1_1;
+#ifdef TLS1_2_VERSION
+        case TLS1_2_VERSION:
+            return NE_SSL_PROTO_TLS_1_2;
+#endif
+#ifdef TLS1_3_VERSION
+        case TLS1_3_VERSION:
+            return NE_SSL_PROTO_TLS_1_3;
+#endif
+        default:
+            break;
+        }
+    }
+#elif defined(HAVE_GNUTLS)
+#warning TODOx
+#endif
+#endif /* NE_HAVE_SSL */
+
+    return NE_SSL_PROTO_UNSPEC;
+}
+
 const char *ne_sock_error(const ne_socket *sock)
 {
     return sock->error;

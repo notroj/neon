@@ -640,6 +640,47 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx,
     return 0;
 }
 
+/* Map neon version constants to native OpenSSL constants, returns -1
+ * on versions not supported. */
+static int proto_to_native(enum ne_ssl_protocol proto)
+{
+    switch (proto) {
+    case NE_SSL_PROTO_UNSPEC: return 0;
+    case NE_SSL_PROTO_SSL_3: return SSL3_VERSION;
+    case NE_SSL_PROTO_TLS_1_0: return TLS1_VERSION;
+    case NE_SSL_PROTO_TLS_1_1: return TLS1_1_VERSION;
+#ifdef TLS1_2_VERSION
+    case NE_SSL_PROTO_TLS_1_2: return TLS1_2_VERSION;
+#endif
+#ifdef TLS1_3_VERSION
+    case NE_SSL_PROTO_TLS_1_3: return TLS1_3_VERSION;
+#endif
+    default:
+        return -1;
+    }
+}
+
+int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
+                                enum ne_ssl_protocol max)
+{
+#if OPENSSL_VERSION_NUMBER < 0x1010000L
+    return NE_SOCK_ERROR;
+#else
+    int omin = proto_to_native(min), omax = proto_to_native(max), ret;
+
+    if (omin < 0 || omax < 0) {
+        return NE_SOCK_ERROR;
+    }
+
+    if ((ret = SSL_CTX_set_min_proto_version(ctx->ctx, omin)) == 1)
+        ret = SSL_CTX_set_max_proto_version(ctx->ctx, omax);
+
+    ERR_clear_error();
+    
+    return ret == 1 ? 0 : NE_SOCK_ERROR;
+#endif
+}
+
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
     SSL_CTX_free(ctx->ctx);
