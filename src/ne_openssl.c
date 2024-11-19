@@ -539,6 +539,11 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
     }
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+#define TLS_client_method SSLv23_client_method
+#define TLS_server_method SSLv23_client_method
+#endif
+
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 {
     sess->client_cert = dup_client_cert(cc);
@@ -547,8 +552,9 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 ne_ssl_context *ne_ssl_context_create(int mode)
 {
     ne_ssl_context *ctx = ne_calloc(sizeof *ctx);
+
     if (mode == NE_SSL_CTX_CLIENT) {
-        ctx->ctx = SSL_CTX_new(SSLv23_client_method());
+        ctx->ctx = SSL_CTX_new(TLS_client_method());
         ctx->sess = NULL;
         /* set client cert callback. */
         SSL_CTX_set_client_cert_cb(ctx->ctx, provide_client_cert);
@@ -558,53 +564,25 @@ ne_ssl_context *ne_ssl_context_create(int mode)
 #if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x3040000fL || (!defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10101000L)
         SSL_CTX_set_post_handshake_auth(ctx->ctx, 1);
 #endif
-    } else if (mode == NE_SSL_CTX_SERVER) {
-        ctx->ctx = SSL_CTX_new(SSLv23_server_method());
+    }
+    else /* mode == NE_SSL_CTX_SERVER */ {
+        ctx->ctx = SSL_CTX_new(TLS_server_method());
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
 #ifdef SSL_OP_NO_TICKET
         /* disable ticket support since it inhibits testing of session
          * caching. */
         SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_TICKET);
 #endif
-    } else {
-        ne_free(ctx);
-        return NULL;
     }
     return ctx;
 }
 
 void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value)
 {
-    long opts = SSL_CTX_get_options(ctx->ctx);
-
-    switch (flag) {
-    case NE_SSL_CTX_SSLv2:
-        if (value) { 
-            /* Enable SSLv2 support; clear the "no SSLv2" flag. */
-            opts &= ~SSL_OP_NO_SSLv2;
-        } else {
-            /* Disable it: set the flag. */
-            opts |= SSL_OP_NO_SSLv2;
-        }
-        break;
-    }
-
-    SSL_CTX_set_options(ctx->ctx, opts);
 }
 
 int ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag)
 {
-    switch (flag) {
-    case NE_SSL_CTX_SSLv2:
-#ifdef OPENSSL_NO_SSL2
-        return 0;
-#else
-        return ! (SSL_CTX_get_options(ctx->ctx) & SSL_OP_NO_SSLv2);
-#endif
-    default:
-        break;
-    }
-
     return 0;
 }
 
