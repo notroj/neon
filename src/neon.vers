@@ -45,5 +45,9 @@ NEON_0_34 {
     ne_get_request_target;
     ne_iaddr_set_scope;
     ne_iaddr_get_scope;
+    ne_ssl_context_set_versions;
+    ne_ssl_set_protovers;
+    ne_ssl_proto_name;
+    ne_sock_getproto;
 };
 
