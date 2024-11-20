@@ -165,7 +165,7 @@ static int ssl_server(ne_socket *sock, void *userdata)
         unsigned int vers = ne_sock_getproto(sock);
         const char *name = ne_ssl_proto_name(vers);
 
-        NE_DEBUG(NE_DBG_SSL, "ssl: TLS protocol version (%d): [%s]\n", 
+        NE_DEBUG(NE_DBG_HTTP, "ssl: TLS protocol version (%d): [%s]\n", 
                  vers, name);
 
         ONV((args->minver && vers < args->minver)
