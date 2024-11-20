@@ -1827,6 +1827,28 @@ static int remove_sess(void *userdata, gnutls_datum_t key)
 {
     return -1;
 }
+
+static int set_priority(ne_socket *sock, ne_ssl_context *ctx)
+{
+    gnutls_set_default_priority(sock->ssl);
+
+#ifdef HAVE_GNUTLS_SET_DEFAULT_PRIORITY_APPEND
+    if (ctx->priority) {
+        const char *pos = NULL;
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: Using priority string %s\n", ctx->priority);
+
+        if (gnutls_set_default_priority_append(sock->ssl, ctx->priority, &pos, 0) != GNUTLS_E_SUCCESS) {
+            ne_snprintf(sock->error, sizeof sock->error,
+                        _("SSL error: failed to set priority string at '%s'"), pos);
+            return NE_SOCK_ERROR;
+        }
+    }
+#endif
+
+    return 0;
+}
+
 #endif
 
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
@@ -1852,8 +1874,12 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     unsigned int verify_status;
 
     gnutls_init(&ssl, GNUTLS_SERVER);
+    sock->ssl = ssl;
+    if (set_priority(sock, ctx)) {
+        return NE_SOCK_ERROR;
+    }
+
     gnutls_credentials_set(ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
-    gnutls_set_default_priority(ssl);
 
     /* Set up dummy session cache. */
     gnutls_db_set_store_function(ssl, store_sess);
@@ -1864,7 +1890,6 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     if (ctx->verify)
         gnutls_certificate_server_set_request(ssl, GNUTLS_CERT_REQUIRE);
 
-    sock->ssl = ssl;
     gnutls_transport_set_ptr(sock->ssl, (gnutls_transport_ptr_t)(long)sock->fd);
     ret = gnutls_handshake(ssl);
     if (ret < 0) {
@@ -1930,7 +1955,11 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
 #elif defined(HAVE_GNUTLS)
     /* DH and RSA params are set in ne_ssl_context_create */
     gnutls_init(&sock->ssl, GNUTLS_CLIENT);
-    gnutls_set_default_priority(sock->ssl);
+
+    if (set_priority(sock, ctx)) {
+        return NE_SOCK_ERROR;
+    }
+
     gnutls_session_set_ptr(sock->ssl, userdata);
     gnutls_credentials_set(sock->ssl, GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
@@ -2049,8 +2078,8 @@ char *ne_sock_cipher(ne_socket *sock)
 enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock)
 {
 #ifdef NE_HAVE_SSL
-#if defined(HAVE_OPENSSL)
     if (sock->ssl) {
+#if defined(HAVE_OPENSSL)
         switch (SSL_version(sock->ssl)) {
         case SSL3_VERSION:
             return NE_SSL_PROTO_SSL_3;
@@ -2069,10 +2098,23 @@ enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock)
         default:
             break;
         }
-    }
 #elif defined(HAVE_GNUTLS)
-#warning TODOx
+        switch (gnutls_protocol_get_version(sock->ssl)) {
+        case GNUTLS_SSL3:
+            return NE_SSL_PROTO_SSL_3;
+        case GNUTLS_TLS1_0:
+            return NE_SSL_PROTO_TLS_1_0;
+        case GNUTLS_TLS1_1:
+            return NE_SSL_PROTO_TLS_1_1;
+        case GNUTLS_TLS1_2:
+            return NE_SSL_PROTO_TLS_1_2;
+        case GNUTLS_TLS1_3:
+            return NE_SSL_PROTO_TLS_1_3;
+        default:
+            break;
+        }
 #endif
+    }
 #endif /* NE_HAVE_SSL */
 
     return NE_SSL_PROTO_UNSPEC;

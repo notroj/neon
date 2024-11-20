@@ -292,9 +292,12 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
  * sessions. */
 void ne_ssl_trust_default_ca(ne_session *sess);
 
-/* Set the minimum and maximum SSL/TLS version for the session. Either
- * minimum and/or maximum may be specified as NE_SSL_PROTO_UNSPEC in
- * which case no minimum (or maximum) version is applied. */
+/* Set the minimum and maximum SSL/TLS protocol version for the
+ * session. Either minimum and/or maximum may be specified as
+ * NE_SSL_PROTO_UNSPEC, in which case no limit is imposed. Defaults of
+ * the SSL/TLS toolkit Returns non-zero on error if the range is
+ * invalid, if the range cannot be configured in the SSL/TLS toolkit,
+ * or if SSL/TLS is not in use for the session. */
 int ne_ssl_set_protovers(ne_session *sess, enum ne_ssl_protocol min,
                          enum ne_ssl_protocol max);
 
