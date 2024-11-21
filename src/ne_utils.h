@@ -106,7 +106,7 @@ typedef struct {
 /* NB: couldn't use 'class' in ne_status because it would clash with
  * the C++ reserved word. */
 
-/* Parse 'status_line' using the the RFC 9112 status-line grammar.
+/* Parse 'status_line' using the RFC 9112 status-line grammar.
  * s->reason_phrase is malloc-allocated if non-NULL, and must be
  * free'd by the caller.  Returns 0 on success, in which case all
  * fields of '*s' will be set; or -1 on parse error, in which case
