@@ -174,7 +174,7 @@ m4_define([ne_require_minor], [$2])
 dnl Deprecated.
 AC_DEFUN([NE_REQUIRE_VERSIONS], [
 # Extract the first minor version from the list:
-NE_MINIMUM_VERSIONS([$1],m4_bregexp($2,[\([0-9]*\)\ .*],[\1]))
+NE_MINIMUM_VERSION([$1],m4_bregexp($2,[\([0-9]*\)\ .*],[\1]))
 m4_warn([obsolete], [The `NE_REQUIRE_VERSIONS` macro is obsolete.
 Update to use `NE_MINIMUM_VERSION`])
 ])
