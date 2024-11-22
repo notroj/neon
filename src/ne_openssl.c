@@ -37,7 +37,11 @@
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
 
-#if defined(NE_HAVE_TS_SSL) && OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#define HAVE_OPENSSL110
+#endif
+
+#if defined(NE_HAVE_TS_SSL) && !defined(HAVE_OPENSSL110)
 /* From OpenSSL 1.1.0 locking callbacks are no longer needed. */
 #define WITH_OPENSSL_LOCKING (1)
 #include <stdlib.h> /* for abort() */
@@ -68,7 +72,7 @@ typedef unsigned char ne_d2i_uchar;
 typedef const unsigned char ne_d2i_uchar;
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#ifndef HAVE_OPENSSL110
 #define X509_get0_notBefore X509_get_notBefore
 #define X509_get0_notAfter X509_get_notAfter
 #define X509_up_ref(x) x->references++
@@ -618,6 +622,7 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx,
     return 0;
 }
 
+#ifdef HAVE_OPENSSL110
 /* Map neon version constants to native OpenSSL constants, returns -1
  * on versions not supported. */
 static int proto_to_native(enum ne_ssl_protocol proto)
@@ -637,13 +642,12 @@ static int proto_to_native(enum ne_ssl_protocol proto)
         return -1;
     }
 }
+#endif
 
 int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
                                 enum ne_ssl_protocol max)
 {
-#if OPENSSL_VERSION_NUMBER < 0x1010000L
-    return NE_SOCK_ERROR;
-#else
+#ifdef HAVE_OPENSSL110
     int omin = proto_to_native(min), omax = proto_to_native(max), ret;
 
     if (omin < 0 || omax < 0) {
@@ -656,6 +660,8 @@ int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
     ERR_clear_error();
     
     return ret == 1 ? 0 : NE_SOCK_ERROR;
+#else
+    return NE_SOCK_ERROR;
 #endif
 }
 
