@@ -222,6 +222,10 @@ static int reason_phrase(void)
     return OK;    
 }
 
+#if 0
+/* This feature was added then remoevd, it potentially wasn't safe
+ * since the location string wasn't cleaned or checked to be a valid
+ * URI. */
 static int redirect_error(void)
 {
     ne_session *sess;
@@ -241,6 +245,7 @@ static int redirect_error(void)
     ne_session_destroy(sess);
     return OK;
 }
+#endif
 
 static int no_body_304(void)
 {
@@ -2554,7 +2559,9 @@ ne_test tests[] = {
     T(retry_408),
     T(dont_retry_408),
     T(ipv6_literal),
+#if 0
     T(redirect_error),
+#endif
     T(targets),
     T(NULL)
 };
