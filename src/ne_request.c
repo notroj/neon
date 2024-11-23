@@ -1633,15 +1633,6 @@ int ne_end_request(ne_request *req)
 	ret = fn(req, hk->userdata, &req->status);
     }
 
-    if (ret == NE_OK && req->status.klass == 3) {
-        const char *dest;
-
-        dest = get_response_header_hv(req, HH_HV_LOCATION, "location");
-        if (dest) {
-            ne_set_error(req->session, _("Redirected to %s"), dest);
-        }
-    }
-
     /* Close the connection if persistent connections are disabled or
      * not supported by the server. */
     if (!req->session->flags[NE_SESSFLAG_PERSIST] || !req->can_persist)
