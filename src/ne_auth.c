@@ -1305,10 +1305,9 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
                                    "client nonce mismatch"));
     }
     else if (nc) {
-        char *ptr;
+        const char *ptr;
         
-        errno = 0;
-        nonce_count = strtoul(nc, &ptr, 16);
+        nonce_count = ne_strhextoul(nc, &ptr);
         if (*ptr != '\0' || errno) {
             ret = NE_ERROR;
             ne_set_error(sess->sess, _("Digest mutual authentication failure: "

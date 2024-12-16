@@ -1491,6 +1491,8 @@ static int fail_on_invalid(void)
           "Could not parse chunk size" },
         { RESP200 TE_CHUNKED "\r\n" "0x5\r\n" VALID_ABCDE,
           "Could not parse chunk size" },
+        { RESP200 TE_CHUNKED "\r\n" "0X5\r\n" VALID_ABCDE,
+          "Could not parse chunk size" },
         { RESP200 TE_CHUNKED "\r\n" "+5\r\n" VALID_ABCDE,
           "Could not parse chunk size" },
         { RESP200 TE_CHUNKED "\r\n" "5 5\r\n" VALID_ABCDE,
