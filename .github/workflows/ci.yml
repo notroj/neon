@@ -22,6 +22,8 @@ jobs:
         conf-debug: [--enable-debug, --disable-debug]
         conf-gssapi: [--with-gssapi, --without-gssapi]
         exclude:
+            - os: [ubuntu-20.04, ubuntu-22.04]
+              conf-shared: --enable-static
             - conf-gssapi: --without-gssapi
               conf-ssl: [--without-ssl, --with-ssl=gnutls]
             - conf-xml: --with-libxml2
@@ -70,3 +72,16 @@ jobs:
       - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
       - run: make -j`nproc`
       - run: make check
+
+  sanity-checks:
+    name: Build sanity checks
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel libtool zlib-devel gcc-c++
+      - uses: actions/checkout@v3
+      - run: ./autogen.sh
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug
+      - run: make -C src check-incl
+      - run: make -C src check-c++
