@@ -88,8 +88,8 @@ clean:
 mktable: mktable.lo
 	$(LINK) -o $@ mktable.lo
 
-c++.c:
-	find . -name ne_\*.h -print | sed 's/.*/#include "&"/;/ne_priv/d' > $@
+c++.c: Makefile
+	find . -name ne_\*.h -print | sed 's/.*/#include "&"/;/ne_priv/d;/ne_internal.h/d;/ne_ntlm.h/d;/ne_acl.h/d' > $@
 	echo "int main(void) {}" >> $@
 
 check-c++: c++.c
@@ -98,9 +98,10 @@ check-c++: c++.c
 check-incl:
 	@for f in ne_*.h; do						\
 	 [ x"$$f" != "xne_internal.h" ] || continue;			\
+	 [ x"$$f" != "xne_ntlm.h" ] || continue;			\
 	 echo Checking $$f...;						\
 	 echo "#include \"$$f\"" > checkincl.c;				\
-	 $(COMPILE) -c checkincl.c -o checkincl.o || exit 1; done
+	 $(LT_COMPILE) -c checkincl.c -o checkincl.o || exit 1; done
 
 # Update generated character lookup tables.
 update-tables: mktable
