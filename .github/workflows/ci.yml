@@ -28,9 +28,15 @@ jobs:
               conf-gssapi: --without-gssapi
             - os: ubuntu-22.04-arm
               conf-xml: --with-libxml2
+            - os: ubuntu-22.04-arm
+              conf-ssl: [--without-ssl, --with-ssl=gnutls]
+            - os: ubuntu-22.04-arm
               conf-debug: --disable-debug
+            - os: ubuntu-22.04-arm
               conf-gssapi: --without-gssapi
+            - os: ubuntu-22.04-arm
               conf-memleak: --enable-memleak
+            - os: ubuntu-22.04-arm
               conf-shared: --enable-static
     steps:
     - uses: actions/checkout@v2
@@ -44,7 +50,7 @@ jobs:
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
-    - run: make
+    - run: make -j`nproc`
     - run: make check
     - if: failure()
       run: if test -f test/debug.log; then tail -n50 test/debug.log; fi
