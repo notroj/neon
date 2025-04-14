@@ -1,4 +1,10 @@
-Changes in release 0.34.0
+Changes in release 0.34.1:
+* Fix regression in 207 parsing of <status> elements which omit
+  a reason-phrase.
+* Fix ne_move() to submit lock tokens for the parent collection
+  of a source resource locked with depth: 0.
+
+Changes in release 0.34.0:
 * Interface changes:
  - API and ABI backwards-compatible with 0.27.x and later
  - NE_SESSFLAG_SSLv2 is now ignored
