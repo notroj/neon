@@ -51,6 +51,3 @@ NEON_0_34 {
     ne_sock_getproto;
 };
 
-NEON_0_35 {
-    ne_strhextoul;
-};

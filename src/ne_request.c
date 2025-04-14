@@ -935,7 +935,6 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
          * number of bytes left to read in the current chunk. */
 	if (resp->body.chunk.remain == 0) {
             unsigned long chunk_len;
-            const char *cptr;
             char *ptr;
 
             /* Read chunk-size. */
@@ -957,11 +956,19 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
                 *ptr = '\0';
             }
 
-           /* Limit chunk size to <= UINT_MAX, for sanity; must have
-            * a following NUL due to chunk-ext handling above. */
-            chunk_len = ne_strhextoul(req->respbuf, &cptr);
-            if (errno || (*cptr != '\0' && *cptr != '\r')
-                || chunk_len > UINT_MAX) {
+            /* Reject things strtoul would otherwise allow */
+            ptr = req->respbuf;
+            if (*ptr == '\0' || *ptr == '-' || *ptr == '+'
+                || (ptr[0] == '0' && ptr[1] == 'x')) {
+                return aborted(req, _("Could not parse chunk size"), 0);
+            }
+
+            /* Limit chunk size to <= UINT_MAX, for sanity; must have
+             * a following NUL due to chunk-ext handling above. */
+            errno = 0;
+            chunk_len = strtoul(req->respbuf, &ptr, 16);
+            if (errno || ptr == req->respbuf || (*ptr != '\0' && *ptr != '\r')
+                || chunk_len == ULONG_MAX || chunk_len > UINT_MAX) {
                 return aborted(req, _("Could not parse chunk size"), 0);
             }
             NE_DEBUG(NE_DBG_HTTP, "req: Chunk size: %lu\n", chunk_len);
