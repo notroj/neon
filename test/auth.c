@@ -29,6 +29,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef NE_HAVE_NTLM
+#include <ntlm.h>
+#endif
+
 #include "ne_string.h"
 #include "ne_request.h"
 #include "ne_auth.h"
@@ -1729,28 +1733,43 @@ static int clean_realm(void)
 static int ntlm_auth(void *userdata, const char *realm, int tries, 
                      char *un, char *pw)
 {
-    strcpy(un, "ntlm");
-    strcpy(pw, "pass");
+    strcpy(un, "Zaphod");
+    strcpy(pw, "Beeblebrox");
     return tries;
 }		   
+
+/* Examples from
+ * https://web.archive.org/web/20210126065105/http://www.innovation.ch/personal/ronald/ntlm.html */
+#define NTLM_T1 "NTLM TlRMTVNTUAABAAAAA7IAAAoACgApAAAACQAJACAAAABMSUdIVENJVFlVUlNBLU1JTk9S"
+#define NTLM_T2 "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA=="
+#define NTLM_T3 "NTLM TlRMTVNTUAADAAAAGAAYAHIAAAAYABgAigAAABQAFABAAAAADAAMAFQAAAASABIAYAAAAAAAAACiAAAAAYIAAFUAUgBTAEEALQBNAEkATgBPAFIAWgBhAHAAaABvAGQATABJAEcASABUAEMASQBUAFkArYfKbe"
 
 static int serve_ntlm(ne_socket *sock, void *userdata)
 {
     auth_failed = 1;
 
     /* Register globals for discard_request. */
-    want_header = NULL;
+    want_header = "Authorization";
+    got_header = dup_header;
 
     discard_request(sock);
     send_response(sock, "WWW-Authenticate: NTLM", 401, 0);
-    
-    discard_request(sock);
-    send_response(sock, 
-                  "WWW-Authenticate: NTLM "
-                  "TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==",
-                  401, 0);
 
     discard_request(sock);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "ntlm: T1 header %s\n", digest_hdr);
+    if (digest_hdr == NULL || strcmp(digest_hdr, NTLM_T1) != 0) {
+        send_response(sock, NULL, 401, 0);
+        return 0;
+    }
+    send_response(sock, "WWW-Authenticate: " NTLM_T2, 401, 0);
+
+    discard_request(sock);
+    NE_DEBUG(NE_DBG_HTTPAUTH, "ntlm: T3 header %s\n", digest_hdr);
+    if (digest_hdr == NULL || strcmp(digest_hdr, NTLM_T3) != 0) {
+        send_response(sock, NULL, 401, 0);
+        return 0;
+    }
+
     send_response(sock, NULL, 200, 1);
 
     return 0;
