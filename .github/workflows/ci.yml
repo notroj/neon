@@ -55,7 +55,7 @@ jobs:
     - run: make -j`nproc`
     - run: make check
     - if: failure()
-      run: if test -f test/debug.log; then tail -n50 test/debug.log; fi
+      run: if test -f test/debug.log; then cat test/debug.log; fi
 
   containers:
     runs-on: ubuntu-latest
