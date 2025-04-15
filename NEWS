@@ -1,4 +1,7 @@
 Changes in release 0.34.1:
+* Fix regression in NTLM auth in 0.34.0 (issue #190).
+
+Changes in release 0.34.1:
 * Fix regression in 207 parsing of <status> elements which omit
   a reason-phrase (issue #188).
 * Fix ne_move() to submit lock tokens for the parent collection
