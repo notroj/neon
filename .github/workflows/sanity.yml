@@ -1,0 +1,26 @@
+name: Build sanity and docs checks
+
+on:
+  push:
+    branches:
+    - master
+    - '*.x'
+  pull_request:
+    branches:
+    - master
+    - '*.x'
+
+jobs:
+  sanity-checks:
+    name: Build sanity and docs checks
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel libtool zlib-devel gcc-c++ xmlto
+      - uses: actions/checkout@v3
+      - run: ./autogen.sh
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug
+      - run: make -C src check-incl
+      - run: make -C src check-c++
+      - run: make docs
