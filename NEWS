@@ -1,5 +1,6 @@
-Changes in release 0.34.1:
+Changes in release 0.34.2:
 * Fix regression in NTLM auth in 0.34.0 (issue #190).
+* Add docs for ne_ssl_proto_name, ne_ssl_protovers, ne_get_request_target.
 
 Changes in release 0.34.1:
 * Fix regression in 207 parsing of <status> elements which omit
