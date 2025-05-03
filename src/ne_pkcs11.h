@@ -43,7 +43,7 @@ int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
 /* Initialize a NSS softoken pseudo-PKCS#11 provider of given name
  * (e.g. "softokn3") to supply a client certificate if requested,
  * using database in given directory name; the other parameters may be
- * NULL.  Returns NE_OK on success, NE_PK11_FAILED if the provider
+ * NULL.  Returns NE_P11_OK on success, NE_PK11_FAILED if the provider
  * could not be loaded/initialized, and NE_PK11_NOTIMPL if PKCS#11 is
  * not supported.  On success, *provider is set to non-NULL. */
 int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
@@ -51,6 +51,17 @@ int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
                                     const char *cert_prefix, 
                                     const char *key_prefix,
                                     const char *secmod_db);
+
+/* Initialize a PKCS#11 provider from a URI. This allows client
+ * certificate lookup for any URI type supported by the underlying SSL
+ * toolkit/installation. This is platform/installation specific, and
+ * may include file: or pkcs11:. The 'flags' argument must be zero.
+ * Returns NE_PK11_OK on success, or NE_PK11_NOTIMPL if URI-based
+ * provision is not available. Note that no verification of the URI is
+ * done here. */
+int ne_ssl_pkcs11_uri_provider_init(ne_ssl_pkcs11_provider **provider,
+                                    const char *uri,
+                                    unsigned int flags);
 
 /* Destroy a PKCS#11 provider object. */
 void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider);
@@ -67,7 +78,7 @@ void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider);
 
 /* Callback for PKCS#11 PIN entry.  The callback provides the PIN code
  * to unlock the token with label 'token_label' in the slot described
- * by 'slot_descr'.
+ * by 'slot_descr'. The label and slot description may be NULL.
  *
  * The PIN code, as a NUL-terminated ASCII string, should be copied
  * into the 'pin' buffer (of fixed length NE_SSL_P11PINLEN), and

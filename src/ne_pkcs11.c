@@ -1,6 +1,6 @@
 /*
    neon PKCS#11 support
-   Copyright (C) 2021, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2021-5, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -22,28 +22,43 @@
 
 #include "ne_pkcs11.h"
 
-#ifdef HAVE_PAKCHOIS
 #include <string.h>
 #include <assert.h>
 
-#include <pakchois.h>
+#ifdef HAVE_OPENSSL
+#include <openssl/opensslv.h>
+#include <openssl/store.h>
+#include <openssl/ui.h>
+#include <openssl/err.h>
+#endif
 
 #include "ne_internal.h"
 #include "ne_alloc.h"
 #include "ne_private.h"
 #include "ne_privssl.h"
 
+#ifdef HAVE_PAKCHOIS
+#include <pakchois.h>
+#endif
+
 struct ne_ssl_pkcs11_provider_s {
-    pakchois_module_t *module;
     ne_ssl_pkcs11_pin_fn pin_fn;
     void *pin_data;
-    pakchois_session_t *session;
+    char *uri;
+    int attempt;
     ne_ssl_client_cert *clicert;
+#ifdef HAVE_OPENSSL
+    UI_METHOD *ui;
+#endif
+#ifdef HAVE_PAKCHOIS
+    pakchois_module_t *module;
+    pakchois_session_t *session;
     ck_object_handle_t privkey;
     ck_key_type_t keytype;
 #ifdef HAVE_OPENSSL
     RSA_METHOD *method;
 #endif
+#endif /* HAVE_PAKCHOIS */
 };
 
 /* To do list for PKCS#11 support:
@@ -68,7 +83,7 @@ struct ne_ssl_pkcs11_provider_s {
 
 */
 
-#ifdef HAVE_OPENSSL
+#if defined(HAVE_PAKCHOIS) && defined(HAVE_OPENSSL)
 
 #include <openssl/rsa.h>
 #include <openssl/err.h>
@@ -156,8 +171,9 @@ static RSA_METHOD *pk11_rsa_method(ne_ssl_pkcs11_provider *prov)
 
     return m;
 }
-#endif
+#endif /* HAVE_PAKCHOIS && HAVE_OPENSSL */
 
+#ifdef HAVE_PAKCHOIS
 #ifdef HAVE_GNUTLS
 static int pk11_sign_callback(gnutls_privkey_t pkey,
                               void *userdata,
@@ -538,10 +554,121 @@ static int pk11_init(ne_ssl_pkcs11_provider **provider,
     
     return NE_PK11_OK;
 }
+#endif /* HAVE_PAKCHOIS */
+
+#if defined(HAVE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x10101000L
+/* OpenSSL STORE-based implementation. */
+
+static int ui_reader(UI *ui, UI_STRING *uis)
+{
+    ne_ssl_pkcs11_provider *prov = UI_get0_user_data(ui);
+    enum UI_string_types uit = UI_get_string_type(uis);
+    char pin[NE_SSL_P11PINLEN];
+    int ret = 0;
+
+    NE_DEBUG(NE_DBG_SSL, "pk11: Password reader, uri %s, type %d.\n",
+             prov->uri, uit);
+    if (uit != UIT_PROMPT || !prov->pin_fn) return -1;
+
+    if (prov->pin_fn(prov->pin_data, prov->attempt++,
+                     NULL, NULL, 0, pin) == 0) {
+        if (UI_set_result(ui, uis, pin) != 0) {
+            unsigned long err = ERR_get_error();
+            NE_DEBUG(NE_DBG_SSL, "pk11: Result set failed: %s.\n",
+                     ERR_reason_error_string(err));
+        }
+        else {
+            NE_DEBUG(NE_DBG_SSL, "pk11: Result set successfully.\n");
+            ret = 1;
+        }
+    }
+    else {
+        NE_DEBUG(NE_DBG_SSL, "pk11: Password callback failed.\n");
+    }
+
+    ne__strzero(pin, sizeof pin);
+
+    return ret;
+}
+
+static void store_provide(void *userdata, ne_session *sess,
+                          const ne_ssl_dname *const *dnames,
+                          int dncount)
+{
+    ne_ssl_pkcs11_provider *prov = userdata;
+    X509 *cert = NULL;
+    EVP_PKEY *pkey = NULL;
+    OSSL_STORE_CTX *store;
+
+    if (prov->clicert) {
+        NE_DEBUG(NE_DBG_SSL, "pk11: Using existing clicert.\n");
+        ne_ssl_set_clicert(sess, prov->clicert);
+        return;
+    }
+
+    NE_DEBUG(NE_DBG_SSL, "pk11: Opening store for %s...\n", prov->uri);
+    store = OSSL_STORE_open(prov->uri, prov->ui, prov, NULL, NULL);
+    if (!store) {
+        NE_DEBUG(NE_DBG_SSL, "pk11: Failed to open store.\n");
+        return;
+    }
+
+    while (!OSSL_STORE_eof(store)) {
+        OSSL_STORE_INFO *info = OSSL_STORE_load(store);
+
+        if (!info) {
+            /* OSSL_STORE_load() returns NULL once reaching
+             * EOF, or on error. Log errors. */
+#ifdef NE_DEBUGGING
+            unsigned long err = ERR_get_error();
+            NE_DEBUG(NE_DBG_SSL, "pk11: Store load failed (eof: %s): %s\n",
+                     OSSL_STORE_eof(store) ? "yes" : "no",
+                     err ? ERR_reason_error_string(err) : "(no error)");
+#endif
+            ERR_clear_error();
+            continue;
+        }
+
+        switch (OSSL_STORE_INFO_get_type(info)) {
+        case OSSL_STORE_INFO_CERT:
+            NE_DEBUG(NE_DBG_SSL, "pk11: STORE got CERT.\n");
+            cert = OSSL_STORE_INFO_get1_CERT(info);
+            break;
+        case OSSL_STORE_INFO_PKEY:
+            NE_DEBUG(NE_DBG_SSL, "pk11: STORE got PKEY.\n");
+            pkey = OSSL_STORE_INFO_get1_PKEY(info);
+            break;
+        }
+
+        OSSL_STORE_INFO_free(info);
+    }
+
+    OSSL_STORE_close(store);
+    NE_DEBUG(NE_DBG_SSL, "pk11: End of store.\n");
+
+    if (cert && pkey) {
+        ne_ssl_client_cert *cc = ne__ssl_clicert_pair_import(cert, pkey);
+
+        if (cc) {
+            prov->clicert = cc;
+            ne_ssl_set_clicert(sess, cc);
+            NE_DEBUG(NE_DBG_SSL, "pk11: Client cert imported successfully.\n");
+        }
+        else {
+            NE_DEBUG(NE_DBG_SSL, "pk11: Failed to import cert/key pair.\n");
+        }
+    }
+    else {
+        if (pkey) EVP_PKEY_free(pkey);
+        if (cert) X509_free(cert);
+    }
+}
+#endif /* HAVE_OPENSSL */
 
 int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
                                 const char *name)
 {
+#ifdef HAVE_PAKCHOIS
     pakchois_module_t *pm;
     
     if (pakchois_module_load(&pm, name) == CKR_OK) {
@@ -550,6 +677,9 @@ int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
     else {
         return NE_PK11_FAILED;
     }
+#else
+    return NE_PK11_NOTIMPL;
+#endif
 }
 
 int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
@@ -558,6 +688,7 @@ int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
                                     const char *key_prefix,
                                     const char *secmod_db)
 {
+#ifdef HAVE_PAKCHOIS
     pakchois_module_t *pm;
     
     if (pakchois_module_nssload(&pm, name, directory, cert_prefix,
@@ -567,6 +698,9 @@ int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
     else {
         return NE_PK11_FAILED;
     }
+#else
+    return NE_PK11_NOTIMPL;
+#endif
 }
 
 void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
@@ -578,51 +712,49 @@ void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
 }
 
 void ne_ssl_set_pkcs11_provider(ne_session *sess, 
-                                ne_ssl_pkcs11_provider *provider)
+                                ne_ssl_pkcs11_provider *prov)
 {
-    ne_ssl_provide_clicert(sess, pk11_provide, provider);
+#ifdef HAVE_PAKCHOIS
+    if (prov->module) ne_ssl_provide_clicert(sess, pk11_provide, prov);
+#endif
+#ifdef HAVE_OPENSSL
+    if (prov->uri) ne_ssl_provide_clicert(sess, store_provide, prov);
+#endif
 }
 
 void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *prov)
 {
-    if (prov->session) {
-        pakchois_close_session(prov->session);
-    }
-    if (prov->clicert) {
-        ne_ssl_clicert_free(prov->clicert);
-    }
-    pakchois_module_destroy(prov->module);
+    if (prov->clicert) ne_ssl_clicert_free(prov->clicert);
+#ifdef HAVE_PAKCHOIS
+    if (prov->session) pakchois_close_session(prov->session);
+    if (prov->module) pakchois_module_destroy(prov->module);
 #ifdef HAVE_OPENSSL
     RSA_meth_free(prov->method);
+#endif
+#endif /* HAVE_PAKCHOIS */
+#ifdef HAVE_OPENSSL
+    if (prov->ui) UI_destroy_method(prov->ui);
+    if (prov->uri) ne_free(prov->uri);
 #endif
     ne_free(prov);
 }
 
-#else /* !HAVE_PAKCHOIS */
-
-int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
-                                const char *name)
+int ne_ssl_pkcs11_uri_provider_init(ne_ssl_pkcs11_provider **provider,
+                                    const char *uri,
+                                    unsigned int flags)
 {
+#ifdef HAVE_OPENSSL
+    UI_METHOD *ui = UI_create_method("neon PKCS#11");
+
+    *provider = ne_calloc(sizeof **provider);
+    (*provider)->uri = ne_strdup(uri);
+    (*provider)->ui = ui;
+
+    UI_method_set_reader(ui, ui_reader);
+
+    return NE_PK11_OK;
+#else
     return NE_PK11_NOTIMPL;
+#endif
 }
-
-int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
-                                    const char *name, const char *directory,
-                                    const char *cert_prefix, 
-                                    const char *key_prefix,
-                                    const char *secmod_db)
-{
-    return NE_PK11_NOTIMPL;
-}
-
-void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider) { }
-
-void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
-                                ne_ssl_pkcs11_pin_fn fn,
-                                void *userdata) { }
-
-void ne_ssl_set_pkcs11_provider(ne_session *sess,
-                                ne_ssl_pkcs11_provider *provider) { }
-
-#endif /* HAVE_PAKCHOIS */
 
