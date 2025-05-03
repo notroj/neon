@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-22.04-arm]
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
         conf-shared: [--enable-static, --enable-shared ]
         conf-xml: [--with-expat, --with-libxml2 ]
         conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls]

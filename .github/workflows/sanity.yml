@@ -17,7 +17,7 @@ jobs:
     container:
       image: fedora:latest
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel libtool zlib-devel gcc-c++ xmlto
+      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel libtool zlib-devel gcc-c++ xmlto gawk
       - uses: actions/checkout@v3
       - run: ./autogen.sh
       - run: ./configure --with-ssl=openssl --with-expat --enable-debug
