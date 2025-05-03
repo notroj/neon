@@ -933,12 +933,22 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
     return parse_client_cert(p12);
 }
 
+ne_ssl_client_cert *ne__ssl_clicert_pair_import(X509 *cert, EVP_PKEY *key)
+{
+    ne_ssl_client_cert *cc = ne_calloc(sizeof *cc);
+
+    cc->decrypted = 1;
+    cc->pkey = key;
+    populate_cert(&cc->cert, cert);
+
+    return cc;
+}
+
 #ifdef HAVE_PAKCHOIS
 ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
                                                  size_t der_len,
                                                  const RSA_METHOD *method)
 {
-    ne_ssl_client_cert *cc;
     ne_d2i_uchar *p;
     X509 *x5;
     EVP_PKEY *pubkey, *privkey;
@@ -968,14 +978,8 @@ ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der,
     /* Set up new EVP_PKEY. */
     privkey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(privkey, rsa);
-    
-    cc = ne_calloc(sizeof *cc);
-    cc->decrypted = 1;
-    cc->pkey = privkey;
 
-    populate_cert(&cc->cert, x5);
-
-    return cc;    
+    return ne__ssl_clicert_pair_import(x5, privkey);
 }
 #endif
 
