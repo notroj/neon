@@ -1301,6 +1301,13 @@ ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, size_t bu
     }
 }
 
+ne_ssl_client_cert *ne_ssl_clicert_fromuri(const char *uri,
+                                           unsigned int flags)
+{
+    errno = ENOTSUP;
+    return NULL;
+}
+
 #ifdef HAVE_GNUTLS_PRIVKEY_IMPORT_EXT
 ne_ssl_client_cert *ne__ssl_clicert_exkey_import(const unsigned char *der, size_t der_len,
                                                  gnutls_privkey_sign_func sign_func,
