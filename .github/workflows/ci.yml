@@ -74,7 +74,7 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel krb5-devel libtool zlib-devel
+      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
       - run: ./autogen.sh
       - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
