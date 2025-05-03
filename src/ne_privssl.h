@@ -52,6 +52,10 @@ ne__ssl_clicert_exkey_import(const unsigned char *der,
                              size_t der_len,
                              const RSA_METHOD *method);
 
+/* Create a clicert object from a cert, key pair. Ownership of both
+ * the cert and key objects is passed to the clicert object. */
+NE_PRIVATE ne_ssl_client_cert *ne__ssl_clicert_pair_import(X509 *cert, EVP_PKEY *key);
+
 #endif /* HAVE_OPENSSL */
 
 #ifdef HAVE_GNUTLS
