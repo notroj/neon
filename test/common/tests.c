@@ -251,6 +251,13 @@ int main(int argc, char *argv[])
 	printf(" Socket library initialization failed.\n");
     }
 
+#ifdef NEON_TEST_INIT
+    if (NEON_TEST_INIT(test_argc, (const char *const *)test_argv, &use_colour, &quiet)) {
+	fprintf(stderr, "%s: Failed parsing command-line.\n", test_suite);
+        return -1;
+    }
+#endif
+
     if ((tmp = getenv("TEST_QUIET")) != NULL && strcmp(tmp, "1") == 0) {
         quiet = 1;
     }
