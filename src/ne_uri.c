@@ -613,9 +613,7 @@ char *ne_uri_unparse(const ne_uri *uri)
         if (uri->port > 0
             && (!uri->scheme 
                 || ne_uri_defaultport(uri->scheme) != uri->port)) {
-            char str[20];
-            ne_snprintf(str, 20, ":%d", uri->port);
-            ne_buffer_zappend(buf, str);
+            ne_buffer_snprintf(buf, 20, ":%d", uri->port);
         }
     }
 
