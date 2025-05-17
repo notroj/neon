@@ -26,10 +26,10 @@
 
 NE_BEGIN_DECLS
 
-/* Return a copy of a path string with anything other than
- * "unreserved" and the forward-slash character percent-encoded
- * according to the URI encoding rules.  Returns a malloc-allocated
- * string and never NULL. */
+/* Return a copy of a path string with anything not allowed in the URI
+ * "pchar" rule, or the forward-slash character, percent-escaped. This
+ * is equivalent to calling ne_path_escape() with the NE_PATH_NOTPC
+ * flag set. Returns a malloc-allocated string and never NULL. */
 char *ne_path_escape(const char *path)
     ne_attribute((nonnull));
 
@@ -39,6 +39,10 @@ char *ne_path_escape(const char *path)
 #define NE_PATH_NONRES (0x0001)
 /* Escape any characters outside of those allowed in URIs. */
 #define NE_PATH_NONURI (0x0002)
+/* Escape any characters which are not allowed in either the URI
+ * "pchar" rule or a forward slash; i.e. characters which are not
+ * allowed in path definitions. */
+#define NE_PATH_NONPC  (0x0004)
 
 /* Return a copy of a path string with escaping applied per rules
  * determined by any combination of NE_PATH_* flags given.  Returns a
