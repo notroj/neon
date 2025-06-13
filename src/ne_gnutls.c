@@ -133,11 +133,11 @@ static void convert_dirstring(ne_buffer *buf, const char *charset,
     char *outbuf = buf->data + buf->used - 1;
     
     if (id == (iconv_t)-1) {
-        char err[128], err2[128];
+        char err[128];
 
-        ne_snprintf(err, sizeof err, "[unprintable in %s: %s]",
-                    charset, ne_strerror(errno, err2, sizeof err2));
-        ne_buffer_zappend(buf, err);
+        ne_buffer_snprintf(buf, 128, "[unprintable in %s: %s]",
+                           charset,
+                           ne_strerror(errno, err, sizeof err));
         return;
     }
     
@@ -179,11 +179,9 @@ static void append_dirstring(ne_buffer *buf, gnutls_datum_t *data, unsigned long
         convert_dirstring(buf, "UCS-2BE", data);
         break;
 #endif
-    default: {
-        char tmp[128];
-        ne_snprintf(tmp, sizeof tmp, _("[unprintable:#%lu]"), tag);
-        ne_buffer_zappend(buf, tmp);
-    } break;
+    default:
+        ne_buffer_snprintf(buf, 128, _("[unprintable:#%lu]"), tag);
+        break;
     }
 }
 
