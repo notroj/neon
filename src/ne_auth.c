@@ -1421,7 +1421,8 @@ static void challenge_error(ne_buffer **errbuf, const char *fmt, ...)
     va_start(ap, fmt);
     len = ne_vsnprintf(err, sizeof err, fmt, ap);
     va_end(ap);
-    
+    NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Challenge error: %s\n", err);
+
     if (*errbuf == NULL) {
         *errbuf = ne_buffer_create();
         ne_buffer_append(*errbuf, err, len);
