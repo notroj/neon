@@ -44,8 +44,8 @@
     <para>Memory consumption attacks against applications based on
     &neon; by use of unbounded response length are also possible, but
     must be mitigated at application level.  Memory consumption in
-    &neon; itself is fixed and is not proportional to the response
-    size.</para>
+    &neon; while reading response bodies is fixed and is not
+    proportional to the response length.</para>
 
     <para>Test cases for all the above attacks are present in the
     &neon; test suite.</para>
