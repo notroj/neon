@@ -981,8 +981,8 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
                 *ptr = '\0';
             }
 
-           /* Limit chunk size to <= UINT_MAX, for sanity; must have
-            * a following NUL due to chunk-ext handling above. */
+            /* Limit chunk size to <= UINT_MAX, for sanity; must have
+             * a following NUL due to chunk-ext handling above. */
             chunk_len = ne_strhextoul(req->respbuf, &cptr);
             if (errno || (*cptr != '\0' && *cptr != '\r')
                 || chunk_len > UINT_MAX) {
