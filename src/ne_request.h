@@ -183,6 +183,14 @@ const ne_uri *ne_get_request_target(ne_request *req)
 ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
     ne_attribute((nonnull (1)));
 
+/* If the response includes a Retry-After header, this function parses
+ * the time given in the header value and returns it. If a relative
+ * time is sent by the server, it will be handled relative to the time
+ * when this function is called. If no header is present, or the
+ * header value cannot be parsed, 0 is returned. */
+time_t ne_get_response_retry_after(ne_request *req)
+    ne_attribute((nonnull (1)));
+
 /* ne_request_dispatch: Sends the given request, and reads the
  * response.  Returns:
  *  - NE_OK if the request was sent and response read successfully
