@@ -2486,6 +2486,64 @@ static int targets(void)
     return OK;
 }
 
+#define RETRY_DRIFT (2)
+
+static int retry_after(void)
+{
+    ne_session *sess;
+    static const struct {
+        const char *value;
+        time_t relative;
+        time_t absolute;
+    } *t, ts[] = {
+        { "100", 100, 0 },
+        { "4242", 4242, 0 },
+        { "blah", 0, 0 },
+        { "Fri, 31 Dec 1999 23:59:59 GMT", 0, 946684799 }
+    };
+    unsigned n;
+
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++ ) {
+        char *resp = ne_concat("HTTP/1.1 429 Maybe Try Later\r\n"
+                               "Server: neon-test-server\r\n"
+                               "Retry-After: ", ts[n].value, "\r\n"
+                               "Content-Length: 0\r\n\r\n", NULL);
+        ne_request *req;
+        time_t expected, actual;
+
+        t = ts + n;
+
+        CALL(make_session(&sess, single_serve_string, resp));
+
+        req = ne_request_create(sess, "GET", "/");
+        ONREQ(ne_request_dispatch(req));
+        actual = ne_get_response_retry_after(req);
+        ne_request_destroy(req);
+
+        if (t->absolute == 0 && t->relative == 0) {
+            ONV(actual != 0,
+                ("expected error return for %s, got %" NE_FMT_TIME_T,
+                 t->value, actual));
+        }
+        else {
+            expected  = t->relative ? time(NULL) + t->relative
+                : t->absolute;
+
+            ONV(actual < expected - RETRY_DRIFT
+                || actual > expected + RETRY_DRIFT,
+                ("retry-after actual %" NE_FMT_TIME_T
+                 " doesn't match expected %" NE_FMT_TIME_T
+                 " for %s", actual, expected, t->value));
+        }
+
+        
+        CALL(destroy_and_wait(sess));
+        ne_free(resp);
+    }
+
+    return OK;
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2565,5 +2623,6 @@ ne_test tests[] = {
     T(redirect_error),
 #endif
     T(targets),
+    T(retry_after),
     T(NULL)
 };

@@ -51,6 +51,7 @@
 #include "ne_utils.h"
 #include "ne_socket.h"
 #include "ne_uri.h"
+#include "ne_dates.h"
 
 #include "ne_private.h"
 
@@ -93,6 +94,7 @@ struct field {
 #define HH_HV_CONTENT_LENGTH    (0x13)
 #define HH_HV_TRANSFER_ENCODING (0x07)
 #define HH_HV_LOCATION          (0x05)
+#define HH_HV_RETRY_AFTER       (0x28)
 
 struct ne_request_s {
     char *method, *target; /* method and request-target */
@@ -803,6 +805,28 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
 
 fail:
     ne_uri_free(&dest);
+
+    return ret;
+}
+
+time_t ne_get_response_retry_after(ne_request *req)
+{
+    char *val, *endp;
+    unsigned long abs;
+    time_t ret;
+
+    val = get_response_header_hv(req, HH_HV_RETRY_AFTER, "retry-after");
+    if (!val) return 0;
+
+    errno = 0;
+    abs = strtoul(val, &endp, 10);
+    if (errno == 0 && abs != ULONG_MAX && *endp == '\0') {
+        ret = time(NULL) + abs;
+    }
+    else {
+        if ((ret = ne_httpdate_parse(val)) == -1)
+            ret = 0;
+    }
 
     return ret;
 }
