@@ -20,7 +20,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
         conf-shared: [--enable-static, --enable-shared ]
@@ -68,6 +68,7 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
         image: ["quay.io/centos/centos:stream9",
                 "fedora:latest"]
