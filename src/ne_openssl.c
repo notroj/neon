@@ -72,6 +72,9 @@ typedef unsigned char ne_d2i_uchar;
 typedef const unsigned char ne_d2i_uchar;
 #endif
 
+/* Convert a ASCII decimal pair into an integer. */
+#define FROM_DEC(p_) (10*((p_)[0]-'0') + (p_)[1]-'0')
+
 #ifndef HAVE_OPENSSL110
 #define X509_get0_notBefore X509_get_notBefore
 #define X509_get0_notAfter X509_get_notAfter
@@ -232,17 +235,17 @@ static time_t asn1time_to_timet(const ASN1_TIME *atm)
     if (i < 10)
         return (time_t )-1;
 
-    tm.tm_year = (atm->data[0]-'0') * 10 + (atm->data[1]-'0');
+    tm.tm_year = FROM_DEC(atm->data);
 
     /* Deal with Year 2000 */
     if (tm.tm_year < 70)
         tm.tm_year += 100;
 
-    tm.tm_mon = (atm->data[2]-'0') * 10 + (atm->data[3]-'0') - 1;
-    tm.tm_mday = (atm->data[4]-'0') * 10 + (atm->data[5]-'0');
-    tm.tm_hour = (atm->data[6]-'0') * 10 + (atm->data[7]-'0');
-    tm.tm_min = (atm->data[8]-'0') * 10 + (atm->data[9]-'0');
-    tm.tm_sec = (atm->data[10]-'0') * 10 + (atm->data[11]-'0');
+    tm.tm_mon = FROM_DEC(atm->data + 2) - 1;
+    tm.tm_mday = FROM_DEC(atm->data + 4);
+    tm.tm_hour = FROM_DEC(atm->data + 6);
+    tm.tm_min = FROM_DEC(atm->data + 8);
+    tm.tm_sec = FROM_DEC(atm->data + 10);
 
 #ifdef HAVE_TIMEZONE
     /* ANSI C time handling is... interesting. */
