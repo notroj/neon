@@ -20,7 +20,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
         conf-shared: [--enable-static, --enable-shared ]
@@ -68,13 +68,15 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
         image: ["quay.io/centos/centos:stream9",
                 "fedora:latest"]
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel openssl-devel krb5-devel libtool zlib-devel gawk
+      - run: dnf update -y && dnf install -y autoconf make expat-devel 
+                  openssl openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
       - run: ./autogen.sh
       - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi

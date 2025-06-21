@@ -54,4 +54,5 @@ NEON_0_34 {
 NEON_0_35 {
     ne_strhextoul;
     ne_get_response_retry_after;
+    ne_ssl_clicert_fromuri;
 };
