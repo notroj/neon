@@ -345,8 +345,18 @@ void sess_notifier(void *userdata, ne_session_status status,
                          status == ne_status_sending ? "send" : "recv",
                          "(", scratch, ")-", NULL);
         break;
+    case ne_status_handshake:
+        ne_buffer_snprintf(buf, 256,
+                           "handshake(%s, %s)-",
+                           ne_ssl_proto_name(info->hs.protocol),
+                           info->hs.ciphersuite ?
+                           info->hs.ciphersuite : "[none]");
+        break;
     default:
         ne_buffer_czappend(buf, "bork!");
         break;
     }
+
+    NE_DEBUG(NE_DBG_HTTP, "notifier %d => %s\n",
+             status, buf->data);
 }
