@@ -777,6 +777,14 @@ int ne__negotiate_ssl(ne_session *sess)
 	ctx->sess = SSL_get1_session(ssl);
     }
 
+    if (sess->notify_cb) {
+        const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
+
+        sess->status.hs.protocol = ne_sock_getproto(sess->socket);
+        sess->status.hs.ciphersuite = SSL_CIPHER_standard_name(ciph);
+        sess->notify_cb(sess->notify_ud, ne_status_handshake, &sess->status);
+    }
+
     return NE_OK;
 }
 

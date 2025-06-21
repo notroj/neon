@@ -1895,6 +1895,32 @@ static int protovers(void)
     return OK;
 }
 
+static int notifier(void)
+{
+    ne_session *sess = DEFSESS;
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    ne_buffer *buf = ne_buffer_create();
+
+    args.minver = NE_SSL_PROTO_TLS_1_2;
+    args.maxver = NE_SSL_PROTO_TLS_1_2;
+
+    ONV(ne_ssl_set_protovers(sess, args.minver, args.maxver),
+        ("setting TLS protocol version failed: %s", ne_get_error(sess)));
+
+    ne_set_notifier(sess, sess_notifier, buf);
+
+    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
+
+    ONV(strstr(buf->data, "-handshake(TLSv1.2, TLS_") == NULL
+        && strstr(buf->data, "-handshake(TLSv1.2, [none]") == NULL,
+        ("missing handshake from notifier: %s", buf->data));
+
+    ne_session_destroy(sess);
+    ne_buffer_destroy(buf);
+
+    return OK;
+}
+
 /* TODO: code paths still to test in cert verification:
  * - server cert changes between connections: Mozilla gives
  * a "bad MAC decode" error for this; can do better?
@@ -1998,6 +2024,7 @@ ne_test tests[] = {
 
     T(pkcs11),
     T_XFAIL(pkcs11_dsa), /* unclear why this fails currently. */
+    T(notifier),
 
     T(NULL) 
 };

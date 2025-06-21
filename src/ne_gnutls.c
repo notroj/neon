@@ -1066,6 +1066,15 @@ int ne__negotiate_ssl(ne_session *sess)
 
     sess->server_cert = chain;
 
+    if (sess->notify_cb) {
+        memset(&sess->status, 0, sizeof sess->status);
+        sess->status.hs.protocol = ne_sock_getproto(sess->socket);
+#if LIBGNUTLS_VERSION_NUMBER >= 0x030704
+        sess->status.hs.ciphersuite = gnutls_ciphersuite_get(sock);
+#endif
+        sess->notify_cb(sess->notify_ud, ne_status_handshake, &sess->status);
+    }
+
     return NE_OK;
 }
 
