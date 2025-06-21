@@ -61,7 +61,7 @@ jobs:
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make -j`nproc`
-    - run: make check
+    - run: make check TEST_QUIET=0
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
 
@@ -79,4 +79,4 @@ jobs:
       - run: ./autogen.sh
       - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
       - run: make -j`nproc`
-      - run: make check
+      - run: make check TEST_QUIET=0
