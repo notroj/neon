@@ -294,7 +294,8 @@ int main(int argc, char *argv[])
 
 #ifdef NEON_MEMLEAK
         /* issue warnings for memory leaks, if requested */
-        if ((tests[n].flags & T_CHECK_LEAKS) && result == OK &&
+        if ((tests[n].flags & T_CHECK_LEAKS)
+            && (result == OK || result == SKIP) &&
             ne_alloc_used > allocated) {
             t_context("memory leak of %" NE_FMT_SIZE_T " bytes",
                       ne_alloc_used - allocated);
