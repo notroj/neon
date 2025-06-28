@@ -1815,6 +1815,7 @@ static int nonssl_trust(void)
     return OK;
 }
 
+#ifdef HAVE_PAKCHOIS
 #define PINMAX (2)
 struct pindata {
     const char *password[PINMAX];
@@ -1901,6 +1902,7 @@ static int pkcs11_dsa(void)
 {
     return nss_pkcs11_test("nssdb-dsa");
 }
+#endif
 
 static int protovers(void)
 {
@@ -2081,8 +2083,10 @@ ne_test tests[] = {
 
     T(nonssl_trust),
 
+#ifdef HAVE_PAKCHOIS
     T(pkcs11),
     T_XFAIL(pkcs11_dsa), /* unclear why this fails currently. */
+#endif
     T(notifier),
     T(clicert_uri),
 
