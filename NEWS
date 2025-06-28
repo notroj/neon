@@ -7,7 +7,8 @@ Changes in release 0.35.0:
  - ne_uri.h: add NE_PATH_NONPC escaping rule
  - ne_string.h: add ne_strhextoul()
  - ne_ssl.h: add ne_ssl_clicert_fromuri(), a simpler API
-   to retrieve client certs based on (e.g.) PKCS#11 URIs
+   to retrieve client certs based on (e.g.) PKCS#11 URIs;
+   only supported with OpenSSL currently.
 * Bug fixes:
  - ne_path_escape() now follows NE_PATH_NONPC pct-encoding
    rule by default (fixes #181)
