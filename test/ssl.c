@@ -1951,7 +1951,7 @@ static int notifier(void)
 
 static int clicert_uri(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     struct ssl_server_args args = {SERVER_CERT, NULL};
     ne_ssl_client_cert *cc;
     int ret;
@@ -1971,6 +1971,8 @@ static int clicert_uri(void)
         ne_ssl_clicert_decrypt(cc, "not-the-password") == 0);
     ONN("unsuccessful decrypt with good password",
         ne_ssl_clicert_decrypt(cc, P12_PASSPHRASE) != 0);
+
+    sess = DEFSESS;
     ne_ssl_set_clicert(sess, cc);
 
     ret = any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL);
