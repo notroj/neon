@@ -367,6 +367,14 @@ fi
 
 AC_SUBST(NEON_BUILD_BUNDLED)
 
+dnl Define NE_MINIMUM_VERSION() for both bundled and non-bundled
+dnl builds.
+AH_BOTTOM([#undef NE_MINIMUM_VERSION
+#define NE_MINIMUM_VERSION(majv_, minv_) \
+    (((majv_) == NE_VERSION_MAJOR && NE_VERSION_MINOR >= (minv_)) \
+     || NE_VERSION_MAJOR > (majv_))
+])
+
 ])
 
 dnl AC_SEARCH_LIBS done differently. Usage:
