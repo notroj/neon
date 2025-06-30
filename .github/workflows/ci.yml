@@ -30,7 +30,7 @@ jobs:
         conf-debug: [--enable-debug, --disable-debug]
         conf-gssapi: [--with-gssapi, --without-gssapi]
         exclude:
-            - os: [ubuntu-20.04, ubuntu-22.04]
+            - os: [ubuntu-22.04, ubuntu-24.04]
               conf-shared: --enable-static
             - conf-gssapi: --without-gssapi
               conf-ssl: [--without-ssl, --with-ssl=gnutls]
