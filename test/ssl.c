@@ -202,6 +202,9 @@ static int ssl_server(ne_socket *sock, void *userdata)
                 || memcmp(args->session.id, sessid, len));
         }
     }	
+
+    ret = ne_sock_shutdown(sock, NE_SOCK_SEND);
+    NE_DEBUG(NE_DBG_SSL, "ssl: Shutdown received %d\n", ret);
     
     return 0;
 }
@@ -975,7 +978,6 @@ static int fail_ca_notyetvalid(void)
                             "issuer ca not yet valid", NE_SSL_BADCHAIN);
 }
 
-#if 0
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
 {
@@ -988,6 +990,10 @@ static int session_cache(void)
     CALL(multi_session_server(&sess, "https", "localhost",
                               2, ssl_server, &args));
 
+    /* This currently fails under OpenSSL with TLSv1.3. */
+    ne_ssl_set_protovers(sess, NE_SSL_PROTO_UNSPEC,
+                         NE_SSL_PROTO_TLS_1_2);
+
     ne_ssl_trust_cert(sess, def_ca_cert);
 
     ONREQ(any_request(sess, "/req1"));
@@ -995,7 +1001,6 @@ static int session_cache(void)
 
     return destroy_and_wait(sess);
 }
-#endif
 
 /* Callback for client_cert_provider; takes a c. cert as userdata and
  * registers it. */
@@ -2071,9 +2076,7 @@ ne_test tests[] = {
     T(fail_nul_san),
 #endif
 
-#if 0
     T(session_cache),
-#endif
 
     T(fail_tunnel),
     T(proxy_tunnel),
