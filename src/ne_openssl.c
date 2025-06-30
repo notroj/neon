@@ -569,6 +569,33 @@ void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
     sess->client_cert = dup_client_cert(cc);
 }
 
+static int new_ssl_session(SSL *ssl, SSL_SESSION *sslsess)
+{
+    SSL_CTX *sslctx = SSL_get_SSL_CTX(ssl);
+    ne_ssl_context *sctx = SSL_CTX_get_app_data(sslctx);
+
+    if (sctx->sess)
+        SSL_SESSION_free(sctx->sess);
+
+    NE_DEBUG(NE_DBG_SSL, "sslsess: New session callback: %s.\n",
+             SSL_SESSION_is_resumable(sslsess) ? "resumable" : "not resumable");
+
+    sctx->sess = SSL_SESSION_dup(sslsess);
+    return 1;
+}
+
+static void remove_ssl_session(SSL_CTX *sslctx, SSL_SESSION *sess)
+{
+    ne_ssl_context *ctx = SSL_CTX_get_app_data(sslctx);
+
+    NE_DEBUG(NE_DBG_SSL, "sslsess: Remove session callback.\n");
+
+    if (ctx->sess && sess == ctx->sess) {
+        SSL_SESSION_free(ctx->sess);
+        ctx->sess = NULL;
+    }
+}
+
 ne_ssl_context *ne_ssl_context_create(int mode)
 {
     ne_ssl_context *ctx = ne_calloc(sizeof *ctx);
@@ -584,15 +611,22 @@ ne_ssl_context *ne_ssl_context_create(int mode)
 #if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x3040000fL || (!defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10101000L)
         SSL_CTX_set_post_handshake_auth(ctx->ctx, 1);
 #endif
+        SSL_CTX_set_app_data(ctx->ctx, ctx);
+        SSL_CTX_sess_set_new_cb(ctx->ctx, new_ssl_session);
+        SSL_CTX_sess_set_remove_cb(ctx->ctx, remove_ssl_session);
+        SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT|SSL_SESS_CACHE_NO_INTERNAL);
     }
     else /* mode == NE_SSL_CTX_SERVER */ {
+        char sidctx[128];
         ctx->ctx = SSL_CTX_new(TLS_server_method());
-        SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT);
 #ifdef SSL_OP_NO_TICKET
         /* disable ticket support since it inhibits testing of session
          * caching. */
         SSL_CTX_set_options(ctx->ctx, SSL_OP_NO_TICKET);
 #endif
+        ne_snprintf(sidctx, sizeof sidctx, "%s-%p", PACKAGE_NAME, ctx);
+        SSL_CTX_set_session_id_context(ctx->ctx, (unsigned char *)sidctx,
+                                       strlen(sidctx));
     }
     return ctx;
 }
@@ -689,25 +723,6 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     ne_free(ctx);
 }
 
-#if !defined(HAVE_SSL_SESSION_CMP) && !defined(SSL_SESSION_cmp) \
-    && defined(OPENSSL_VERSION_NUMBER) \
-    && OPENSSL_VERSION_NUMBER > 0x10000000L
-/* OpenSSL 1.0 removed SSL_SESSION_cmp for no apparent reason - hoping
- * it is reasonable to assume that comparing the session IDs is
- * sufficient. */
-static int SSL_SESSION_cmp(SSL_SESSION *a, SSL_SESSION *b)
-{
-    const unsigned char *session1_buf, *session2_buf;
-    unsigned int session1_len, session2_len;
-
-    session1_buf = SSL_SESSION_get_id(a, &session1_len);
-    session2_buf = SSL_SESSION_get_id(b, &session2_len);
-
-    return session1_len == session2_len
-        && memcmp(session1_buf, session2_buf, session1_len) == 0;
-}
-#endif
-
 /* For internal use only. */
 int ne__negotiate_ssl(ne_session *sess)
 {
@@ -726,11 +741,6 @@ int ne__negotiate_ssl(ne_session *sess)
     ctx->failures = 0;
 
     if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
-	if (ctx->sess) {
-	    /* remove cached session. */
-	    SSL_SESSION_free(ctx->sess);
-	    ctx->sess = NULL;
-	}
         if (sess->ssl_cc_requested) {
             ne_set_error(sess, _("SSL handshake failed, "
                                  "client certificate was requested: %s"),
@@ -781,18 +791,6 @@ int ne__negotiate_ssl(ne_session *sess)
         sess->server_cert = cert;
     }
     
-    if (ctx->sess) {
-        SSL_SESSION *newsess = SSL_get0_session(ssl);
-        /* Replace the session if it has changed. */ 
-        if (newsess != ctx->sess || SSL_SESSION_cmp(ctx->sess, newsess)) {
-            SSL_SESSION_free(ctx->sess);
-            ctx->sess = SSL_get1_session(ssl); /* bumping the refcount */
-        }
-    } else {
-	/* Store the session. */
-	ctx->sess = SSL_get1_session(ssl);
-    }
-
     if (sess->notify_cb) {
         const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
 
