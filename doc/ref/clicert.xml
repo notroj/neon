@@ -81,11 +81,11 @@
     certificate from a memory buffer using the PKCS#12 format. The
     <function>ne_ssl_clicert_fromuri</function> function loads a
     client certificate from a URI. URI schemes supported are defined
-    by the SSL/TLS toolkit, and may include PKCS#11 URIs.</para>
+    by the SSL/TLS toolkit, and may include <ulink url="https://www.rfc-editor.org/rfc/rfc7512.html">PKCS#11 URIs</ulink>.</para>
 
-    <para>A <type>ne_ssl_client_cert</type> object contains both a
+    <para>A <type>ne_ssl_client_cert</type> object represents both a
     client certificate and the associated private key; the term
-    "<glossterm>client certificate</glossterm>" will used to refer to
+    "<glossterm>client certificate</glossterm>" is used here to refer to
     this pair. A client certificate object loaded by any of the above
     functions can be in one of two states:
     <emphasis>encrypted</emphasis> or <emphasis>decrypted</emphasis>.
@@ -94,7 +94,7 @@
     <emphasis>encrypted</emphasis> state.</para>
 
     <para>A client certificate <emphasis>must</emphasis> be in the
-    decrypted state before it can be associated with a
+    decrypted state before it is associated with a
     session. <function>ne_ssl_clicert_decrypt</function> can be used
     to decrypt a client certificate using the appropriate password.
     This function must only be called if the object is in the
@@ -115,7 +115,7 @@
     only be called if the client certificate is in the
     <emphasis>decrypted</emphasis> state.</para>
 
-    <para>When the client certificate is no longer needed, the
+    <para>When the client certificate object is no longer needed, the
     <function>ne_ssl_clicert_free</function> function should be used
     to destroy the object.</para>
 
@@ -161,6 +161,14 @@ if (ccert == NULL) {
 ne_ssl_set_clicert(sess, ccert);
 </programlisting>
 
+  </refsect1>
+
+  <refsect1>
+    <title>History</title>
+
+    <para><function>ne_ssl_clicert_import</function> was added in
+    &neon; 0.30.0. <function>ne_ssl_clicert_fromuri</function> was
+    added in &neon; 0.35.0.</para>
   </refsect1>
 
   <refsect1>
