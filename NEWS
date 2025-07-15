@@ -11,9 +11,12 @@ Changes in release 0.35.0:
  - ne_ssl.h: add ne_ssl_clicert_fromuri(), a simpler API
    to retrieve client certs based on (e.g.) PKCS#11 URIs;
    only supported with OpenSSL currently.
+ - ne_session.h: add ne_status_handshake to notifier API
 * Bug fixes:
  - ne_path_escape() now follows NE_PATH_NONPC pct-encoding
    rule by default (fixes #181)
+ - ne_md5_*(): for OpenSSL, now uses the EVP* API
+ - session caching fixes for OpenSSL
 
 Changes in release 0.34.2:
 * Fix regression in NTLM auth in 0.34.0 (issue #190).
