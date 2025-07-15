@@ -21,7 +21,7 @@ fi
 printf  "aclocal... "
 ${ACLOCAL:-aclocal} -I macros
 printf  "autoheader... "
-${AUTOHEADER:-autoheader}
+${AUTOHEADER:-autoheader} -Wall
 printf  "autoconf... "
 ${AUTOCONF:-autoconf} -Wall -Werror
 echo okay.
