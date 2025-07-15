@@ -140,8 +140,8 @@ NE_VERSION_MINOR=35
 NE_VERSION_PATCH=0
 NE_VERSION_TAG=-dev
 
-# 0.34.x is backwards-compatible to 0.27.x, so AGE=7
-NE_LIBTOOL_VERSINFO="34:${NE_VERSION_PATCH}:7"
+# 0.35.x is backwards-compatible to 0.27.x, so AGE=7
+NE_LIBTOOL_VERSINFO="35:${NE_VERSION_PATCH}:8"
 
 NE_DEFINE_VERSIONS
 
