@@ -17,6 +17,7 @@ Changes in release 0.35.0:
    rule by default (fixes #181)
  - ne_md5_*(): for OpenSSL, now uses the EVP* API
  - session caching fixes for OpenSSL
+* "BUGS" document removed, use https://github.com/notroj/neon/issues
 
 Changes in release 0.34.2:
 * Fix regression in NTLM auth in 0.34.0 (issue #190).
