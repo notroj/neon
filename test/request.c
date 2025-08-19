@@ -2327,8 +2327,8 @@ static int retry_408(void)
     ne_session *sess;
 
     /* Serve two responses down a single persistent connection, the
-     * second of which is invalid and will cause the request to be
-     * aborted. */
+     * second of which should be treated as a timed-out persistent
+     * connection, i.e. should be retried on a new connection. */
     CALL(multi_session_server(&sess, "http", "localhost",
                               2, single_serve_string,
                               EMPTY_RESP
