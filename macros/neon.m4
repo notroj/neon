@@ -515,6 +515,13 @@ AS_CASE([x"$ne_cv_os_uname"],
 )dnl AS_CASE
 ])
 
+AC_DEFUN([NE_FORMAT_TIMET], [
+NEON_FORMAT(time_t, [
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif])
+])
+
 AC_DEFUN([NEON_COMMON_CHECKS], [
 
 # These checks are done whether or not the bundled neon build
@@ -538,7 +545,7 @@ AC_CHECK_HEADERS([errno.h stdarg.h string.h stdlib.h sys/uio.h])
 NEON_FORMAT(size_t,,u) dnl size_t is unsigned; use %u formats
 NEON_FORMAT(off_t)
 NEON_FORMAT(ssize_t)
-
+NE_FORMAT_TIMET
 ])
 
 AC_DEFUN([NEON_FORMAT_PREP], [
