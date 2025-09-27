@@ -104,6 +104,8 @@ else
 	$2
 fi
 
+AC_CONFIG_FILES([${neon_bundled_builddir}/Makefile])
+
 ])
 
 dnl Not got any bundled sources:
