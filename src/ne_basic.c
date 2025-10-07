@@ -142,6 +142,50 @@ int ne_putbuf(ne_session *sess, const char *path,
     return ret;
 }
 
+int ne_getbuf(ne_session *sess, const char *path,
+              char *buf, size_t *buflen)
+{
+    ne_request *req = ne_request_create(sess, "GET", path);
+    int ret;
+    char *ptr;
+
+    do {
+        size_t remain = *buflen;
+        ssize_t rlen = -1;
+
+        ptr = buf;
+
+        ret = ne_begin_request(req);
+        if (ret != NE_OK) break;
+
+        while (remain > 0
+               && (rlen = ne_read_response_block(req, ptr, remain)) > 0) {
+            remain -= rlen;
+            ptr += rlen;
+        }
+
+        if (rlen < 0) {
+            ret = NE_ERROR;
+        }
+        else if (rlen > 0) {
+            ne_set_error(sess, N_("Response buffer size too small"));
+            ret = NE_FAILED;
+        }
+
+        if (ret == NE_OK) ret = ne_end_request(req);
+    } while (ret == NE_RETRY);
+
+    if (ret == NE_OK)
+        *buflen = ptr - buf;
+
+    if (ret != NE_OK)
+        ne_close_connection(sess);
+
+    ne_request_destroy(req);
+
+    return ret;
+}
+
 /* Dispatch a GET request REQ, writing the response body to FD fd.  If
  * RANGE is non-NULL, then it is the value of the Range request
  * header, e.g. "bytes=1-5".  Returns an NE_* error code. */
