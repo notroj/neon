@@ -56,3 +56,7 @@ NEON_0_35 {
     ne_get_response_retry_after;
     ne_ssl_clicert_fromuri;
 };
+
+NEON_0_36 {
+    ne_xml_dispatchif_request;
+};
