@@ -82,7 +82,7 @@
 <!ENTITY refiaddr SYSTEM "ref/iaddr.xml">
 <!ENTITY refclicert SYSTEM "ref/clicert.xml">
 <!ENTITY refxml SYSTEM "ref/xml.xml">
-
+<!ENTITY refxmlreq SYSTEM "ref/xmlreq.xml">
 ]>
 
 <book>
@@ -212,6 +212,7 @@ ignoring the WebDAV support if desired.</para>
     &reftok; <!-- ne_token -->
     &refvers; <!-- ne_version_match -->
     &refxml; <!-- ne_xml_parser -->
+    &refxmlreq; <!-- ne_xml_parse_response -->
 
     <!-- REFEND -->
     <!-- ******************************************************************* -->
