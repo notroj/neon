@@ -104,6 +104,13 @@
     <literal>NE_*</literal> error code on failure.</para></refsect1>
 
   <refsect1>
+    <title>History</title>
+
+    <para><function>ne_xml_dispatchif_request</function> is available
+    in &neon; 0.36.0 and later.</para>
+  </refsect1>
+
+  <refsect1>
     <title>See also</title>
 
     <para><xref linkend="ne_xml_create"/>, <xref linkend="ne_request_dispatch"/></para>
