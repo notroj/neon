@@ -948,7 +948,6 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 			       char *buffer, size_t *buflen) 
 {
     ne_socket *const sock = req->session->socket;
-    size_t willread;
     ssize_t readlen;
     
     switch (resp->mode) {
@@ -991,28 +990,31 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
             NE_DEBUG(NE_DBG_HTTP, "req: Chunk size: %lu\n", chunk_len);
             resp->body.chunk.remain = chunk_len;
 	}
-	willread = resp->body.chunk.remain > *buflen
-            ? *buflen : resp->body.chunk.remain;
+        if (resp->body.chunk.remain < *buflen)
+            *buflen = resp->body.chunk.remain;
 	break;
     case R_CLENGTH:
-	willread = resp->body.clen.remain > (off_t)*buflen 
-            ? *buflen : (size_t)resp->body.clen.remain;
+        if (resp->body.clen.remain < (off_t)*buflen)
+            *buflen = (size_t)resp->body.clen.remain;
 	break;
     case R_TILLEOF:
-	willread = *buflen;
+	/* fill whatever buffer space. */
 	break;
     case R_NO_BODY:
     default:
-	willread = 0;
+	*buflen = 0;
 	break;
     }
-    if (willread == 0) {
-	*buflen = 0;
+
+    NE_DEBUG(NE_DBG_HTTP, "req: Reading %" NE_FMT_SIZE_T " bytes "
+             "of response body.\n", *buflen);
+    /* Special case when reaching the end of a known-length response,
+     * *buflen is set to zero and nothing further is read from the
+     * socket. */
+    if (*buflen == 0) {
 	return 0;
     }
-    NE_DEBUG(NE_DBG_HTTP,
-	     "Reading %" NE_FMT_SIZE_T " bytes of response body.\n", willread);
-    readlen = ne_sock_read(sock, buffer, willread);
+    readlen = ne_sock_read(sock, buffer, *buflen);
 
     /* EOF is only valid when response body is delimited by it.
      * Strictly, an SSL truncation should not be treated as an EOF in
@@ -1054,25 +1056,24 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
 {
     struct body_reader *rdr;
-    size_t readlen = buflen;
     struct ne_response *const resp = &req->resp;
 
-    if (read_response_block(req, resp, buffer, &readlen))
+    if (read_response_block(req, resp, buffer, &buflen))
 	return -1;
 
-    if (readlen) {
-        req->session->status.sr.progress += readlen;
+    if (buflen) {
+        req->session->status.sr.progress += buflen;
         notify_status(req->session, ne_status_recving);
     }
 
     for (rdr = req->body_readers; rdr!=NULL; rdr=rdr->next) {
-	if (rdr->use && rdr->handler(rdr->userdata, buffer, readlen) != 0) {
+	if (rdr->use && rdr->handler(rdr->userdata, buffer, buflen) != 0) {
             ne_close_connection(req->session);
             return -1;
         }
     }
     
-    return readlen;
+    return buflen;
 }
 
 /* Build the request string, returning the buffer. */
