@@ -1688,6 +1688,44 @@ int ne_read_response_to_fd(ne_request *req, int fd)
     return len == 0 ? NE_OK : NE_ERROR;
 }
 
+int ne_read_response_to_buffer(ne_request *req, char *buf, size_t *buflen)
+{
+    size_t remain = *buflen;
+    ssize_t rlen = -1;
+    char ch, *ptr = buf;
+    int ret = NE_OK;
+
+    while (ret == NE_OK && remain) {
+        rlen = ne_read_response_block(req, ptr, remain);
+        if (rlen > 0) {
+            remain -= rlen;
+            ptr += rlen;
+        }
+        else if (rlen == 0) {
+            *buflen = ptr - buf;
+            break;
+        }
+        else if (rlen < 0) {
+            ret = NE_ERROR;
+        }
+    }
+
+    /* If the buffer was filled, check whether the entire response
+     * body has been read, and fail with NE_FAILED if not. */
+    if (ret == NE_OK && remain == 0 && rlen > 0) {
+        if ((rlen = ne_read_response_block(req, &ch, sizeof ch)) == 0)
+            *buflen = ptr - buf; /* success, entire response read. */
+        else if (rlen < 0)
+            ret = NE_ERROR;
+        else /* rlen > 0 => more response to read, fail */ {
+            ret = NE_FAILED;
+            ne_set_error(req->session, _("Response buffer size too small"));
+        }
+    }
+
+    return ret;
+}
+
 int ne_discard_response(ne_request *req)
 {
     ssize_t len;

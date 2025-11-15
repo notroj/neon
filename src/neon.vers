@@ -59,4 +59,6 @@ NEON_0_35 {
 
 NEON_0_36 {
     ne_xml_dispatchif_request;
+    ne_getbuf;
+    ne_read_response_to_buffer;
 };
