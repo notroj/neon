@@ -22,7 +22,7 @@
 	  </funcprototype>
 
 	  <funcprototype>
-	    <funcdef>int <function>ne_read_response_to_fd</function></funcdef>
+	    <funcdef>int <function>ne_read_response_to_buffer</function></funcdef>
 	    <paramdef>ne_request *<parameter>req</parameter></paramdef>
 	    <paramdef>char *<parameter>data</parameter></paramdef>
 	    <paramdef>size_t *<parameter>buflen</parameter></paramdef>
