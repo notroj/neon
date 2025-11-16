@@ -70,6 +70,13 @@
       </refsect1>
 
       <refsect1>
+        <title>History</title>
+
+        <para><function>ne_read_response_to_buffer</function> is available
+        in &neon; 0.36.0 and later.</para>
+      </refsect1>
+
+      <refsect1>
 	<title>See also</title>
 
 	<para><xref linkend="ne_request_create"/>, <xref
