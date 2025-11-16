@@ -16,7 +16,7 @@
 
     <funcsynopsis>
 
-      <funcsynopsisinfo>#include &lt;ne_xml.h&gt;</funcsynopsisinfo>
+      <funcsynopsisinfo>#include &lt;ne_xmlreq.h&gt;</funcsynopsisinfo>
 
       <funcprototype>
         <funcdef>int <function>ne_xml_parse_response</function></funcdef>
