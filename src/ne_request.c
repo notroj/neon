@@ -1057,12 +1057,17 @@ ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen)
 {
     struct body_reader *rdr;
     struct ne_response *const resp = &req->resp;
+    ne_session_status_info *const info = &req->session->status;
 
     if (read_response_block(req, resp, buffer, &buflen))
 	return -1;
 
     if (buflen) {
-        req->session->status.sr.progress += buflen;
+        info->sr.progress += buflen;
+        notify_status(req->session, ne_status_recving);
+    }
+    else if (info->sr.total == -1) {
+        info->sr.total = info->sr.progress;
         notify_status(req->session, ne_status_recving);
     }
 

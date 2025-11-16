@@ -1987,6 +1987,7 @@ static int status_chunked(void)
                 "recv(3,-1)-"
                 "recv(4,-1)-"
                 "recv(5,-1)-"
+                "recv(5,5)-"
                 "disconnected(%s)-",
                 host, addr, host, host);
 
