@@ -1998,12 +1998,9 @@ static int open_connection(ne_session *sess)
         /* Set up CONNECT tunnel if using an HTTP proxy. */
         if (sess->nexthop->proxy == PROXY_HTTP)
             ret = proxy_tunnel(sess);
-        
-        if (ret == NE_OK) {
-            ret = ne__negotiate_ssl(sess);
-            if (ret != NE_OK)
-                ne_close_connection(sess);
-        }
+
+        if (ret == NE_OK) ret = ne__negotiate_ssl(sess);
+        if (ret != NE_OK) ne_close_connection(sess);
     }
 #endif
     
