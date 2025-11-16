@@ -62,8 +62,8 @@
       <refsect1>
 	<title>Return value</title>
 
-	<para>Both functions return zero on success, or an
-	<literal>NE_*</literal> error code on failure. The
+	<para>Both functions return zero on success, or an <xref
+	linkend="error-codes"/> on failure. The
 	<function>ne_read_response_to_buffer</function> function
 	returns <literal>NE_FAILED</literal> if the response message
 	length is larger than the buffer length.</para>
