@@ -3,8 +3,10 @@ Changes in release 0.36.0:
  - API and ABI backwards-compatible with 0.27.x and later
 * New interfaces and features:
  - ne_xmlreq.h: add ne_xml_dispatchif_request()
+ - ne_request.h: add ne_read_response_to_buffer()
+ - ne_basic.h: add ne_getbuf()
 * Bug fixes:
- - fix ne_simple_request() to fail on non-207 XML responses (#208)
+ - fix ne_simple_request() failures on non-207 XML responses (#208)
 
 Changes in release 0.35.0:
 * Interface changes:
