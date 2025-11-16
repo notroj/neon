@@ -101,7 +101,7 @@
     <title>Return value</title>
 
     <para>All functions documented here return zero on success, or an
-    <literal>NE_*</literal> error code on failure.</para></refsect1>
+    <xref linkend="error-codes"/> on failure.</para></refsect1>
 
   <refsect1>
     <title>History</title>
