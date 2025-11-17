@@ -5,10 +5,12 @@ Changes in release 0.36.0:
  - ne_xmlreq.h: add ne_xml_dispatchif_request()
  - ne_request.h: add ne_read_response_to_buffer()
  - ne_basic.h: add ne_getbuf()
-* Bug fixes and other changes:
+* Bug fixes:
  - fix ne_simple_request() failures on non-207 XML responses (#208)
  - invoke the notifier callback again at the end of a chunked response
- - various documentation updates.
+ - fix a failure case where a proxy connection could get reused after
+   SSL proxy tunnel setup failed at the proxy
+* Various documentation updates.
 
 Changes in release 0.35.0:
 * Interface changes:
