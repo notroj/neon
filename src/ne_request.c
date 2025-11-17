@@ -859,6 +859,8 @@ void ne_request_destroy(ne_request *req)
     struct interim_handler *ih, *next_ih;
     struct hook *hk, *next_hk;
 
+    NE_DEBUG(NE_DBG_HTTP, "req: Destroy (%s %s).\n", req->method, req->target);
+
     ne_free(req->target);
     ne_free(req->method);
     if (req->target_uri) {
@@ -895,7 +897,6 @@ void ne_request_destroy(ne_request *req)
     if (req->status.reason_phrase)
 	ne_free(req->status.reason_phrase);
 
-    NE_DEBUG(NE_DBG_HTTP, "Request ends.\n");
     ne_free(req);
 }
 
