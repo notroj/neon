@@ -10,6 +10,7 @@ Changes in release 0.36.0:
  - invoke the notifier callback again at the end of a chunked response
  - fix a failure case where a proxy connection could get reused after
    SSL proxy tunnel setup failed at the proxy
+ - fix ne_sock_* OpenSSL 3.4 error handling on Windows (#213)
 * Various documentation updates.
 
 Changes in release 0.35.0:
