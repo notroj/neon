@@ -65,7 +65,7 @@ int ne_xml_parse_response(ne_request *req, ne_xml_parser *parser)
 }
 
 /* Returns non-zero if given content-type is an XML media type,
- * following the RFC 3023 rules. */
+ * following the RFC 7303 rules. */
 static int media_type_is_xml(const ne_content_type *ctype)
 {
     size_t stlen;
@@ -100,6 +100,12 @@ int ne_xml_dispatchif_request(ne_request *req, ne_xml_parser *parser,
 
             if (ne_get_content_type(req, &ctype) == 0) {
                 parseit = media_type_is_xml(&ctype);
+
+                if (parseit && ctype.charset) {
+                    NE_DEBUG(NE_DBG_XML, "xmlreq: Using charset '%s'\n",
+                             ctype.charset);
+                    parseit = ne_xml_set_encoding(parser, ctype.charset) == 0;
+                }
                 ne_free(ctype.value);
             }
 
