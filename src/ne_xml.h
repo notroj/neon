@@ -78,6 +78,10 @@ typedef struct ne_xml_parser_s ne_xml_parser;
 /* Create an XML parser. */
 ne_xml_parser *ne_xml_create(void);
 
+/* Set character encoding 'encoding' for the parser 'p'. Returns
+ * zero on success, non-zero on failure. */
+int ne_xml_set_encoding(ne_xml_parser *p, const char *encoding);
+
 /* Push a new handler on the stack of parser 'p'. 'cdata' and/or
  * 'endelm' may be NULL; startelm must be non-NULL. */
 void ne_xml_push_handler(ne_xml_parser *p,
