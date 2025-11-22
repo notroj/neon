@@ -100,6 +100,10 @@ int ne_xml_dispatchif_request(ne_request *req, ne_xml_parser *parser,
 
             if (ne_get_content_type(req, &ctype) == 0) {
                 parseit = media_type_is_xml(&ctype);
+
+                if (parseit && ctype.charset)
+                    parseit = ne_xml_set_encoding(parser, ctype.charset) == 0;
+
                 ne_free(ctype.value);
             }
 

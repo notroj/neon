@@ -50,32 +50,78 @@ static int startelm(void *userdata, int state,
     return ++state;
 }
 
-static int success(void)
+static int pc_startelm(void *userdata, int state,
+                    const char *nspace, const char *name,
+		    const char **atts)
+{
+    ne_buffer *buf = userdata;
+    ne_buffer_concat(buf, "<", "{", nspace, "}", name, ">", NULL);
+    return state + 1;
+}
+
+static int pc_chardata(void *userdata, int state, const char *cdata, size_t len)
+{
+    ne_buffer *buf = userdata;
+    ne_buffer_append(buf, cdata, len);
+    return NE_XML_DECLINE;
+}
+
+static int parse_for_ctype(const char *ctype, const char *body,
+                           const char *output)
 {
     ne_session *sess;
     ne_request *req;
     ne_xml_parser *parser;
-    int flag = 0;
+    ne_buffer *buf = ne_buffer_create();
+    char response[BUFSIZ];
 
-    CALL(make_session(&sess, single_serve_string, 
-                      "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: text/xml\r\n"
-                      "Connection: close\r\n" "\r\n"
-                      "<?xml version='1.0' encoding='UTF-8'?>\n"
-                      "<hello/>"));
+    ne_snprintf(response, sizeof response,
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: %s\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "%s", 
+                ctype, body);
+
+    CALL(make_session(&sess, single_serve_string, response));
     
     req = ne_request_create(sess, "PARSE", "/");
     parser = ne_xml_create();
 
-    ne_xml_push_handler(parser, startelm, NULL, NULL, &flag);
+    ne_xml_push_handler(parser, pc_startelm, pc_chardata, NULL, buf);
     
     ONREQ(ne_xml_dispatch_request(req, parser));
 
-    ONN("XML parser not invoked", !flag);
-    
+    if (output) {
+        ONV(strcmp(buf->data, output),
+            ("for '%s': result mismatch: %s not %s", ctype, buf->data,
+             output));
+    }
+
+    ne_buffer_destroy(buf);
     ne_xml_destroy(parser);
     ne_request_destroy(req);
     return destroy_and_wait(sess);
+}
+
+#define ISO_FOOBAR "f\xd8\xd8" "b\xe1" "r"
+
+static int success(void)
+{
+    static const struct {
+        const char *ctype, *body, *output;
+    } ts[] = {
+        { "text/xml", "<?xml version='1.0' encoding='UTF-8'?>\n<hello>foo</hello>", "<{}hello>foo" },
+        { "text/xml; charset=ISO-8859-1", "<?xml version='1.0'?>\n<hello>" ISO_FOOBAR "</hello>",
+          "<{}hello>fØØbár" },
+        { "application/xml", "<?xml version='1.0'?><hello/>" },
+    };
+    unsigned n;
+
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++)
+        CALL(parse_for_ctype(ts[n].ctype, ts[n].body, ts[n].output));
+
+    return OK;
 }
 
 static int failure(void)
