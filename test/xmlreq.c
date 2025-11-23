@@ -66,7 +66,7 @@ static int pc_chardata(void *userdata, int state, const char *cdata, size_t len)
     return NE_XML_DECLINE;
 }
 
-static int parse_for_ctype(const char *ctype, const char *body,
+static int parse_for_ctype(const char *ctype, const char *body, size_t len,
                            const char *output)
 {
     ne_session *sess;
@@ -75,19 +75,16 @@ static int parse_for_ctype(const char *ctype, const char *body,
     ne_buffer *buf = ne_buffer_create();
     char response[BUFSIZ];
 
-    ne_snprintf(response, sizeof response,
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: %s\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-                "%s", 
-                ctype, body);
+    ne_buffer_concat(buf, "HTTP/1.1 200 OK\r\n" "Content-Type: ", ctype, "\r\n",
+                     "Connection: close\r\n" "\r\n", NULL);
+    ne_buffer_append(buf, body, len);
 
-    CALL(make_session(&sess, single_serve_string, response));
+    CALL(make_session(&sess, serve_buffer, buf));
     
     req = ne_request_create(sess, "PARSE", "/");
     parser = ne_xml_create();
 
+    ne_buffer_clear(buf);
     ne_xml_push_handler(parser, pc_startelm, pc_chardata, NULL, buf);
     
     ONREQ(ne_xml_dispatch_request(req, parser));
@@ -105,24 +102,47 @@ static int parse_for_ctype(const char *ctype, const char *body,
 }
 
 #define ISO_FOOBAR "f\xd8\xd8" "b\xe1" "r"
+#define UTF8_FOOBAR "fØØbár"
+
+static const unsigned char foobar_utf16_be[] = {
+  0x00, 0x3c, 0x00, 0x3f, 0x00, 0x78, 0x00, 0x6d, 0x00, 0x6c, 0x00, 0x20,
+  0x00, 0x76, 0x00, 0x65, 0x00, 0x72, 0x00, 0x73, 0x00, 0x69, 0x00, 0x6f,
+  0x00, 0x6e, 0x00, 0x3d, 0x00, 0x27, 0x00, 0x31, 0x00, 0x2e, 0x00, 0x30,
+  0x00, 0x27, 0x00, 0x20, 0x00, 0x65, 0x00, 0x6e, 0x00, 0x63, 0x00, 0x6f,
+  0x00, 0x64, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x67, 0x00, 0x3d, 0x00, 0x27,
+  0x00, 0x75, 0x00, 0x74, 0x00, 0x66, 0x00, 0x2d, 0x00, 0x38, 0x00, 0x27,
+  0x00, 0x3f, 0x00, 0x3e, 0x00, 0x0a, 0x00, 0x3c, 0x00, 0x66, 0x00, 0x6f,
+  0x00, 0x6f, 0x00, 0x62, 0x00, 0x61, 0x00, 0x72, 0x00, 0x3e, 0x00, 0x66,
+  0x00, 0xd8, 0x00, 0xd8, 0x00, 0x62, 0x00, 0xe1, 0x00, 0x72, 0x00, 0x3c,
+  0x00, 0x2f, 0x00, 0x66, 0x00, 0x6f, 0x00, 0x6f, 0x00, 0x62, 0x00, 0x61,
+  0x00, 0x72, 0x00, 0x3e, 0x00, 0x0a
+};
+
+#define SL(s_) s_, strlen(s_)
 
 static int success(void)
 {
     static const struct {
-        const char *ctype, *body, *output;
+        const char *ctype, *body;
+        size_t len;
+        const char *output;
     } ts[] = {
-        { "text/xml", "<?xml version='1.0' encoding='UTF-8'?>\n<hello>foo</hello>", "<{}hello>foo" },
-        { "text/xml; charset=ISO-8859-1", "<?xml version='1.0'?>\n<hello>" ISO_FOOBAR "</hello>",
-          "<{}hello>fØØbár" },
-        { "application/xml", "<?xml version='1.0'?><hello/>" },
+        { "text/xml", SL("<?xml version='1.0' encoding='UTF-8'?>\n<hello>foo</hello>"), "<{}hello>foo" },
+        { "text/xml; charset=ISO-8859-1", SL("<?xml version='1.0'?>\n<hello>" ISO_FOOBAR "</hello>"),
+          "<{}hello>" UTF8_FOOBAR },
+        { "application/xml; charset=UTF-16BE", (const char *)foobar_utf16_be, sizeof foobar_utf16_be,
+          "<{}foobar>" UTF8_FOOBAR },
+        { "application/xml", SL("<?xml version='1.0'?><hello/>") }
     };
     unsigned n;
 
     for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++)
-        CALL(parse_for_ctype(ts[n].ctype, ts[n].body, ts[n].output));
+        CALL(parse_for_ctype(ts[n].ctype, ts[n].body, ts[n].len, ts[n].output));
 
     return OK;
 }
+
+#undef SL
 
 static int failure(void)
 {
