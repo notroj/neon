@@ -242,7 +242,8 @@ static int parse_match(const char *doc, const char *result,
     
     if (t == match_encoding) {
         const char *enc = ne_xml_doc_encoding(p);
-        ONV(strcmp(enc, result), 
+
+        ONV(enc == NULL || strcmp(enc, result),
             ("for '%s': encoding was `%s' not `%s'", origdoc, enc, result));
     }
     else if (t == match_valid || t == match_chunked) {
@@ -596,7 +597,7 @@ static int errors(void)
     ONV(strcmp(err, "Fish food"), ("wrong error %s!", err));
 
     ne_xml_destroy(p);
-    return 0;        
+    return 0;
 }
 
 ne_test tests[] = {
