@@ -56,7 +56,7 @@ static int patch_simple(void)
     return destroy_and_wait(sess);
 }
 
-#define RESP207 "HTTP/1.0 207 Stuff\r\n" "Server: foo\r\n\r\n"
+#define RESP207 "HTTP/1.0 207 Stuff\r\n" "Content-Type: text/xml\r\n" "Server: foo\r\n\r\n"
 
 static void dummy_results(void *ud, const ne_uri *uri,
 			  const ne_prop_result_set *rset)
