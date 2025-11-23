@@ -153,6 +153,35 @@ static int failure(void)
     return destroy_and_wait(sess);
 }
 
+static int fail_ctype(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    ne_xml_parser *parser;
+
+    CALL(make_session(&sess, single_serve_string, 
+                      "HTTP/1.1 200 OK\r\n"
+                      "Content-Type: text/xml; charset=FOOBAR-16\r\n"
+                      "Connection: close\r\n" "\r\n"
+                      "<?xml version='1.0' encoding='UTF-8'?>\n"
+                      "<hello/>"));
+
+    req = ne_request_create(sess, "PARSE", "/");
+    parser = ne_xml_create();
+
+    ONN("XML parse did not fail",
+        ne_xml_dispatch_request(req, parser) == NE_OK);
+
+    NE_DEBUG(NE_DBG_HTTP, "error string: %s\n", ne_get_error(sess));
+
+    ONV(strstr(ne_get_error(sess), "200 OK") != NULL,
+        ("no error string set on parse error: '%s'", ne_get_error(sess)));
+
+    ne_xml_destroy(parser);
+    ne_request_destroy(req);
+    return destroy_and_wait(sess);
+}
+
 static int types(void)
 {
     static const struct {
@@ -214,6 +243,7 @@ static int types(void)
 ne_test tests[] = {
     T(success),
     T(failure),
+    T(fail_ctype),
     T(types),
     T(NULL)
 };
