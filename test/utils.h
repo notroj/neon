@@ -175,7 +175,7 @@ int file_to_buffer(const char *filename, ne_buffer *buf);
 void sess_notifier(void *userdata, ne_session_status status,
                    const ne_session_status_info *info);
 
-#define MULTI_207(x) "HTTP/1.0 207 Foo\r\nConnection: close\r\n\r\n" \
+#define MULTI_207(x) "HTTP/1.0 207 Foo\r\nContent-Type: text/xml\r\nConnection: close\r\n\r\n" \
 "<?xml version='1.0'?>\r\n" \
 "<D:multistatus xmlns:D='DAV:'>" x "</D:multistatus>"
 #define RESP_207(href, x) "<D:response><D:href>" href "</D:href>" x \
