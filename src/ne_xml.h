@@ -140,9 +140,9 @@ const char *ne_xml_get_attr(ne_xml_parser *parser,
 const char *ne_xml_resolve_nspace(ne_xml_parser *parser, 
                                   const char *prefix, size_t length);
 
-/* Return the encoding of the document being parsed.  May return NULL
- * if no encoding is defined or if the XML declaration has not yet
- * been parsed. */
+/* Return the encoding of the document being parsed as provided by the
+ * declaration. May return NULL if no encoding is defined in the
+ * declaration, or if the XML declaration has not yet been parsed. */
 const char *ne_xml_doc_encoding(const ne_xml_parser *p);
 
 /* Destroy the parser object. */
