@@ -46,10 +46,9 @@ static int content_type(void)
 	{ "foo/bar", "foo", "bar", NULL },
 	{ "foo/bar  ", "foo", "bar", NULL },
 	{ "application/xml", "application", "xml", NULL },
-	/* text/ subtypes default to charset ISO-8859-1, per 2616. */
-	{ "text/lemon", "text", "lemon", "ISO-8859-1" },
-        /* text/xml defaults to charset us-ascii, per 3280 */
-        { "text/xml", "text", "xml", "us-ascii" },        
+        /* these rules previously applied RFC 3023, now updated for 7303. */
+        { "text/lemon", "text", "lemon", NULL },
+        { "text/xml", "text", "xml", NULL },
 #undef TXU
 #define TXU "text", "xml", "utf-8"
 	/* 2616 doesn't *say* that charset can be quoted, but bets are
