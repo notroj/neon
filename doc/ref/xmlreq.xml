@@ -74,7 +74,7 @@
     </itemizedlist>
 
     In both cases, the rules in <ulink
-    url="https://www.rfc-editor.org/rfc/rfc3023">RFC 3023</ulink> are
+    url="https://www.rfc-editor.org/rfc/rfc7303">RFC 7303</ulink> are
     followed to identify XML content-types, that is
     <literal>text/xml</literal>, <literal>application/xml</literal>,
     or any other content-type ending in a <literal>+xml</literal>
