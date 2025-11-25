@@ -1574,16 +1574,12 @@ static int forget(void)
     CALL(make_session(&sess, serve_forgotten, NULL));
 
     ne_set_server_auth(sess, auth_cb, NULL);
-    
     CALL(any_2xx_request(sess, "/norman"));
     
     ne_forget_auth(sess);
-
     CALL(any_2xx_request(sess, "/norman"));
 
-    ne_session_destroy(sess);
-    
-    return await_server();
+    return destroy_and_wait(sess);
 }
 
 static int serve_basic_scope_checker(ne_socket *sock, void *userdata)
