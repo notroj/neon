@@ -377,7 +377,6 @@ static int getbuf_retry(void)
     ne_session *sess;
     char buf[6] = "00000";
     size_t buflen = sizeof buf;
-    int ret;
 
     CALL(make_session(&sess, single_serve_string,
                       "HTTP/1.1 401 Retry Please\r\n" "Server: neon-test-server\r\n"
@@ -392,11 +391,9 @@ static int getbuf_retry(void)
     ne_hook_post_send(sess, post_getbuf_retry, NULL);
     
     ONREQ(ne_getbuf(sess, "/", buf, &buflen));
-    ONV(ret != NE_OK, ("overflow case gave %d not FAILED", ret));
     ONV(buflen != 1, ("buffer length returned as %" NE_FMT_SIZE_T, buflen));
 
-    ret = any_request(sess, "/closeme");
-    ONN("failed to close connection", ret != NE_CONNECT);
+    ONN("failed to close connection", any_request(sess, "/closeme") != NE_CONNECT);
 
     return destroy_and_wait(sess);
 }
