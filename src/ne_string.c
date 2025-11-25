@@ -67,7 +67,7 @@ char *ne_qtoken(char **str, char separator, const char *quotes)
     char *pnt, *ret = NULL;
 
     for (pnt = *str; *pnt != '\0'; pnt++) {
-	char *quot = strchr(quotes, *pnt);
+	const char *quot = strchr(quotes, *pnt);
 	
 	if (quot) {
 	    char *qclose = strchr(pnt+1, *quot);
