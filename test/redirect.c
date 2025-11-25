@@ -190,10 +190,11 @@ static int no_redirect(void)
     ONN("initial redirect non-NULL", ne_redirect_location(sess));
 
     ONREQ(any_request(sess, "/noredir"));
-
     ONN("redirect non-NULL after non-redir req", ne_redirect_location(sess));
 
     CALL(process_redir(sess, "/foo", &loc));
+    ONV(loc == NULL || strcmp(loc->path, "/blah"),
+        ("redirect returned was '%s' not /blah", loc ? loc->path : "(null)"));
 
     return destroy_and_wait(sess);
 }
