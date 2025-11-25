@@ -1010,7 +1010,7 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
     ne_sock_addr *addr = ne_calloc(sizeof *addr);
 #ifdef USE_GETADDRINFO
     struct addrinfo hints = {0};
-    char *pnt;
+    const char *pnt;
 
     hints.ai_socktype = SOCK_STREAM;
 

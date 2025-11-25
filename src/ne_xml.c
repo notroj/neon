@@ -695,7 +695,7 @@ ne_xml_get_attr(ne_xml_parser *p, const char **attrs,
     int n;
 
     for (n = 0; attrs[n] != NULL; n += 2) {
-	char *pnt = strchr(attrs[n], ':');
+	const char *pnt = strchr(attrs[n], ':');
 
 	if (!nspace && !pnt && strcmp(attrs[n], name) == 0) {
 	    return attrs[n+1];
