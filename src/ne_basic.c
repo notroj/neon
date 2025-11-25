@@ -458,7 +458,7 @@ static int copy_or_move(ne_session *sess, int is_move, int overwrite,
 {
     ne_request *req = ne_request_create( sess, is_move?"MOVE":"COPY", src );
 
-    /* RFC4918ẞ9.9.2 - "Depth: infinity" is implicit for MOVE. */
+    /* RFC4918§9.9.2 - "Depth: infinity" is implicit for MOVE. */
     if (!is_move) {
 	ne_add_depth_header(req, depth);
     }
@@ -511,7 +511,7 @@ int ne_delete(ne_session *sess, const char *path)
     ne_lock_using_parent(req, path);
 #endif
     
-    /* Per RFC4918ẞ9.6.1 DELETE can get a 207 response. */
+    /* Per RFC4918§9.6.1 DELETE can get a 207 response. */
     return ne_simple_request(sess, req);
 }
 

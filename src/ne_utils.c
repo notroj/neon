@@ -215,7 +215,7 @@ static const unsigned char table_status_line[256] = {
 /* xF0 */ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10
 }; /* -- Generated code from 'mktable status_line' ends. */
 
-/* Strict parser per RFC9112ẞ4:
+/* Strict parser per RFC9112§4:
  *
  *    status-line = HTTP-version SP status-code SP [ reason-phrase ]
  *  HTTP-version  = HTTP-name "/" DIGIT "." DIGIT

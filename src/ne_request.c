@@ -559,7 +559,7 @@ ne_request *ne_request_create(ne_session *sess, const char *method,
     return req;
 }
 
-/* Reconstruct the request target URI following RFC 9112ẞ3.3. Returns
+/* Reconstruct the request target URI following RFC 9112§3.3. Returns
  * zero on success or non-zero on error. */
 static int get_request_target_uri(ne_request *req, ne_uri *uri)
 {
@@ -779,7 +779,7 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
 
     memset(&dest, 0, sizeof dest);
 
-    /* Location is a URI-reference (RFC9110ẞ10.2.2) relative to the
+    /* Location is a URI-reference (RFC9110§10.2.2) relative to the
      * request target URI; determine each of these then resolve. */
 
     /* Parse the Location header */
@@ -798,7 +798,7 @@ ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
     ret = ne_malloc(sizeof *ret);
     ne_uri_resolve(base, &dest, ret);
 
-    /* HTTP-specific fragment handling is a MUST in RFC9110ẞ10.2.2: */
+    /* HTTP-specific fragment handling is a MUST in RFC9110§10.2.2: */
     if (fragment && !dest.fragment) {
         ret->fragment = ne_strdup(fragment);
     }
@@ -900,7 +900,7 @@ void ne_request_destroy(ne_request *req)
     ne_free(req);
 }
 
-/* Read an HTTP message line following RFC 9112ẞ2.2, returning <0 on
+/* Read an HTTP message line following RFC 9112§2.2, returning <0 on
  * error, >= 0 for line length excluding trailing CRLF. Bare CR are
  * converted to spaces. */
 static ssize_t read_message_line(ne_socket *sock, char *const buf, size_t buflen)
@@ -1253,7 +1253,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
         }
     }
 
-    /* Per RFC 9110ẞ15.5.9 a client MAY retry an outstanding request
+    /* Per RFC 9110§15.5.9 a client MAY retry an outstanding request
      * after a 408. Some modern servers generate this. */
     if (sess->persisted && status->code == 408) {
         NE_DEBUG(NE_DBG_HTTP, "req: Retrying after 408.\n");
@@ -1288,7 +1288,7 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
     buf += n;
     buflen -= n;
 
-    /* Per RFC9112ẞ5.2, append any folded headers extended over
+    /* Per RFC9112§5.2, append any folded headers extended over
      * multiple lines. */
     while (buflen > 0) {
 	char ch;
@@ -1351,7 +1351,7 @@ static void add_response_header(ne_request *req, unsigned int hash,
     (*nextf)->next = NULL;
 }
 
-/* HTTP token lookup per RFC9110ẞ5.6.2 - returns tolower(ch) or 0 for
+/* HTTP token lookup per RFC9110§5.6.2 - returns tolower(ch) or 0 for
  * non-token characters. */
 
 /* Generated with 'mktable http_token', do not alter here -- */
@@ -1407,9 +1407,9 @@ static int read_response_headers(ne_request *req, int clear)
         char *pnt, ch;
         unsigned int hash = 0;
 
-        /* Parse field-line per RFC9110ẞ5:
+        /* Parse field-line per RFC9110§5:
          *    field-line   = field-name ":" OWS field-value OWS
-         * where field-name is defined as a token, RFC9110ẞ5.1. */
+         * where field-name is defined as a token, RFC9110§5.1. */
 
         /* Strip trailing OWS */
         pnt = hdr + strlen(hdr) - 1;
@@ -1425,7 +1425,7 @@ static int read_response_headers(ne_request *req, int clear)
         }
 
         /* Ignore header lines where ':' is not directly after the
-         * token (per RFC9112ẞ5.1). */
+         * token (per RFC9112§5.1). */
         if (pnt[0] != ':') {
             NE_DEBUG(NE_DBG_HTTP, "req: Ignoring invalid field %s\n", hdr);
             continue;
