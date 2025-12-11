@@ -104,7 +104,9 @@ int ne_xml_dispatchif_request(ne_request *req, ne_xml_parser *parser,
                 if (parseit && ctype.charset) {
                     NE_DEBUG(NE_DBG_XML, "xmlreq: Using charset '%s'\n",
                              ctype.charset);
-                    parseit = ne_xml_set_encoding(parser, ctype.charset) == 0;
+                    if (ne_xml_set_encoding(parser, ctype.charset)) {
+                        return parse_error(ne_get_session(req), parser);
+                    }
                 }
                 ne_free(ctype.value);
             }
