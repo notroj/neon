@@ -107,6 +107,7 @@ int ne_xml_dispatchif_request(ne_request *req, ne_xml_parser *parser,
                     NE_DEBUG(NE_DBG_XML, "xmlreq: Using charset '%s'\n",
                              ctype.charset);
                     if (ne_xml_set_encoding(parser, ctype.charset)) {
+                        ne_free(ctype.value);
                         return parse_error(req, parser);
                     }
                 }
