@@ -129,10 +129,10 @@ static int init_ssl(void)
 
     ne_ssl_context_keypair(server_ctx, "server.cert", server_key);
 
-    client_ctx = ne_ssl_context_create(0);
+    client_ctx = ne_ssl_context_create(NE_SSL_CTX_CLIENT);
     ONN("SSL_CTX_new failed for client", client_ctx == NULL);
 
-    client_ctx_tls12 = ne_ssl_context_create(0);
+    client_ctx_tls12 = ne_ssl_context_create(NE_SSL_CTX_CLIENT);
     ONN("SSL_CTX_new failed for client", client_ctx_tls12 == NULL);
     ne_ssl_context_set_versions(client_ctx_tls12, NE_SSL_PROTO_TLS_1_2,
                                 NE_SSL_PROTO_TLS_1_2);
@@ -1472,6 +1472,21 @@ static int proto_tls12(void)
 
     return finish(sock, 1);
 }
+
+static int context_untrusted(void)
+{
+    ne_ssl_context *ctx = ne_ssl_context_create(NE_SSL_CTX_CLIENT);
+    ne_socket *sock;
+
+    ONN("SSL_CTX_new failed for notrust client", ctx == NULL);
+
+    CALL(beginc(&sock, ctx, serve_close, NULL));
+    CALL(finish(sock, 1));
+
+    ne_ssl_context_destroy(ctx);
+
+    return OK;
+}
 #endif
 
 static int error(void)
@@ -1667,6 +1682,7 @@ ne_test tests[] = {
     T(protocols),
 #ifdef SOCKET_SSL
     T(proto_tls12),
+    T(context_untrusted),
 #endif
     T(line_simple),
     T(line_closure),
