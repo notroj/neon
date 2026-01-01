@@ -392,7 +392,8 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
      * yet to be born.  Or... "Seriously, wtf?"  */
     SSL *ssl = X509_STORE_CTX_get_ex_data(ctx, 
                                           SSL_get_ex_data_X509_STORE_CTX_idx());
-    ne_session *sess = SSL_get_app_data(ssl);
+    SSL_CTX *sslctx = SSL_get_SSL_CTX(ssl);
+    ne_ssl_context *sctx = SSL_CTX_get_app_data(sslctx);
     int depth = X509_STORE_CTX_get_error_depth(ctx);
     int err = X509_STORE_CTX_get_error(ctx);
     int failures = 0;
@@ -424,16 +425,16 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
     default:
         /* Clear the failures bitmask so check_certificate knows this
          * is a bailout. */
-        sess->ssl_context->failures |= NE_SSL_UNHANDLED;
+        sctx->failures |= NE_SSL_UNHANDLED;
         NE_DEBUG(NE_DBG_SSL, "ssl: Unhandled verification error %d -> %s\n", 
                  err, X509_verify_cert_error_string(err));
         return 0;
     }
 
-    sess->ssl_context->failures |= failures;
+    sctx->failures |= failures;
 
     NE_DEBUG(NE_DBG_SSL, "ssl: Verify failures |= %d => %d\n", failures,
-             sess->ssl_context->failures);
+             sctx->failures);
     
     return 1;
 }
