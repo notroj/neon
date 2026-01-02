@@ -172,6 +172,10 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *ccert, const char *password);
  * object which is in the encrypted state. */
 const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert);
 
+/* Copy a client certificate object. This function has undefined
+ * behaviour for a ccert object which is in the encrypted state. */
+ne_ssl_client_cert *ne_ssl_clicert_copy(const ne_ssl_client_cert *ccert);
+
 /* Destroy a client certificate object.  This function may be used on
  * a ccert object in either the encrypted or decrypted state. */
 void ne_ssl_clicert_free(ne_ssl_client_cert *ccert);

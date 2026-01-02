@@ -567,6 +567,14 @@ void ne_ssl_provide_clicert(ne_session *sess,
     sess->ssl_provide_ud = userdata;
 }
 
+void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
+{
+#ifdef NE_HAVE_SSL
+    if (sess->client_cert) ne_ssl_clicert_free(sess->client_cert);
+    sess->client_cert = ne_ssl_clicert_copy(cc);
+#endif
+}
+
 void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 {
 #ifdef NE_HAVE_SSL

@@ -1,3 +1,6 @@
+Changes in release 0.36.1:
+* Fix ne_xml_set_encoding() failure case with libxml 2.13+.
+
 Changes in release 0.36.0:
 * Interface changes:
  - API and ABI backwards-compatible with 0.27.x and later
