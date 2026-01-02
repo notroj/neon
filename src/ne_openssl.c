@@ -511,14 +511,15 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
     return ret;
 }
 
-/* Duplicate a client certificate, which must be in the decrypted state. */
-static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
+ne_ssl_client_cert *ne_ssl_clicert_copy(const ne_ssl_client_cert *cc)
 {
     ne_ssl_client_cert *newcc = ne_calloc(sizeof *newcc);
     
     newcc->pkey = cc->pkey;
     if (cc->friendly_name)
         newcc->friendly_name = ne_strdup(cc->friendly_name);
+    if (cc->uri)
+        newcc->uri = ne_strdup(cc->uri);
 
     populate_cert(&newcc->cert, cc->cert.subject);
 
@@ -571,11 +572,6 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 	NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
 	return 0;
     }
-}
-
-void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
-{
-    sess->client_cert = dup_client_cert(cc);
 }
 
 static int new_ssl_session(SSL *ssl, SSL_SESSION *sslsess)

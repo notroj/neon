@@ -498,8 +498,7 @@ static gnutls_x509_crt_t x509_crt_copy(gnutls_x509_crt_t src)
     return dest;
 }
 
-/* Duplicate a client certificate, which must be in the decrypted state. */
-static ne_ssl_client_cert *dup_client_cert(const ne_ssl_client_cert *cc)
+ne_ssl_client_cert *ne_ssl_clicert_copy(const ne_ssl_client_cert *cc)
 {
     int ret;
     ne_ssl_client_cert *newcc = ne_calloc(sizeof *newcc);
@@ -664,11 +663,6 @@ static int provide_client_cert(gnutls_session_t session,
     }
 
     return 0;
-}
-
-void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
-{
-    sess->client_cert = dup_client_cert(cc);
 }
 
 ne_ssl_context *ne_ssl_context_create(int flags)

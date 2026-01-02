@@ -346,7 +346,7 @@ static int trust_default_ca(void)
 /* Tests for loading client certificates */
 static int load_client_cert(void)
 {
-    ne_ssl_client_cert *cc;
+    ne_ssl_client_cert *cc, *cc2;
     const ne_ssl_certificate *cert;
     const char *name;
 
@@ -379,6 +379,15 @@ static int load_client_cert(void)
                      "client cert subject"));
     CALL(check_dname(ne_ssl_cert_issuer(cert), CACERT_DNAME, 
                      "client cert issuer"));
+
+    cc2 = ne_ssl_clicert_copy(cc);
+    ONN("could not load unencrypted cert unclient.p12", cc == NULL);
+    ONN("copied cert marked encrypted?", ne_ssl_clicert_encrypted(cc));
+    cert = ne_ssl_clicert_owner(cc);
+    ONN("client cert had no certificate", cert == NULL);
+    ONCMP(ne_ssl_clicert_name(cc), ne_ssl_clicert_name(cc2),
+          "clicert", "duplicate cert name");
+    ne_ssl_clicert_free(cc2);
     ne_ssl_clicert_free(cc);
 
     /* test for ccert without a friendly name, noclient.p12 */
