@@ -1147,6 +1147,9 @@ static int ccert_unencrypted(void)
     CALL(load_and_trust_cert(sess, CA_CERT));
     CALL(any_request(sess, "/foo"));
 
+    /* Calling twice to ensure there is no memory leaked. */
+    ne_ssl_set_clicert(sess, ccert);
+
     ne_ssl_clicert_free(ccert);
     return destroy_and_wait(sess);
 }
