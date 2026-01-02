@@ -143,7 +143,7 @@ static int stub_ssl(void)
         name = ne_ssl_clicert_name(cc);
         ONN("this code shouldn't run", name != NULL);
         ONN("this code shouldn't run", ne_ssl_clicert_decrypt(cc, "fubar"));
-        ne_ssl_set_clicert(sess, cc);
+        ne_ssl_set_clicert(sess, ne_ssl_clicert_copy(cc));
     }
 
     ONN("client certificate load succeeded", cc != NULL);
