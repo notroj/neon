@@ -1106,19 +1106,17 @@ void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *c
     ctx->client_cert = ne_ssl_clicert_copy(cc);
 }
 
-void ne_ssl_trust_default_ca(ne_session *sess)
+void ne_ssl_context_trustdefca(ne_ssl_context *ctx)
 {
-    if (sess->ssl_context) {
 #ifdef NE_SSL_CA_BUNDLE
-        gnutls_certificate_set_x509_trust_file(sess->ssl_context->cred,
-                                               NE_SSL_CA_BUNDLE,
-                                               GNUTLS_X509_FMT_PEM);
+    gnutls_certificate_set_x509_trust_file(ctx->cred,
+                                           NE_SSL_CA_BUNDLE,
+                                           GNUTLS_X509_FMT_PEM);
 #elif defined(HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST)
-        int rv = gnutls_certificate_set_x509_system_trust(sess->ssl_context->cred);
+    int rv = gnutls_certificate_set_x509_system_trust(ctx->cred);
 
-        NE_DEBUG(NE_DBG_SSL, "ssl: System certificates trusted (%d)\n", rv);
+    NE_DEBUG(NE_DBG_SSL, "ssl: System certificates trusted (%d)\n", rv);
 #endif
-    }
 }
 
 /* Read the contents of file FILENAME into *DATUM. */

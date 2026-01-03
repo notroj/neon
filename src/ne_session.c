@@ -581,6 +581,14 @@ void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert)
 #endif
 }
 
+void ne_ssl_trust_default_ca(ne_session *sess)
+{
+#ifdef NE_HAVE_SSL
+    if (sess->ssl_context)
+        ne_ssl_context_trustdefca(sess->ssl_context);
+#endif
+}
+
 int ne_ssl_set_protovers(ne_session *sess, enum ne_ssl_protocol min,
                          enum ne_ssl_protocol max)
 {

@@ -208,6 +208,9 @@ ne_ssl_context *ne_ssl_context_create(int mode);
 /* Client mode: trust the given certificate 'cert' in context 'ctx'. */
 void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
 
+/* Trust the default system CAs. */
+void ne_ssl_context_trustdefca(ne_ssl_context *ctx);
+
 /* Server mode: use given cert and key (filenames to PEM certificates). */
 int ne_ssl_context_keypair(ne_ssl_context *ctx,
                            const char *cert, const char *key);
