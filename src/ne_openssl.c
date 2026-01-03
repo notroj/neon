@@ -119,6 +119,8 @@ struct ne_ssl_client_cert_s {
     char *friendly_name;
 };
 
+static void free_cert(ne_ssl_certificate *cert);
+
 #define NE_SSL_UNHANDLED (0x20) /* failure bit for unhandled case. */
 
 /* Append an ASN.1 DirectoryString STR to buffer BUF as UTF-8.
@@ -207,21 +209,13 @@ int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2)
     return X509_NAME_cmp(dn1->dn, dn2->dn);
 }
 
-static void clicert_free_cert(ne_ssl_client_cert *cc)
-{
-    if (cc->cert.identity) ne_free(cc->cert.identity);
-    if (cc->cert.subject) X509_free(cc->cert.subject);
-    cc->cert.identity = NULL;
-    cc->cert.subject = NULL;
-}
-
 void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
 {
     if (cc->p12) PKCS12_free(cc->p12);
     if (cc->uri) ne_free(cc->uri);
     if (cc->pkey) EVP_PKEY_free(cc->pkey);
     if (cc->friendly_name) ne_free(cc->friendly_name);
-    clicert_free_cert(cc);
+    free_cert(&cc->cert);
     ne_free(cc);
 }
 
@@ -1005,7 +999,7 @@ static int store_iterate(ne_ssl_client_cert *cc, const char *password)
 
     /* Clear any existing cert data to ensure each iteration fetches a
      * matching cert/key pair. */
-    clicert_free_cert(cc);
+    free_cert(&cc->cert);
 
     NE_DEBUG(NE_DBG_SSL, "ssl: Opening store for %s...\n", cc->uri);
     store = OSSL_STORE_open(cc->uri, ui, (char *)password, NULL, NULL);
@@ -1243,13 +1237,18 @@ int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename)
     return 0;
 }
 
-void ne_ssl_cert_free(ne_ssl_certificate *cert)
+static void free_cert(ne_ssl_certificate *cert)
 {
     X509_free(cert->subject);
     if (cert->issuer)
         ne_ssl_cert_free(cert->issuer);
     if (cert->identity)
         ne_free(cert->identity);
+}
+
+void ne_ssl_cert_free(ne_ssl_certificate *cert)
+{
+    free_cert(cert);
     ne_free(cert);
 }
 
