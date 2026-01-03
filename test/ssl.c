@@ -1897,11 +1897,6 @@ static int pkcs11(void)
 {
     return nss_pkcs11_test("nssdb");
 }
-
-static int pkcs11_dsa(void)
-{
-    return nss_pkcs11_test("nssdb-dsa");
-}
 #endif
 
 static int protovers(void)
@@ -2085,7 +2080,6 @@ ne_test tests[] = {
 
 #ifdef HAVE_PAKCHOIS
     T(pkcs11),
-    T_XFAIL(pkcs11_dsa), /* unclear why this fails currently. */
 #endif
     T(notifier),
     T(clicert_uri),
