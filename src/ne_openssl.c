@@ -526,8 +526,10 @@ ne_ssl_client_cert *ne_ssl_clicert_copy(const ne_ssl_client_cert *cc)
 static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 {
     ne_session *const sess = SSL_get_app_data(ssl);
+    SSL_CTX *const sslctx = SSL_get_SSL_CTX(ssl);
+    ne_ssl_context *const sctx = SSL_CTX_get_app_data(sslctx);
 
-    if (!sess->client_cert && sess->ssl_provide_fn) {
+    if (!sctx->client_cert && sess->ssl_provide_fn) {
 	ne_ssl_dname **dnames = NULL, *dnarray = NULL;
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
@@ -553,15 +555,16 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
         }
     }
 
-    if (sess->client_cert) {
-        ne_ssl_client_cert *const cc = sess->client_cert;
+    if (sctx->client_cert) {
+        ne_ssl_client_cert *cc = sctx->client_cert;
 	NE_DEBUG(NE_DBG_SSL, "Supplying client certificate.\n");
 	EVP_PKEY_up_ref(cc->pkey);
 	X509_up_ref(cc->cert.subject);
 	*cert = cc->cert.subject;
 	*pkey = cc->pkey;
 	return 1;
-    } else {
+    }
+    else {
         sess->ssl_cc_requested = 1;
 	NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
 	return 0;
@@ -719,6 +722,8 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     SSL_CTX_free(ctx->ctx);
     if (ctx->sess)
         SSL_SESSION_free(ctx->sess);
+    if (ctx->client_cert)
+        ne_ssl_clicert_free(ctx->client_cert);
     ne_free(ctx);
 }
 
@@ -827,6 +832,12 @@ void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cer
     X509_STORE *store = SSL_CTX_get_cert_store(ctx->ctx);
     
     X509_STORE_add_cert(store, cert->subject);
+}
+
+void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *cc)
+{
+    if (ctx->client_cert) ne_ssl_clicert_free(ctx->client_cert);
+    ctx->client_cert = ne_ssl_clicert_copy(cc);
 }
 
 void ne_ssl_trust_default_ca(ne_session *sess)

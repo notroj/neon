@@ -117,7 +117,6 @@ struct ne_session_s {
     char *user_agent; /* full User-Agent: header field */
 
 #ifdef NE_HAVE_SSL
-    ne_ssl_client_cert *client_cert;
     ne_ssl_certificate *server_cert;
     ne_ssl_context *ssl_context;
     int ssl_cc_requested; /* set to non-zero if a client cert was

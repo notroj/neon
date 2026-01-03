@@ -98,6 +98,9 @@ int ne_ssl_context_set_verify(ne_ssl_context *ctx,
     return -1;
 }
 
+void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *cc)
+{}
+
 void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value) {}
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx) {}
