@@ -212,6 +212,12 @@ void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cer
 int ne_ssl_context_keypair(ne_ssl_context *ctx,
                            const char *cert, const char *key);
 
+/* Client mode: use the given client certificate 'cc'.  The client
+ * cert MUST be in the decrypted state, otherwise behaviour is
+ * undefined.  The client cert object is duplicated internally so can
+ * be destroyed by the caller.  */
+void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *cc);
+
 /* Set the minimum and maximum protocol version which is allowed for
  * the connection. This must be called prior to ne_sock_connect_ssl()
  * or ne_sock_accept_ssl(). Returns 0 on success or NE_SOCK_*. */

@@ -41,6 +41,7 @@ struct ne_ssl_context_s {
     SSL_SESSION *sess;
     const char *hostname; /* for SNI */
     int failures; /* bitmask of exposed failure bits. */
+    ne_ssl_client_cert *client_cert;
 };
 
 typedef SSL *ne_ssl_socket;
@@ -65,7 +66,7 @@ ne__ssl_clicert_exkey_import(const unsigned char *der,
 struct ne_ssl_context_s {
     gnutls_certificate_credentials_t cred;
     int verify; /* non-zero if client cert verification required */
-
+    ne_ssl_client_cert *client_cert;
     const char *hostname; /* for SNI */
     char *priority;
 

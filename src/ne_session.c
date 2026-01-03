@@ -122,9 +122,6 @@ void ne_session_destroy(ne_session *sess)
 
     if (sess->server_cert)
         ne_ssl_cert_free(sess->server_cert);
-    
-    if (sess->client_cert)
-        ne_ssl_clicert_free(sess->client_cert);
 #endif
 
     ne_free(sess);
@@ -570,8 +567,8 @@ void ne_ssl_provide_clicert(ne_session *sess,
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
 {
 #ifdef NE_HAVE_SSL
-    if (sess->client_cert) ne_ssl_clicert_free(sess->client_cert);
-    sess->client_cert = ne_ssl_clicert_copy(cc);
+    if (sess->ssl_context)
+        ne_ssl_context_set_clicert(sess->ssl_context, cc);
 #endif
 }
 
