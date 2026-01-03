@@ -80,8 +80,6 @@ int ne_ssl_clicert_decrypt(ne_ssl_client_cert *ccert, const char *password)
 
 void ne_ssl_clicert_free(ne_ssl_client_cert *ccert) {}
 
-void ne_ssl_trust_default_ca(ne_session *sess) {}
-
 ne_ssl_context *ne_ssl_context_create(int mode)
 {
     return NULL;
@@ -102,7 +100,7 @@ void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *c
 {}
 
 void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value) {}
-
+void ne_ssl_context_trustdefca(ne_ssl_context *ctx) {}
 void ne_ssl_context_destroy(ne_ssl_context *ctx) {}
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
