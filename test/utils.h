@@ -62,6 +62,8 @@ int make_session(ne_session **sess, server_fn fn, void *userdata);
 /* Returns hostname used for make_session(). */
 const char *get_session_host(void);
 
+unsigned int get_session_port(void);
+
 /* Server which sleeps for 10 seconds then closes the socket. */
 int sleepy_server(ne_socket *sock, void *userdata);
 
