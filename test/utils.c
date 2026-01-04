@@ -38,6 +38,7 @@
 #include "utils.h"
 
 static char session_host[128];
+unsigned int session_port;
 
 int serve_response(ne_socket *s, const char *response)
 {
@@ -203,16 +204,27 @@ int full_write(ne_socket *sock, const char *data, size_t len)
     return OK;
 }
 
+static const char *localhost_session_host(void)
+{
+    if (get_lh_family() == AF_INET6) {
+        ne_snprintf(session_host, sizeof session_host, "[%s]", get_lh_addr());
+    }
+    else {
+        ne_strnzcpy(session_host, get_lh_addr(), sizeof session_host);
+    }
+    return session_host;
+}
+
 int multi_session_server(ne_session **sess,
                          const char *scheme, const char *hostname,
                          int count, server_fn fn, void *userdata)
 {
-    unsigned int port;
-    
-    CALL(new_spawn_server(count, fn, userdata, &port));
-    
-    *sess = ne_session_create(scheme, hostname, port);
+    CALL(new_spawn_server(count, fn, userdata, &session_port));
 
+    *sess = ne_session_create(scheme, localhost_session_host(), session_port);
+
+    NE_DEBUG(NE_DBG_HTTP, "test: Created session for %s://%s:%u\n",
+             scheme, session_host, session_port);
     return OK;
 }
 
@@ -221,16 +233,14 @@ const char *get_session_host(void)
     return session_host;
 }
 
+unsigned int get_session_port(void)
+{
+    return session_port;
+}
+
 int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
-    if (get_lh_family() == AF_INET6) {
-        ne_snprintf(session_host, sizeof session_host, "[%s]", get_lh_addr());
-    }
-    else {
-        ne_strnzcpy(session_host, get_lh_addr(), sizeof session_host);
-    }
-
-    return multi_session_server(sess, "http", session_host, 1, fn, userdata);
+    return multi_session_server(sess, "http", NULL, 1, fn, userdata);
 }
 
 int proxied_multi_session_server(int count, ne_session **sess,
@@ -238,15 +248,13 @@ int proxied_multi_session_server(int count, ne_session **sess,
                                  unsigned int fakeport,
                                  server_fn fn, void *userdata)
 {
-    unsigned int port;
-    
-    CALL(new_spawn_server(count, fn, userdata, &port));
+    CALL(new_spawn_server(count, fn, userdata, &session_port));
     
     *sess = ne_session_create(scheme, host, fakeport);
 
-    NE_DEBUG(NE_DBG_HTTP, "test: Using proxied session to port %u.\n", port);
+    NE_DEBUG(NE_DBG_HTTP, "test: Using proxied session to port %u.\n", session_port);
 
-    ne_session_proxy(*sess, get_lh_addr(), port);
+    ne_session_proxy(*sess, localhost_session_host(), session_port);
 
     return OK;
 }
@@ -280,20 +288,19 @@ int fakeproxied_multi_session_server(int count,
                                      const char *host, unsigned int fakeport,
                                      server_fn fn, void *userdata)
 {
-    unsigned int port;
     ne_inet_addr *addr;
     const ne_inet_addr *alist[1];
     
-    CALL(new_spawn_server2(count, fn, userdata, &addr, &port));
+    CALL(new_spawn_server2(count, fn, userdata, &addr, &session_port));
 
     NE_DEBUG(NE_DBG_HTTP, "test: Using fake proxied '%s' session for %s using port %u.\n",
-             scheme, host, port);
+             scheme, host, session_port);
     
     alist[0] = addr;
 
     *sess = ne_session_create(scheme, host, fakeport);
 
-    ne_set_addrlist2(*sess, port, alist, 1);
+    ne_set_addrlist2(*sess, session_port, alist, 1);
 
     ne_hook_destroy_session(*sess, fakesess_destroy, addr);
 
