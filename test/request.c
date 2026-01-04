@@ -51,11 +51,8 @@ static unsigned int fail_request_last_port;
 static int prepare_request(server_fn fn, void *ud)
 {
     static char uri[100];
-    unsigned int port;
 
-    CALL(new_spawn_server(1, fn, ud, &port));
-
-    def_sess = ne_session_create("http", "localhost", port);
+    CALL(session_server(&def_sess, fn, ud));
 
     sprintf(uri, "/test%d", test_num);
 
@@ -403,11 +400,9 @@ static int serve_eof(ne_socket *sock, void *ud)
 static int fail_early_eof(const char *resp)
 {
     ne_session *sess;
-    unsigned int port;
 
-    CALL(new_spawn_server(3, serve_eof, (char *)resp, &port));
+    CALL(multi_session_server(&sess, "http", 3, serve_eof, (char *)resp));
     
-    sess = ne_session_create("http", "localhost", port);
     ONREQ(any_request(sess, "/foo"));
     ONN("request retried after early EOF",
 	any_request(sess, "/foobar") == NE_OK);
@@ -444,12 +439,9 @@ static int fail_eof_badclen(void)
 static int ptimeout_eof(void)
 {
     ne_session *sess;
-    unsigned int port;
 
-    CALL(new_spawn_server(4, single_serve_string, 
-                          RESP200 "Content-Length: 0\r\n" "\r\n",
-                          &port));
-    sess = ne_session_create("http", "localhost", port);
+    CALL(multi_session_server(&sess, "http", 4, single_serve_string, 
+                              RESP200 "Content-Length: 0\r\n" "\r\n"));
     
     CALL(any_2xx_request(sess, "/first"));
     CALL(any_2xx_request(sess, "/second"));
@@ -467,13 +459,10 @@ static int ptimeout_eof(void)
 static int ptimeout_eof2(void)
 {
     ne_session *sess;
-    unsigned int port;
 
-    CALL(new_spawn_server(4, single_serve_string, 
-                          RESP200 "Content-Length: 0\r\n" "\r\n",
-                          &port));
-    
-    sess = ne_session_create("http", "localhost", port);
+    CALL(multi_session_server(&sess, "http", 4, single_serve_string, 
+                              RESP200 "Content-Length: 0\r\n" "\r\n"));
+
     CALL(any_2xx_request(sess, "/first"));
     minisleep();
     CALL(any_2xx_request_body(sess, "/second"));
@@ -507,15 +496,12 @@ static int persist_timeout(void)
     ne_session *sess;
     ne_buffer *buf = ne_buffer_create();
     struct many_serve_args args;
-    unsigned int port;
     int n;
 
     args.str = RESP200 "Content-Length: 5\r\n\r\n" "abcde";
     args.count = 1;
 
-    CALL(new_spawn_server(9, incr_server, &args, &port));
-    
-    sess = ne_session_create("http", "localhost", port);
+    CALL(multi_session_server(&sess, "http", 9, incr_server, &args));
 
     for (args.count = 1; args.count < 10; args.count++) {
 
@@ -542,16 +528,12 @@ static int persist_timeout(void)
 static int no_persist_http10(void)
 {
     ne_session *sess;
-    unsigned int port;
 
-    CALL(new_spawn_server(4, single_serve_string,
-                          "HTTP/1.0 200 OK\r\n"
-                          "Content-Length: 5\r\n\r\n"
-                          "abcde"
-                          "Hello, world - what a nice day!\r\n",
-                          &port));
-
-    sess = ne_session_create("http", "localhost", port);
+    CALL(multi_session_server(&sess, "http", 4, single_serve_string,
+                              "HTTP/1.0 200 OK\r\n"
+                              "Content-Length: 5\r\n\r\n"
+                              "abcde"
+                              "Hello, world - what a nice day!\r\n"));
 
     /* if the connection is treated as persistent, the status-line for
      * the second request will be "Hello, world...", which will
@@ -1009,11 +991,9 @@ static int fail_request_with_error(int with_body, server_fn fn, void *ud,
 {
     ne_session *sess;
     ne_request *req;
-    unsigned int port;
     int ret;
 
-    CALL(new_spawn_server(forever ? 100 : 1, fn, ud, &port));
-    sess = ne_session_create("http", "localhost", port);
+    CALL(multi_session_server(&sess, "http", forever ? 100 : 1, fn, ud));
 
     /* Set default timeout, required by e.g. fail_excess_1xx. */
     ne_set_read_timeout(sess, 2);
@@ -1047,7 +1027,7 @@ static int fail_request_with_error(int with_body, server_fn fn, void *ud,
     ne_request_destroy(req);
     ne_session_destroy(sess);
 
-    fail_request_last_port = port;
+    fail_request_last_port = get_session_port();
    
     return OK;    
 }
@@ -2314,7 +2294,7 @@ static int retry_408(void)
     /* Serve two responses down a single persistent connection, the
      * second of which should be treated as a timed-out persistent
      * connection, i.e. should be retried on a new connection. */
-    CALL(multi_session_server(&sess, "http", "localhost",
+    CALL(multi_session_server(&sess, "http",
                               2, single_serve_string,
                               EMPTY_RESP
                               "HTTP/1.1 408 Request Timeout\r\n"

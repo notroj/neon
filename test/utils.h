@@ -134,7 +134,6 @@ int session_server(ne_session **sess, server_fn fn, void *userdata);
  * failure; initializes *sess with a new session on success.  Uses an
  * unspecified hostname/port for the server. */
 int multi_session_server(ne_session **sess, const char *scheme,
-                         const char *hostname,
                          int count, server_fn fn, void *userdata);
 
 /* Create a session with server process running fn(userdata).  Sets

@@ -1235,7 +1235,7 @@ static int fail_challenge(void)
                     "Content-Length: 0\r\n" "\r\n",
                     ts[n].resp);
         
-        CALL(multi_session_server(&sess, "http", "localhost",
+        CALL(multi_session_server(&sess, "http",
                                   2, single_serve_string, resp));
 
         ne_add_server_auth(sess, NE_AUTH_ALL|NE_AUTH_LEGACY_DIGEST, fail_cb, buf);
