@@ -1,6 +1,6 @@
 /* 
    Utility functions for HTTP client tests
-   Copyright (C) 2001-2009, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2001-2026, Joe Orton <joe@manyfish.co.uk>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -215,9 +215,8 @@ static const char *localhost_session_host(void)
     return session_host;
 }
 
-int multi_session_server(ne_session **sess,
-                         const char *scheme, const char *hostname,
-                         int count, server_fn fn, void *userdata)
+int multi_session_server(ne_session **sess, const char *scheme, int count,
+                         server_fn fn, void *userdata)
 {
     CALL(new_spawn_server(count, fn, userdata, &session_port));
 
@@ -240,7 +239,7 @@ unsigned int get_session_port(void)
 
 int session_server(ne_session **sess, server_fn fn, void *userdata)
 {
-    return multi_session_server(sess, "http", NULL, 1, fn, userdata);
+    return multi_session_server(sess, "http", 1, fn, userdata);
 }
 
 int proxied_multi_session_server(int count, ne_session **sess,

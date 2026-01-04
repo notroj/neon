@@ -63,7 +63,7 @@ static int check_redir(int status_code, const char *location,
 		"Location: %s\r\n\n",
 		status_code, location);
 
-    CALL(multi_session_server(&sess, "http", "localhost", 2,
+    CALL(multi_session_server(&sess, "http", 2,
                               single_serve_string, response));
 
     if (expect[0] == '/') {
