@@ -343,6 +343,8 @@ int file_to_buffer(const char *filename, ne_buffer *buf)
     return 0;
 }
 
+#define sornull(s_) (s_ ? s_ : "[null]")
+
 void sess_notifier(void *userdata, ne_session_status status,
                    const ne_session_status_info *info)
 {
@@ -351,18 +353,18 @@ void sess_notifier(void *userdata, ne_session_status status,
 
     switch (status) {
     case ne_status_lookup:
-        ne_buffer_concat(buf, "lookup(", info->lu.hostname, ")-", NULL);
+        ne_buffer_concat(buf, "lookup(", sornull(info->lu.hostname), ")-", NULL);
         break;
     case ne_status_connecting:
         ne_iaddr_print(info->ci.address, scratch, sizeof scratch);
-        ne_buffer_concat(buf, "connecting(", info->lu.hostname,
+        ne_buffer_concat(buf, "connecting(", sornull(info->lu.hostname),
                          ",", scratch, ")-", NULL);
         break;
     case ne_status_disconnected:
         ne_buffer_czappend(buf, "dis");
         /* fallthrough */
     case ne_status_connected:
-        ne_buffer_concat(buf, "connected(", info->cd.hostname,
+        ne_buffer_concat(buf, "connected(", sornull(info->cd.hostname),
                          ")-", NULL);
         break;
     case ne_status_sending:
@@ -389,3 +391,5 @@ void sess_notifier(void *userdata, ne_session_status status,
     NE_DEBUG(NE_DBG_HTTP, "notifier %d => %s\n",
              status, buf->data);
 }
+
+#undef sornull
