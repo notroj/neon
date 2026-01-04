@@ -987,8 +987,7 @@ static int session_cache(void)
     args.cert = SERVER_CERT;
     args.cache = 1;
 
-    CALL(multi_session_server(&sess, "https", "localhost",
-                              2, ssl_server, &args));
+    CALL(multi_ssl_session(2, &sess, &args));
 
     /* This currently fails under OpenSSL with TLSv1.3. */
     ne_ssl_set_protovers(sess, NE_SSL_PROTO_UNSPEC,
