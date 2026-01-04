@@ -164,6 +164,10 @@ int fakeproxied_multi_session_server(int count,
                                      const char *host, unsigned int fakeport,
                                      server_fn fn, void *userdata);
 
+int socksproxied_session_server(ne_session **sess, struct socks_server *srv,
+                                const char *hostname, unsigned int port,
+                                server_fn server, void *userdata);
+
 /* Read contents of file 'filename' into buffer 'buf'. */
 int file_to_buffer(const char *filename, ne_buffer *buf);
 

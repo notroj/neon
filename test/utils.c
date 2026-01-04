@@ -307,6 +307,20 @@ int fakeproxied_multi_session_server(int count,
     return OK;
 }
 
+int socksproxied_session_server(ne_session **sess, struct socks_server *srv,
+                                const char *hostname, unsigned int port,
+                                server_fn server, void *userdata)
+{
+    srv->server = server;
+    srv->userdata = userdata;
+
+    CALL(new_spawn_server(1, socks_server, srv, &session_port));
+    *sess = ne_session_create("http", hostname, port);
+    ne_session_socks_proxy(*sess, srv->version, localhost_session_host(), session_port,
+                           srv->username, srv->password);
+    return OK;
+}
+
 int make_session(ne_session **sess, server_fn fn, void *ud)
 {
     return session_server(sess, fn, ud);

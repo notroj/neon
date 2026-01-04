@@ -2061,22 +2061,6 @@ static int addrlist(void)
     return destroy_and_wait(sess);
 }
 
-static int socks_session(ne_session **sess, struct socks_server *srv,
-                         const char *hostname, unsigned int port,
-                         server_fn server, void *userdata)
-{
-    unsigned int realport;
-
-    srv->server = server;
-    srv->userdata = userdata;
-    
-    CALL(new_spawn_server(1, socks_server, srv, &realport));
-    *sess = ne_session_create("http", hostname, port);
-    ne_session_socks_proxy(*sess, srv->version, "localhost", realport,
-                           srv->username, srv->password);
-    return OK;    
-}
-
 static int socks_proxy(void)
 {
     ne_session *sess;
@@ -2090,8 +2074,8 @@ static int socks_proxy(void)
     srv.username = "bloggs";
     srv.password = "guessme";
     
-    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
-                       single_serve_string, EMPTY_RESP));
+    CALL(socksproxied_session_server(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                                     single_serve_string, EMPTY_RESP));
 
     CALL(any_2xx_request(sess, "/blee"));
 
@@ -2111,8 +2095,8 @@ static int socks_v4_proxy(void)
     srv.username = "bloggs";
     srv.password = "guessme";
     
-    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
-                       single_serve_string, EMPTY_RESP));
+    CALL(socksproxied_session_server(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                                     single_serve_string, EMPTY_RESP));
 
     CALL(any_2xx_request(sess, "/blee"));
 
@@ -2195,8 +2179,8 @@ static int socks_fail(void)
     srv.username = "bloggs";
     srv.password = "guessme";
     
-    CALL(socks_session(&sess, &srv, srv.expect_fqdn, srv.expect_port,
-                       single_serve_string, EMPTY_RESP));
+    CALL(socksproxied_session_server(&sess, &srv, srv.expect_fqdn, srv.expect_port,
+                                     single_serve_string, EMPTY_RESP));
 
     ret = any_request(sess, "/blee");
     ONV(ret != NE_ERROR,
