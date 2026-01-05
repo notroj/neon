@@ -112,13 +112,17 @@
 #include <gnutls/gnutls.h>
 #endif
 
+#ifdef NE_HAVE_UNBOUND
+#include <unbound.h>
+#endif
+
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
  * pointer to an opaque object, so this should be well-defined
  * behaviour.  It avoids the hassle of a real wrapper ne_inet_addr
  * structure, or losing type-safety by using void *. */
-#ifdef USE_GETADDRINFO
+#if USE_GETADDRINFO
 typedef struct addrinfo ne_inet_addr;
 #else
 typedef struct in_addr ne_inet_addr;
@@ -228,9 +232,15 @@ struct ne_socket_s {
     char error[192];
 };
 
+#define SOCK_UB_NOHOST (0x01)
+#define SOCK_UB_NXDOMAIN (0x02)
+
 /* ne_sock_addr represents an Internet address. */
 struct ne_sock_addr_s {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_UNBOUND
+    unsigned int flags;
+#endif
+#if defined(USE_GETADDRINFO)
     struct addrinfo *result, *cursor;
 #else
     struct in_addr *addrs;
@@ -1026,12 +1036,86 @@ ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t buflen)
 extern int h_errno;
 #endif
 
+#ifdef NE_HAVE_UNBOUND
+/* Map a libunbound struct ub_result * into chain of struct addrinfo *. */
+static struct addrinfo *from_result_to_gai(struct ub_result *result)
+{
+    struct addrinfo *head = NULL, **this = &head;
+    unsigned n;
+
+    for (n = 0; result->data[n]; n++) {
+        ne_iaddr_type itype = result->len[n] == 4 ? ne_iaddr_ipv4 : ne_iaddr_ipv6;
+
+        *this = ne_iaddr_make(itype, (unsigned char *)result->data[n]);
+
+        /* Copy the canonname to the head, emulating AI_CANONNAME. */
+        if (result->canonname && *result->canonname && !head->ai_canonname)
+            head->ai_canonname = ne_strdup(result->canonname);
+
+        this = &(*this)->ai_next;
+    }
+
+    return head;
+}
+
+/* Resolve literal addresses. */
+static struct addrinfo *parse_literals(const char *hostname)
+{
+    ne_inet_addr *ia;
+
+    if ((ia = ne_iaddr_parse(hostname, ne_iaddr_ipv4)) != NULL)
+        return ia;
+
+    if ((ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6)) != NULL)
+        return ia;
+
+    return NULL;
+}
+
+#endif
+
 /* This implementation does not attempt to support IPv6 using
  * gethostbyname2 et al.  */
 ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 {
     ne_sock_addr *addr = ne_calloc(sizeof *addr);
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_UNBOUND
+    struct ub_ctx *ctx = ub_ctx_create();
+    struct ub_result *results;
+
+    if (!ctx) {
+        addr->errnum = ENOMEM;
+        return addr;
+    }
+
+    /* "Resolve" any literal address by translation, to get similar
+     * behaviour to getaddrinfo(). */
+    if ((addr->result = parse_literals(hostname)) != NULL) {
+        return addr;
+    }
+
+    (void) ub_ctx_resolvconf(ctx, NULL);
+    (void) ub_ctx_hosts(ctx, NULL);
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: unbound lookup %s...\n", hostname);
+
+    if ((addr->errnum = ub_resolve(ctx, hostname, 1, 1, &results)) == 0) {
+        if (results->havedata) {
+            addr->result = from_result_to_gai(results);
+            /* Emulate getaddrinfo - if no explicit canonname was
+             * returned in the results, copy the hostname. */
+            if (addr->result && !addr->result->ai_canonname
+                && (flags & NE_ADDR_CANON)) {
+                addr->result->ai_canonname = ne_strdup(hostname);
+            }
+        }
+        NE_DEBUG(NE_DBG_SOCKET, "unbound: %s - havedata=%d, nxdomain=%d, rcode=%d.\n",
+                 hostname, !!results, results->nxdomain, results->rcode);
+        if (results->nxdomain) addr->flags |= SOCK_UB_NXDOMAIN;
+        if (!addr->result) addr->flags |= SOCK_UB_NOHOST;
+        ub_resolve_free(results);
+    }
+#elif defined(USE_GETADDRINFO)
     struct addrinfo hints = {0};
     const char *pnt;
 
@@ -1105,6 +1189,9 @@ ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 
 int ne_addr_result(const ne_sock_addr *addr)
 {
+#ifdef NE_HAVE_UNBOUND
+    return addr->errnum || addr->flags != 0;
+#endif
     return addr->errnum;
 }
 
@@ -1119,7 +1206,7 @@ const char *ne_addr_canonical(const ne_sock_addr *addr)
 
 const ne_inet_addr *ne_addr_first(ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
+#if defined(USE_GETADDRINFO)
     addr->cursor = addr->result->ai_next;
     return addr->result;
 #else
@@ -1149,7 +1236,14 @@ char *ne_addr_error(const ne_sock_addr *addr, char *buf, size_t bufsiz)
     print_error(addr->errnum, buf, bufsiz);
 #else
     const char *err;
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_UNBOUND
+    if (addr->errnum)
+        err = ub_strerror(addr->errnum);
+    else if (addr->flags & SOCK_UB_NXDOMAIN)
+        err = _("Name doesn't exist");
+    else
+        err = _("Host not found");
+#elif defined(USE_GETADDRINFO)
     /* override horrible generic "Name or service not known" error. */
     if (addr->errnum == EAI_NONAME)
 	err = _("Host not found");
@@ -1325,7 +1419,13 @@ char *ne_iaddr_get_scope(const ne_inet_addr *ia)
 
 void ne_addr_destroy(ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_UNBOUND
+    while ((addr->cursor = addr->result) != NULL) {
+        addr->result = addr->cursor->ai_next;
+        if (addr->cursor->ai_canonname) ne_free(addr->cursor->ai_canonname);
+        ne_iaddr_free(addr->cursor);
+    }
+#elif defined(USE_GETADDRINFO)
     /* Note that ->result is only valid for successful invocations of
      * getaddrinfo. */
     if (!addr->errnum && addr->result)

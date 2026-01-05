@@ -31,6 +31,10 @@
 
 #ifdef HAVE_NTLM
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include "ne_string.h"
 
 typedef enum {
