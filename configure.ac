@@ -61,7 +61,7 @@ dnl is not available.
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
 
 AC_DISABLE_SHARED
-m4_ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
+m4_ifdef([LT_INIT], [LT_INIT(pic-only)], [AC_PROG_LIBTOOL])
 
 AC_EXEEXT
 
@@ -166,11 +166,6 @@ if test "x$have_ld_version_script" = "xyes"; then
 else
   NEON_LINK_FLAGS="$NEON_LINK_FLAGS -export-symbols-regex '^ne_[[^_]]'"
 fi 
-
-if test x${enable_shared}${pic_mode}z = xnodefaultz; then
-   CFLAGS="$CFLAGS -prefer-pic"
-   AC_MSG_NOTICE([Using PIC for static library build])
-fi
 
 if test x${enable_shared} = xno; then
    # Defining NE_PRIVATE as the empty string would work; using a
