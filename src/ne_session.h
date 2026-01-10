@@ -190,13 +190,13 @@ typedef union ne_session_status_info_u {
     } lu;
     struct /* ne_status_connecting */ {
         /* The hostname and network address to which a connection
-         * attempt is being made: */
+         * attempt is being made, hostname may be NULL: */
         const char *hostname;
         const ne_inet_addr *address;
     } ci;
     struct /* ne_status_connected, ne_status_disconnected */ {
         /* The hostname to which a connection has just been
-         * established or closed: */
+         * established or closed - may be NULL: */
         const char *hostname;
     } cd;
     struct /* ne_status_sending and ne_status_recving */ {
