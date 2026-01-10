@@ -1938,7 +1938,7 @@ static int notifier(void)
 
     ONV(strstr(buf->data, "-handshake(TLSv1.2, TLS_") == NULL
         && strstr(buf->data, "-handshake(TLSv1.2, [none]") == NULL,
-        ("missing handshake from notifier: %s", buf->data));
+        ("missing handshake in notifier data: %s", buf->data));
 
     ne_buffer_destroy(buf);
     return destroy_and_wait(sess);
