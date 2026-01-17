@@ -792,11 +792,12 @@ int ne__negotiate_ssl(ne_session *sess)
     }
     
     if (sess->notify_cb) {
-        const SSL_CIPHER *ciph = SSL_get_current_cipher(ssl);
+        char *ciph = ne_sock_cipher(sess->socket);
 
         sess->status.hs.protocol = ne_sock_getproto(sess->socket);
-        sess->status.hs.ciphersuite = SSL_CIPHER_standard_name(ciph);
+        sess->status.hs.ciphersuite = ciph;
         sess->notify_cb(sess->notify_ud, ne_status_handshake, &sess->status);
+        if (ciph) ne_free(ciph);
     }
 
     return NE_OK;
