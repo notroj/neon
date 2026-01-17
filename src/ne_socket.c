@@ -2068,12 +2068,16 @@ char *ne_sock_cipher(ne_socket *sock)
 #ifdef NE_HAVE_SSL
     if (sock->ssl) {
 #ifdef HAVE_OPENSSL
-        const char *name = SSL_get_cipher(sock->ssl);
-        return ne_strdup(name);
+        const SSL_CIPHER *ciph = SSL_get_current_cipher(sock->ssl);
+#ifdef HAVE_SSL_CIPHER_STANDARD_NAME
+        const char *name = SSL_CIPHER_standard_name(ciph);
+#else
+        const char *name = SSL_CIPHER_get_name(ciph);
+#endif
 #elif defined(HAVE_GNUTLS)
         const char *name = gnutls_cipher_get_name(gnutls_cipher_get(sock->ssl));
-        return ne_strdup(name);
 #endif
+        return ne_strdup(name);
     }
     else 
 #endif /* NE_HAVE_SSL */
