@@ -60,6 +60,7 @@
 <!ENTITY refrespbody SYSTEM "ref/respbody.xml">
 <!ENTITY refreqflags SYSTEM "ref/reqflags.xml">
 <!ENTITY refreqtarget SYSTEM "ref/reqtgt.xml">
+<!ENTITY refctype SYSTEM "ref/ctype.xml">
 <!ENTITY refred SYSTEM "ref/redir.xml">
 <!ENTITY refstatus SYSTEM "ref/status.xml">
 <!ENTITY refgetst SYSTEM "ref/getst.xml">
@@ -199,6 +200,7 @@ ignoring the WebDAV support if desired.</para>
     &refreqflags; <!-- ne_set_request_flag -->
     &refreqbody; <!-- ne_set_request_body_buffer -->
     &refreqtarget; <!-- ne_get_request_target -->
+    &refctype; <!-- ne_get_content_type -->
     &refred; <!-- ne_redirect_register -->
     &refauth; <!-- ne_set_server_auth -->
     &refshave; <!-- ne_shave -->
