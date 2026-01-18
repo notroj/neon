@@ -225,14 +225,16 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
     ne_free(cc);
 }
 
-/* Format an ASN1 time to a string. 'buf' must be at least of size
- * 'NE_SSL_VDATELEN'. */
+/* Convert an ASN1 time to time_t. */
 static time_t asn1time_to_timet(const ASN1_TIME *atm)
 {
     struct tm tm = {0};
-    int i = atm->length;
-    
-    if (i < 10)
+
+#ifdef HAVE_ASN1_TIME_TO_TM
+    if (ASN1_TIME_to_tm(atm, &tm) != 1)
+        return (time_t)-1;
+#else
+    if (atm->length < 10)
         return (time_t )-1;
 
     tm.tm_year = FROM_DEC(atm->data);
@@ -245,10 +247,16 @@ static time_t asn1time_to_timet(const ASN1_TIME *atm)
     tm.tm_mday = FROM_DEC(atm->data + 4);
     tm.tm_hour = FROM_DEC(atm->data + 6);
     tm.tm_min = FROM_DEC(atm->data + 8);
-    tm.tm_sec = FROM_DEC(atm->data + 10);
+    if (atm->length > 12)
+        tm.tm_sec = FROM_DEC(atm->data + 10);
+#endif
 
-#ifdef HAVE_TIMEZONE
-    /* ANSI C time handling is... interesting. */
+#ifdef HAVE_TIMEGM
+    /* BSD/GNU; convert directly to GMT */
+    return timegm(&tm);
+#elif defined(HAVE_TIMEZONE) && !defined(HAVE_ASN1_TIME_TO_TM)
+    /* ASN1_TIME_to_tm already converts to GMT, otherwise
+     * use the timezone global offset to do so. */
     return mktime(&tm) - timezone;
 #else
     return mktime(&tm);
