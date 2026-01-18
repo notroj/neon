@@ -838,6 +838,29 @@ static int strhextoul(void)
     return OK;
 }
 
+static int strlower(void)
+{
+    char buf[256];
+
+    ne_strnzcpy(buf, "HELLO", sizeof buf);
+    ONN("unexpected return value", ne_strlower(buf) != buf);
+    ONV(strcmp(buf, "hello"), ("strlower failed: got %s", buf));
+
+    ne_strnzcpy(buf, "MiXeD CaSe 123", sizeof buf);
+    ne_strlower(buf);
+    ONV(strcmp(buf, "mixed case 123"), ("strlower failed: got %s", buf));
+
+    ne_strnzcpy(buf, "already lower", sizeof buf);
+    ne_strlower(buf);
+    ONV(strcmp(buf, "already lower"), ("strlower failed: got %s", buf));
+
+    ne_strnzcpy(buf, "", sizeof buf);
+    ne_strlower(buf);
+    ONV(strcmp(buf, ""), ("strlower failed on empty string"));
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -872,6 +895,7 @@ ne_test tests[] = {
     T(strhash_sha_512_256),
     T(strparam),
     T(strhextoul),
+    T(strlower),
     T(NULL)
 };
 

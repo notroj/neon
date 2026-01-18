@@ -202,6 +202,10 @@ int ne_strncasecmp(const char *s1, const char *s2, size_t n);
 
 const unsigned char *ne_tolower_array(void) ne_attribute((const));
 
+/* Modifies every character in 'str' to lower-case in-place, returning
+ * 'str'. */
+char *ne_strlower(char *str);
+
 /* Convert an ASCII hexadecimal character in the ranges '0'..'9'
  * 'a'..'f' 'A'..'F' to its numeric equivalent. */
 #define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : \
