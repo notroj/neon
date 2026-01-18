@@ -54,11 +54,13 @@ static int content_type(void)
 	/* 2616 doesn't *say* that charset can be quoted, but bets are
 	 * that some servers do it anyway. */
 	{ "text/xml; charset=utf-8", TXU },
+	{ "TEXT/XML; charset=utf-8", TXU },
+	{ "tExT/xMl; ChaRSet='utf-8'", TXU },
 	{ "text/xml; charset=utf-8; foo=bar", TXU },
 	{ "text/xml;charset=utf-8", TXU },
 	{ "text/xml ;charset=utf-8", TXU },
-	{ "text/xml;charset=utf-8;foo=bar", TXU },
-	{ "text/xml; foo=bar; charset=utf-8", TXU },
+	{ "text/xml; bleee; charset=utf-8;foo=bar", TXU },
+	{ "text/xml; foo=bar;  charset = utf-8; foo=bar", TXU },
 	{ "text/xml; foo=bar; charset=utf-8; bar=foo", TXU },
 	{ "text/xml; charset=\"utf-8\"", TXU },
 	{ "text/xml; charset='utf-8'", TXU },
