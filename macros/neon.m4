@@ -1022,7 +1022,7 @@ yes|openssl)
 
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
-   NE_CHECK_FUNCS(SSL_CIPHER_standard_name)
+   NE_CHECK_FUNCS(SSL_CIPHER_standard_name ASN1_TIME_to_tm timegm)
    if test "$ne_cv_lib_ssl110" = "yes"; then
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])
