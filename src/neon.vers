@@ -63,3 +63,7 @@ NEON_0_36 {
     ne_getbuf;
     ne_read_response_to_buffer;
 };
+
+NEON_0_37 {
+    ne_strlower;
+};

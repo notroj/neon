@@ -633,6 +633,17 @@ const unsigned char *ne_tolower_array(void)
     return table_tolower;
 }
 
+char *ne_strlower(char *str)
+{
+    unsigned char *p = (unsigned char *)str;
+
+    do {
+        *p = TOLOWER(*p);
+    } while (*p++);
+
+    return str;
+}
+
 int ne_strcasecmp(const char *s1, const char *s2)
 {
     const unsigned char *p1 = (const unsigned char *) s1;
