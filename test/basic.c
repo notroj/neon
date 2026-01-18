@@ -127,13 +127,13 @@ static int content_type(void)
  * If 'fail' is non-NULL, expect ne_get_range to fail, and fail the
  * test with given message if it doesn't. */
 static int do_range(off_t start, off_t end, const char *fail,
-		    char *resp)
+		    const char *resp)
 {
     ne_session *sess;
     ne_content_range range = {0};
     int fd, ret;
 
-    CALL(make_session(&sess, single_serve_string, resp));
+    CALL(make_session(&sess, single_serve_string, (void *)resp));
     
     range.start = start;
     range.end = end;
@@ -161,49 +161,60 @@ static int do_range(off_t start, off_t end, const char *fail,
 
 static int get_range(void)
 {
-    return do_range(1, 10, NULL,
-		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-10/10\r\n"
-		    "Content-Length: 10\r\n\r\nabcdefghij");
-}
+    struct {
+        off_t start, end;
+        const char *expected_error, *response;
+    } ts[] = {
+        {
+            1, 10, NULL,
+            "HTTP/1.1 206 Widgets\r\n"
+            "Connection: close\r\n"
+            "Content-Range: bytes 1-10/10\r\n"
+            "Content-Length: 10\r\n\r\nabcdefghij"
+        },
+        {
+            1, -1, NULL,
+            "HTTP/1.1 206 Widgets\r\n"
+            "Connection: close\r\n"
+            "Content-Range: bytes 1-10/10\r\n"
+            "Content-Length: 10\r\n\r\nabcdefghij"
+        },
+        {
+            1, 10, "range response length mismatch should fail",
+            "HTTP/1.1 206 Widgets\r\n"
+            "Connection: close\r\n"
+            "Content-Range: bytes 1-2/2\r\n"
+            "Content-Length: 2\r\n\r\nab"
+        },
+        {
+            1, 2, "range response units check should fail",
+            "HTTP/1.1 206 Widgets\r\n"
+            "Connection: close\r\n"
+            "Content-Range: fish 1-2/2\r\n"
+            "Content-Length: 2\r\n\r\nab"
+        },
+        {
+            1, 2, "non-ranged response should fail",
+            "HTTP/1.1 200 Widgets\r\n"
+            "Connection: close\r\n"
+            "Content-Range: bytes 1-2/2\r\n"
+            "Content-Length: 2\r\n\r\nab"
+        },
+        {
+            1, 2, "unsatisfiable range should fail",
+            "HTTP/1.1 416 No Go\r\n"
+            "Connection: close\r\n"
+            "Content-Length: 2\r\n\r\nab"
+        }
+    };
+    unsigned i;
 
-static int get_eof_range(void)
-{
-    return do_range(1, -1, NULL,
-		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-10/10\r\n"
-		    "Content-Length: 10\r\n\r\nabcdefghij");
-}
+    for (i = 0; i < sizeof(ts) / sizeof(ts[0]); i++) {
+        CALL(do_range(ts[i].start, ts[i].end,
+                      ts[i].expected_error, ts[i].response));
+    }
 
-static int fail_range_length(void)
-{
-    return do_range(1, 10, "range response length mismatch should fail",
-		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-2/2\r\n"
-		    "Content-Length: 2\r\n\r\nab");
-}
-
-static int fail_range_units(void)
-{
-    return do_range(1, 2, "range response units check should fail",
-		    "HTTP/1.1 206 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: fish 1-2/2\r\n"
-		    "Content-Length: 2\r\n\r\nab");
-}
-
-static int fail_range_notrange(void)
-{
-    return do_range(1, 2, "non-ranged response should fail",
-		    "HTTP/1.1 200 Widgets\r\n" "Connection: close\r\n"
-		    "Content-Range: bytes 1-2/2\r\n"
-		    "Content-Length: 2\r\n\r\nab");
-}
-
-static int fail_range_unsatify(void)
-{
-    return do_range(1, 2, "unsatisfiable range should fail",
-		    "HTTP/1.1 416 No Go\r\n" "Connection: close\r\n"
-		    "Content-Length: 2\r\n\r\nab");
+    return OK;
 }
 
 static int dav_capabilities(void)
@@ -459,11 +470,6 @@ ne_test tests[] = {
     T(lookup_localhost),
     T(content_type),
     T(get_range),
-    T(get_eof_range),
-    T(fail_range_length),
-    T(fail_range_units),
-    T(fail_range_notrange),
-    T(fail_range_unsatify),
     T(dav_capabilities),
     T(get),
     T(getbuf),
