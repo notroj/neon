@@ -468,6 +468,48 @@ static int put(void)
     return destroy_and_wait(sess);
 }
 
+static int getmodtime(void)
+{
+    static const struct {
+        const char *header;
+        time_t expected;
+    } ts[] = {
+        { "Last-Modified: Sun, 06 Nov 1994 08:49:37 GMT\r\n", 784111777 },
+        { "Last-Modified: Sunday, 06-Nov-94 08:49:37 GMT\r\n", 784111777 },
+        { "Last-Modified: Sun Nov  6 08:49:37 1994\r\n", 784111777 },
+        /* Missing header => -1 */
+        { "", -1 },
+        /* Invalid date => -1 */
+        { "Last-Modified: not a valid date\r\n", -1 },
+        { NULL, 0 }
+    };
+    int n;
+
+    for (n = 0; ts[n].header != NULL; n++) {
+        ne_session *sess;
+        char resp[BUFSIZ];
+        time_t modtime = 0;
+
+        ne_snprintf(resp, BUFSIZ,
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Length: 0\r\n"
+                    "%s"
+                    "\r\n", ts[n].header);
+
+        CALL(make_session(&sess, single_serve_string, resp));
+
+        ONREQ(ne_getmodtime(sess, "/foo", &modtime));
+
+        ONV(modtime != ts[n].expected,
+            ("for '%s': modtime was %ld, expected %ld",
+             ts[n].header, (long)modtime, (long)ts[n].expected));
+
+        CALL(destroy_and_wait(sess));
+    }
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(lookup_localhost),
     T(content_type),
@@ -481,6 +523,7 @@ ne_test tests[] = {
     T(getbuf_retry),
     T(options2),
     T(put),
+    T(getmodtime),
     T(NULL) 
 };
 
