@@ -69,4 +69,5 @@ NEON_0_37 {
     ne_ssl_clicert_copy;
     ne_ssl_context_set_clicert;
     ne_ssl_context_trustdefca;
+    ne_sock_getcert;
 };

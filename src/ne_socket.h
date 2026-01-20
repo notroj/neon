@@ -310,6 +310,9 @@ char *ne_sock_cipher(ne_socket *sock);
  * NE_SSL_PROTO_UNSPEC if SSL/TLS is not in use for the socket. */
 enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock);
 
+/* Return the server certificate for the socket. */
+ne_ssl_certificate *ne_sock_getcert(ne_socket *sock, ne_ssl_context *ctx);
+
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {
     NE_SOCK_SOCKSV4 = 0,
