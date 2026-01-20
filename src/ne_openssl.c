@@ -434,7 +434,8 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
 }
 
 /* Return a linked list of certificate objects from an OpenSSL chain. */
-static ne_ssl_certificate *make_chain(STACK_OF(X509) *chain)
+#define make_chain ne__ssl_make_chain
+ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain)
 {
     int n, count = sk_X509_num(chain);
     ne_ssl_certificate *top = NULL, *current = NULL;

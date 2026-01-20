@@ -797,8 +797,9 @@ static gnutls_x509_crt_t find_issuer(gnutls_x509_crt_t *ca_list,
 #endif
 
 /* Return the certificate chain sent by the peer, or NULL on error. */
-static ne_ssl_certificate *make_peers_chain(gnutls_session_t sock,
-                                            gnutls_certificate_credentials_t crd)
+#define make_peers_chain ne__ssl_make_chain
+ne_ssl_certificate *ne__ssl_make_chain(gnutls_session_t sock,
+                                       gnutls_certificate_credentials_t crd)
 {
     ne_ssl_certificate *current = NULL, *top = NULL;
     const gnutls_datum_t *certs;

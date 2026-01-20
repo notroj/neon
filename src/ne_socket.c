@@ -2131,6 +2131,24 @@ enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock)
     return NE_SSL_PROTO_UNSPEC;
 }
 
+ne_ssl_certificate *ne_sock_getcert(ne_socket *sock, ne_ssl_context *ctx)
+{
+    ne_ssl_certificate *ret = NULL;
+#if defined(HAVE_OPENSSL)
+    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(sock->ssl);
+
+    if (chain == NULL || sk_X509_num(chain) == 0) {
+        set_error(sock, _("SSL server did not present certificate"));
+        return NULL;
+    }
+
+    ret = ne__ssl_make_chain(chain);
+#elif defined(HAVE_GNUTLS)
+    ret = ne__ssl_make_chain(sock->ssl, ctx->cred);
+#endif
+    return ret;
+}
+
 const char *ne_sock_error(const ne_socket *sock)
 {
     return sock->error;
