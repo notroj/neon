@@ -313,6 +313,20 @@ enum ne_ssl_protocol ne_sock_getproto(ne_socket *sock);
 /* Return the server certificate for the socket. */
 ne_ssl_certificate *ne_sock_getcert(ne_socket *sock, ne_ssl_context *ctx);
 
+/* Check the identity of a server certificate against the hostname or
+ * address used to establish the connection, following rules specified
+ * by RFC 2818 and RFC 3280.  Either hostname or address can be
+ * non-NULL; whichever was used to identify the server when
+ * establishing the SSL connection. If both are NULL, matching
+ * will fail but the *identity output parameter will still be set.
+ *
+ * Returns zero if identity matches; 1 if identity does not match, or
+ * <0 if the certificate had no identity.  If 'identity' is non-NULL,
+ * the malloc-allocated identity is stored in *identity. */
+int ne_ssl_check_identity(ne_ssl_certificate *cert,
+                          const char *hostname, const ne_inet_addr *address,
+                          char **identity);
+
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {
     NE_SOCK_SOCKSV4 = 0,

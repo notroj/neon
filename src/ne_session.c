@@ -685,6 +685,10 @@ int ne__ssl_match_hostname(const char *cn, size_t cnlen, const char *hostname)
 {
     const char *dot;
 
+    if (!hostname) {
+        return 0;
+    }
+
     NE_DEBUG(NE_DBG_SSL, "ssl: Match common name '%s' against '%s'\n",
              cn, hostname);
 

@@ -124,6 +124,7 @@ static int stub_ssl(void)
         ONN("this code shouldn't run", ne_ssl_cert_identity(issuer) != NULL);
         ONN("this code shouldn't run", ne_ssl_cert_export(cert) != NULL);
         ONN("this code shouldn't run", ne_ssl_cert_hdigest(cert, NE_HASH_MD5) != NULL);
+        ONN("this code shouldn't run", ne_ssl_check_identity(cert, NULL, NULL, NULL));
     }
 
     ONN("this code shouldn't run", ne_ssl_cert_import("foo") != NULL);

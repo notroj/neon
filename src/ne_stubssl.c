@@ -102,6 +102,12 @@ void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *c
 void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value) {}
 void ne_ssl_context_trustdefca(ne_ssl_context *ctx) {}
 void ne_ssl_context_destroy(ne_ssl_context *ctx) {}
+int ne_ssl_check_identity(ne_ssl_certificate *cert,
+                          const char *hostname, const ne_inet_addr *address,
+                          char **identity)
+{
+    return -1;
+}
 
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
