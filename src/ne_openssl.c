@@ -268,18 +268,15 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-/* Check certificate identity.  Returns zero if identity matches; 1 if
- * identity does not match, or <0 if the certificate had no identity.
- * If 'identity' is non-NULL, store the malloc-allocated identity in
- * *identity.  Logic specified by RFC 2818 and RFC 3280. */
-static int check_identity(const struct host_info *server, X509 *cert,
+int ne_ssl_check_identity(ne_ssl_certificate *server_cert,
+                          const char *hostname, const ne_inet_addr *address,
                           char **identity)
 {
     STACK_OF(GENERAL_NAME) *names;
     int match = 0, found = 0;
-    const char *hostname;
-    
-    hostname = server ? server->hostname : "";
+    X509 *cert = server_cert->subject;
+
+    if (!hostname) hostname = "";
 
     names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (names) {
@@ -296,12 +293,12 @@ static int check_identity(const struct host_info *server, X509 *cert,
 
                 /* Only match if the server was not identified by a
                  * literal IP address; avoiding wildcard matches. */
-                if (server && !server->literal)
+                if (!address)
                     match = ne__ssl_match_hostname(name, strlen(name), hostname);
 		ne_free(name);
 		found = 1;
             } 
-            else if (nm->type == GEN_IPADD && server && server->literal) {
+            else if (nm->type == GEN_IPADD && address) {
                 /* compare IP addfress with server literal IP address. */
                 ne_inet_addr *ia;
                 if (nm->d.ip->length == 4)
@@ -312,11 +309,12 @@ static int check_identity(const struct host_info *server, X509 *cert,
                     ia = NULL;
                 /* ne_iaddr_make returns NULL if address type is unsupported */
                 if (ia != NULL) { /* address type was supported. */
-                    match = ne_iaddr_cmp(ia, server->literal) == 0;
+                    match = ne_iaddr_cmp(ia, address) == 0;
                     found = 1;
                     ne_iaddr_free(ia);
-                } else {
-                    NE_DEBUG(NE_DBG_SSL, "iPAddress name with unsupported "
+                }
+                else {
+                    NE_DEBUG(NE_DBG_SSL, "ssl: iPAddress name with unsupported "
                              "address type (length %d), skipped.\n",
                              nm->d.ip->length);
                 }
@@ -353,12 +351,13 @@ static int check_identity(const struct host_info *server, X509 *cert,
             return -1;
         }
         if (identity) *identity = ne_strdup(cname->data);
-        if (server && !server->literal)
+        if (!address)
             match = ne__ssl_match_hostname(cname->data, cname->used-1, hostname);
         ne_buffer_destroy(cname);
     }
 
-    NE_DEBUG(NE_DBG_SSL, "Identity match for '%s': %s\n", hostname, 
+    NE_DEBUG(NE_DBG_SSL, "ssl: Identity match for '%s': %s\n",
+             hostname && *hostname ? hostname : "(no host)",
              match ? "good" : "bad");
     return match ? 0 : 1;
 }
@@ -372,7 +371,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
     cert->subject = x5;
     /* Retrieve the cert identity; pass a dummy hostname to match. */
     cert->identity = NULL;
-    check_identity(NULL, x5, &cert->identity);
+    ne_ssl_check_identity(cert, NULL, NULL, &cert->identity);
     return cert;
 }
 
@@ -465,7 +464,6 @@ ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain)
 /* Verifies an SSL server certificate. */
 static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *chain)
 {
-    X509 *cert = chain->subject;
     int ret, failures = sess->ssl_context->failures;
 
     /* If the verification callback hit a case which can't be mapped
@@ -483,7 +481,8 @@ static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *cha
 
     /* Check certificate was issued to this server; pass URI of
      * server. */
-    ret = check_identity(&sess->server, cert, NULL);
+    ret = ne_ssl_check_identity(chain, sess->server.hostname,
+                                sess->server.literal, NULL);
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));

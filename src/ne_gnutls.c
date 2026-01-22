@@ -357,12 +357,8 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-/* Check certificate identity.  Returns zero if identity matches; 1 if
- * identity does not match, or <0 if the certificate had no identity.
- * If 'identity' is non-NULL, store the malloc-allocated identity in
- * *identity.  If 'server' is non-NULL, it must be the network address
- * of the server in use, and identity must be NULL. */
-static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert,
+int ne_ssl_check_identity(ne_ssl_certificate *server_cert,
+                          const char *hostname, const ne_inet_addr *address,
                           char **identity)
 {
     char name[255];
@@ -370,9 +366,7 @@ static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert
     int ret, seq = 0;
     int match = 0, found = 0;
     size_t len;
-    const char *hostname;
-    
-    hostname = server ? server->hostname : "";
+    gnutls_x509_crt_t cert = server_cert->subject;
 
     do {
         len = sizeof name - 1;
@@ -384,7 +378,7 @@ static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert
             if (identity && !found) *identity = ne_strdup(name);
             /* Only match if the server was not identified by a
              * literal IP address; avoiding wildcard matches. */
-            if (server && !server->literal)
+            if (!address)
                 match = ne__ssl_match_hostname(name, len, hostname);
             found = 1;
             break;
@@ -397,8 +391,8 @@ static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert
             else 
                 ia = NULL;
             if (ia) {
-                if (server && server->literal)
-                    match = ne_iaddr_cmp(ia, server->literal) == 0;
+                if (address)
+                    match = ne_iaddr_cmp(ia, address) == 0;
                 found = 1;
                 ne_iaddr_free(ia);
             }
@@ -427,7 +421,7 @@ static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert
                                                 seq, 0, name, &len);
             if (ret == 0) {
                 if (identity) *identity = ne_strdup(name);
-                if (server && !server->literal)
+                if (!address)
                     match = ne__ssl_match_hostname(name, len, hostname);
             }
         } else {
@@ -435,7 +429,7 @@ static int check_identity(const struct host_info *server, gnutls_x509_crt_t cert
         }
     }
 
-    if (*hostname)
+    if (hostname)
         NE_DEBUG(NE_DBG_SSL, "ssl: Identity match for '%s': %s\n", hostname, 
                  match ? "good" : "bad");
 
@@ -460,7 +454,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
-    check_identity(NULL, x5, &cert->identity);
+    ne_ssl_check_identity(cert, NULL, NULL, &cert->identity);
     return cert;
 }
 
@@ -960,8 +954,8 @@ static int check_certificate(ne_session *sess, gnutls_session_t sock,
     int ret, failures = 0;
     unsigned int status;
 
-    ret = check_identity(&sess->server, chain->subject, NULL);
-
+    ret = ne_ssl_check_identity(chain, sess->server.hostname,
+                                sess->server.literal, NULL);
     if (ret < 0) {
         ne_set_error(sess, _("Server certificate was missing commonName "
                              "attribute in subject name"));
