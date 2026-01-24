@@ -681,7 +681,7 @@ static int check_certificate(ne_session *sess, ne_ssl_certificate *cert)
 
     if (ne_ssl_check_certificate(sess->ssl_context, sess->socket,
                                  sess->server.hostname, sess->server.literal,
-                                 cert, &failures)) {
+                                 cert, 0, &failures)) {
         /* Propagate error back. */
         ne_set_error(sess, _("SSL error: %s"), ne_sock_error(sess->socket));
         /* Fail, or allow override for non-fatal errors (failures!=0). */

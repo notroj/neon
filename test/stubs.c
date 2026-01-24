@@ -99,6 +99,7 @@ static int stub_ssl(void)
     ne_session *sess = ne_session_create("https", "localhost", 1234);
     ne_ssl_certificate *cert;
     ne_ssl_client_cert *cc;
+    ne_ssl_context *ctx;
 
     /* these should all fail when SSL is not supported. */
     cert = ne_ssl_cert_read("Makefile");
@@ -124,13 +125,26 @@ static int stub_ssl(void)
         ONN("this code shouldn't run", ne_ssl_cert_identity(issuer) != NULL);
         ONN("this code shouldn't run", ne_ssl_cert_export(cert) != NULL);
         ONN("this code shouldn't run", ne_ssl_cert_hdigest(cert, NE_HASH_MD5) != NULL);
-        ONN("this code shouldn't run", ne_ssl_check_identity(cert, NULL, NULL, NULL));
     }
 
     ONN("this code shouldn't run", ne_ssl_cert_import("foo") != NULL);
     ONN("this code shouldn't run", ne_ssl_cert_read("Makefile") != NULL);
     ONN("this code shouldn't succeed", ne_ssl_cert_cmp(NULL, NULL) == 0);
     ONN("this code shouldn't run", ne_ssl_clicert_fromuri("Makefile", 0) != NULL);
+
+    ctx = ne_ssl_context_create(NE_SSL_CTX_CLIENT);
+    if (ctx) {
+        enum ne_ssl_protocol unspec = NE_SSL_PROTO_UNSPEC;
+        int out;
+        
+        (void) ne_ssl_context_trustcert(ctx, cert);
+        (void) ne_ssl_context_trustdefca(ctx);
+        ONN("this code shouldn't run", ne_ssl_context_set_versions(ctx, unspec, unspec) == 0);
+        (void) ne_ssl_context_destroy(ctx);
+        ONN("this code shouldn't run", ne_ssl_check_certificate(ctx, NULL, 
+                                                                NULL, NULL, cert,
+                                                                0, &out));
+    }
 
     ONN("certificate load succeeded", cert != NULL);
     ne_ssl_cert_free(cert);

@@ -355,7 +355,8 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-int ne_ssl_check_identity(ne_ssl_certificate *server_cert,
+/* Check certificate identity per RFC 2818 and RFC 3280. */
+static int check_identity(const ne_ssl_certificate *server_cert,
                           const char *hostname, const ne_inet_addr *address,
                           char **identity)
 {
@@ -452,7 +453,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert,
     cert->issuer = NULL;
     cert->subject = x5;
     cert->identity = NULL;
-    ne_ssl_check_identity(cert, NULL, NULL, &cert->identity);
+    check_identity(cert, NULL, NULL, &cert->identity);
     return cert;
 }
 
@@ -927,10 +928,10 @@ static char *verify_error_string(unsigned int status)
 }
 
 /* Return NE_SSL_* failure bits after checking chain expiry. */
-static int check_chain_expiry(ne_ssl_certificate *chain)
+static int check_chain_expiry(const ne_ssl_certificate *chain)
 {
     time_t before, after, now = time(NULL);
-    ne_ssl_certificate *cert;
+    const ne_ssl_certificate *cert;
     int failures = 0;
     
     /* Check that all certs within the chain are inside their defined
@@ -951,14 +952,15 @@ static int check_chain_expiry(ne_ssl_certificate *chain)
 }
 
 int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
-                             const char *hostname, ne_inet_addr *address,
-                             ne_ssl_certificate *cert, int *failures_out)
+                             const char *hostname, const ne_inet_addr *address,
+                             const ne_ssl_certificate *cert,
+                             unsigned int flags, int *failures_out)
 {
     ne_ssl_socket *sslsock = ne__sock_sslsock(sock);
     int ret, failures = 0;
     unsigned int status;
 
-    ret = ne_ssl_check_identity(cert, hostname, address, NULL);
+    ret = check_identity(cert, hostname, address, NULL);
     if (ret < 0) {
         ne_sock_set_error(sock, _("Server certificate was missing commonName "
                                   "attribute in subject name"));

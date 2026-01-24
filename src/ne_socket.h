@@ -326,13 +326,11 @@ ne_ssl_certificate *ne_sock_getcert(ne_socket *sock, ne_ssl_context *ctx);
  * Returns zero if identity matches; 1 if identity does not match, or
  * <0 if the certificate had no identity.  If 'identity' is non-NULL,
  * the malloc-allocated identity is stored in *identity. */
-int ne_ssl_check_identity(ne_ssl_certificate *cert,
-                          const char *hostname, const ne_inet_addr *address,
-                          char **identity);
-
 int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
-                             const char *hostname, ne_inet_addr *address,
-                             ne_ssl_certificate *cert, int *failures);
+                             const char *hostname,
+                             const ne_inet_addr *address,
+                             const ne_ssl_certificate *cert,
+                             unsigned int flags, int *failures);
 
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {

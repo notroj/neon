@@ -267,7 +267,8 @@ void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
     }
 }
 
-int ne_ssl_check_identity(ne_ssl_certificate *server_cert,
+/* Check certificate identity per RFC 2818 and RFC 3280. */
+static int check_identity(const ne_ssl_certificate *server_cert,
                           const char *hostname, const ne_inet_addr *address,
                           char **identity)
 {
@@ -370,7 +371,7 @@ static ne_ssl_certificate *populate_cert(ne_ssl_certificate *cert, X509 *x5)
     cert->subject = x5;
     /* Retrieve the cert identity; pass a dummy hostname to match. */
     cert->identity = NULL;
-    ne_ssl_check_identity(cert, NULL, NULL, &cert->identity);
+    check_identity(cert, NULL, NULL, &cert->identity);
     return cert;
 }
 
@@ -460,8 +461,9 @@ ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain)
 
 /* Verifies an SSL server certificate. */
 int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
-                             const char *hostname, ne_inet_addr *address,
-                             ne_ssl_certificate *cert, int *failures_out)
+                             const char *hostname, const ne_inet_addr *address,
+                             const ne_ssl_certificate *cert,
+                             unsigned int flags, int *failures_out)
 {
     ne_ssl_socket *sslsock = ne__sock_sslsock(sock);
     int ret, failures = sslsock->failures;
@@ -479,7 +481,7 @@ int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
 
     /* Check certificate was issued to this server; pass URI of
      * server. */
-    ret = ne_ssl_check_identity(cert, hostname, address, NULL);
+    ret = check_identity(cert, hostname, address, NULL);
     if (ret < 0) {
         ne_sock_set_error(sock, _("Server certificate was missing commonName "
                                   "attribute in subject name"));
