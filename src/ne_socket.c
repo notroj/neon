@@ -825,6 +825,7 @@ static int readable_gnutls(ne_socket *sock, int secs)
 
 static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
 {
+    const char *note = "";
     ssize_t ret;
 
     switch (sret) {
@@ -858,10 +859,14 @@ static ssize_t error_gnutls(ne_socket *sock, ssize_t sret)
         ret = NE_SOCK_RESET;
         set_error(sock, _("SSL socket read failed"));
         break;
+    case GNUTLS_E_UNEXPECTED_PACKET:
+        if (sock->ssl.cc_requested)
+            note = _(" (client certificate was requested)");
+        /* fallthrough */
     default:
         ret = NE_SOCK_ERROR;
-        ne_snprintf(sock->error, sizeof sock->error, _("SSL error: %s"),
-                    gnutls_strerror(sret));
+        ne_snprintf(sock->error, sizeof sock->error, _("SSL error%s: %s"),
+                    note, gnutls_strerror(sret));
     }
     return ret;
 }
