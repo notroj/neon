@@ -244,7 +244,7 @@ typedef struct ne_ssl_context_s ne_ssl_context;
 /* Context creation modes: */
 #define NE_SSL_CTX_CLIENT (0) /* client context */
 #define NE_SSL_CTX_SERVER (1) /* default server context */
-#define NE_SSL_CTX_SERVERv2 (2) /* SSLv2-specific server context */
+#define NE_SSL_CTX_SERVERv2 (2) /* unused */
 
 /* Create an SSL context. */
 ne_ssl_context *ne_ssl_context_create(int mode);
@@ -274,9 +274,8 @@ typedef void (*ne_ssl_ccprovide_fn)(void *userdata,
                                     const ne_ssl_dname *const *dnames,
                                     int dncount);
 
-/* Set the minimum and maximum protocol version which is allowed for
- * the connection. This must be called prior to ne_sock_connect_ssl()
- * or ne_sock_accept_ssl(). Returns 0 on success or NE_SOCK_*. */
+/* Client mode: register a callback to provide a client certificate if
+ * requested by the server. */
 void ne_ssl_context_set_ccprovide(ne_ssl_context *ctx,
                                   ne_ssl_ccprovide_fn provider,
                                   void *userdata);
