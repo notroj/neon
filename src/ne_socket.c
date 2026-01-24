@@ -240,8 +240,6 @@ struct ne_sock_addr_s {
     int errnum;
 };
 
-#define sock_ssl(s_) ((s_)->ssl)
-
 /* set_error: set socket error string to 'str'. */
 #define set_error(s, str) ne_strnzcpy((s)->error, (str), sizeof (s)->error)
 
@@ -625,6 +623,7 @@ static const struct iofns iofns_raw = { read_raw, write_raw, readable_raw, write
 
 #ifdef HAVE_OPENSSL
 static int error_ossl(ne_socket *sock, int sret);
+#define sock_ssl(s_) ((s_)->ssl.ssl)
 #endif
 
 #ifdef HAVE_OPENSSL
@@ -701,12 +700,28 @@ static int error_ossl(ne_socket *sock, int sret)
 	    set_error(sock, _("Secure connection truncated"));
 	    return NE_SOCK_TRUNC;
 	}
-        else
 #endif
 	if (reason == SSL_R_PROTOCOL_IS_SHUTDOWN) {
 	    set_error(sock, _("Secure connection reset"));
 	    return NE_SOCK_RESET;
 	}
+#ifdef SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED
+        if (reason == SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED) {
+            set_error(sock, _("Handshake rejected - client certificate "
+                              "was requested"));
+            return NE_SOCK_ERROR;
+        }
+#endif
+#ifdef SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE
+        if (reason == SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE) {
+            if (sock->ssl.cc_requested)
+                set_error(sock, _("Handshake rejected - client certificate "
+                                  "was requested"));
+            else
+                set_error(sock, _("Handshake failed"));
+            return NE_SOCK_ERROR;
+        }
+#endif
         break;
     case ERR_LIB_SYS:
         set_strerror(sock, reason);
@@ -780,6 +795,8 @@ static const struct iofns iofns_ssl = {
 };
 
 #elif defined(HAVE_GNUTLS)
+
+#define sock_ssl(s_) ((s_)->ssl.sess)
 
 /* Return zero if an alert value can be ignored. */
 static int check_alert(ne_socket *sock, ssize_t ret)
@@ -865,7 +882,6 @@ static ssize_t read_gnutls(ne_socket *sock, char *buffer, size_t len)
         do {
             ret = gnutls_record_recv(sock_ssl(sock), buffer, len);
         } while (RETRY_GNUTLS(sock, ret));
-        
     } while (ret == GNUTLS_E_REHANDSHAKE && reneg--
              && (ret = gnutls_handshake(sock_ssl(sock))) == GNUTLS_E_SUCCESS);
 
@@ -1781,6 +1797,40 @@ void ne_sock_connect_timeout(ne_socket *sock, int timeout)
 
 #ifdef NE_HAVE_SSL
 
+/* Functions common to OpenSSL and GnuTLS: */
+ne_ssl_socket *ne__sock_sslsock(ne_socket *sock)
+{
+    return &sock->ssl;
+}
+
+void ne__sock_set_verify_err(ne_socket *sock, int failures)
+{
+    static const struct {
+        int bit;
+        const char *str;
+    } reasons[] = {
+        { NE_SSL_NOTYETVALID, N_("certificate is not yet valid") },
+        { NE_SSL_EXPIRED, N_("certificate has expired") },
+        { NE_SSL_IDMISMATCH, N_("certificate issued for a different hostname") },
+        { NE_SSL_UNTRUSTED, N_("issuer is not trusted") },
+        { NE_SSL_BADCHAIN, N_("bad certificate chain") },
+        { NE_SSL_REVOKED, N_("certificate has been revoked") },
+        { 0, NULL }
+    };
+    int n, flag = 0;
+
+    ne_strnzcpy(sock->error, _("Server certificate verification failed: "),
+                sizeof sock->error);
+
+    for (n = 0; reasons[n].bit; n++) {
+        if (failures & reasons[n].bit) {
+            if (flag) strncat(sock->error, ", ", sizeof sock->error - 1);
+            strncat(sock->error, _(reasons[n].str), sizeof sock->error - 1);
+            flag = 1;
+        }
+    }
+}
+
 #ifdef HAVE_GNUTLS
 /* Dumb server session cache implementation for GNUTLS; holds a single
  * session. */
@@ -1861,10 +1911,8 @@ static int set_priority(ne_socket *sock, ne_ssl_context *ctx)
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
 {
     int ret;
-    ne_ssl_socket ssl;
-
 #if defined(HAVE_OPENSSL)
-    ssl = SSL_new(ctx->ctx);
+    SSL *ssl = SSL_new(ctx->ctx);
     
     SSL_set_fd(ssl, sock->fd);
 
@@ -1879,6 +1927,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     }
 #elif defined(HAVE_GNUTLS)
     unsigned int verify_status;
+    gnutls_session_t ssl;
 
     gnutls_init(&ssl, GNUTLS_SERVER);
     sock_ssl(sock) = ssl;
@@ -1913,6 +1962,12 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
 
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
 {
+    return ne_sock_handshake(sock, ctx, NULL, 0);
+}
+
+int ne_sock_handshake(ne_socket *sock, ne_ssl_context *ctx,
+                      const char *hostname, unsigned int flags)
+{
     int ret;
 
 #if defined(HAVE_OPENSSL)
@@ -1929,7 +1984,7 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
 	return NE_SOCK_ERROR;
     }
     
-    SSL_set_app_data(ssl, userdata);
+    SSL_set_app_data(ssl, &sock->ssl);
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
     SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 #else
@@ -1939,11 +1994,11 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     sock->ops = &iofns_ssl;
 
 #ifdef SSL_set_tlsext_host_name
-    if (ctx->hostname) {
+    if (hostname) {
         /* Try to enable SNI, but ignore failure (should only fail for
          * >255 char hostnames, which are probably not legal
          * anyway).  */
-        if (SSL_set_tlsext_host_name(ssl, ctx->hostname) != 1) {
+        if (SSL_set_tlsext_host_name(ssl, hostname) != 1) {
             ERR_clear_error();
         }
     }
@@ -1962,6 +2017,8 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
 	return NE_SOCK_ERROR;
     }
 #elif defined(HAVE_GNUTLS)
+    sock->ssl.context = ctx;
+
     /* DH and RSA params are set in ne_ssl_context_create */
     gnutls_init(&sock_ssl(sock), GNUTLS_CLIENT);
 
@@ -1969,12 +2026,12 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
         return NE_SOCK_ERROR;
     }
 
-    gnutls_session_set_ptr(sock_ssl(sock), userdata);
+    gnutls_session_set_ptr(sock_ssl(sock), sock);
     gnutls_credentials_set(sock_ssl(sock), GNUTLS_CRD_CERTIFICATE, ctx->cred);
 
-    if (ctx->hostname) {
-        gnutls_server_name_set(sock_ssl(sock), GNUTLS_NAME_DNS, ctx->hostname,
-                               strlen(ctx->hostname));
+    if (hostname) {
+        gnutls_server_name_set(sock_ssl(sock), GNUTLS_NAME_DNS, hostname,
+                               strlen(hostname));
     }                               
 
     gnutls_transport_set_ptr(sock_ssl(sock), (gnutls_transport_ptr_t)(long)sock->fd);
@@ -2017,11 +2074,6 @@ int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
     }
 #endif
     return 0;
-}
-
-ne_ssl_socket ne__sock_sslsock(ne_socket *sock)
-{
-    return sock_ssl(sock);
 }
 
 #endif

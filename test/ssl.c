@@ -1162,30 +1162,34 @@ static int ccert_unencrypted(void)
  * cert was requested. */
 static int no_client_cert(void)
 {
-    ne_session *sess;
-    struct ssl_server_args args = {SERVER_CERT, NULL};
-    int ret;
+    unsigned i;
 
-    args.require_cc = 1;
-    args.fail_silently = 1;
+    for (i = 0; i < 2; i++) {
+        ne_session *sess;
+        struct ssl_server_args args = {SERVER_CERT, NULL};
+        int ret;
 
-    CALL(make_ssl_session(&sess, NULL, ssl_server, &args));
+        args.require_cc = 1;
+        args.fail_silently = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
-    
-    ret = any_request(sess, "/failme");
+        CALL(make_ssl_session(&sess, NULL, ssl_server, &args));
+        ne_ssl_trust_cert(sess, def_ca_cert);
 
-    ONV(ret != NE_ERROR,
-        ("unexpected result %d: %s", ret, ne_get_error(sess)));
+        if (i)
+            ne_ssl_set_protovers(sess, NE_SSL_PROTO_TLS_1_2, NE_SSL_PROTO_TLS_1_2);
 
-    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL
-        && strstr(ne_get_error(sess), NOCERT_ALT) == NULL,
-        ("error message was '%s', missing '%s'", 
-         ne_get_error(sess), NOCERT_MESSAGE));
-    
-    reap_server();
+        ret = any_request(sess, i ? "failme-tls12" : "/failme");
+        ONV(ret != NE_ERROR,
+            ("unexpected result %d: %s", ret, ne_get_error(sess)));
 
-    ne_session_destroy(sess);    
+        ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL
+            && strstr(ne_get_error(sess), NOCERT_ALT) == NULL,
+            ("error message was '%s', missing '%s'",
+             ne_get_error(sess), NOCERT_MESSAGE));
+
+        CALL(destroy_and_wait(sess));
+    }
+
     return OK;
 }
 
