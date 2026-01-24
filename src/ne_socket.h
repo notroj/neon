@@ -285,12 +285,15 @@ void ne_sock_connect_timeout(ne_socket *sock, int timeout);
  * SSL context. */
 int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
 
-/* Negotiate an SSL connection on socket as an SSL client, using given
- * SSL context.  The 'userdata' parameter is associated with the
- * underlying SSL library's socket structure for use in callbacks.
- * Returns zero on success, or non-zero on error. */
+/* Deprecated interface for initiating an SSL handshake, use
+ * ne_sock_handshake() instead. */
 int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
                         void *userdata);
+
+/* Initiate an SSL handshake with SSL context 'ctx', using SNI hint
+ * 'hostname' (which may be NULL). 'flags' must be 0. */
+int ne_sock_handshake(ne_socket *sock, ne_ssl_context *ctx,
+                      const char *hostname, unsigned int flags);
 
 /* Retrieve the session ID of the current SSL session.  If 'buf' is
  * non-NULL, on success, copies at most *buflen bytes to 'buf' and
@@ -326,6 +329,10 @@ ne_ssl_certificate *ne_sock_getcert(ne_socket *sock, ne_ssl_context *ctx);
 int ne_ssl_check_identity(ne_ssl_certificate *cert,
                           const char *hostname, const ne_inet_addr *address,
                           char **identity);
+
+int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
+                             const char *hostname, ne_inet_addr *address,
+                             ne_ssl_certificate *cert, int *failures);
 
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {

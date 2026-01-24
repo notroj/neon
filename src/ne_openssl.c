@@ -52,9 +52,8 @@
 
 #include "ne_ssl.h"
 #include "ne_string.h"
-#include "ne_session.h"
 #include "ne_internal.h"
-#include "ne_private.h"
+#include "ne_utils.h"
 #include "ne_privssl.h"
 
 /* OpenSSL 0.9.6 compatibility */
@@ -385,8 +384,7 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
      * yet to be born.  Or... "Seriously, wtf?"  */
     SSL *ssl = X509_STORE_CTX_get_ex_data(ctx, 
                                           SSL_get_ex_data_X509_STORE_CTX_idx());
-    SSL_CTX *sslctx = SSL_get_SSL_CTX(ssl);
-    ne_ssl_context *sctx = SSL_CTX_get_app_data(sslctx);
+    ne_ssl_socket *sslsock = SSL_get_app_data(ssl);
     int depth = X509_STORE_CTX_get_error_depth(ctx);
     int err = X509_STORE_CTX_get_error(ctx);
     int failures = 0;
@@ -418,22 +416,21 @@ static int verify_callback(int ok, X509_STORE_CTX *ctx)
     default:
         /* Clear the failures bitmask so check_certificate knows this
          * is a bailout. */
-        sctx->failures |= NE_SSL_UNHANDLED;
+        sslsock->failures |= NE_SSL_UNHANDLED;
         NE_DEBUG(NE_DBG_SSL, "ssl: Unhandled verification error %d -> %s\n", 
                  err, X509_verify_cert_error_string(err));
         return 0;
     }
 
-    sctx->failures |= failures;
+    sslsock->failures |= failures;
 
     NE_DEBUG(NE_DBG_SSL, "ssl: Verify failures |= %d => %d\n", failures,
-             sctx->failures);
+             sslsock->failures);
     
     return 1;
 }
 
 /* Return a linked list of certificate objects from an OpenSSL chain. */
-#define make_chain ne__ssl_make_chain
 ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain)
 {
     int n, count = sk_X509_num(chain);
@@ -462,44 +459,38 @@ ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain)
 }
 
 /* Verifies an SSL server certificate. */
-static int check_certificate(ne_session *sess, SSL *ssl, ne_ssl_certificate *chain)
+int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
+                             const char *hostname, ne_inet_addr *address,
+                             ne_ssl_certificate *cert, int *failures_out)
 {
-    int ret, failures = sess->ssl_context->failures;
+    ne_ssl_socket *sslsock = ne__sock_sslsock(sock);
+    int ret, failures = sslsock->failures;
 
     /* If the verification callback hit a case which can't be mapped
      * to one of the exported error bits, it's treated as a hard
      * failure rather than invoking the callback, which can't present
      * a useful error to the user.  "Um, something is wrong.  OK?" */
     if (failures & NE_SSL_UNHANDLED) {
-        long result = SSL_get_verify_result(ssl);
-
-        ne_set_error(sess, _("Certificate verification error: %s"),
-                    X509_verify_cert_error_string(result));
-
-        return NE_ERROR;
+        long result = SSL_get_verify_result(sslsock->ssl);
+        ne_sock_set_error(sock, _("Certificate verification error: %s"),
+                          X509_verify_cert_error_string(result));
+        return NE_SOCK_ERROR;
     }
 
     /* Check certificate was issued to this server; pass URI of
      * server. */
-    ret = ne_ssl_check_identity(chain, sess->server.hostname,
-                                sess->server.literal, NULL);
+    ret = ne_ssl_check_identity(cert, hostname, address, NULL);
     if (ret < 0) {
-        ne_set_error(sess, _("Server certificate was missing commonName "
-                             "attribute in subject name"));
-        return NE_ERROR;
+        ne_sock_set_error(sock, _("Server certificate was missing commonName "
+                                  "attribute in subject name"));
+        return NE_SOCK_ERROR;
     } else if (ret > 0) failures |= NE_SSL_IDMISMATCH;
 
-    if (failures == 0) {
-        /* verified OK! */
-        ret = NE_OK;
-    } else {
-        /* Set up the error string. */
-        ne__ssl_set_verify_err(sess, failures);
-        ret = NE_ERROR;
-        /* Allow manual override */
-        if (sess->ssl_verify_fn && 
-            sess->ssl_verify_fn(sess->ssl_verify_ud, failures, chain) == 0)
-            ret = NE_OK;
+    if (failures) {
+        /* Pass up the failures for possible override. */
+        ne__sock_set_verify_err(sock, failures);
+        *failures_out = failures;
+        ret = NE_SOCK_ERROR;
     }
 
     return ret;
@@ -525,11 +516,11 @@ ne_ssl_client_cert *ne_ssl_clicert_copy(const ne_ssl_client_cert *cc)
 /* Callback invoked when the SSL server requests a client certificate.  */
 static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
 {
-    ne_session *const sess = SSL_get_app_data(ssl);
+    ne_ssl_socket *sslsock = SSL_get_app_data(ssl);
     SSL_CTX *const sslctx = SSL_get_SSL_CTX(ssl);
-    ne_ssl_context *const sctx = SSL_CTX_get_app_data(sslctx);
+    ne_ssl_context *const ctx = SSL_CTX_get_app_data(sslctx);
 
-    if (!sctx->client_cert && sess->ssl_provide_fn) {
+    if (!ctx->client_cert && ctx->provider) {
 	ne_ssl_dname **dnames = NULL, *dnarray = NULL;
         int n, count = 0;
 	STACK_OF(X509_NAME) *ca_list = SSL_get_client_CA_list(ssl);
@@ -547,27 +538,27 @@ static int provide_client_cert(SSL *ssl, X509 **cert, EVP_PKEY **pkey)
         }
 
 	NE_DEBUG(NE_DBG_SSL, "Calling client certificate provider...\n");
-	sess->ssl_provide_fn(sess->ssl_provide_ud, sess, 
-                             (const ne_ssl_dname *const *)dnames, count);
+	ctx->provider(ctx->provider_ud,
+                      (const ne_ssl_dname *const *)dnames, count);
         if (count) {
             ne_free(dnarray);
             ne_free(dnames);
         }
     }
 
-    if (sctx->client_cert) {
-        ne_ssl_client_cert *cc = sctx->client_cert;
-	NE_DEBUG(NE_DBG_SSL, "Supplying client certificate.\n");
-	EVP_PKEY_up_ref(cc->pkey);
-	X509_up_ref(cc->cert.subject);
-	*cert = cc->cert.subject;
-	*pkey = cc->pkey;
-	return 1;
+    if (ctx->client_cert) {
+        ne_ssl_client_cert *cc = ctx->client_cert;
+        NE_DEBUG(NE_DBG_SSL, "ssl: Supplying client certificate.\n");
+        EVP_PKEY_up_ref(cc->pkey);
+        X509_up_ref(cc->cert.subject);
+        *cert = cc->cert.subject;
+        *pkey = cc->pkey;
+        return 1;
     }
     else {
-        sess->ssl_cc_requested = 1;
-	NE_DEBUG(NE_DBG_SSL, "No client certificate supplied.\n");
-	return 0;
+        sslsock->cc_requested = 1;
+        NE_DEBUG(NE_DBG_SSL, "ssl: No client certificate supplied.\n");
+        return 0;
     }
 }
 
@@ -725,86 +716,6 @@ void ne_ssl_context_destroy(ne_ssl_context *ctx)
     if (ctx->client_cert)
         ne_ssl_clicert_free(ctx->client_cert);
     ne_free(ctx);
-}
-
-/* For internal use only. */
-int ne__negotiate_ssl(ne_session *sess)
-{
-    ne_ssl_context *ctx = sess->ssl_context;
-    SSL *ssl;
-    STACK_OF(X509) *chain;
-    int freechain = 0; /* non-zero if chain should be free'd. */
-
-    NE_DEBUG(NE_DBG_SSL, "Doing SSL negotiation.\n");
-    
-    /* Pass through the hostname if SNI is enabled. */
-    ctx->hostname = 
-        sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
-
-    sess->ssl_cc_requested = 0;
-    ctx->failures = 0;
-
-    if (ne_sock_connect_ssl(sess->socket, ctx, sess)) {
-        if (sess->ssl_cc_requested) {
-            ne_set_error(sess, _("SSL handshake failed, "
-                                 "client certificate was requested: %s"),
-                         ne_sock_error(sess->socket));
-        }
-        else {
-            ne_set_error(sess, _("SSL handshake failed: %s"),
-                         ne_sock_error(sess->socket));
-        }
-        return NE_ERROR;
-    }	
-    
-    ssl = ne__sock_sslsock(sess->socket);
-
-    chain = SSL_get_peer_cert_chain(ssl);
-    /* For an SSLv2 connection, the cert chain will always be NULL. */
-    if (chain == NULL) {
-        X509 *cert = SSL_get_peer_certificate(ssl);
-        if (cert) {
-            chain = sk_X509_new_null();
-            sk_X509_push(chain, cert);
-            freechain = 1;
-        }
-    }
-
-    if (chain == NULL || sk_X509_num(chain) == 0) {
-	ne_set_error(sess, _("SSL server did not present certificate"));
-	return NE_ERROR;
-    }
-
-    if (sess->server_cert 
-        && X509_cmp(sk_X509_value(chain, 0), sess->server_cert->subject) == 0) {
-        /* Same leaf cert used as last time - no need to reverify. */
-        if (freechain) sk_X509_free(chain); /* no longer need the chain */
-    } else {
-	/* new connection: create the chain. */
-        ne_ssl_certificate *cert = make_chain(chain);
-
-        if (freechain) sk_X509_free(chain); /* no longer need the chain */
-
-	if (check_certificate(sess, ssl, cert)) {
-	    NE_DEBUG(NE_DBG_SSL, "SSL certificate checks failed: %s\n",
-		     sess->error);
-	    ne_ssl_cert_free(cert);
-	    return NE_ERROR;
-	}
-	/* remember the chain. */
-        sess->server_cert = cert;
-    }
-    
-    if (sess->notify_cb) {
-        char *ciph = ne_sock_cipher(sess->socket);
-
-        sess->status.hs.protocol = ne_sock_getproto(sess->socket);
-        sess->status.hs.ciphersuite = ciph;
-        sess->notify_cb(sess->notify_ud, ne_status_handshake, &sess->status);
-        if (ciph) ne_free(ciph);
-    }
-
-    return NE_OK;
 }
 
 const ne_ssl_dname *ne_ssl_cert_issuer(const ne_ssl_certificate *cert)

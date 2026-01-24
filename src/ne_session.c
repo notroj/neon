@@ -557,11 +557,29 @@ void ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata)
     sess->ssl_verify_ud = userdata;
 }
 
-void ne_ssl_provide_clicert(ne_session *sess, 
-			  ne_ssl_provide_fn fn, void *userdata)
+#ifdef NE_HAVE_SSL
+static void sess_ccprovider(void *userdata, const ne_ssl_dname *const *dnames,
+                            int dncount)
 {
-    sess->ssl_provide_fn = fn;
-    sess->ssl_provide_ud = userdata;
+    ne_session *sess = userdata;
+
+    sess->ssl_provide_fn(sess->ssl_provide_ud, sess,
+                         dnames, dncount);
+}
+#endif
+
+void ne_ssl_provide_clicert(ne_session *sess,
+                            ne_ssl_provide_fn fn, void *userdata)
+{
+#ifdef NE_HAVE_SSL
+    if (sess->ssl_context) {
+        sess->ssl_provide_fn = fn;
+        sess->ssl_provide_ud = userdata;
+
+        ne_ssl_context_set_ccprovide(sess->ssl_context,
+                                     sess_ccprovider, sess);
+    }
+#endif
 }
 
 void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *cc)
@@ -651,57 +669,73 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *unti
 }
 
 #ifdef NE_HAVE_SSL
-void ne__ssl_set_verify_err(ne_session *sess, int failures)
+static int check_certificate(ne_session *sess, ne_ssl_certificate *cert)
 {
-    static const struct {
-	int bit;
-	const char *str;
-    } reasons[] = {
-	{ NE_SSL_NOTYETVALID, N_("certificate is not yet valid") },
-	{ NE_SSL_EXPIRED, N_("certificate has expired") },
-	{ NE_SSL_IDMISMATCH, N_("certificate issued for a different hostname") },
-	{ NE_SSL_UNTRUSTED, N_("issuer is not trusted") },
-        { NE_SSL_BADCHAIN, N_("bad certificate chain") },
-        { NE_SSL_REVOKED, N_("certificate has been revoked") },
-	{ 0, NULL }
-    };
-    int n, flag = 0;
+    int failures = 0;
 
-    ne_strnzcpy(sess->error, _("Server certificate verification failed: "),
-                sizeof sess->error);
-
-    for (n = 0; reasons[n].bit; n++) {
-	if (failures & reasons[n].bit) {
-	    if (flag) strncat(sess->error, ", ", sizeof sess->error - 1);
-	    strncat(sess->error, _(reasons[n].str), sizeof sess->error - 1);
-	    flag = 1;
-	}
+    if (sess->server_cert && ne_ssl_cert_cmp(cert, sess->server_cert) == 0) {
+        /* Same leaf cert used as last time - no need to reverify. */
+        ne_ssl_cert_free(cert);
+        return NE_OK;
     }
+
+    if (ne_ssl_check_certificate(sess->ssl_context, sess->socket,
+                                 sess->server.hostname, sess->server.literal,
+                                 cert, &failures)) {
+        /* Propagate error back. */
+        ne_set_error(sess, _("SSL error: %s"), ne_sock_error(sess->socket));
+        /* Fail, or allow override for non-fatal errors (failures!=0). */
+        if (!failures || !sess->ssl_verify_fn
+            || sess->ssl_verify_fn(sess->ssl_verify_ud, failures, cert)) {
+            ne_ssl_cert_free(cert);
+            return NE_ERROR;
+        }
+    }
+
+    sess->server_cert = cert;
+    return NE_OK;
 }
 
-/* This doesn't actually implement complete RFC 2818 logic; omits
- * "f*.example.com" support for simplicity. */
-int ne__ssl_match_hostname(const char *cn, size_t cnlen, const char *hostname)
+/* For internal use only. */
+int ne__negotiate_ssl(ne_session *sess)
 {
-    const char *dot;
+    ne_ssl_context *ctx = sess->ssl_context;
+    ne_ssl_certificate *cert;
+    const char *snihost;
 
-    if (!hostname) {
-        return 0;
+    NE_DEBUG(NE_DBG_SSL, "sess: Doing SSL negotiation.\n");
+
+    /* Pass through the hostname if SNI is enabled. */
+    snihost = sess->flags[NE_SESSFLAG_TLS_SNI] ? sess->server.hostname : NULL;
+
+    if (ne_sock_handshake(sess->socket, ctx, snihost, 0)) {
+        ne_set_error(sess, _("SSL handshake failed: %s"),
+                     ne_sock_error(sess->socket));
+        return NE_ERROR;
     }
 
-    NE_DEBUG(NE_DBG_SSL, "ssl: Match common name '%s' against '%s'\n",
-             cn, hostname);
-
-    if (strncmp(cn, "*.", 2) == 0 && cnlen > 2
-        && (dot = strchr(hostname, '.')) != NULL) {
-	hostname = dot + 1;
-	cn += 2;
-        cnlen -= 2;
+    cert = ne_sock_getcert(sess->socket, sess->ssl_context);
+    if (!cert) {
+        ne_set_error(sess, _("No server certificate: %s"),
+                     ne_sock_error(sess->socket));
+        return NE_ERROR;
     }
 
-    return cnlen == strlen(hostname) && !ne_strcasecmp(cn, hostname);
+    if (check_certificate(sess, cert)) {
+        return NE_ERROR;
+    }
+
+    if (sess->notify_cb) {
+        char *ciph = ne_sock_cipher(sess->socket);
+
+        sess->status.hs.protocol = ne_sock_getproto(sess->socket);
+        sess->status.hs.ciphersuite = ciph;
+        sess->notify_cb(sess->notify_ud, ne_status_handshake, &sess->status);
+        if (ciph) ne_free(ciph);
+    }
+
+    return NE_OK;
 }
-
 #endif /* NE_HAVE_SSL */
 
 typedef void (*void_fn)(void);
