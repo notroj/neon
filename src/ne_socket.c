@@ -2076,7 +2076,9 @@ char *ne_sock_cipher(ne_socket *sock)
 #else
         const char *name = SSL_CIPHER_get_name(ciph);
 #endif
-#elif defined(HAVE_GNUTLS)
+#elif defined(HAVE_GNUTLS_CIPHERSUITE_GET)
+        const char *name = gnutls_ciphersuite_get(sock_ssl(sock));
+#else
         const char *name = gnutls_cipher_get_name(gnutls_cipher_get(sock_ssl(sock)));
 #endif
         return ne_strdup(name);
