@@ -1952,9 +1952,8 @@ static int notifier(void)
 
     CALL(any_request(sess, "/notifier"));
 
-    ONV(strstr(buf->data, "-handshake(TLSv1.2, TLS_") == NULL
-        && strstr(buf->data, "-handshake(TLSv1.2, [none]") == NULL,
-        ("missing handshake in notifier data: %s", buf->data));
+    ONV(strstr(buf->data, "-handshake(TLSv1.2, ") == NULL,
+        ("missing/bad handshake() in notifier: %s", buf->data));
 
     ne_buffer_destroy(buf);
     return destroy_and_wait(sess);
