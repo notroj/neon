@@ -1091,6 +1091,7 @@ gnutls)
 
    # Check for functions in later releases
    NE_CHECK_FUNCS([gnutls_session_get_data2 gnutls_x509_dn_get_rdn_ava \
+                  gnutls_ciphersuite_get \
                   gnutls_certificate_get_issuer \
                   gnutls_certificate_get_x509_cas \
                   gnutls_x509_crt_sign2 \
