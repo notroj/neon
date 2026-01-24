@@ -54,6 +54,7 @@
 <!ENTITY refsslcertio SYSTEM "ref/sslcertio.xml">
 <!ENTITY refssldname SYSTEM "ref/ssldname.xml">
 <!ENTITY refssltrust SYSTEM "ref/ssltrust.xml">
+<!ENTITY refsslctx SYSTEM "ref/sslctx.xml">
 <!ENTITY refreq SYSTEM "ref/req.xml">
 <!ENTITY refreqhdr SYSTEM "ref/reqhdr.xml">
 <!ENTITY refresphdr SYSTEM "ref/resphdr.xml">
@@ -213,6 +214,7 @@ ignoring the WebDAV support if desired.</para>
     &refsslproto; <!-- ne_ssl_proto_name -->
     &refsslvers; <!-- ne_ssl_set_protovers -->
     &refsslvfy; <!-- ne_ssl_set_verify -->
+    &refsslctx; <!-- ne_ssl_context_* -->
     &refclicert; <!-- ne_ssl_client_cert -->
     &refstatus; <!-- ne_status -->
     &reftok; <!-- ne_token -->
