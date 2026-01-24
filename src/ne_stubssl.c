@@ -87,6 +87,11 @@ ne_ssl_context *ne_ssl_context_create(int mode)
 
 void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert)
 {}
+int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
+                                enum ne_ssl_protocol max)
+{
+    return NE_SOCK_ERROR;
+}
 
 int ne_ssl_context_set_verify(ne_ssl_context *ctx, 
                               int required,
