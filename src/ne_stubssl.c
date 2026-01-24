@@ -92,6 +92,14 @@ int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
 {
     return NE_SOCK_ERROR;
 }
+int ne_ssl_check_certificate(ne_ssl_context *ctx, ne_socket *sock,
+                             const char *hostname,
+                             const ne_inet_addr *address,
+                             const ne_ssl_certificate *cert,
+                             unsigned int flags, int *failures)
+{
+    return -1;
+}
 
 int ne_ssl_context_set_verify(ne_ssl_context *ctx, 
                               int required,
