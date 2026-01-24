@@ -1158,13 +1158,21 @@ static int ccert_unencrypted(void)
 /* random SSL read may fail like this with TLSv1.3 */
 #define NOCERT_ALT "certificate required"
 
+/* GnuTLS fails to note the cc request in the error path for
+ * TLSv1.3; for OpenSSL test with TLSv1.2 and 1.3. */
+#ifdef HAVE_GNUTLS
+#define NCC_MAX (1)
+#else
+#define NCC_MAX (2)
+#endif
+
 /* Tests for useful error message if a handshake fails where a client
  * cert was requested. */
 static int no_client_cert(void)
 {
     unsigned i;
 
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < NCC_MAX; i++) {
         ne_session *sess;
         struct ssl_server_args args = {SERVER_CERT, NULL};
         int ret;
@@ -1175,7 +1183,7 @@ static int no_client_cert(void)
         CALL(make_ssl_session(&sess, NULL, ssl_server, &args));
         ne_ssl_trust_cert(sess, def_ca_cert);
 
-        if (i)
+        if (i == 0)
             ne_ssl_set_protovers(sess, NE_SSL_PROTO_TLS_1_2, NE_SSL_PROTO_TLS_1_2);
 
         ret = any_request(sess, i ? "failme-tls12" : "/failme");
