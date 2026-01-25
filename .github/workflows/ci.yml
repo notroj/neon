@@ -256,7 +256,7 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - run: sudo dnf config-manager --set-enabled crb
-        if: ${{ contains(matrix.image, 'centos' }}
+        if: ${{ contains(matrix.image, 'centos') }}
       - run: dnf update -y && dnf install -y autoconf make expat-devel unbound-devel
                   openssl openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
