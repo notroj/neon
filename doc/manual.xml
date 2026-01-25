@@ -63,6 +63,7 @@
 <!ENTITY refreqtarget SYSTEM "ref/reqtgt.xml">
 <!ENTITY refctype SYSTEM "ref/ctype.xml">
 <!ENTITY refred SYSTEM "ref/redir.xml">
+<!ENTITY refsockssl SYSTEM "ref/sockssl.xml">
 <!ENTITY refstatus SYSTEM "ref/status.xml">
 <!ENTITY refgetst SYSTEM "ref/getst.xml">
 <!ENTITY refreqbody SYSTEM "ref/reqbody.xml">
@@ -215,6 +216,7 @@ ignoring the WebDAV support if desired.</para>
     &refsslvers; <!-- ne_ssl_set_protovers -->
     &refsslvfy; <!-- ne_ssl_set_verify -->
     &refsslctx; <!-- ne_ssl_context_* -->
+    &refsockssl; <!-- ne_sock_ssl*_* -->
     &refclicert; <!-- ne_ssl_client_cert -->
     &refstatus; <!-- ne_status -->
     &reftok; <!-- ne_token -->
