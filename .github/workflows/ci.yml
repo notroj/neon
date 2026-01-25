@@ -29,6 +29,7 @@ jobs:
         conf-memleak: [--disable-memleak, --enable-memleak]
         conf-debug: [--enable-debug, --disable-debug]
         conf-gssapi: [--with-gssapi, --without-gssapi]
+        conf-unbound: [--with-unbound, --without-unbound]
         exclude:
             - os: [ubuntu-22.04, ubuntu-24.04]
               conf-shared: --enable-static
@@ -60,6 +61,7 @@ jobs:
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
+                       ${{matrix.conf-unbound}}
     - run: make -j`nproc`
     - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
     - if: failure()
