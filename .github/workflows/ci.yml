@@ -234,6 +234,8 @@ jobs:
     - run: case ${{matrix.conf-gssapi}} in
            *with-gssapi) sudo apt-get update && sudo apt-get -y install libkrb5-dev ;;
            esac
+    - sudo apt-get update && sudo apt-get -y install libunbound-dev
+      if: ${{matrix.conf-unbound == 'yes'}}
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
@@ -253,10 +255,10 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel 
+      - run: dnf update -y && dnf install -y autoconf make expat-devel unbound-devel
                   openssl openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
       - run: ./autogen.sh
-      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi --with-unbound
       - run: make -j`nproc`
       - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
