@@ -440,6 +440,38 @@ static int addr_canonical(void)
     return OK;
 }
 
+static int addr_failures(void)
+{
+    static const char *hosts[] = {
+        "nonesuch.example.com",
+        "absolutelynodomain1231241255.com",
+        NULL
+    };
+    unsigned n;
+
+    if (getenv("TEST_RESOLVER") == NULL) {
+        t_context("not testing resolver failure cases");
+        return SKIP;
+    }
+
+    for (n = 0; hosts[n]; n++) {
+        ne_sock_addr *sa = ne_addr_resolve(hosts[n], 0);
+        char buf[BUFSIZ], *err;
+
+        ONN("resolver failed", sa == NULL);
+        ONN("should get lookup failure for bad domain", ne_addr_result(sa) == 0);
+        err = ne_addr_error(sa, buf, sizeof buf);
+        ONN("no error pointer", err == NULL);
+        ONN("bad error pointer", err != buf);
+        ONN("empty error", strcmp(err, "") == 0);
+
+        ne_addr_destroy(sa);
+    }
+
+    return OK;
+}
+
+
 static int just_connect(void)
 {
     ne_socket *sock;
@@ -1663,6 +1695,7 @@ ne_test tests[] = {
     T(addr_connect),
     T(addr_peer),
     T(addr_canonical),
+    T(addr_failures),
     T(read_close),
     T(peek_close),
     T(open_close),
