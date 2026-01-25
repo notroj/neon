@@ -237,7 +237,7 @@ jobs:
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
-                       ${{matrix.conf-unbound == 'yes' && '--with-unbound' || '' }
+                       ${{matrix.conf-unbound == 'yes' && '--with-unbound' || '' }}
     - run: make -j`nproc`
     - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
     - if: failure()
