@@ -824,6 +824,7 @@ fi
 NEON_SSL()
 NEON_GSSAPI()
 NEON_LIBPROXY()
+NEON_UNBOUND()
 
 AC_SUBST(NEON_CFLAGS)
 AC_SUBST(NEON_LIBS)
@@ -1236,6 +1237,21 @@ else
    NE_DISABLE_SUPPORT(LIBPXY, [libproxy support not enabled])
 fi
 ])   
+
+AC_DEFUN([NEON_UNBOUND], [
+AC_ARG_WITH(unbound, AS_HELP_STRING(--with-unbound, enable unbound support))
+# unbound support is translated into getaddrinfo-like results.
+if test "x$with_unbound" != "xno" -a "x$ne_enable_gai" = "xyes"; then
+   NE_PKG_CONFIG(NE_UNB, libunbound,
+     [AC_DEFINE(HAVE_UNBOUND, 1, [Define if unbound is supported])
+      CPPFLAGS="$CPPFLAGS $NE_UNB_CFLAGS"
+      NEON_LIBS="$NEON_LIBS ${NE_UNB_LIBS}"
+      NE_ENABLE_SUPPORT(UNBOUND, [unbound support enabled using unbound $NE_UNB_VERSION])],
+     [NE_DISABLE_SUPPORT(UNBOUND, [unbound support not enabled])])
+else
+   NE_DISABLE_SUPPORT(UNBOUND, [unbound support not enabled])
+fi
+])
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
 dnl compiler warnings

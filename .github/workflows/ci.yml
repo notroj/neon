@@ -22,32 +22,209 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
-        conf-shared: [--enable-static, --enable-shared ]
-        conf-xml: [--with-expat, --with-libxml2 ]
-        conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls]
-        conf-memleak: [--disable-memleak, --enable-memleak]
-        conf-debug: [--enable-debug, --disable-debug]
-        conf-gssapi: [--with-gssapi, --without-gssapi]
-        exclude:
-            - os: [ubuntu-22.04, ubuntu-24.04]
-              conf-shared: --enable-static
-            - conf-gssapi: --without-gssapi
-              conf-ssl: [--without-ssl, --with-ssl=gnutls]
-            - conf-xml: --with-libxml2
-              conf-gssapi: --without-gssapi
-            - os: ubuntu-22.04-arm
-              conf-xml: --with-libxml2
-            - os: ubuntu-22.04-arm
-              conf-ssl: [--without-ssl, --with-ssl=gnutls]
-            - os: ubuntu-22.04-arm
-              conf-debug: --disable-debug
-            - os: ubuntu-22.04-arm
-              conf-gssapi: --without-gssapi
-            - os: ubuntu-22.04-arm
-              conf-memleak: --enable-memleak
-            - os: ubuntu-22.04-arm
-              conf-shared: --enable-static
+        include:
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --enable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            conf-unbound: yes
+            
+          - os: ubuntu-22.04-arm
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            conf-unbound: yes
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --without-ssl
+            conf-memleak: --disable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --without-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --enable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            conf-unbound: yes
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04-arm
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --enable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --enable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --without-ssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --without-gssapi
+            
+          - os: ubuntu-22.04-arm
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --disable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --enable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04-arm
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=gnutls
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --enable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --enable-memleak
+            conf-debug: --disable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --without-ssl
+            conf-memleak: --enable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --without-gssapi
+            
+          - os: ubuntu-22.04-arm
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-22.04
+            conf-shared: --enable-shared
+            conf-xml: --with-expat
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
+            
+          - os: ubuntu-24.04
+            conf-shared: --enable-shared
+            conf-xml: --with-libxml2
+            conf-ssl: --with-ssl=openssl
+            conf-memleak: --disable-memleak
+            conf-debug: --enable-debug
+            conf-gssapi: --with-gssapi
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
@@ -57,11 +234,14 @@ jobs:
     - run: case ${{matrix.conf-gssapi}} in
            *with-gssapi) sudo apt-get update && sudo apt-get -y install libkrb5-dev ;;
            esac
+    - run: sudo apt-get update && sudo apt-get -y install libunbound-dev
+      if: ${{matrix.conf-unbound == 'yes'}}
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
+                       ${{matrix.conf-unbound == 'yes' && '--with-unbound' || '' }}
     - run: make -j`nproc`
-    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
 
@@ -75,10 +255,12 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel 
+      - run: dnf config-manager --set-enabled crb
+        if: ${{ contains(matrix.image, 'centos') }}
+      - run: dnf update -y && dnf install -y autoconf make expat-devel unbound-devel
                   openssl openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
       - run: ./autogen.sh
-      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi --with-unbound
       - run: make -j`nproc`
       - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
