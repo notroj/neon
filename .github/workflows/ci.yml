@@ -234,7 +234,7 @@ jobs:
     - run: case ${{matrix.conf-gssapi}} in
            *with-gssapi) sudo apt-get update && sudo apt-get -y install libkrb5-dev ;;
            esac
-    - run: sudo apt-get update && apt-get -y install libunbound-dev
+    - run: sudo apt-get update && sudo apt-get -y install libunbound-dev
       if: ${{matrix.conf-unbound == 'yes'}}
     - run: ./configure ${{matrix.conf-shared}} ${{matrix.conf-xml}}
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
