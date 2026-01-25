@@ -241,7 +241,7 @@ jobs:
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
                        ${{matrix.conf-unbound == 'yes' && '--with-unbound' || '' }}
     - run: make -j`nproc`
-    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
 
@@ -255,7 +255,8 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: if test -x /usr/bin/crb; then /usr/bin/crb enable; fi
+      - run: sudo dnf config-manager --set-enabled crb
+        if: ${{ contains(matrix.image, 'centos' }}
       - run: dnf update -y && dnf install -y autoconf make expat-devel unbound-devel
                   openssl openssl-devel krb5-devel libtool zlib-devel gawk
       - uses: actions/checkout@v3
