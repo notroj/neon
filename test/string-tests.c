@@ -861,6 +861,33 @@ static int strlower(void)
     return OK;
 }
 
+static int strupper(void)
+{
+    static const struct {
+        const char *input;
+        const char *expected;
+    } ts[] = {
+        { "hello", "HELLO" },
+        { "MiXeD CaSe 123", "MIXED CASE 123" },
+        { "ALREADY UPPER", "ALREADY UPPER" },
+        { "", "" },
+        { NULL, NULL }
+    };
+    unsigned int i;
+
+    for (i = 0; ts[i].input != NULL; i++) {
+        char buf[256];
+
+        ne_strnzcpy(buf, ts[i].input, sizeof buf);
+        
+        ONN("unexpected return value", ne_strupper(buf) != buf);
+        ONV(strcmp(buf, ts[i].expected),
+            ("strupper failed: got %s, expected %s", buf, ts[i].expected));
+    }
+
+    return OK;
+}
+
 ne_test tests[] = {
     T(simple),
     T(buf_concat),
@@ -896,6 +923,7 @@ ne_test tests[] = {
     T(strparam),
     T(strhextoul),
     T(strlower),
+    T(strupper),
     T(NULL)
 };
 
