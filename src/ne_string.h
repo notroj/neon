@@ -206,6 +206,10 @@ const unsigned char *ne_tolower_array(void) ne_attribute((const));
  * 'str'. */
 char *ne_strlower(char *str);
 
+/* Modifies every character in 'str' to upper-case in-place, returning
+ * 'str'. */
+char *ne_strupper(char *str);
+
 /* Convert an ASCII hexadecimal character in the ranges '0'..'9'
  * 'a'..'f' 'A'..'F' to its numeric equivalent. */
 #define NE_ASC2HEX(x) (((x) <= '9') ? ((x) - '0') : \
