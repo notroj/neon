@@ -672,6 +672,7 @@ void ne_ssl_cert_validity(const ne_ssl_certificate *cert, char *from, char *unti
 static int check_certificate(ne_session *sess, ne_ssl_certificate *cert)
 {
     int failures = 0;
+    const char *hostname = sess->server.literal ? NULL : sess->server.hostname;
 
     if (sess->server_cert && ne_ssl_cert_cmp(cert, sess->server_cert) == 0) {
         /* Same leaf cert used as last time - no need to reverify. */
@@ -680,7 +681,7 @@ static int check_certificate(ne_session *sess, ne_ssl_certificate *cert)
     }
 
     if (ne_ssl_check_certificate(sess->ssl_context, sess->socket,
-                                 sess->server.hostname, sess->server.literal,
+                                 hostname, sess->server.literal,
                                  cert, 0, &failures)) {
         /* Propagate error back. */
         ne_set_error(sess, _("SSL error: %s"), ne_sock_error(sess->socket));
