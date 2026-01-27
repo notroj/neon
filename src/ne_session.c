@@ -235,8 +235,9 @@ ne_session *ne_session_create(const char *scheme,
 
     ne_strnzcpy(sess->error, _("Unknown error."), sizeof sess->error);
 
+    sess->scheme = ne_strlower(ne_strdup(scheme));
     /* use SSL if scheme is https */
-    sess->use_ssl = !strcmp(scheme, "https");
+    sess->use_ssl = !strcmp(sess->scheme, "https");
     
     /* set the hostname/port */
     set_hostinfo(&sess->server, PROXY_NONE, hostname, port);
@@ -254,8 +255,6 @@ ne_session *ne_session_create(const char *scheme,
                  "enabled" : "disabled");
     }
 #endif
-
-    sess->scheme = ne_strdup(scheme);
 
     /* Set flags which default to on: */
     sess->flags[NE_SESSFLAG_PERSIST] = 1;

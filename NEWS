@@ -9,6 +9,7 @@ Changes in release 0.37.0:
  - ne_string.h: add ne_strlower()
 * Bug fixes:
  - fix ne_xml_set_encoding() failure case with libxml 2.13+.
+ - ne_session_create() passed-in scheme now always lower-cased
 
 Changes in release 0.36.0:
 * Interface changes:
