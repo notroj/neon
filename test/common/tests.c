@@ -74,6 +74,8 @@ static int use_colour = 0, tty_output = 0;
 
 static int flag_child;
 
+static void print_prefix(int n);
+
 /* resource for ANSI escape codes:
  * http://www.isthe.com/chongo/tech/comp/ansi_escapes.html */
 #define COL(x) do { if (use_colour) printf("\033[" x "m"); } while (0)
@@ -95,6 +97,7 @@ void t_context(const char *context, ...)
 void t_warning(const char *str, ...)
 {
     va_list ap;
+    if (warned) print_prefix(test_num);
     COL("43;01"); printf("WARNING:"); NOCOL;
     putchar(' ');
     va_start(ap, str);
