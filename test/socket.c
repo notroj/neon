@@ -445,6 +445,8 @@ static int addr_failures(void)
     static const char *hosts[] = {
         "nonesuch.example.com",
         "absolutelynodomain1231241255.com",
+        "",
+        ".",
         NULL
     };
     unsigned n;
@@ -471,6 +473,52 @@ static int addr_failures(void)
     return OK;
 }
 
+static int addresses(void)
+{
+    static const char *hosts[] = {
+        "www.google.com",
+        "www.ietf.org",
+        "www.iana.org",
+        "www.example.com",
+        "www.microsoft.com",
+        NULL
+    };
+    unsigned n;
+
+    if (getenv("TEST_RESOLVER") == NULL) {
+        t_context("not testing public address resolver cases");
+        return SKIP;
+    }
+
+    for (n = 0; hosts[n]; n++) {
+        ne_sock_addr *sa = ne_addr_resolve(hosts[n], NE_ADDR_CANON);
+        const ne_inet_addr *ia;
+        unsigned count = 0, countv6 = 0;
+
+        ONV(sa == NULL, ("resolver failed for %s", hosts[n]));
+        ONV(ne_addr_result(sa) != 0,
+            ("error result for %s: %s", hosts[n],
+             ne_addr_error(sa, buffer, sizeof buffer)));
+
+        for (ia = ne_addr_first(sa); ia; ia = ne_addr_next(sa)) {
+            if (ne_iaddr_typeof(ia) == ne_iaddr_ipv6)
+                countv6++;
+            count++;
+        }
+
+        t_warning("%s - canonical name: %s", hosts[n], ne_addr_canonical(sa));
+
+        ONV(count == 0, ("no addresses returned for %s", hosts[n]));
+        if (count - countv6 == 0)
+            t_warning("no IPv4 addresses for %s", hosts[n]);
+        if (countv6 == 0)
+            t_warning("no IPv6 addresses for %s", hosts[n]);
+
+        ne_addr_destroy(sa);
+    }
+
+    return OK;
+}
 
 static int just_connect(void)
 {
@@ -1696,6 +1744,7 @@ ne_test tests[] = {
     T(addr_peer),
     T(addr_canonical),
     T(addr_failures),
+    T(addresses),
     T(read_close),
     T(peek_close),
     T(open_close),
