@@ -25,7 +25,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
         conf-shared: [--enable-static, --enable-shared --enable-warnings=error ]
         conf-xml: [--with-expat, --with-libxml2 ]
-        conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls]
+        conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls, --with-ssl=openssl --with-ldns]
         conf-memleak: [--disable-memleak, --enable-memleak]
         conf-debug: [--enable-debug, --disable-debug]
         conf-gssapi: [--with-gssapi, --without-gssapi]
@@ -51,8 +51,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: ./autogen.sh
-    - run: case ${{matrix.conf-ssl}} in
+    - run: case "${{matrix.conf-ssl}}" in
            *gnutls) sudo apt-get update && sudo apt-get -y install libgnutls28-dev gnutls-bin ;;
+           *ldns) sudo apt-get update && sudo apt-get -y install libldns-dev ;;
            esac
     - run: case ${{matrix.conf-gssapi}} in
            *with-gssapi) sudo apt-get update && sudo apt-get -y install libkrb5-dev ;;
@@ -61,7 +62,7 @@ jobs:
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make -j`nproc`
-    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
 

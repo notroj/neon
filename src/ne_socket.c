@@ -112,6 +112,10 @@
 #include <gnutls/gnutls.h>
 #endif
 
+#ifdef NE_HAVE_LDNS
+#include <ldns/ldns.h>
+#endif
+
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
@@ -230,6 +234,9 @@ struct ne_socket_s {
 
 /* ne_sock_addr represents an Internet address. */
 struct ne_sock_addr_s {
+#ifdef NE_HAVE_LDNS
+    ldns_status errnum;
+#endif
 #ifdef USE_GETADDRINFO
     struct addrinfo *result, *cursor;
 #else
@@ -237,7 +244,9 @@ struct ne_sock_addr_s {
     size_t cursor, count;
     char *name;
 #endif
+#ifndef NE_HAVE_LDNS
     int errnum;
+#endif
 };
 
 /* set_error: set socket error string to 'str'. */
@@ -1026,12 +1035,95 @@ ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t buflen)
 extern int h_errno;
 #endif
 
+#ifdef NE_HAVE_LDNS
+static struct addrinfo *from_rrs_to_addrinfo(ldns_rr_list *rrs, int flags)
+{
+    struct addrinfo *head = NULL, **this = &head;
+    size_t n, count = ldns_rr_list_rr_count(rrs);
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: got %lu rrs to handle.\n", count);
+
+    for (n = 0; n < count; n++) {
+        ldns_rr *rr = ldns_rr_list_rr(rrs, n);
+        ldns_rdf *rdf = ldns_rr_rdf(rr, 0);
+
+        if (!rdf) continue;
+
+        if (ldns_rdf_get_type(rdf) == LDNS_RDF_TYPE_A) {
+            *this = ne_iaddr_make(ne_iaddr_ipv4, (unsigned char *)ldns_rdf_data(rdf));
+        }
+        else if (ldns_rdf_get_type(rdf) == LDNS_RDF_TYPE_AAAA) {
+            *this = ne_iaddr_make(ne_iaddr_ipv6, (unsigned char *)ldns_rdf_data(rdf));
+        }
+        else /* anything else shouldn't happen, but ignore it if it does... */
+            continue;
+
+        /* Store the owner (left hand side) of any valid IN A/AAAA
+         * record as the canonical name, if requested. */
+        if (flags & NE_ADDR_CANON)
+            (*this)->ai_canonname = ldns_rdf2str(ldns_rr_owner(rr));
+
+        this = &(*this)->ai_next;
+    }
+
+    return head;
+}
+
+/* Resolve literal addresses. */
+static struct addrinfo *parse_literals(const char *hostname)
+{
+    ne_inet_addr *ia;
+
+    if ((ia = ne_iaddr_parse(hostname, ne_iaddr_ipv4)) != NULL)
+        return ia;
+
+    if ((ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6)) != NULL)
+        return ia;
+
+    return NULL;
+}
+#endif
+
 /* This implementation does not attempt to support IPv6 using
  * gethostbyname2 et al.  */
 ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 {
     ne_sock_addr *addr = ne_calloc(sizeof *addr);
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    ldns_rdf *domain;
+    ldns_resolver *res;
+    ldns_rr_list *rrs;
+
+    /* "Resolve" any literal address by translation, to get similar
+     * behaviour to getaddrinfo(). */
+    if ((addr->result = parse_literals(hostname)) != NULL) {
+        return addr;
+    }
+
+    if ((domain = ldns_dname_new_frm_str(hostname)) == NULL) {
+        addr->errnum = LDNS_STATUS_ERR;
+        return addr;
+    }
+
+    addr->errnum = ldns_resolver_new_frm_file(&res, NULL);
+    if (addr->errnum != LDNS_STATUS_OK) {
+        NE_DEBUG(NE_DBG_SOCKET, "addr: Couldn't create resolver: %d.\n", addr->errnum);
+        return addr;
+    }
+
+    /* This handles /etc/hosts internally, does A and AAAA lookup. */
+    rrs = ldns_get_rr_list_addr_by_name(res, domain, LDNS_RR_CLASS_IN, 0);
+    /* Map the result into struct addrinfo. */
+    addr->result = from_rrs_to_addrinfo(rrs, flags);
+    ldns_rr_list_deep_free(rrs);
+
+    /* Empty list -> give a no data error. */
+    if (!addr->result) addr->errnum = LDNS_STATUS_NO_DATA;
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: Resolved %s: errnum = %d\n", hostname, addr->errnum);
+    ldns_rdf_deep_free(domain);
+    ldns_resolver_free(res);
+#elif defined(USE_GETADDRINFO)
     struct addrinfo hints = {0};
     const char *pnt;
 
@@ -1149,7 +1241,9 @@ char *ne_addr_error(const ne_sock_addr *addr, char *buf, size_t bufsiz)
     print_error(addr->errnum, buf, bufsiz);
 #else
     const char *err;
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    err = ldns_get_errorstr_by_id(addr->errnum);
+#elif defined(USE_GETADDRINFO)
     /* override horrible generic "Name or service not known" error. */
     if (addr->errnum == EAI_NONAME)
 	err = _("Host not found");
@@ -1325,7 +1419,15 @@ char *ne_iaddr_get_scope(const ne_inet_addr *ia)
 
 void ne_addr_destroy(ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    struct addrinfo *ai;
+
+    while ((ai = addr->result) != NULL) {
+        addr->result = ai->ai_next;
+        if (ai->ai_canonname) free(ai->ai_canonname);
+        ne_iaddr_free(ai);
+    }
+#elif defined(USE_GETADDRINFO)
     /* Note that ->result is only valid for successful invocations of
      * getaddrinfo. */
     if (!addr->errnum && addr->result)
