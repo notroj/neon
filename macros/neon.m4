@@ -829,6 +829,7 @@ NEON_SSL()
 NEON_GSSAPI()
 NEON_NTLM()
 NEON_LIBPROXY()
+NEON_LDNS()
 
 AC_SUBST(NEON_CFLAGS)
 AC_SUBST(NEON_LIBS)
@@ -1257,6 +1258,19 @@ else
 fi
 ])
 
+AC_DEFUN([NEON_LDNS], [
+AC_ARG_WITH(ldns, AS_HELP_STRING(--without-ldns, disable ldns support))
+if test "x$with_ldns" != "xno"; then
+   NE_PKG_CONFIG(NE_LDNS, ldns,
+     [AC_DEFINE(HAVE_LDNS, 1, [Define if ldns is supported])
+      CPPFLAGS="$CPPFLAGS $NE_LDNS_CFLAGS"
+      NEON_LIBS="$NEON_LIBS ${NE_LDNS_LIBS}"
+      NE_ENABLE_SUPPORT(LDNS, [ldns support enabled using ldns $NE_LDNS_VERSION])],
+     [NE_DISABLE_SUPPORT(LDNS, [ldns support not enabled])])
+else
+   NE_DISABLE_SUPPORT(LDNS, [ldns support not enabled])
+fi
+])
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
 dnl compiler warnings
