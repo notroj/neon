@@ -1744,6 +1744,7 @@ ne_test tests[] = {
     T(addr_peer),
     T(addr_canonical),
     T(addr_failures),
+    T(addresses),
     T(read_close),
     T(peek_close),
     T(open_close),
