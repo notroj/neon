@@ -23,7 +23,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm]
-        conf-shared: [--enable-static, --enable-shared ]
+        conf-shared: [--enable-static, --enable-shared --enable-warnings=error ]
         conf-xml: [--with-expat, --with-libxml2 ]
         conf-ssl: [--without-ssl, --with-ssl=openssl, --with-ssl=gnutls]
         conf-memleak: [--disable-memleak, --enable-memleak]
