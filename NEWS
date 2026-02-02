@@ -3,7 +3,7 @@ Changes in release 0.37.0:
  - API and ABI backwards-compatible with 0.27.x and later
 * New interfaces and feaures:
  - ne_socket.h: add ne_sock_handshake(); deprecate ne_ssl_connect_ssl();
-   add ne_sock_getcert()
+   add ne_sock_getcert(), ne_iaddr_put()
  - ne_ssl.h: add ne_ssl_clicert_copy(), ne_ssl_context_trustdefca(),
    ne_ssl_check_certificate(), ne_ssl_context_set_clicert(),
    ne_ssl_context_set_ccprovide()

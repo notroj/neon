@@ -112,6 +112,12 @@ typedef enum {
  * address type is not supported. */
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
 
+/* Change an existing network address object to a new raw byte
+ * representation of given 'type'. The raw data must must be of length
+ * 4 bytes for an IPv4 address, or 16 bytes for an IPv6 address. */
+ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type,
+                           const unsigned char *raw);
+
 /* Compare two network address objects i1 and i2; returns zero if they
  * are equivalent or non-zero otherwise. For an IPv6 literal, the
  * scope is ignored by this function if set, so must be compared

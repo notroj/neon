@@ -78,4 +78,5 @@ NEON_0_37 {
     ne_response_trailer_iterate;
     ne_get_response_trailer;
     ne_version_library;
+    ne_iaddr_put;
 };

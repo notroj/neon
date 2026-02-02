@@ -383,6 +383,28 @@ static int addr_compare(void)
     return OK;
 }
 
+static int addr_put(void)
+{
+    ne_inet_addr *ia, *ia2;
+
+    ia = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+    ONN("parse failed", ia == NULL);
+    CALL(check_is_raw127(ia));
+
+    ia2 = ne_iaddr_put(ia, ne_iaddr_ipv4, raw_1234);
+    ONN("new pointer returned after _put", ia2 != ia);
+    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv4);
+
+#ifdef TEST_IPV6
+    ia2 = ne_iaddr_put(ia, ne_iaddr_ipv6, raw6_cafe);
+    ONN("new pointer returned after _put", ia2 != ia);
+    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv6);
+#endif
+
+    ne_iaddr_free(ia);
+    return OK;
+}
+
 static int addr_reverse(void)
 {
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
@@ -1690,6 +1712,7 @@ ne_test tests[] = {
     T(parse_v4),
     T(addr_make_v6),
     T(addr_compare),
+    T(addr_put),
     T(addr_reverse),
     T(just_connect),
     T(addr_connect),

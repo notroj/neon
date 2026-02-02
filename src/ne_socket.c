@@ -1695,7 +1695,12 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
     if (type == ne_iaddr_ipv6)
 	return NULL;
 #endif
-    ia = ne_calloc(sizeof *ia);
+    return ne_iaddr_put(ne_calloc(sizeof *ia), type, raw);
+}
+
+ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type, const unsigned char *raw)
+{
+    if (ia->ai_addr) ne_free(ia->ai_addr);
 #ifdef USE_GETADDRINFO
     /* ai_protocol and ai_socktype aren't used by connect_socket() so
      * ignore them here. (for now) */
