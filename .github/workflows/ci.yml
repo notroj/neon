@@ -33,7 +33,7 @@ jobs:
             - os: [ubuntu-22.04, ubuntu-24.04]
               conf-shared: --enable-static
             - conf-gssapi: --without-gssapi
-              conf-ssl: [--without-ssl, --with-ssl=gnutls --with-libntlm]
+              conf-ssl: [--without-ssl, --with-ssl=gnutls --with-libntlm, --with-ssl=openssl --with-ldns]
             - conf-xml: --with-libxml2
               conf-gssapi: --without-gssapi
             - os: ubuntu-22.04-arm
@@ -62,7 +62,7 @@ jobs:
                        ${{matrix.conf-ssl}} ${{matrix.conf-memleak}}
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make -j`nproc`
-    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1
+    - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
     - run: test/checksyms.sh src/.libs/libneon.so
@@ -88,4 +88,4 @@ jobs:
                          ${{ contains(matrix.image, 'fedora') && '--with-libntlm' || '' }}
                          --enable-warnings=error --without-pakchois
       - run: make -j`nproc`
-      - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+      - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1
