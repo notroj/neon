@@ -1246,13 +1246,20 @@ AC_REQUIRE([AC_PROG_CC]) dnl so that $GCC is set
 AC_ARG_ENABLE(warnings,
 AS_HELP_STRING(--enable-warnings, [enable compiler warnings]))
 
+if test "$enable_warnings" = "error"; then
+   CFLAGS="$CFLAGS -Werror"
+   enable_warnings=yes
+fi
+
 if test "$enable_warnings" = "yes"; then
    case $GCC:`uname` in
    yes:*)
-      CFLAGS="$CFLAGS -Wall -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wbad-function-cast -Wformat-security"
-      if test -z "$with_ssl" -o "$with_ssl" = "no"; then
-	 # OpenSSL headers fail strict prototypes checks
-	 CFLAGS="$CFLAGS -Wstrict-prototypes"
+      CFLAGS="$CFLAGS -Wall -Wstrict-prototypes -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wbad-function-cast -Wformat-security"
+      if test "$with_ssl" = "openssl"; then
+         CFLAGS="-DOPENSSL_SUPPRESS_DEPRECATED $CFLAGS"
+      fi
+      if test "$neon_xml_parser" = "libxml2"; then
+         CFLAGS="$CFLAGS -Wno-pointer-sign -Wno-discarded-qualifiers"
       fi
       ;;
    no:OSF1) CFLAGS="$CFLAGS -check -msg_disable returnchecks -msg_disable alignment -msg_disable overflow" ;;
