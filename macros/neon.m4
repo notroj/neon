@@ -1248,7 +1248,8 @@ fi
 AC_DEFUN([NEON_LDNS], [
 AC_ARG_WITH(ldns, AS_HELP_STRING(--without-ldns, disable ldns support))
 if test "x$with_ldns" != "xno"; then
-   NE_PKG_CONFIG(NE_LDNS, ldns,
+   # Require 1.8.2+ for ldns_rdf2buffer_str_svcparams()
+   NE_PKG_CONFIG_MINVER(NE_LDNS, ldns, [1.8.2],
      [AC_DEFINE(HAVE_LDNS, 1, [Define if ldns is supported])
       CPPFLAGS="$CPPFLAGS $NE_LDNS_CFLAGS"
       NEON_LIBS="$NEON_LIBS ${NE_LDNS_LIBS}"

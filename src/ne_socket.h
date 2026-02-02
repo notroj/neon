@@ -64,25 +64,40 @@ int ne_sock_init(void);
  * times to ne_sock_init() for the process. */
 void ne_sock_exit(void);
 
-#define NE_ADDR_CANON (0x01)
-/* Resolve the given hostname. Hex string IPv6 addresses (e.g. `::1')
- * may be enclosed in brackets (e.g. `[::1]').  'flags' should be
- * zero, or if NE_ADDR_CANON is passed, the canonical name for the
- * hostname will be determined. */
+/* Resolve the given hostname. Flags should be zero or a combination
+ * of NE_ADDR_* flags listed below. By default, IPv4/6 addresses
+ * (A/AAAA records) are resolved for the given hostname. The return
+ * value is always non-NULL; ne_addr_result() must be used to check
+ * whether the name could be resolved successfully. */
 ne_sock_addr *ne_addr_resolve(const char *hostname, int flags);
+
+/* Flags which can be passed to ne_addr_resolve(): */
+
+#define NE_ADDR_CANON (0x01) /* Retrieve canonical name. */
+
+#define NE_ADDR_HTTPS (0x02) /* Retrieve HTTPS record rather than A/AAAA. */
+/* Note: if the NE_ADDR_HTTPS flag is used with ne_addr_resolve(), the
+ * ne_addr_first() and ne_addr_next() functions must be used to
+ * iterate through the returned records, but the ne_inet_addr returned
+ * does not contain useful data. The service binding data must be
+ * retrieved by calling ne_addr_getdata(,NE_ADDR_SVCB). */
 
 /* Returns zero if name resolution was successful, non-zero on
  * error. */
 int ne_addr_result(const ne_sock_addr *addr);
 
 /* Returns the first network address associated with the 'addr'
- * object.  Undefined behaviour if ne_addr_result returns non-zero for
- * 'addr'; otherwise, never returns NULL.  */
+ * object. Undefined behaviour if ne_addr_result() returns non-zero
+ * for 'addr'; otherwise, never returns NULL. */
 const ne_inet_addr *ne_addr_first(ne_sock_addr *addr);
 
 /* Returns the next network address associated with the 'addr' object,
  * or NULL if there are no more. */
 const ne_inet_addr *ne_addr_next(ne_sock_addr *addr);
+
+/* Returns TTL data for the current record accessed via
+ * ne_addr_first/ne_addr_next, or 0 if no TTL data is available. */
+unsigned int ne_addr_ttl(const ne_sock_addr *addr);
 
 /* NB: the pointers returned by ne_addr_first and ne_addr_next are
  * valid until ne_addr_destroy is called for the corresponding
@@ -96,6 +111,35 @@ char *ne_addr_error(const ne_sock_addr *addr, char *buffer, size_t bufsiz);
  * if NE_ADDR_CANON was used, and name resolution was successful.
  * Otherwise, returns NULL. */
 const char *ne_addr_canonical(const ne_sock_addr *addr);
+
+typedef enum {
+    NE_ADDR_SVCB = 0
+} ne_addr_data_type;
+
+/* Data storage for ne_addr_getdata(). WARNING: the size of this union
+ * is not limited by ABI constraint; it may be extended with
+ * additional members of different size, or existing members may be
+ * extended. */
+typedef union ne_addr_data_u {
+    struct /* NE_ADDR_SVCB service binding */ {
+        const char *target;
+        unsigned int priority;
+        const char *params;
+    } svcb;
+} ne_addr_data;
+
+/* Returns additional data from a record while iterating through the
+ * results; must only be called after ne_addr_first() (and subsequent
+ * calls ne_addr_next() to continue iterating).
+ *
+ * The 'type' argument dictates which type of data is requested. The
+ * flags used when calling ne_addr_resolve() dictate which type (if
+ * any) of data is available, currently NE_ADDR_SVCB data is available
+ * if the resolver flag NE_ADDR_HTTPS was used.  Returns NULL if no
+ * data is available.
+ */
+const ne_addr_data *ne_addr_getdata(ne_sock_addr *addr,
+                                    ne_addr_data_type type);
 
 /* Destroys an address object created by ne_addr_resolve. */
 void ne_addr_destroy(ne_sock_addr *addr);
@@ -113,8 +157,8 @@ typedef enum {
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
 
 /* Change an existing network address object to a new raw byte
- * representation, which must be length 4 bytes for an IPv4 address or
- * 16 bytes for an IPv6 address. */
+ * representation of given 'type', which must be length 4 bytes for an
+ * IPv4 address or 16 bytes for an IPv6 address. */
 ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type,
                            const unsigned char *raw);
 
