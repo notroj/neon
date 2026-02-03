@@ -21,7 +21,7 @@
 
 /*
   portions were originally under GPL in Mutt, http://www.mutt.org/
-  Relicensed under LGPL for neon, http://www.webdav.org/neon/
+  Relicensed under LGPL by the author for neon, http://www.webdav.org/neon/
 */
 
 #include "config.h"
@@ -110,6 +110,10 @@
 
 #ifdef HAVE_GNUTLS
 #include <gnutls/gnutls.h>
+#endif
+
+#ifdef NE_HAVE_LDNS
+#include <ldns/ldns.h>
 #endif
 
 #define NE_INET_ADDR_DEFINED
@@ -230,14 +234,25 @@ struct ne_socket_s {
 
 /* ne_sock_addr represents an Internet address. */
 struct ne_sock_addr_s {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    ldns_status errnum;
+    struct rdata {
+        ne_inet_addr addr;
+        unsigned int ttl, priority;
+        char *params, *target;
+        struct rdata *next;
+    } *result, *cursor;
+    ne_addr_data data;
+#elif USE_GETADDRINFO
     struct addrinfo *result, *cursor;
 #else
     struct in_addr *addrs;
     size_t cursor, count;
     char *name;
 #endif
+#ifndef NE_HAVE_LDNS
     int errnum;
+#endif
 };
 
 /* set_error: set socket error string to 'str'. */
@@ -1026,12 +1041,180 @@ ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t buflen)
 extern int h_errno;
 #endif
 
+#ifdef NE_HAVE_LDNS
+
+/* Parse the SVCB format record. Although LDNS does the heavy
+ * lifting, understanding the wire format is necessary; the
+ * record should comprise three RDFs:
+ *    <uint16> <str> <svcparams>
+ * which are priority, TargetName, params respectively.
+ */
+static int parse_svcb_data(struct rdata *data, ldns_rr *rr)
+{
+    size_t n, count = ldns_rr_rd_count(rr);
+    ldns_buffer *buf = ldns_buffer_new(256);
+    ldns_rdf *rdf[3];
+
+    if (count < 3) {
+        NE_DEBUG(NE_DBG_SOCKET, "addr: SVCB error: only %u rds.\n",
+                 (unsigned)count);
+        return LDNS_STATUS_SYNTAX_TYPE_ERR;
+    }
+
+    for (n = 0; n < 3; n++)
+        rdf[n] = ldns_rr_rdf(rr, n);
+
+    if (ldns_rdf_get_type(rdf[0]) != LDNS_RDF_TYPE_INT16
+        || ldns_rdf_get_type(rdf[1]) != LDNS_RDF_TYPE_DNAME
+        || ldns_rdf_get_type(rdf[2]) != LDNS_RDF_TYPE_SVCPARAMS) {
+        NE_DEBUG(NE_DBG_SOCKET, "addr: SVCB error: bad types.\n");
+        return LDNS_STATUS_INVALID_RDF_TYPE;
+    }
+
+    data->priority = ldns_read_uint16(ldns_rdf_data(rdf[0]));
+    if (ldns_rdf2buffer_str_dname(buf, rdf[1]) == LDNS_STATUS_OK) {
+        data->target = ldns_buffer2str(buf);
+        if (strcmp(data->target, ".") == 0) {
+            free(data->target);
+            data->target = ldns_rdf2str(ldns_rr_owner(rr));
+        }
+    }
+
+    ldns_buffer_clear(buf);
+    if (ldns_rdf2buffer_str_svcparams(buf, rdf[2]) == LDNS_STATUS_OK)
+        data->params = ldns_buffer2str(buf);
+    ldns_buffer_free(buf);
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: SVCB got %u %s %s\n",
+             data->priority, data->target, data->params);
+    return LDNS_STATUS_OK;
+}
+
+/* Translate the LDNS rr_list into a struct rdata linked list. */
+static struct rdata *from_rrs_to_results(ldns_rr_list *rrs, int flags)
+{
+    struct rdata *head = NULL, **this = &head;
+    size_t n, count = ldns_rr_list_rr_count(rrs);
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: got %lu rrs to handle.\n", count);
+
+    for (n = 0; n < count; n++) {
+        ldns_rr *rr = ldns_rr_list_rr(rrs, n);
+        ldns_rr_type rrtype = ldns_rr_get_type(rr);
+
+        if (ldns_rr_rd_count(rr) == 0) continue;
+
+        *this = ne_calloc(sizeof **this);
+
+        if (rrtype == LDNS_RR_TYPE_A || rrtype == LDNS_RR_TYPE_AAAA) {
+            ldns_rdf *rdf = ldns_rr_rdf(rr, 0);
+
+            if (ldns_rdf_get_type(rdf) == LDNS_RDF_TYPE_A)
+                ne_iaddr_put(&(*this)->addr, ne_iaddr_ipv4, (unsigned char *)ldns_rdf_data(rdf));
+            else if (ldns_rdf_get_type(rdf) == LDNS_RDF_TYPE_AAAA)
+                ne_iaddr_put(&(*this)->addr, ne_iaddr_ipv6, (unsigned char *)ldns_rdf_data(rdf));
+        }
+        else if (rrtype == LDNS_RR_TYPE_HTTPS && parse_svcb_data(*this, rr)) {
+            ne_free(*this);
+            *this = NULL;
+            continue;
+        }
+
+        /* Store the owner (left hand side) of any valid IN A/AAAA
+         * record as the canonical name, if requested. */
+        if (flags & NE_ADDR_CANON)
+            (*this)->addr.ai_canonname = ldns_rdf2str(ldns_rr_owner(rr));
+
+        (*this)->ttl = ldns_rr_ttl(rr);
+
+        this = &(*this)->next;
+    }
+
+    return head;
+}
+
+/* Manually resolve for a particular rr_type, used for HTTPS lookup. */
+static ldns_rr_list *resolve_data(ldns_resolver *res, ldns_rdf *domain, ldns_rr_type type)
+{
+    ldns_pkt *p = ldns_resolver_search(res, domain, type, LDNS_RR_CLASS_IN, LDNS_RD);
+    ldns_rr_list *rrs;
+
+    if (!p) return NULL;
+
+    rrs = ldns_pkt_rr_list_by_type(p, type, LDNS_SECTION_ANSWER);
+    if (rrs) {
+        /* Create a clone (deep copy) to return. */
+        ldns_rr_list *cp = ldns_rr_list_clone(rrs);
+        ldns_rr_list_free(rrs);
+        rrs = cp;
+    }
+    ldns_pkt_free(p);
+    return rrs;
+}
+
+/* Resolve literal addresses. */
+static struct rdata *parse_literals(const char *hostname)
+{
+    struct rdata *ret;
+    ne_inet_addr *ia;
+
+    if ((ia = ne_iaddr_parse(hostname, ne_iaddr_ipv4)) == NULL
+        && (ia = ne_iaddr_parse(hostname, ne_iaddr_ipv6)) == NULL)
+        return NULL;
+
+    ret = ne_calloc(sizeof *ret);
+    memcpy(&ret->addr, ia, sizeof *ia);
+    ne_free(ia);
+    return ret;
+}
+#endif
+
 /* This implementation does not attempt to support IPv6 using
  * gethostbyname2 et al.  */
 ne_sock_addr *ne_addr_resolve(const char *hostname, int flags)
 {
     ne_sock_addr *addr = ne_calloc(sizeof *addr);
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    ldns_rdf *domain;
+    ldns_resolver *res;
+    ldns_rr_list *rrs;
+
+    /* "Resolve" any literal address by translation, to get similar
+     * behaviour to getaddrinfo(). */
+    if ((addr->result = parse_literals(hostname)) != NULL) {
+        return addr;
+    }
+
+    if ((domain = ldns_dname_new_frm_str(hostname)) == NULL) {
+        addr->errnum = LDNS_STATUS_ERR;
+        return addr;
+    }
+
+    addr->errnum = ldns_resolver_new_frm_file(&res, NULL);
+    if (addr->errnum != LDNS_STATUS_OK) {
+        NE_DEBUG(NE_DBG_SOCKET, "addr: Couldn't create resolver: %d.\n", addr->errnum);
+        ldns_rdf_deep_free(domain);
+        return addr;
+    }
+
+    if (flags & NE_ADDR_HTTPS) {
+        rrs = resolve_data(res, domain, LDNS_RR_TYPE_HTTPS);
+    }
+    else {
+        /* This handles /etc/hosts internally, does A and AAAA lookup. */
+        rrs = ldns_get_rr_list_addr_by_name(res, domain, LDNS_RR_CLASS_IN, 0);
+    }
+
+    addr->result = from_rrs_to_results(rrs, flags);
+    ldns_rr_list_deep_free(rrs);
+
+    /* Empty list -> give a no data error. */
+    if (!addr->result) addr->errnum = LDNS_STATUS_NO_DATA;
+
+    NE_DEBUG(NE_DBG_SOCKET, "addr: Resolved %s: errnum = %d\n", hostname, addr->errnum);
+    ldns_rdf_deep_free(domain);
+    ldns_resolver_free(res);
+#elif defined(USE_GETADDRINFO)
     struct addrinfo hints = {0};
     const char *pnt;
 
@@ -1108,9 +1291,20 @@ int ne_addr_result(const ne_sock_addr *addr)
     return addr->errnum;
 }
 
+unsigned int ne_addr_ttl(const ne_sock_addr *addr)
+{
+#ifdef NE_HAVE_LDNS
+    return addr->cursor ? addr->cursor->ttl : 0;
+#else
+    return 0;
+#endif
+}
+
 const char *ne_addr_canonical(const ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    return addr->result ? addr->result->addr.ai_canonname : NULL;
+#elif defined(USE_GETADDRINFO)
     return addr->result ? addr->result->ai_canonname : NULL;
 #else
     return addr->name;
@@ -1119,8 +1313,11 @@ const char *ne_addr_canonical(const ne_sock_addr *addr)
 
 const ne_inet_addr *ne_addr_first(ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
-    addr->cursor = addr->result->ai_next;
+#ifdef NE_HAVE_LDNS
+    addr->cursor = addr->result;
+    return &addr->cursor->addr;
+#elif USE_GETADDRINFO
+    addr->cursor = addr->result;
     return addr->result;
 #else
     addr->cursor = 0;
@@ -1131,9 +1328,14 @@ const ne_inet_addr *ne_addr_first(ne_sock_addr *addr)
 const ne_inet_addr *ne_addr_next(ne_sock_addr *addr)
 {
 #ifdef USE_GETADDRINFO
-    struct addrinfo *ret = addr->cursor;
-    if (addr->cursor) addr->cursor = addr->cursor->ai_next;
+    struct addrinfo *ret;
+#ifdef NE_HAVE_LDNS
+    addr->cursor = addr->cursor->next;
+    ret = addr->cursor ? &addr->cursor->addr : NULL;
 #else
+    ret = addr->cursor = addr->cursor->ai_next;
+#endif /* NE_HAVE_LDNS */
+#else /* !USE_GETADDRINFO */
     struct in_addr *ret;
     if (++addr->cursor < addr->count)
 	ret = &addr->addrs[addr->cursor];
@@ -1149,7 +1351,9 @@ char *ne_addr_error(const ne_sock_addr *addr, char *buf, size_t bufsiz)
     print_error(addr->errnum, buf, bufsiz);
 #else
     const char *err;
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    err = ldns_get_errorstr_by_id(addr->errnum);
+#elif defined(USE_GETADDRINFO)
     /* override horrible generic "Name or service not known" error. */
     if (addr->errnum == EAI_NONAME)
 	err = _("Host not found");
@@ -1323,9 +1527,32 @@ char *ne_iaddr_get_scope(const ne_inet_addr *ia)
     return NULL;
 }
 
+const ne_addr_data *ne_addr_getdata(ne_sock_addr *addr, ne_addr_data_type type)
+{
+#ifdef NE_HAVE_LDNS
+    addr->data.svcb.target = addr->cursor->target;
+    addr->data.svcb.priority = addr->cursor->priority;
+    addr->data.svcb.params = addr->cursor->params;
+    return &addr->data;
+#endif
+    return NULL;
+}
+
 void ne_addr_destroy(ne_sock_addr *addr)
 {
-#ifdef USE_GETADDRINFO
+#ifdef NE_HAVE_LDNS
+    struct rdata *rd;
+
+    while ((rd = addr->result) != NULL) {
+        ne_inet_addr *ai = &rd->addr;
+        addr->result = rd->next;
+        if (ai->ai_canonname) free(ai->ai_canonname);
+        if (rd->target) free(rd->target);
+        if (rd->params) free(rd->params);
+        if (ai->ai_addr) ne_free(ai->ai_addr);
+        ne_free(rd);
+    }
+#elif defined(USE_GETADDRINFO)
     /* Note that ->result is only valid for successful invocations of
      * getaddrinfo. */
     if (!addr->errnum && addr->result)
@@ -1695,7 +1922,12 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
     if (type == ne_iaddr_ipv6)
 	return NULL;
 #endif
-    ia = ne_calloc(sizeof *ia);
+    return ne_iaddr_put(ne_calloc(sizeof *ia), type, raw);
+}
+
+ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type, const unsigned char *raw)
+{
+    if (ia->ai_addr) ne_free(ia->ai_addr);
 #ifdef USE_GETADDRINFO
     /* ai_protocol and ai_socktype aren't used by connect_socket() so
      * ignore them here. (for now) */

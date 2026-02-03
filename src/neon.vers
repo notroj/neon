@@ -73,4 +73,7 @@ NEON_0_37 {
     ne_ssl_check_certificate;
     ne_sock_getcert;
     ne_sock_handshake;
+    ne_iaddr_put;
+    ne_addr_ttl;
+    ne_addr_getdata;
 };

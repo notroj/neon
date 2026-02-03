@@ -383,6 +383,28 @@ static int addr_compare(void)
     return OK;
 }
 
+static int addr_put(void)
+{
+    ne_inet_addr *ia, *ia2;
+
+    ia = ne_iaddr_parse("127.0.0.1", ne_iaddr_ipv4);
+    ONN("parse failed", ia == NULL);
+    CALL(check_is_raw127(ia));
+
+    ia2 = ne_iaddr_put(ia, ne_iaddr_ipv4, raw_1234);
+    ONN("new pointer returned after _put", ia2 != ia);
+    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv4);
+
+#ifdef TEST_IPV6
+    ia2 = ne_iaddr_put(ia, ne_iaddr_ipv6, raw6_cafe);
+    ONN("new pointer returned after _put", ia2 != ia);
+    ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv6);
+#endif
+
+    ne_iaddr_free(ia);
+    return OK;
+}
+
 static int addr_reverse(void)
 {
     ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, raw_127);
@@ -445,6 +467,8 @@ static int addr_failures(void)
     static const char *hosts[] = {
         "nonesuch.example.com",
         "absolutelynodomain1231241255.com",
+        "",
+        ".",
         NULL
     };
     unsigned n;
@@ -471,6 +495,80 @@ static int addr_failures(void)
     return OK;
 }
 
+static int addresses(void)
+{
+    static const struct {
+        const char *host;
+        int flags;
+    } ts[] = {
+        { "www.google.com", 0 },
+        { "www.ietf.org", NE_ADDR_CANON },
+        { "www.iana.org", NE_ADDR_CANON },
+        { "www.example.com", NE_ADDR_CANON },
+        { "www.microsoft.com", NE_ADDR_CANON },
+#ifdef NE_HAVE_LDNS
+        { "test.defo.ie", NE_ADDR_HTTPS },
+#endif
+        { NULL, 0 }
+    };
+    unsigned n;
+
+    if (getenv("TEST_RESOLVER") == NULL) {
+        t_context("not testing public address resolver cases");
+        return SKIP;
+    }
+
+    for (n = 0; ts[n].host; n++) {
+        const char *hostname = ts[n].host;
+        ne_sock_addr *sa = ne_addr_resolve(hostname, ts[n].flags);
+        const ne_inet_addr *ia;
+        unsigned count = 0, countv6 = 0;
+        const char *canon;
+
+        ONV(sa == NULL, ("resolver failed for %s", hostname));
+        ONV(ne_addr_result(sa) != 0,
+            ("error result for %s: %s", hostname,
+             ne_addr_error(sa, buffer, sizeof buffer)));
+
+        if (ts[n].flags & NE_ADDR_HTTPS) {
+            const ne_addr_data *data;
+
+            (void) ne_addr_first(sa);
+
+            data = ne_addr_getdata(sa, NE_ADDR_SVCB);
+            ONV(data == NULL, ("no HTTPS data for %s", hostname));
+            t_warning("got HTTPs data for %s - %u / %s / %s", hostname,
+                      data->svcb.priority, data->svcb.target, data->svcb.params);
+            ne_addr_destroy(sa);
+            continue;
+        }
+
+        for (ia = ne_addr_first(sa); ia; ia = ne_addr_next(sa)) {
+            unsigned int ttl = ne_addr_ttl(sa);
+            if (ne_iaddr_typeof(ia) == ne_iaddr_ipv6)
+                countv6++;
+            if (ttl == 0) t_warning("no ttl for address");
+            count++;
+        }
+
+        if (ts[n].flags & NE_ADDR_CANON) {
+            canon = ne_addr_canonical(sa);
+            ONV(canon == NULL, ("no canonical name for %s", hostname));
+            /* display it just so we can see it's working. */
+            t_warning("%s - canonical name: %s", hostname, ne_addr_canonical(sa));
+        }
+
+        ONV(count == 0, ("no addresses returned for %s", hostname));
+        if (count - countv6 == 0)
+            t_warning("no IPv4 addresses for %s", hostname);
+        if (countv6 == 0)
+            t_warning("no IPv6 addresses for %s", hostname);
+
+        ne_addr_destroy(sa);
+    }
+
+    return OK;
+}
 
 static int just_connect(void)
 {
@@ -1690,12 +1788,14 @@ ne_test tests[] = {
     T(parse_v4),
     T(addr_make_v6),
     T(addr_compare),
+    T(addr_put),
     T(addr_reverse),
     T(just_connect),
     T(addr_connect),
     T(addr_peer),
     T(addr_canonical),
     T(addr_failures),
+    T(addresses),
     T(read_close),
     T(peek_close),
     T(open_close),
