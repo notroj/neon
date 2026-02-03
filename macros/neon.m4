@@ -958,17 +958,20 @@ good
 $4], [$1=no])])])
 
 dnl Less noisy replacement for PKG_CHECK_MODULES
-AC_DEFUN([NE_PKG_CONFIG], [
+AC_DEFUN([NE_PKG_CONFIG_MINVER], [
 
 m4_define([ne_cvar], m4_translit(ne_cv_pkg_[$2], [.-], [__]))dnl
+m4_define([ne_pkg_minver], m4_if([$3], [], [], [--atleast-version $3]))dnl
+m4_define([ne_pkg_msgver], m4_if([$3], [], [for $2 via pkg-config],
+                           [for $2 >= $3 via pkg-config]))dnl
 
 AC_PATH_TOOL(PKG_CONFIG, pkg-config, no)
 if test "x$PKG_CONFIG" = "xno"; then
    : Not using pkg-config
    $4
 else
-   AC_CACHE_CHECK([for $2 pkg-config data], ne_cvar,
-     [if $PKG_CONFIG $2; then
+   AC_CACHE_CHECK([ne_pkg_msgver], ne_cvar,
+     [if $PKG_CONFIG ne_pkg_minver $2; then
         ne_cvar=yes
       else
         ne_cvar=no
@@ -979,15 +982,19 @@ else
       $1_LIBS=`$PKG_CONFIG --libs $2`
       $1_VERSION=`$PKG_CONFIG --modversion $2`
       : Using provided pkg-config data
-      $3
+      $4
    else
       : No pkg-config for $2 provided
-      $4
+      $5
    fi
 fi
 
+m4_undefine([ne_pkg_minver])
+m4_undefine([ne_pkg_msgver])
 m4_undefine([ne_cvar])
 ])
+
+AC_DEFUN([NE_PKG_CONFIG], [NE_PKG_CONFIG_MINVER([$1], [$2], [], [$3], [$4])])
 
 dnl Check for an SSL library (GNU TLS or OpenSSL)
 AC_DEFUN([NEON_SSL], [
