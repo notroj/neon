@@ -506,7 +506,9 @@ static int addresses(void)
         { "www.iana.org", NE_ADDR_CANON },
         { "www.example.com", NE_ADDR_CANON },
         { "www.microsoft.com", NE_ADDR_CANON },
+#ifdef NE_HAVE_LDNS
         { "test.defo.ie", NE_ADDR_HTTPS },
+#endif
         { NULL, 0 }
     };
     unsigned n;
