@@ -175,7 +175,7 @@ static const char *const empty_atts[] = {NULL, NULL};
 /* macro for determining the attributes array to pass */
 #define PASS_ATTS(atts) (atts ? (const char **)(atts) : empty_atts)
 
-#if LIBXML_VERSION >= 2130
+#if LIBXML_VERSION >= 21300
 /* Structured error handling from 2.13.x onwards. */
 static void error_handler(void *userdata, const xmlError *err)
 {
