@@ -63,6 +63,8 @@ jobs:
                        ${{matrix.conf-debug}} ${{matrix.conf-gssapi}}
     - run: make -j`nproc`
     - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+    - run: grep -q 'undef NE_HAVE_LDNS' config.h ||
+           make check TEST_QUIET=0 TEST_COLOUR=1 TEST_RESOLVER=1 TESTS=socket
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
 
