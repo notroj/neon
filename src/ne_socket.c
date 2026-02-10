@@ -1103,6 +1103,7 @@ static struct rdata *from_rrs_to_results(ldns_rr_list *rrs, int flags)
         ldns_rr_type rrtype = ldns_rr_get_type(rr);
 
         if (ldns_rr_rd_count(rr) == 0) continue;
+        NE_DEBUG(NE_DBG_SOCKET, "addr: RR %lu record type %d\n", n, rrtype);
 
         *this = ne_calloc(sizeof **this);
 
@@ -1114,7 +1115,8 @@ static struct rdata *from_rrs_to_results(ldns_rr_list *rrs, int flags)
             else if (ldns_rdf_get_type(rdf) == LDNS_RDF_TYPE_AAAA)
                 ne_iaddr_put(&(*this)->addr, ne_iaddr_ipv6, (unsigned char *)ldns_rdf_data(rdf));
         }
-        else if (rrtype == LDNS_RR_TYPE_HTTPS && parse_svcb_data(*this, rr)) {
+        /* parse HTTPS rr; ignore on failure or for other rrtypes. */
+        else if (rrtype != LDNS_RR_TYPE_HTTPS || parse_svcb_data(*this, rr)) {
             ne_free(*this);
             *this = NULL;
             continue;
