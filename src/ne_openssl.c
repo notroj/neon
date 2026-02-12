@@ -36,6 +36,7 @@
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
+#include <openssl/ech.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define HAVE_OPENSSL110
@@ -722,6 +723,9 @@ int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
+#ifdef HAVE_ECH
+    if (ctx->ech) ne_free(ctx->ech);
+#endif
     SSL_CTX_free(ctx->ctx);
     if (ctx->sess)
         SSL_SESSION_free(ctx->sess);

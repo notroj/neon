@@ -43,6 +43,8 @@ struct ne_ssl_context_s {
     ne_ssl_client_cert *client_cert;
     ne_ssl_ccprovide_fn provider;
     void *provider_ud;
+    unsigned char *ech;
+    size_t echlen;
 };
 
 typedef struct ne_ssl_socket_s {

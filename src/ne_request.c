@@ -1874,6 +1874,14 @@ static int do_connect(ne_session *sess, struct host_info *host)
 {
     int ret;
 
+#ifdef NE_HAVE_SSL
+    if (sess->ssl_context && sess->flags[NE_SESSFLAG_TLS_ECH]
+        && !sess->server.literal) {
+        (void) ne_ssl_context_resolve_ech(sess->ssl_context,
+                                          sess->server.hostname, 0);
+    }
+#endif
+
     /* Resolve hostname if necessary. */
     if (host->address == NULL && host->network == NULL) {
         ret = lookup_host(sess, host);

@@ -2246,6 +2246,19 @@ int ne_sock_handshake(ne_socket *sock, ne_ssl_context *ctx,
     }
 #endif
 
+#ifdef HAVE_ECH
+    if (ctx->ech) {
+        ret = SSL_set1_ech_config_list(ssl, ctx->ech, ctx->echlen);
+        if (ret != 1) {
+            NE_DEBUG(NE_DBG_SSL, "ssl: ECH config failed.\n");
+            error_ossl(sock, ret);
+            SSL_free(ssl);
+            sock_ssl(sock) = NULL;
+            return NE_SOCK_ERROR;
+        }
+    }
+#endif
+
     if (ctx->sess) {
         ret = SSL_set_session(ssl, ctx->sess);
         NE_DEBUG(NE_DBG_SSL, "sslsess: Using cached session: set_session = %d.\n", ret);
