@@ -32,7 +32,6 @@
 #ifdef HAVE_NTLM
 
 #include "ne_string.h"
-#include "ne_utils.h"
 
 typedef enum {
   NTLMSTATE_NONE,
@@ -373,8 +372,8 @@ static void mkhash(char *password,
 /* this is for creating ntlm header output */
 static int ne_output_ntlm(ne_ntlm_context *ctx)
 {
-  const char *domain="URSA-MINOR"; /* empty */
-  const char *host="LIGHTCITY"; /* empty */
+  const char *domain=""; /* empty */
+  const char *host=""; /* empty */
   int domlen=strlen(domain);
   int hostlen = strlen(host);
   int hostoff; /* host name offset */
@@ -421,7 +420,11 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
              0,     /* trailing zero */
              0,0,0, /* part of type-1 long */
 
-                LONGQUARTET(0xb203),
+             LONGQUARTET(
+               NTLMFLAG_NEGOTIATE_OEM|      /*   2 */
+               NTLMFLAG_NEGOTIATE_NTLM_KEY  /* 200 */
+               /* equals 0x0202 */
+               ),
              SHORTPAIR(domlen),
              SHORTPAIR(domlen),
              SHORTPAIR(domoff),
@@ -619,19 +622,6 @@ static int ne_output_ntlm(ne_ntlm_context *ctx)
     ctx->requestToken = NULL;
     break;
   }
-
-  if (ctx->requestToken) {
-      unsigned char *p;
-
-      NE_DEBUG(NE_DBG_HTTPAUTH, "ntlm: State %d message:", ctx->state);
-      for (p = ntlmbuf; p - ntlmbuf < size; p++) {
-          if ((p - ntlmbuf) % 16 == 0)
-              NE_DEBUG(NE_DBG_HTTPAUTH, "\n");
-          NE_DEBUG(NE_DBG_HTTPAUTH, "%02hhx ", *p);
-      }
-      NE_DEBUG(NE_DBG_HTTPAUTH, " - ends.\n");
-  }
-      
 
   return 0; /* OK */
 }

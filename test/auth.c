@@ -29,10 +29,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef NE_HAVE_NTLM
-#include <ntlm.h>
-#endif
-
 #include "ne_string.h"
 #include "ne_request.h"
 #include "ne_auth.h"
@@ -1730,63 +1726,213 @@ static int clean_realm(void)
     return destroy_and_wait(sess);
 }
 
-static int ntlm_auth(void *userdata, const char *realm, int tries, 
-                     char *un, char *pw)
+#ifdef NE_HAVE_NTLM
+#include <ntlm.h>
+
+static char *ntlm_auth_hdr = NULL;
+
+static void capture_ntlm_hdr(char *value)
 {
-    strcpy(un, "Zaphod");
-    strcpy(pw, "Beeblebrox");
-    return tries;
-}		   
-
-/* Examples from
- * https://web.archive.org/web/20210126065105/http://www.innovation.ch/personal/ronald/ntlm.html */
-#define NTLM_T1 "NTLM TlRMTVNTUAABAAAAA7IAAAoACgApAAAACQAJACAAAABMSUdIVENJVFlVUlNBLU1JTk9S"
-#define NTLM_T2 "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA=="
-#define NTLM_T3 "NTLM TlRMTVNTUAADAAAAGAAYAHIAAAAYABgAigAAABQAFABAAAAADAAMAFQAAAASABIAYAAAAAAAAACiAAAAAYIAAFUAUgBTAEEALQBNAEkATgBPAFIAWgBhAHAAaABvAGQATABJAEcASABUAEMASQBUAFkArYfKbe"
-
-static int serve_ntlm(ne_socket *sock, void *userdata)
-{
-    auth_failed = 1;
-
-    /* Register globals for discard_request. */
-    want_header = "Authorization";
-    got_header = dup_header;
-
-    discard_request(sock);
-    send_response(sock, "WWW-Authenticate: NTLM", 401, 0);
-
-    discard_request(sock);
-    NE_DEBUG(NE_DBG_HTTPAUTH, "ntlm: T1 header %s\n", digest_hdr);
-    if (digest_hdr == NULL || strcmp(digest_hdr, NTLM_T1) != 0) {
-        send_response(sock, NULL, 401, 0);
-        return 0;
-    }
-    send_response(sock, "WWW-Authenticate: " NTLM_T2, 401, 0);
-
-    discard_request(sock);
-    NE_DEBUG(NE_DBG_HTTPAUTH, "ntlm: T3 header %s\n", digest_hdr);
-    if (digest_hdr == NULL || strcmp(digest_hdr, NTLM_T3) != 0) {
-        send_response(sock, NULL, 401, 0);
-        return 0;
-    }
-
-    send_response(sock, NULL, 200, 1);
-
-    return 0;
+    if (ntlm_auth_hdr) ne_free(ntlm_auth_hdr);
+    ntlm_auth_hdr = ne_strdup(value);
 }
 
-static int ntlm(void)
+/* Helper to build a Type 2 NTLM challenge message */
+static int build_type2_challenge(tSmbNtlmAuthChallenge *challenge,
+                                  const char *domain, const char *nonce)
+{
+    unsigned char *raw;
+    size_t nlen = ne_unbase64(nonce, &raw);
+
+    ONN("could not extract nonce", nlen == 0);
+    
+    memset(challenge, 0, sizeof(*challenge));
+
+    /* Set NTLMSSP signature */
+    memcpy(challenge->ident, "NTLMSSP\0", 8);
+
+    /* Set message type to 2 */
+    challenge->msgType = 2;
+
+    /* Set flags - negotiate Unicode, NTLM key */
+    challenge->flags = 0x00008201;
+
+    /* Set the challenge nonce */
+    memcpy(challenge->challengeData, nonce, 8);
+
+    /* Set domain in Unicode */
+    if (domain && *domain) {
+        unsigned i;
+
+        for (i = 0; i < strlen(domain) && i < (NTLM_MSG_BUFSIZE/2 - 1); i++) {
+            challenge->buffer[i*2] = domain[i];
+            challenge->buffer[i*2+1] = 0;
+        }
+        challenge->uDomain.len = i * 2;
+        challenge->uDomain.maxlen = i * 2;
+        challenge->uDomain.offset = (unsigned char *)challenge->buffer - (unsigned char *)challenge;
+        challenge->bufIndex = i * 2;
+    }
+
+    return OK;
+}
+
+/* Server function for NTLM auth handling. */
+static int serve_ntlm(ne_socket *sock, void *userdata)
+{
+    tSmbNtlmAuthRequest request;
+    tSmbNtlmAuthChallenge challenge;
+    tSmbNtlmAuthResponse response;
+    char resp[NE_BUFSIZ];
+    char *type2_b64;
+    unsigned char *type1_buf = NULL;
+    unsigned char *type3_buf = NULL;
+    size_t type1_size, type3_size, type2_size;
+    char *nonce = ne_strnonce(64, NE_HASH_MD5);
+
+    want_header = "Authorization";
+    got_header = capture_ntlm_hdr;
+    ntlm_auth_hdr = NULL;
+
+    /* Request 1: No auth expected, send NTLM challenge */
+    CALL(discard_request(sock));
+    ONV(ntlm_auth_hdr != NULL,
+        ("got unexpected Authorization header on first request: %s", ntlm_auth_hdr));
+
+    ne_snprintf(resp, sizeof resp,
+                "HTTP/1.1 401 Unauthorized\r\n"
+                "WWW-Authenticate: NTLM\r\n"
+                "Content-Length: 0\r\n\r\n");
+    SEND_STRING(sock, resp);
+
+    /* Request 2: Expect Type 1 message, send Type 2 challenge */
+    CALL(discard_request(sock));
+    ONN("no Authorization header on second request", ntlm_auth_hdr == NULL);
+
+    /* Verify it starts with "NTLM " */
+    ONV(strncmp(ntlm_auth_hdr, "NTLM ", 5) != 0,
+        ("Authorization header doesn't start with 'NTLM ': %s", ntlm_auth_hdr));
+
+    /* Decode and validate Type 1 message */
+    type1_size = ne_unbase64(ntlm_auth_hdr + 5, &type1_buf);
+    ONV(type1_size < 32,
+        ("Type 1 message too short: %lu bytes", type1_size));
+
+    if (type1_size >= 32) {
+        size_t copy_size = type1_size < sizeof(request) ? type1_size : sizeof(request);
+        memcpy(&request, type1_buf, copy_size);
+
+        ONV(memcmp(request.ident, "NTLMSSP\0", 8) != 0,
+            ("Type 1 message has invalid NTLMSSP signature"));
+        ONV(request.msgType != 1,
+            ("Type 1 message has wrong type: %u (expected 1)", request.msgType));
+
+        NE_DEBUG(NE_DBG_HTTP, "auth: Valid Type 1 message received, flags=0x%08x\n",
+                 request.flags);
+    }
+
+    if (type1_buf) ne_free(type1_buf);
+    if (ntlm_auth_hdr) ne_free(ntlm_auth_hdr);
+    ntlm_auth_hdr = NULL;
+
+    /* Build Type 2 challenge */
+    build_type2_challenge(&challenge, "DOMAIN", nonce);
+
+    ONV(memcmp(challenge.ident, "NTLMSSP\0", 8) != 0,
+        ("Type 2 challenge has invalid NTLMSSP signature"));
+    ONV(challenge.msgType != 2,
+        ("Type 2 challenge has wrong type: %u (expected 2)", challenge.msgType));
+
+    NE_DEBUG(NE_DBG_HTTP, "auth: Sending Type 2 challenge, flags=0x%08x\n",
+             challenge.flags);
+
+    /* Calculate size using the SmbLength macro */
+    type2_size = SmbLength(&challenge);
+    type2_b64 = ne_base64((unsigned char *)&challenge, type2_size);
+    ne_snprintf(resp, sizeof resp,
+                "HTTP/1.1 401 Unauthorized\r\n"
+                "WWW-Authenticate: NTLM %s\r\n"
+                "Content-Length: 0\r\n\r\n", type2_b64);
+    ne_free(type2_b64);
+    SEND_STRING(sock, resp);
+
+    /* Request 3: Expect Type 3 response, validate and send 200 */
+    CALL(discard_request(sock));
+    ONN("no Authorization header on third request", ntlm_auth_hdr == NULL);
+
+    /* Verify it starts with "NTLM " */
+    ONV(strncmp(ntlm_auth_hdr, "NTLM ", 5) != 0,
+        ("Authorization header doesn't start with 'NTLM ': %s", ntlm_auth_hdr));
+
+    /* Decode and validate Type 3 message */
+    type3_size = ne_unbase64(ntlm_auth_hdr + 5, &type3_buf);
+    ONV(type3_size < 52,
+        ("Type 3 message too short: %lu bytes", type3_size));
+
+    if (type3_size >= 52) {
+        size_t copy_size = type3_size < sizeof(response) ? type3_size : sizeof(response);
+        memcpy(&response, type3_buf, copy_size);
+
+        ONV(memcmp(response.ident, "NTLMSSP\0", 8) != 0,
+            ("Type 3 message has invalid NTLMSSP signature"));
+        ONV(response.msgType != 3,
+            ("Type 3 message has wrong type: %u (expected 3)", response.msgType));
+
+        /* Validate security buffers have reasonable values */
+        ONV(response.lmResponse.len > 24 && response.lmResponse.len != 24,
+            ("Type 3 LM response length invalid: %u", response.lmResponse.len));
+        ONV(response.ntResponse.len != 24 && response.ntResponse.len != 0,
+            ("Type 3 NT response length invalid: %u", response.ntResponse.len));
+
+        /* Check that offsets are within message bounds */
+        ONV(response.lmResponse.offset >= type3_size,
+            ("Type 3 LM response offset out of bounds: %u >= %lu",
+             response.lmResponse.offset, type3_size));
+        ONV(response.ntResponse.offset >= type3_size,
+            ("Type 3 NT response offset out of bounds: %u >= %lu",
+             response.ntResponse.offset, type3_size));
+
+        NE_DEBUG(NE_DBG_HTTP, "auth: Valid Type 3 message received, flags=0x%08x\n",
+                 response.flags);
+        NE_DEBUG(NE_DBG_HTTP, "auth: LM response len=%u, NT response len=%u\n",
+                 response.lmResponse.len, response.ntResponse.len);
+    }
+
+    if (type3_buf) ne_free(type3_buf);
+    if (ntlm_auth_hdr) ne_free(ntlm_auth_hdr);
+    ntlm_auth_hdr = NULL;
+
+    /* Send success response */
+    ne_snprintf(resp, sizeof resp,
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Length: 0\r\n\r\n");
+    SEND_STRING(sock, resp);
+
+    ne_free(nonce);
+    return OK;
+}
+
+static int ntlm_cb(void *userdata, const char *realm, int tries,
+                   char *un, char *pw)
+{
+    strcpy(un, "user");
+    strcpy(pw, "SecREt01");
+    return tries;
+}
+
+/* Test NTLM authentication with server handshake */
+static int ntlm_session(void)
 {
     ne_session *sess;
 
     CALL(make_session(&sess, serve_ntlm, NULL));
+    ne_add_server_auth(sess, NE_AUTH_NTLM, ntlm_cb, NULL);
 
-    ne_add_server_auth(sess, NE_AUTH_NTLM, ntlm_auth, NULL);
-
-    CALL(any_2xx_request(sess, "/ntlmy"));
+    CALL(any_2xx_request(sess, "/ntlm-test"));
 
     return destroy_and_wait(sess);
 }
+#endif
 
 /* proxy auth, proxy AND origin */
 
@@ -1813,6 +1959,8 @@ ne_test tests[] = {
     T(basic_scope),
     T(star_scope),
     T(clean_realm),
-    T(ntlm),
+#ifdef HAVE_NTLM
+    T(ntlm_session),
+#endif
     T(NULL)
 };
