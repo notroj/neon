@@ -1243,7 +1243,7 @@ if test "$with_libntlm" != "no"; then
   ne_save_CFLAGS=$CFLAGS
   ne_save_LIBS=$NEON_LIBS
   NE_PKG_CONFIG(NE_NTLM, [libntlm],
-    [NE_ENABLE_SUPPORT(NTLM, [NTLM support enabled using libntlm $NE_NTLM_VERSION $NE_NTLM_LIBS])
+    [NE_ENABLE_SUPPORT(NTLM, [NTLM support enabled using libntlm $NE_NTLM_VERSION])
      NEON_LIBS="$NEON_LIBS ${NE_NTLM_LIBS}"
      CPPFLAGS="$CPPFLAGS $NE_NTLM_CFLAGS"
     ],
