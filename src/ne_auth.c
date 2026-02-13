@@ -35,24 +35,6 @@
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h> /* for getpid() */
-#endif
-
-#ifdef WIN32
-#include <windows.h> /* for GetCurrentThreadId() etc */
-#endif
-
-#ifdef HAVE_OPENSSL
-#include <openssl/rand.h>
-#elif defined(HAVE_GNUTLS)
-#include <gnutls/gnutls.h>
-#if LIBGNUTLS_VERSION_NUMBER < 0x020b00
-#include <gcrypt.h>
-#else
-#include <gnutls/crypto.h>
-#endif
-#endif
 
 #include <errno.h>
 #include <time.h>
@@ -330,67 +312,6 @@ static void clean_session(auth_session *sess)
 #endif
 
     sess->protocol = NULL;
-}
-
-/* Returns client nonce string using given hash algorithm. Returns
- * NULL on error, in which case challenge_error(errmsg) is called. */
-static char *get_cnonce(const struct hashalg *alg, ne_buffer **errmsg)
-{
-#ifdef NE_HAVE_SSL
-    unsigned char data[32];
-
-#ifdef HAVE_GNUTLS
-#if LIBGNUTLS_VERSION_NUMBER < 0x020b00
-    gcry_create_nonce(data, sizeof data);
-#else
-    gnutls_rnd(GNUTLS_RND_NONCE, data, sizeof data);
-#endif
-    return ne_base64(data, sizeof data);
-
-#else /* !HAVE_GNUTLS */
-    if (RAND_status() == 1 && RAND_bytes(data, sizeof data) >= 0) {
-        return ne_base64(data, sizeof data);
-    } 
-    else {
-        challenge_error(errmsg,
-                        _("cannot create client nonce for Digest challenge, "
-                          "OpenSSL PRNG not seeded"));
-        return NULL;
-    }
-#endif /* HAVE_GNUTLS */
-
-#else /* !NE_HAVE_SSL */
-    /* Fallback sources of random data: all bad, but no good sources
-     * are available. */
-    ne_buffer *buf = ne_buffer_create();
-    char *ret;
-
-#ifdef HAVE_GETTIMEOFDAY
-    struct timeval tv;
-    if (gettimeofday(&tv, NULL) == 0)
-        ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
-                           tv.tv_sec, (long)tv.tv_usec);
-#else /* !HAVE_GETTIMEOFDAY */
-    ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
-#endif
-
-    {
-#ifdef WIN32
-        DWORD pid = GetCurrentThreadId();
-#else
-        pid_t pid = getpid();
-#endif
-        ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
-    }
-
-    ret = ne_strhash(alg->hash, buf->data, NULL);
-    if (!ret)
-        challenge_error(errmsg, _("%s hash failed for Digest challenge"),
-                        alg->name);
-
-    ne_buffer_destroy(buf);
-    return ret;
-#endif
 }
 
 /* Callback to retrieve user credentials for given session on given
@@ -1002,6 +923,8 @@ static int digest_challenge(auth_session *sess, int attempt,
     ne_free(p);
 
     if (!parms->stale) {
+        unsigned char nonce[32];
+
         /* Non-stale challenge: clear session and request credentials. */
         clean_session(sess);
 
@@ -1013,12 +936,13 @@ static int digest_challenge(auth_session *sess, int attempt,
             return -1;
         }
 
-        /* The hash alg from parameters already tested to work above,
-           so re-use it. */
-        if ((sess->cnonce = get_cnonce(parms->alg, errmsg)) == NULL) {
-            /* challenge_error() called by get_cnonce(). */
+        /* Create the client nonce. */
+        if ((ne_mknonce(nonce, sizeof nonce, 0))) {
+            challenge_error(errmsg,
+                            _("cannot create client nonce for Digest challenge"));
             return -1;
         }
+        sess->cnonce = ne_base64(nonce, sizeof nonce);
 
         sess->realm = ne_strdup(parms->realm);
         sess->alg = parms->alg;
