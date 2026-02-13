@@ -75,6 +75,7 @@
 <!ENTITY refbufdest SYSTEM "ref/bufdest.xml">
 <!ENTITY refbufutil SYSTEM "ref/bufutil.xml">
 <!ENTITY refhash SYSTEM "ref/hash.xml">
+<!ENTITY refnonce SYSTEM "ref/nonce.xml">
 <!ENTITY refparam SYSTEM "ref/param.xml">
 <!ENTITY reflower SYSTEM "ref/lower.xml">
 <!ENTITY reftok SYSTEM "ref/tok.xml">
@@ -183,6 +184,7 @@ ignoring the WebDAV support if desired.</para>
     &refbufcr; <!-- ne_buffer_create -->
     &refbufdest; <!-- ne_buffer_destroy -->
     &refhash; <!-- ne_strhash -->
+    &refnonce; <!-- ne_mknonce -->
     &refparam; <!-- ne_strparam -->
     &reflower; <!-- ne_strlower -->
     &referr; <!-- ne_get_error -->
