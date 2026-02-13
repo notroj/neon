@@ -48,6 +48,10 @@
 #include <sys/time.h>
 #endif
 
+#ifdef HAVE_GETRANDOM
+#include <sys/random.h>
+#endif
+
 #ifdef WIN32
 #include <windows.h> /* for GetCurrentThreadId() etc */
 #endif
@@ -823,6 +827,20 @@ char *ne_strnonce(size_t lenhint, unsigned int flags)
     ne_free(data);
     return ret;
 #else /* !NE_HAVE_SSL */
+#ifdef HAVE_GETRANDOM
+    /* Use getrandom() system call - cryptographically secure. */
+    size_t len = lenhint ? lenhint : 24;
+    unsigned char *data = ne_malloc(len);
+    ssize_t n = getrandom(data, len, 0);
+    char *ret = NULL;
+
+    if (n == (ssize_t)len) {
+        ret = ne_base64(data, len);
+    }
+
+    ne_free(data);
+    return ret;
+#else /* !HAVE_GETRANDOM */
     /* Fallback sources of random data: all bad, but no good sources
      * are available. */
     ne_buffer *buf = ne_buffer_create();
@@ -849,6 +867,7 @@ char *ne_strnonce(size_t lenhint, unsigned int flags)
     ret = ne_strhash(NE_HASH_MD5, buf->data, NULL);
     ne_buffer_destroy(buf);
     return ret;
+#endif /* !HAVE_GETRANDOM */
 #endif /* NE_HAVE_SSL */
 }
 
