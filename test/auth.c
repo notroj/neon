@@ -790,7 +790,16 @@ static int serve_digest(ne_socket *sock, void *userdata)
         state.uri = "/fish";
 
     state.realm = parms->realm;
-    state.nonce = parms->nonce;
+    if (parms->nonce)
+        state.nonce = parms->nonce;
+    else {
+        unsigned char nonce[24];
+
+        ONN("nonce generation failed", ne_mknonce(nonce, sizeof nonce, 0));
+
+        state.nonce = ne_base64(nonce, sizeof nonce);
+    }
+    NE_DEBUG(NE_DBG_HTTP, "digest: nonce is %s\n", state.nonce);
     state.opaque = parms->opaque;
     if (parms->flags & PARM_ALTUSER)
         state.username = alt_username;
@@ -1111,7 +1120,6 @@ static int digest_failures(void)
     memset(&parms, 0, sizeof parms);
     
     parms.realm = "WallyWorld";
-    parms.nonce = "random-invented-string";
     parms.opaque = NULL;
     parms.num_requests = 1;
 
@@ -1465,7 +1473,6 @@ static int domains(void)
     memset(&parms, 0, sizeof parms);
     parms.realm = "WallyWorld";
     parms.flags = PARM_RFC2617;
-    parms.nonce = "agoog";
     parms.domain = "http://localhost:4242/fish/ https://example.com /agaor /other";
     parms.num_requests = 6;
 
@@ -1493,7 +1500,6 @@ static int CVE_2008_3746(void)
     memset(&parms, 0, sizeof parms);
     parms.realm = "WallyWorld";
     parms.flags = PARM_RFC2617;
-    parms.nonce = "agoog";
     parms.domain = "foo";
     parms.num_requests = 1;
 
