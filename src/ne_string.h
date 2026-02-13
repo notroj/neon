@@ -176,6 +176,12 @@ char *ne_strhash(unsigned int flags, ...)
 char *ne_vstrhash(unsigned int flags, va_list ap)
     ne_attribute_malloc;
 
+/* Generates a nonce using the crypto library if available. Return
+ * value is a malloc-allocated, NUL-terminated ASCII string, or NULL
+ * on error. The 'lenhint' argument can be passed as zero. 'flags'
+ * must be zero. */
+char *ne_strnonce(size_t lenhint, unsigned int flags);
+
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
 size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)

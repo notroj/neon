@@ -1,0 +1,95 @@
+<refentry id="refnonce">
+
+  <refmeta>
+    <refentrytitle>ne_strnonce</refentrytitle>
+    <manvolnum>3</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname id="ne_strnonce">ne_strnonce</refname>
+    <refpurpose>generate nonce</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+
+    <funcsynopsis>
+      <funcsynopsisinfo>#include &lt;ne_string.h&gt;</funcsynopsisinfo>
+
+      <funcprototype>
+        <funcdef>char *<function>ne_strnonce</function></funcdef>
+        <paramdef>size_t <parameter>lenhint</parameter></paramdef>
+        <paramdef>unsigned int <parameter>flags</parameter></paramdef>
+      </funcprototype>
+
+    </funcsynopsis>
+
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para>The <function>ne_strnonce</function> function can be used to
+    generate a nonce value.  The function returns a nonce as a
+    base64-encoded or ASCII hexadecimal string.</para>
+
+    <para>The <parameter>lenhint</parameter> parameter suggests the
+    length in bytes of random data to generate before encoding. If
+    zero, a default length is used.  The actual length of the returned
+    string will be longer due to Base64 encoding overhead.</para>
+
+    <para>The <parameter>flags</parameter> parameter is reserved for
+    future use and must be zero.</para>
+
+    <para>When &neon; is built with SSL/TLS support, the nonce is
+    generated using cryptographically secure random number generation
+    from the underlying SSL library (OpenSSL or GnuTLS).  Without SSL
+    support, a fallback implementation is used which combines timing
+    and process information; this fallback is not cryptographically
+    secure and should not be relied upon for security-sensitive
+    applications.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Return value</title>
+
+    <para>The return value is a malloc-allocated, NUL-terminated
+    Base64-encoded ASCII string, or &null; if the nonce cannot be
+    generated.  The caller must free the returned string using
+    <function>ne_free</function>.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Examples</title>
+
+    <para>Generate a nonce using default parameters:</para>
+
+    <programlisting>char *nonce = ne_strnonce(0, 0);
+if (nonce) {
+    printf("Nonce: %s\n", nonce);
+    ne_free(nonce);
+}</programlisting>
+
+    <para>Generate a nonce with a specific length hint:</para>
+
+    <programlisting>char *nonce = ne_strnonce(32, 0);
+/* nonce will be base64 of 32 random bytes */</programlisting>
+
+  </refsect1>
+
+  <refsect1>
+    <title>History</title>
+
+    <para>The <function>ne_strnonce</function> function is available
+    in &neon; 0.37.0 and later.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para><xref linkend="ne_strhash"/></para>
+  </refsect1>
+
+</refentry>

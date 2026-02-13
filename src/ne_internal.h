@@ -89,6 +89,9 @@
  * input. */
 NE_PRIVATE char *ne__strhash2hex(const unsigned char *digest, size_t len, unsigned int flags);
 
+/* Returns non-zero if buf was filled with nonce data. */
+NE_PRIVATE int ne__ssl_nonce(unsigned char *buf, size_t buflen);
+
 #ifdef HAVE_EXPLICIT_BZERO
 #define ne__strzero(s, n) explicit_bzero(s, n)
 #else
