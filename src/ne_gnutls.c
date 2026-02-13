@@ -1548,3 +1548,13 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     ne_free(out);
     return rv;
 }
+
+int ne_mknonce(unsigned char *buffer, size_t len, unsigned int flags)
+{
+#if LIBGNUTLS_VERSION_NUMBER < 0x020b00
+    gcry_create_nonce(buf, buflen);
+    return 0;
+#else
+    return gnutls_rnd(GNUTLS_RND_NONCE, buf, buflen) == 0 ? 0 : EAGAIN;
+#endif
+}

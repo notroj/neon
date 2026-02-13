@@ -176,6 +176,11 @@ char *ne_strhash(unsigned int flags, ...)
 char *ne_vstrhash(unsigned int flags, va_list ap)
     ne_attribute_malloc;
 
+/* Generates a nonce of length 'len', which must be no greater than
+ * 256. 'flags' must be zero. Returns zero on error, or an errno value
+ * on error. */
+int ne_mknonce(unsigned char *nonce, size_t len, unsigned int flags);
+
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
 size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)

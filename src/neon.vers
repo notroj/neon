@@ -67,6 +67,7 @@ NEON_0_36 {
 NEON_0_37 {
     ne_strlower;
     ne_strupper;
+    ne_mknonce;
     ne_ssl_clicert_copy;
     ne_ssl_context_set_clicert;
     ne_ssl_context_trustdefca;

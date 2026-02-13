@@ -1303,6 +1303,14 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     return ne__strhash2hex(v, vlen, flags);
 }
 
+int ne_mknonce(unsigned char *nonce, size_t len, unsigned int flags)
+{
+    if (RAND_status() == 1 && RAND_bytes(nonce, len) == 1)
+        return 0;
+    else
+        return EAGAIN;
+}
+
 #ifdef WITH_OPENSSL_LOCKING
 /* Implementation of locking callbacks to make OpenSSL thread-safe.
  * If the OpenSSL API was better designed, this wouldn't be necessary.

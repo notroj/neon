@@ -34,6 +34,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef WIN32
+#include <windows.h> /* for GetCurrentThreadId() etc */
+#endif
+
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
@@ -43,6 +47,15 @@
 #include "ne_internal.h"
 
 #ifndef NE_HAVE_SSL
+/* For fallback ne_strnonce() implementation. */
+#ifdef HAVE_GETRANDOM
+#include <sys/random.h>
+#endif
+
+#ifdef WIN32
+#include <windows.h> /* for GetCurrentThreadId() etc */
+#endif
+
 #include "ne_md5.h"
 #define NEED_VSTRHASH
 #endif
@@ -800,6 +813,22 @@ char *ne__strhash2hex(const unsigned char *digest, size_t len,
     return rv;
 }
 
+#ifndef NE_HAVE_SSL
+int ne_mknonce(unsigned char *nonce, size_t len, unsigned int flags)
+{
+#ifdef HAVE_GETRANDOM
+    ssize_t ret = getrandom(nonce, len, 0);
+
+    if (ret < 0)
+        return errno;
+    else if ((size_t)ret != len)
+        return EINVAL;
+
+    return 0;
+#endif /* NE_HAVE_SSL */
+    return ENOTSUP;
+}
+#endif
 
 /* Generated with 'mktable extparam', do not alter here -- */
 static const unsigned char table_extparam[256] = {
