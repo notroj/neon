@@ -34,10 +34,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef WIN32
-#include <windows.h> /* for GetCurrentThreadId() etc */
-#endif
-
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
@@ -47,8 +43,18 @@
 #include "ne_internal.h"
 
 #ifndef NE_HAVE_SSL
+/* For fallback ne_strnonce() implementation. */
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
+#ifdef WIN32
+#include <windows.h> /* for GetCurrentThreadId() etc */
+#endif
+
 #include "ne_md5.h"
 #define NEED_VSTRHASH
+
 #endif
 
 char *ne_token(char **str, char separator)
