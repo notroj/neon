@@ -34,6 +34,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef WIN32
+#include <windows.h> /* for GetCurrentThreadId() etc */
+#endif
+
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
@@ -800,6 +804,47 @@ char *ne__strhash2hex(const unsigned char *digest, size_t len,
     return rv;
 }
 
+char *ne_strnonce(size_t lenhint, unsigned int flags)
+{
+#ifdef NE_HAVE_SSL
+    size_t len = lenhint ? lenhint : 24;
+    unsigned char *data = ne_malloc(len);
+    char *ret = NULL;
+
+    if (ne__ssl_nonce(data, len))
+        ret = ne_base64(data, len);
+
+    ne_free(data);
+    return ret;
+#else /* !NE_HAVE_SSL */
+    /* Fallback sources of random data: all bad, but no good sources
+     * are available. */
+    ne_buffer *buf = ne_buffer_create();
+    char *ret;
+
+#ifdef HAVE_GETTIMEOFDAY
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == 0)
+        ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
+                           tv.tv_sec, (long)tv.tv_usec);
+#else /* !HAVE_GETTIMEOFDAY */
+    ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
+#endif
+
+    {
+#ifdef WIN32
+        DWORD pid = GetCurrentThreadId();
+#else
+        pid_t pid = getpid();
+#endif
+        ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
+    }
+
+    ret = ne_strhash(NE_HASH_MD5, buf->data, NULL);
+    ne_buffer_destroy(buf);
+    return ret;
+#endif /* NE_HAVE_SSL */
+}
 
 /* Generated with 'mktable extparam', do not alter here -- */
 static const unsigned char table_extparam[256] = {
