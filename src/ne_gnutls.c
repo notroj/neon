@@ -1549,12 +1549,12 @@ char *ne_vstrhash(unsigned int flags, va_list ap)
     return rv;
 }
 
-int ne_mknonce(unsigned char *buffer, size_t len, unsigned int flags)
+int ne_mknonce(unsigned char *nonce, size_t len, unsigned int flags)
 {
 #if LIBGNUTLS_VERSION_NUMBER < 0x020b00
-    gcry_create_nonce(buf, buflen);
+    gcry_create_nonce(nonce, len);
     return 0;
 #else
-    return gnutls_rnd(GNUTLS_RND_NONCE, buf, buflen) == 0 ? 0 : EAGAIN;
+    return gnutls_rnd(GNUTLS_RND_NONCE, nonce, len) == 0 ? 0 : EAGAIN;
 #endif
 }
