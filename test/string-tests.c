@@ -888,52 +888,39 @@ static int strupper(void)
     return OK;
 }
 
-/* Test nonce generation with various hash algorithms */
-static int strnonce(void)
+static int mknonce(void)
 {
-    size_t ts[3] = {0, 16, 32};
+    size_t ts[3] = {16, 32, 64};
     unsigned int n;
 
     for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
-        char *nonce1, *nonce2;
+        unsigned char nonce1[256], nonce2[256];
 
-        nonce1 = ne_strnonce(ts[n], 0);
-        ONN("nonce generation failed", nonce1 == NULL);
-        ONV(strlen(nonce1) < 24, ("too short nonce %" NE_FMT_SIZE_T, strlen(nonce1)));
-
-        /* Generate a second nonce to verify they're different */
-        nonce2 = ne_strnonce(ts[n], 0);
-        ONN("nonce generation failed", nonce2 == NULL);
-        ONV(strcmp(nonce1, nonce2) == 0,
-            ("two consecutive nonces are identical: %s", nonce1));
-
-        ne_free(nonce1);
-        ne_free(nonce2);
+        ONN("nonce generation failed", ne_mknonce(nonce1, ts[n], 0));
+        ONN("second nonce generation failed", ne_mknonce(nonce2, ts[n], 0));
+        ONV(memcmp(nonce1, nonce2, ts[0]) == 0,
+            ("two consecutive nonces are identical"));
     }
 
     return OK;
 }
 
 /* Test multiple nonces for uniqueness */
-static int strnonce_uniqueness(void)
+static int mknonce_uniqueness(void)
 {
-    char *nonces[10];
+    unsigned char nonces[10][16];
     unsigned int i, j;
 
     /* Generate 10 nonces */
-    for (i = 0; i < 10; i++) {
-        nonces[i] = ne_strnonce(16, NE_HASH_MD5);
-        ONN("ne_strnonce returned NULL", nonces[i] == NULL);
-    }
+    for (i = 0; i < 10; i++)
+        ONN("nonce generation failed", ne_mknonce(nonces[i], sizeof nonces[i], 0));
 
     /* Check all are unique */
     for (i = 0; i < 10; i++)
         for (j = i + 1; j < 10; j++)
-            ONV(strcmp(nonces[i], nonces[j]) == 0,
-                ("nonces at positions %u and %u are identical: %s",
-                 i, j, nonces[i]));
-
-    for (i = 0; i < 10; i++) ne_free(nonces[i]);
+            ONV(memcmp(nonces[i], nonces[j], sizeof nonces[i]) == 0,
+                ("nonces at positions %u and %u are identical",
+                 i, j));
 
     return OK;
 }
@@ -974,8 +961,8 @@ ne_test tests[] = {
     T(strhextoul),
     T(strlower),
     T(strupper),
-    T(strnonce),
-    T(strnonce_uniqueness),
+    T(mknonce),
+    T(mknonce_uniqueness),
     T(NULL)
 };
 
