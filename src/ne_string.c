@@ -818,10 +818,11 @@ int ne_mknonce(unsigned char *nonce, size_t len, unsigned int flags)
         return EINVAL;
 
     return 0;
-#endif /* NE_HAVE_SSL */
+#else
     return ENOTSUP;
-}
 #endif
+}
+#endif /* !NE_HAVE_SSL */
 
 /* Generated with 'mktable extparam', do not alter here -- */
 static const unsigned char table_extparam[256] = {
