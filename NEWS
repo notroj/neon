@@ -6,7 +6,7 @@ Changes in release 0.37.0:
    add ne_sock_getcert()
  - ne_ssl.h: add ne_ssl_clicert_copy(), ne_ssl_context_trustdefca(),
    ne_ssl_check_certificate(), ne_ssl_context_set_clicert()
- - ne_string.h: add ne_strlower()
+ - ne_string.h: add ne_strlower(), ne_strupper(), ne_mknonce()
 * Bug fixes:
  - fix ne_xml_set_encoding() failure case with libxml 2.13+.
  - ne_session_create() passed-in scheme now always lower-cased
