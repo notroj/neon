@@ -1905,7 +1905,7 @@ static int nss_pkcs11_test(const char *dbname)
     ne_ssl_pkcs11_provider_pin(prov, pkcs11_pin, &pindata);
     ne_ssl_set_pkcs11_provider(sess, prov);
 
-    CALL(any_request("/pkcs11"));
+    CALL(any_request(sess, "/pkcs11"));
     CALL(destroy_and_wait(sess));
     ne_ssl_pkcs11_provider_destroy(prov);
 
