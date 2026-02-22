@@ -1272,7 +1272,7 @@ if test "$enable_warnings" = "yes"; then
    case $GCC:`uname` in
    yes:*)
       CFLAGS="$CFLAGS -Wall -Wstrict-prototypes -Wmissing-declarations -Wshadow -Wreturn-type -Wsign-compare -Wundef -Wpointer-arith -Wbad-function-cast -Wformat-security"
-      if test "$with_ssl" = "openssl"; then
+      if test "${with_ssl}X${with_pakchois}" = "opensslXyes"; then
          CFLAGS="-DOPENSSL_SUPPRESS_DEPRECATED $CFLAGS"
       fi
       if test "$neon_xml_parser" = "libxml2"; then
