@@ -144,6 +144,14 @@ void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
 const char *ne_get_response_header(ne_request *req, const char *name)
     ne_attribute((nonnull));
 
+/* Retrieve the value of the response header field from any chunked
+ * trailer with given name; returns NULL if no response header with
+ * the given name was found.  The return value is valid only until the
+ * next call to either ne_request_destroy or ne_begin_request for this
+ * request. */
+const char *ne_get_response_trailer(ne_request *req, const char *name)
+    ne_attribute((nonnull));
+
 /* Iterator interface for response headers: if passed a NULL cursor,
  * returns the first header; if passed a non-NULL cursor pointer,
  * returns the next header.  The return value is a cursor pointer: if

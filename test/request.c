@@ -133,8 +133,11 @@ static int expect_header_value(const char *name, const char *value,
     ONREQ(ne_request_dispatch(req));
     ne_close_connection(sess);
     CALL(await_server());
-    
-    gotval = ne_get_response_header(req, name);
+
+    if (strcmp(name, "X-Trailer") == 0)
+        gotval = ne_get_response_trailer(req, name);
+    else
+        gotval = ne_get_response_header(req, name);
     ONV(value && !gotval, ("header '%s: %s' not sent", name, value));
     ONV(!value && gotval, ("header '%s: %s' not expected", name, gotval));
 
@@ -627,8 +630,6 @@ static int response_headers(void)
         { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr: \t    fishy\r\n" NO_BODY},
         { "ranDom-HEader", "fishy", single_serve_string, RESP200 "RANDom-HeADEr: fishy  \r\n" NO_BODY },
         { "ranDom-HEader", "geezer", single_serve_string, RESP200 "RANDom-HeADEr: \t \tgeezer\r\n" NO_BODY },
-        { "gONe", "fishing", single_serve_string,
-          RESP200 TE_CHUNKED "\r\n0\r\n" "Hello: world\r\n" "GONE: fishing\r\n" "\r\n" },
         { "hello", "w o r l d", single_serve_string,
           RESP200 "Hello:  \n\tw\r\n\to r l\r\n\td  \r\n" NO_BODY },
         { "X-Header", "jim, jab, jar", single_serve_string,
@@ -649,10 +650,15 @@ static int response_headers(void)
         { "X-Header", "foo", single_serve_string,
           RESP200 TE_CHUNKED "X-Header: foo\r\n\r\n"
           CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
-        /* Test that merging between trailers and main response headers works. */
-        { "X-Trailer", "fooish, barish", single_serve_string,
+        /* Test retrieving trailers. */
+        { "X-Trailer", "barish", single_serve_string,
           RESP200 TE_CHUNKED "X-Trailer: fooish\r\n\r\n"
           CHUNK(6, "foobar") "0\r\nX-Trailer: barish\r\n\r\n" },
+        { "X-Trailer", "fishing", single_serve_string,
+          RESP200 TE_CHUNKED "\r\n0\r\n" "Hello: world\r\n" "X-Trailer: fishing\r\n" "\r\n" },
+        { "X-Trailer", "fish, food", single_serve_string,
+          RESP200 TE_CHUNKED "\r\n0\r\n" "Hello: world\r\n"
+          "X-Trailer: fish\r\n" "X-Trailer: food\r\n\r\n" },
         /* Test that bare LFs are treated as a spaces. */
         { "X-Test", "just plain spaces", single_serve_string,
           RESP200 "X-Test: just\rplain\rspaces\r\n" NO_BODY },
@@ -666,9 +672,8 @@ static int response_headers(void)
     };
     unsigned n;
 
-    for (n = 0; ts[n].name != NULL; n++ ){
+    for (n = 0; ts[n].name != NULL; n++ )
         CALL(expect_header_value(ts[n].name, ts[n].value, ts[n].fn, (void *)ts[n].response));
-    }
 
     return OK;
 }
