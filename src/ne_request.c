@@ -85,6 +85,10 @@ struct field {
 /* Size of hash table; 43 is the smallest prime for which the common
  * header names hash uniquely using the *33 hash function. */
 #define HH_HASHSIZE (43)
+
+/* Array type for storing a hash of the header fields. */
+typedef struct field *field_hash[HH_HASHSIZE];
+
 /* Hash iteration step: *33 known to be a good hash for ASCII, see RSE. */
 #define HH_ITERATE(hash, ch) (((hash)*33 + (unsigned char)(ch)) % HH_HASHSIZE)
 
@@ -152,8 +156,9 @@ struct ne_request_s {
     
     struct hook *private;
 
-    /* response header fields */
-    struct field *response_headers[HH_HASHSIZE];
+    /* Response header fields; response_trailers is allocated only if
+     * (rarely) required. */
+    field_hash response_headers, *response_trailers;
     
     unsigned int current_index; /* response_headers cursor for iterator */
 
@@ -173,7 +178,7 @@ struct ne_request_s {
 };
 
 static int open_connection(ne_session *sess);
-static int read_response_headers(ne_request *req, int clear);
+static int read_header_fields(ne_request *req, field_hash **fields);
 
 /* Returns hash value for header 'name', converting it to lower-case
  * in-place. */
@@ -679,25 +684,35 @@ void ne_print_request_header(ne_request *req, const char *name,
 
 /* Returns the value of the response header 'name', for which the hash
  * value is 'h', or NULL if the header is not found. */
-static inline char *get_response_header_hv(ne_request *req, unsigned int h,
-                                           const char *name)
+static char *get_field_hv(field_hash *fh, unsigned int h, const char *name)
 {
     struct field *f;
 
-    for (f = req->response_headers[h]; f; f = f->next)
+    for (f = (*fh)[h]; f; f = f->next)
         if (strcmp(f->name, name) == 0)
             return f->value;
 
     return NULL;
 }
 
-const char *ne_get_response_header(ne_request *req, const char *name)
+static char *get_response_header_hv(ne_request *req, unsigned int h,
+                                    const char *name)
+{
+    return get_field_hv(&req->response_headers, h, name);
+}
+
+static const char *get_header_field(field_hash *hv, const char *name)
 {
     char *lcname = ne_strdup(name);
     unsigned int hash = hash_and_lower(lcname);
-    char *value = get_response_header_hv(req, hash, lcname);
+    char *value = get_field_hv(hv, hash, lcname);
     ne_free(lcname);
     return value;
+}
+
+const char *ne_get_response_header(ne_request *req, const char *name)
+{
+    return get_header_field(&req->response_headers, name);
 }
 
 /* The return value of the iterator function is a pointer to the
@@ -750,12 +765,12 @@ static void remove_response_header(ne_request *req, const char *name,
 }
 
 /* Free all stored response headers. */
-static void free_response_headers(ne_request *req)
+static void free_fields(field_hash *fields)
 {
     int n;
 
     for (n = 0; n < HH_HASHSIZE; n++) {
-        struct field **ptr = req->response_headers + n;
+        struct field **ptr = &(*fields)[n];
 
         while (*ptr) {
             struct field *const f = *ptr;
@@ -765,6 +780,24 @@ static void free_response_headers(ne_request *req)
             ne_free(f);
 	}
     }
+}
+
+static void free_response_headers(ne_request *req)
+{
+    free_fields(&req->response_headers);
+    if (req->response_trailers) free_fields(req->response_trailers);
+}
+
+/* Read response headers. */
+static int read_response_headers(ne_request *req)
+{
+    field_hash *fh = &req->response_headers;
+
+    /* Clear any response headers from previous invocations
+     * (e.g. retried requests, interim responses. */
+    free_response_headers(req);
+
+    return read_header_fields(req, &fh);
 }
 
 ne_uri *ne_get_response_location(ne_request *req, const char *fragment)
@@ -879,6 +912,7 @@ void ne_request_destroy(ne_request *req)
     }
 
     free_response_headers(req);
+    if (req->response_trailers) ne_free(req->response_trailers);
 
     ne_buffer_destroy(req->headers);
 
@@ -1231,7 +1265,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	retry = 0; /* successful read() => never retry now. */
 
 	/* Discard headers with the interim response. */
-	if ((ret = read_response_headers(req, 1)) != NE_OK) break;
+	if ((ret = read_response_headers(req)) != NE_OK) break;
 
         /* Run interim handlers. */
         for (ih = req->interim_handler; ih; ih = ih->next) {
@@ -1321,13 +1355,21 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
 
 #define MAX_HEADER_LEN (8192)
 
-/* Add a respnose header field for the given request, using
- * precalculated hash value. */
-static void add_response_header(ne_request *req, unsigned int hash,
-                                char *name, char *value)
+#define add_response_header(req_, hash, name, value) \
+    add_field(&(req_)->response_headers, (hash), (name), (value))
+
+/* Add a response header field, using precalculated hash value. The
+ * fields parameter is a pointer to a pointer to an array of pointers;
+ * *fields may be NULL in which case it is lazily-initialized on
+ * demand. */
+static void add_field(field_hash **fh, unsigned int hash,
+                      const char *name, char *value)
 {
-    struct field **nextf = &req->response_headers[hash];
+    struct field **nextf;
     size_t vlen = strlen(value);
+
+    if (*fh == NULL) *fh = ne_calloc(sizeof **fh);
+    nextf = &(**fh)[hash];
 
     while (*nextf) {
         struct field *const f = *nextf;
@@ -1390,17 +1432,12 @@ static const unsigned char table_http_token[256] = {
 /* xF8 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 }; /* -- Generated code from 'mktable http_token' ends. */
 
-/* Read response headers. If 'clear' is non-zero, clears existing
- * response header hash first. Returns NE_* code, sets session error
- * and closes connection on error. */
-static int read_response_headers(ne_request *req, int clear)
+/* Read headers into fields. Returns NE_* code, sets session error and
+ * closes connection on error. */
+static int read_header_fields(ne_request *req, field_hash **fields)
 {
     char hdr[MAX_HEADER_LEN];
     int ret, count = 0;
-
-    /* Clear any response headers from previous invocations
-     * (e.g. retired requests, interim responses. */
-    if (clear) free_response_headers(req);
 
     while ((ret = read_message_header(req, hdr, sizeof hdr)) == NE_RETRY 
            && ++count < MAX_HEADER_FIELDS) {
@@ -1440,7 +1477,7 @@ static int read_response_headers(ne_request *req, int clear)
 
         /* pnt now points to the header value. */
         NE_DEBUG(NE_DBG_HTTP, "req: Header: [%s] = [%s]\n", hdr, pnt);
-        add_response_header(req, hash, hdr, pnt);
+        add_field(fields, hash, hdr, pnt);
     }
 
     if (count == MAX_HEADER_FIELDS)
@@ -1509,8 +1546,8 @@ int ne_begin_request(ne_request *req)
 
     ne_set_error(req->session, "%d %s", st->code, st->reason_phrase);
 
-    /* Read the headers */
-    ret = read_response_headers(req, 1);
+    /* Read response headers. */
+    ret = read_response_headers(req);
     if (ret) return ret;
 
     /* check the Connection header */
@@ -1630,15 +1667,13 @@ int ne_begin_request(ne_request *req)
 int ne_end_request(ne_request *req)
 {
     struct hook *hk;
-    int ret;
+    int ret = NE_OK;
 
     if (req->resp.mode == R_CHUNKED) {
-        /* Read headers in chunked trailers WITHOUT clearing existing
-         * header hash. */
-	ret = read_response_headers(req, 0);
+        /* Read headers in chunked trailer, lazy-init the array. Per
+         * RFC9110§6.5, trailer fields are stored separately. */
+        ret = read_header_fields(req, &req->response_trailers);
         if (ret) return ret;
-    } else {
-        ret = NE_OK;
     }
     
     NE_DEBUG(NE_DBG_HTTP, "Running post_send hooks\n");
