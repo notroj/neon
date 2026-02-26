@@ -715,6 +715,14 @@ const char *ne_get_response_header(ne_request *req, const char *name)
     return get_header_field(&req->response_headers, name);
 }
 
+const char *ne_get_response_trailer(ne_request *req, const char *name)
+{
+    if (req->response_trailers)
+        return get_header_field(req->response_trailers, name);
+    else
+        return NULL;
+}
+
 /* The return value of the iterator function is a pointer to the
  * struct field of the previously returned header. */
 void *ne_response_header_iterate(ne_request *req, void *iterator,
