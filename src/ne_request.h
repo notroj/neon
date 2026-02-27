@@ -166,6 +166,13 @@ const char *ne_get_response_trailer(ne_request *req, const char *name)
 void *ne_response_header_iterate(ne_request *req, void *cursor,
                                  const char **name, const char **value);
 
+/* Iterator interface for response trailers; this has exactly the same
+ * semantics as ne_response_header_iterate() except it operates on
+ * fields in the trailer section (sent after a chunked response body)
+ * rather than the header section (sent before any response body). */
+void *ne_response_trailer_iterate(ne_request *req, void *cursor,
+                                  const char **name, const char **value);
+
 /* Adds a header to the request with given name and value. */
 void ne_add_request_header(ne_request *req, const char *name, 
 			   const char *value);

@@ -74,5 +74,6 @@ NEON_0_37 {
     ne_ssl_check_certificate;
     ne_sock_getcert;
     ne_sock_handshake;
+    ne_response_trailer_iterate;
     ne_get_response_trailer;
 };

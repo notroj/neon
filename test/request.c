@@ -728,6 +728,8 @@ static int iterate_none(void)
 
     ONN("iterator was not NULL for no headers",
         ne_response_header_iterate(req, NULL, NULL, NULL) != NULL);
+    ONN("trailer iterator was not NULL for no headers",
+        ne_response_trailer_iterate(req, NULL, NULL, NULL) != NULL);
 
     ne_request_destroy(req);
 
@@ -736,7 +738,9 @@ static int iterate_none(void)
 
 #define MANY_HEADERS (90)
 
-static int iterate_many(void)
+typedef void *request_iterator(ne_request *r, void *c, const char **n, const char **v);
+
+static int iterate_test(int trailer, request_iterator *iterator)
 {
     ne_request *req;
     ne_buffer *buf = ne_buffer_create();
@@ -748,8 +752,11 @@ static int iterate_many(void)
     } hdrs[MANY_HEADERS];
     void *cursor = NULL;
     const char *name, *value;
-    
+
     ne_buffer_czappend(buf, "HTTP/1.0 200 OK\r\n");
+
+    if (trailer) ne_buffer_czappend(buf, TE_CHUNKED "\r\n"
+                                     "0\r\n");
 
     for (n = 0; n < MANY_HEADERS; n++) {
         sprintf(hdrs[n].name, "x-%d", n);
@@ -758,7 +765,7 @@ static int iterate_many(void)
         
         ne_buffer_concat(buf, hdrs[n].name, ": ", hdrs[n].value, "\r\n", NULL);
     }
-    
+
     ne_buffer_czappend(buf, "\r\n");
 
     CALL(make_session(&sess, single_serve_string, buf->data));
@@ -766,7 +773,7 @@ static int iterate_many(void)
     req = ne_request_create(sess, "GET", "/foo");
     ONREQ(ne_request_dispatch(req));
 
-    while ((cursor = ne_response_header_iterate(req, cursor, &name, &value))) {
+    while ((cursor = iterator(req, cursor, &name, &value))) {
         ONV(strncmp(name, "x-", 2) || strncmp(value, "Y-", 2)
             || strcmp(name + 2, value + 2)
             || (n = atoi(name + 2)) >= MANY_HEADERS
@@ -790,6 +797,11 @@ static int iterate_many(void)
     return destroy_and_wait(sess);
 }
 
+static int iterate_many(void)
+{
+    CALL(iterate_test(0, ne_response_header_iterate));
+    return iterate_test(1, ne_response_trailer_iterate);
+}
 
 struct s1xx_args {
     int count;
