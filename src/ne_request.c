@@ -159,8 +159,9 @@ struct ne_request_s {
     /* Response header fields; response_trailers is allocated only if
      * (rarely) required. */
     field_hash response_headers, *response_trailers;
-    
-    unsigned int current_index; /* response_headers cursor for iterator */
+
+    /* Iterators for the response_headers and trailers. */
+    unsigned int headers_index, trailers_index;
 
     /* List of callbacks which are passed response body blocks */
     struct body_reader *body_readers;
@@ -723,32 +724,48 @@ const char *ne_get_response_trailer(ne_request *req, const char *name)
         return NULL;
 }
 
-/* The return value of the iterator function is a pointer to the
- * struct field of the previously returned header. */
-void *ne_response_header_iterate(ne_request *req, void *iterator,
-                                 const char **name, const char **value)
+static void *header_iterate(struct field *f,
+                            field_hash *hash, unsigned int *index,
+                            const char **name, const char **value)
 {
-    struct field *f = iterator;
     unsigned int n;
+
+    /* Short circuit when there is no trailers array. */
+    if (f == NULL && hash == NULL) return NULL;
 
     if (f == NULL) {
         n = 0;
-    } else if ((f = f->next) == NULL) {
-        n = req->current_index + 1;
+    }
+    else if ((f = f->next) == NULL) {
+        n = *index + 1;
     }
 
     if (f == NULL) {
-        while (n < HH_HASHSIZE && req->response_headers[n] == NULL)
+        while (n < HH_HASHSIZE && (*hash)[n] == NULL)
             n++;
         if (n == HH_HASHSIZE)
             return NULL; /* no more headers */
-        f = req->response_headers[n];
-        req->current_index = n;
+        f = (*hash)[n];
+        *index = n;
     }
     
     *name = f->name;
     *value = f->value;
     return f;
+}
+
+void *ne_response_header_iterate(ne_request *req, void *cursor,
+                                 const char **name, const char **value)
+{
+    return header_iterate(cursor, &req->response_headers, &req->headers_index,
+                          name, value);
+}
+
+void *ne_response_trailer_iterate(ne_request *req, void *cursor,
+                                  const char **name, const char **value)
+{
+    return header_iterate(cursor, req->response_trailers, &req->trailers_index,
+                          name, value);
 }
 
 /* Removes the response header 'name', which has hash value 'hash'. */

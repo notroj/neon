@@ -9,6 +9,7 @@
     <refname id="ne_get_response_header">ne_get_response_header</refname>
     <refname id="ne_get_response_trailer">ne_get_response_trailer</refname>
     <refname id="ne_response_header_iterate">ne_response_header_iterate</refname>
+    <refname id="ne_response_trailer_iterate">ne_response_trailer_iterate</refname>
     <refpurpose>functions to access response headers and trailers</refpurpose>
   </refnamediv>
   
@@ -38,8 +39,14 @@
         <paramdef>const char **<parameter>value</parameter></paramdef>
       </funcprototype>
 
+      <funcprototype>
+        <funcdef>void *<function>ne_response_trailer_iterate</function></funcdef>
+        <paramdef>ne_request *<parameter>request</parameter></paramdef>
+        <paramdef>void *<parameter>cursor</parameter></paramdef>
+        <paramdef>const char **<parameter>name</parameter></paramdef>
+        <paramdef>const char **<parameter>value</parameter></paramdef>
+      </funcprototype>
     </funcsynopsis>
-
   </refsynopsisdiv>
 
   <refsect1>
@@ -47,14 +54,19 @@
 
     <para>To retrieve the value of a response header field, the
     <function>ne_get_response_header</function> function can be used,
-    and is given the name of the header to return.</para>
+    and is given the name of the header to return. If multiple HTTP
+    response headers are received with the same name, their values are
+    combined together in a comma-separated list.</para>
 
-    <para>To retrieve the value of a chunked trailer field,
-    <function>ne_get_response_trailer</function> can be used; it takes
-    the same arguments and has the same behaviour as
-    <function>ne_get_response_header</function>, but searches the
-    trailers sent after the final chunk of a chunked-encoded response
-    body rather than the response headers.</para>
+    <para>To retrieve the value of a header from a chunked response
+    trailer section (sent after, rather than before, the response
+    body), <function>ne_get_response_trailer</function> can be
+    used. This function otherwise has the same semantics as
+    <function>ne_get_response_header</function>. Note that trailer
+    fields are used rarely and should be interpreted with care, see
+    <ulink
+    url="https://www.rfc-editor.org/rfc/rfc9110.html#name-trailer-fields">RFC
+    9110 §6.5</ulink>.</para>
 
     <para>To iterate over all the response headers returned, the
     <function>ne_response_header_iterate</function> function can be
@@ -66,6 +78,11 @@
     to <function>ne_response_header_iterate</function> to retrieve the
     next header.</para>
 
+    <para>The <function>ne_response_trailer_iterate</function>
+    function has the same semantics as
+    <function>ne_response_header_iterate</function> except it operates
+    on the response trailer fields rather than the header
+    section.</para>
   </refsect1>
 
   <refsect1>
@@ -79,10 +96,10 @@
     <function>ne_request_destroy</function> for the same request.</para>
 
     <para>Likewise, the cursor, names, and values returned by
-    <function>ne_response_header_iterate</function> are only valid
+    <function>ne_response_header_iterate</function> or
+    <function>ne_response_trailer_iterate</function> are only valid
     until the next call to <function>ne_begin_request</function> or
     until the request object is destroyed.</para>
-
   </refsect1>
 
   <refsect1>
@@ -105,10 +122,12 @@ ne_request_destroy(req);</programlisting>
   <refsect1>
     <title>History</title>
 
-    <para><function>ne_get_response_trailer</function> is available in
+    <para><function>ne_get_response_trailer</function> and
+    <function>ne_response_trailer_iterate</function> are available in
     &neon; 0.37.0 and later. In older releases, trailer fields were
-    merged with normal response headers and could be retrieved using
-    <function>ne_get_response_header</function>.</para>
+    merged with normal response headers and could be accessed using
+    <function>ne_get_response_header</function> or
+    <function>ne_response_header_iterate</function>.</para>
   </refsect1>
 
   <refsect1>
