@@ -1622,7 +1622,9 @@ static int ah_post_send(ne_request *req, void *cookie, const ne_status *status)
     if (!areq) return NE_OK;
 
     auth_hdr = ne_get_response_header(req, sess->spec->resp_hdr);
-    auth_info_hdr = ne_get_response_header(req, sess->spec->resp_info_hdr);
+    auth_info_hdr = ne_get_response_trailer(req, sess->spec->resp_info_hdr);
+    if (!auth_info_hdr)
+        auth_info_hdr = ne_get_response_header(req, sess->spec->resp_info_hdr);
 
     if (sess->context == AUTH_CONNECT && status->code == 401 && !auth_hdr) {
         /* Some broken proxies issue a 401 as a proxy auth challenge

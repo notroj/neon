@@ -412,19 +412,20 @@ static void dup_header(char *header)
     digest_hdr = ne_strdup(header);
 }
 
-#define PARM_PROXY     (0x0001)
-#define PARM_NEXTNONCE (0x0002)
-#define PARM_ALG       (0x0004) /* use algorithm= */
-#define PARM_AINFO     (0x0008)
-#define PARM_USERHASH  (0x0010) /* userhash=true */
-#define PARM_UHFALSE   (0x0020) /* userhash=false */
-#define PARM_ALTUSER   (0x0040)
+#define PARM_PROXY       (0x0001)
+#define PARM_NEXTNONCE   (0x0002)
+#define PARM_ALG         (0x0004) /* use algorithm= */
+#define PARM_AINFO       (0x0008)
+#define PARM_USERHASH    (0x0010) /* userhash=true */
+#define PARM_UHFALSE     (0x0020) /* userhash=false */
+#define PARM_ALTUSER     (0x0040)
 #define PARM_LEGACY      (0x0080)
 #define PARM_LEGACY_ONLY (0x0100)
-#define PARM_QOP       (0x0200) /* use qop= */
-#define PARM_RFC2617   (0x0204) /* use algorithm= and qop= */
-#define PARM_OPTSTAR   (0x0400) /* use OPTIONS * */
-#define PARM_PARSEQOP  (0x0800) /* use qop-value parsing test */
+#define PARM_QOP         (0x0200) /* use qop= */
+#define PARM_RFC2617     (PARM_QOP|PARM_ALG) /* use algorithm= and qop= */
+#define PARM_OPTSTAR     (0x0400) /* use OPTIONS * */
+#define PARM_PARSEQOP    (0x0800) /* use qop-value parsing test */
+#define PARM_TRAILER     (0x1000) /* use chunked trailers for Auth-Info */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -910,12 +911,22 @@ static int serve_digest(ne_socket *sock, void *userdata)
         }
         else if (parms->flags & PARM_AINFO) {
             char *ai = make_authinfo_header(&state, parms);
-            
-            ne_snprintf(resp, sizeof resp,
-                        "HTTP/1.1 200 Well, if you insist\r\n"
-                        "Content-Length: 0\r\n"
-                        "%s\r\n"
-                        "\r\n", ai);
+
+            if (parms->flags & PARM_TRAILER) {
+                ne_snprintf(resp, sizeof resp,
+                            "HTTP/1.1 200 Well, if you insist\r\n"
+                            "Transfer-Encoding: chunked\r\n"
+                            "\r\n"
+                            "0\r\n%s\r\n"
+                            "\r\n", ai);
+            }
+            else {
+                ne_snprintf(resp, sizeof resp,
+                            "HTTP/1.1 200 Well, if you insist\r\n"
+                            "Content-Length: 0\r\n"
+                            "%s\r\n"
+                            "\r\n", ai);
+            }
             
             ne_free(ai);
         } else {
@@ -989,6 +1000,8 @@ static int digest(void)
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO | PARM_NEXTNONCE, 20, 0, fail_not },
         /* ... with qop parsing tests. */
         { "WallyWorld", "qop-parsing-test", NULL, NULL, ALG_MD5, PARM_RFC2617 | PARM_PARSEQOP, 1, 0, fail_not },
+        /* next-nonce, use chunked trailers. */
+        { "WallyWorld", "chunked-trailer", NULL, NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_TRAILER|PARM_NEXTNONCE, 20, 0, fail_not },
 
         /* staleness. */
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO, 3, 2, fail_not },
