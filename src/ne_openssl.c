@@ -1225,6 +1225,7 @@ static const EVP_MD *hash_to_md(unsigned int flags)
 {
     switch (flags & NE_HASH_ALGMASK) {
     case NE_HASH_MD5: return EVP_md5();
+    case NE_HASH_SHA1: return EVP_sha1();
     case NE_HASH_SHA256: return EVP_sha256();
 #ifdef HAVE_OPENSSL11
     case NE_HASH_SHA512: return EVP_sha512();

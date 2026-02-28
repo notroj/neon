@@ -1449,6 +1449,7 @@ static gnutls_digest_algorithm_t hash_to_alg(unsigned int flags)
     case NE_HASH_MD5: return GNUTLS_DIG_MD5; break;
     case NE_HASH_SHA256: return GNUTLS_DIG_SHA256; break;
     case NE_HASH_SHA512: return GNUTLS_DIG_SHA512; break;
+    case NE_HASH_SHA1: return GNUTLS_DIG_SHA1; break;
     default: break;
     }
     return GNUTLS_DIG_UNKNOWN;

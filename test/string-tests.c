@@ -753,6 +753,41 @@ static int strhash_sha_512_256(void)
     return OK;
 }
 
+/* FIPS 180-1 standard SHA-1 test vectors from RFC 3174 */
+#define TEST1_SHA1 "abc"
+#define TEST1_SHA1_MD "a9993e364706816aba3e25717850c26c9cd0d89d"
+#define TEST2_SHA1 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+#define TEST2_SHA1_MD "84983e441c3bd26ebaae4aa1f95129e5e54670f1"
+#define TEST2_SHA1_MDC "84:98:3e:44:1c:3b:d2:6e:ba:ae:4a:a1:f9:51:29:e5:e5:46:70:f1"
+
+static int strhash_sha1(void)
+{
+    char *p = ne_strhash(NE_HASH_SHA1, "", NULL);
+
+    if (p == NULL) {
+        t_context("SHA-1 not supported");
+        return SKIP;
+    }
+    ne_free(p);
+
+    /* Test vector 1: "abc" */
+    ONVEC((NE_HASH_SHA1, TEST1_SHA1, NULL), TEST1_SHA1_MD);
+
+    /* Test vector 2: "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" */
+    ONVEC((NE_HASH_SHA1, TEST2_SHA1, NULL), TEST2_SHA1_MD);
+
+    /* Test with colon formatting */
+    ONVEC((NE_HASH_SHA1|NE_HASH_COLON, TEST2_SHA1, NULL), TEST2_SHA1_MDC);
+
+    /* Test with multiple string arguments */
+    ONVEC((NE_HASH_SHA1, "a", "b", "c", NULL), TEST1_SHA1_MD);
+
+    /* Test empty string - da39a3ee5e6b4b0d3255bfef95601890afd80709 */
+    ONVEC((NE_HASH_SHA1, "", NULL), "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+
+    return OK;
+}
+
 static int strparam(void)
 {
     static const struct {
@@ -954,6 +989,7 @@ ne_test tests[] = {
     T(buf_print),
     T(qappend),
     T(strhash),
+    T(strhash_sha1),
     T(strhash_sha_256),
     T(strhash_sha_512),
     T(strhash_sha_512_256),
