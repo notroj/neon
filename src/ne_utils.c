@@ -148,6 +148,11 @@ const char *ne_version_string(void)
     return version_string;
 }
 
+const char *ne_version_library(void)
+{
+    return NEON_VERSION;
+}
+
 #define LAST_COMPAT_ZERO_MINOR (27)
 
 #if NE_VERSION_MAJOR > 0
