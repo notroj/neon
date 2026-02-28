@@ -13,6 +13,8 @@ Changes in release 0.37.0:
  - ne_string.h: add ne_strlower(), ne_strupper(), ne_mknonce()
  - dropped bundled NTLM code; Libntlm <https://gitlab.com/gsasl/libntlm>
    is now required for NTLM authentication support
+ - ne_utils.h: ne_version_match() description fixed to match code;
+   add ne_version_library()
 * Bug fixes:
  - fix ne_xml_set_encoding() failure case with libxml 2.13+.
  - ne_session_create() passed-in scheme now always lower-cased

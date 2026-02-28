@@ -334,6 +334,20 @@ static int version_string(void)
     return OK;    
 }
 
+static int version_library(void)
+{
+    const char *ver;
+
+    ver = ne_version_library();
+    ONN("ne_version_library returned NULL", ver == NULL);
+    ONN("ne_version_library returned empty string", strlen(ver) == 0);
+
+    /* Version string should contain at least a digit */
+    ONV(strspn(ver, "0123456789.-dev") != strlen(ver),
+        ("version string '%s' contains suprising digits", ver));
+    return OK;
+}
+
 static int support(void)
 {
 #ifdef NE_HAVE_SSL
@@ -403,6 +417,7 @@ ne_test tests[] = {
     T(bad_dates),
     T(versioning),
     T(version_string),
+    T(version_library),
     T(support),
     T(NULL)
 };
