@@ -64,6 +64,8 @@ jobs:
     - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
     - if: failure()
       run: if test -f test/debug.log; then cat test/debug.log; fi
+    - run: test/checksyms.sh src/.libs/libneon.so
+      if: ${{ matrix.conf-debug == '--enable-debug' && matrix.conf-shared != '--enable-static' && matrix.conf-memleak == '--disable-memleak' }}
 
   containers:
     runs-on: ubuntu-latest
