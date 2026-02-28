@@ -171,7 +171,8 @@ int ne_has_support(int feature)
     switch (feature) {
 #if defined(NE_HAVE_SSL) || defined(NE_HAVE_ZLIB) || defined(NE_HAVE_IPV6) \
     || defined(NE_HAVE_SOCKS) || defined(NE_HAVE_LFS) \
-    || defined(NE_HAVE_TS_SSL) || defined(NE_HAVE_I18N) || defined(HAVE_SSPI)
+    || defined(NE_HAVE_TS_SSL) || defined(NE_HAVE_I18N) || defined(HAVE_SSPI) \
+    || defined(NE_HAVE_GSSAPI) || defined(NE_HAVE_LIBPXY) || defined(NE_HAVE_NTLM)
 #ifdef NE_HAVE_SSL
     case NE_FEATURE_SSL:
 #endif
