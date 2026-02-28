@@ -193,6 +193,9 @@ int ne_has_support(int feature)
 #ifdef NE_HAVE_LIBPXY
     case NE_FEATURE_LIBPXY:
 #endif
+#ifdef NE_HAVE_NTLM
+    case NE_FEATURE_NTLM:
+#endif
         return 1;
 #endif /* NE_HAVE_* */
     default:

@@ -379,6 +379,13 @@ static int support(void)
     ONN("libproxy support advertised", 
         ne_has_support(NE_FEATURE_LIBPXY));
 #endif
+#ifdef NE_HAVE_NTLM
+    ONN("Libntlm support not advertised", 
+        !ne_has_support(NE_FEATURE_NTLM));
+#else
+    ONN("Libntlm support advertised", 
+        ne_has_support(NE_FEATURE_NTLM));
+#endif
     return OK;
 }
 
