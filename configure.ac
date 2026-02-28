@@ -198,14 +198,16 @@ test -d test/common || mkdir test/common
 
 AC_MSG_NOTICE([Configured to build AC_PACKAGE_STRING:
 
-  Install prefix:  ${prefix}
-  Compiler:        ${CC}
-  XML Parser:      ${neon_xml_parser_message}
-  SSL library:     ${ne_SSL_message}
-  zlib support:    ${ne_ZLIB_message}
-  GSSAPI support:  ${ne_GSSAPI_message}
-  NTLM support:    ${ne_NTLM_message}
-  Build libraries: Shared=${enable_shared}, Static=${enable_static}
+  Install prefix:   ${prefix}
+  Compiler:         ${CC}
+  XML Parser:       ${neon_xml_parser_message}
+  SSL library:      ${ne_SSL_message}
+  zlib support:     ${ne_ZLIB_message}
+  GSSAPI support:   ${ne_GSSAPI_message}
+  NTLM support:     ${ne_NTLM_message}
+  libproxy support: ${ne_LIBPXY_message}
+
+  Building:         Shared=${enable_shared}, Static=${enable_static}, Libtool Version=${NE_LIBTOOL_VERSINFO}
 ])
 
 case $ALLOW_INSTALL in
