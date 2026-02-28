@@ -36,11 +36,9 @@
     <title>Description</title>
 
     <para>The <function>ne_version_match</function> function returns
-    non-zero if the library version is not of major version
-    <parameter>major</parameter>, or the minor version is less than
-    <parameter>minor</parameter>.  For &neon; versions 0.x, every
-    minor version is assumed to be incompatible with every other minor
-    version.</para>  <!-- TODO: remove that for 1.0 -->
+    non-zero if the library version is backwards-compatible with the
+    version given in the <parameter>major</parameter> and
+    <parameter>minor</parameter> parameters.</para>
 
     <para>The <function>ne_version_string</function> function returns
     a string giving the library version.</para>
@@ -50,7 +48,7 @@
   <refsect1>
     <title>Examples</title>
 
-    <para>To require &neon; 1.x, version 1.2 or later:</para>
+    <para>To require a version of &neon; which is backwards-compatible with version 1.2:</para>
 
     <programlisting>if (ne_version_match(1, 2)) {
     printf("Library version out of date: 1.2 required, found %s.",
