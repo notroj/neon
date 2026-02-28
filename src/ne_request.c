@@ -101,11 +101,14 @@ typedef struct field *field_hash[HH_HASHSIZE];
 #define HH_HV_RETRY_AFTER       (0x28)
 
 struct ne_request_s {
-    char *method, *target; /* method and request-target */
+    /* Buffer for reading the response message lines or body. */
+    char respbuf[NE_BUFSIZ];
 
+    char *method, *target; /* method and request-target */
     ne_buffer *headers; /* request headers */
 
-    /* Request body. */
+    /* Request body provider callback, must be non-NULL if body_length
+     * is non-zero. */
     ne_provide_body body_cb;
     void *body_ud;
 
@@ -123,15 +126,10 @@ struct ne_request_s {
 	    size_t length, remain;
 	} buf;
     } body;
-	    
-    ne_off_t body_length; /* length of request body */
+    /* Length of request body, -1 means chunked */
+    ne_off_t body_length;
 
-    /* temporary store for response lines. */
-    char respbuf[NE_BUFSIZ];
-
-    /**** Response ***/
-
-    /* The transfer encoding types */
+    /* Response transfer encoding types */
     struct ne_response {
 	enum {
 	    R_TILLEOF = 0, /* read till eof */
@@ -154,18 +152,17 @@ struct ne_request_s {
         ne_off_t progress; /* number of bytes read of response */
     } resp;
     
-    struct hook *private;
-
     /* Response header fields; response_trailers is allocated only if
      * (rarely) required. */
-    field_hash response_headers, *response_trailers;
+    field_hash *response_trailers, response_headers;
 
     /* Iterators for the response_headers and trailers. */
     unsigned int headers_index, trailers_index;
 
-    /* List of callbacks which are passed response body blocks */
+    /* Callbacks and hooks. */
     struct body_reader *body_readers;
     struct interim_handler *interim_handler;
+    struct hook *private;
 
     /*** Miscellaneous ***/
     ne_uri *target_uri;
