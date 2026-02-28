@@ -157,6 +157,7 @@ char *ne_concat(const char *str, ...)
 #define NE_HASH_SHA256     (0x0002) /* SHA-256 (SHA-2) */
 #define NE_HASH_SHA512     (0x0003) /* SHA-512 (SHA-2) */
 #define NE_HASH_SHA512_256 (0x0004) /* SHA-512/256 (SHA-2) */
+#define NE_HASH_SHA1       (0x0005) /* SHA-1 */
 
 /* Optional hash output formatting options: */
 #define NE_HASH_COLON      (0x1000) /* Colon-separated pairs */
