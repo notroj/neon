@@ -25,6 +25,7 @@
 
 #include "ne_ssl.h"
 #include "ne_session.h"
+#include "ne_socket.h"
 
 char *ne_ssl_readable_dname(const ne_ssl_dname *dn)
 {
@@ -64,6 +65,12 @@ ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename)
 }
 
 const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert)
+{
+    return NULL;
+}
+
+ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
+                                          size_t buflen)
 {
     return NULL;
 }
@@ -179,4 +186,20 @@ ne_ssl_client_cert *ne_ssl_clicert_fromuri(const char *uri,
                                            unsigned int flags)
 {
     return NULL;
+}
+
+int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx) {
+    return NE_SOCK_ERROR;
+}
+
+int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx, void *userdata)
+{
+    return NE_SOCK_ERROR;
+}
+
+int ne_sock_handshake(ne_socket *sock, ne_ssl_context *ctx,
+                      const char *hostname, unsigned int flags)
+
+{
+    return NE_SOCK_ERROR;
 }
