@@ -36,7 +36,7 @@
     <title>Description</title>
 
     <para>The <function>ne_version_match</function> function returns
-    non-zero if the library version is backwards-compatible with the
+    zero if the library version is backwards-compatible with the
     version given in the <parameter>major</parameter> and
     <parameter>minor</parameter> parameters.</para>
 

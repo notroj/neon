@@ -40,8 +40,8 @@ NE_BEGIN_DECLS
  *    "neon 0.2.0: Library build, OpenSSL support" */
 const char *ne_version_string(void);
 
-/* Returns non-zero if neon library version is backwards-compatible
- * with ABI at given (major, minor). */
+/* Returns non-zero if neon library version is backwards-compatible with
+ * ABI at given (major, minor). */
 int ne_version_match(int major, int minor);
 
 /* Feature codes: */
