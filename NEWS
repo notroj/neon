@@ -10,12 +10,11 @@ Changes in release 0.37.0:
  - ne_request.h: add ne_get_response_trailer(), ne_response_trailer_iterate()
    headers from the chunked trailer section are no longer merged with
    response headers to conform with RFC 9110 section 6.5
- - ne_string.h: add ne_strlower(), ne_strupper(), ne_mknonce()
+ - ne_string.h: add ne_strlower(), ne_strupper(), ne_mknonce(), NE_HASH_SHA1
  - dropped bundled NTLM code; Libntlm <https://gitlab.com/gsasl/libntlm>
    is now required for NTLM authentication support
  - ne_utils.h: ne_version_match() description fixed to match code;
    add ne_version_library()
- - ne_string.h: add NE_HASH_SHA1 hash type
 * Bug fixes:
  - fix ne_xml_set_encoding() failure case with libxml 2.13+.
  - ne_session_create() passed-in scheme now always lower-cased
