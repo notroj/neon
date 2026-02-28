@@ -138,6 +138,13 @@ ne_session_destroy(sess);
       </refsect1>
 
       <refsect1>
+        <title>History</title>
+        
+        <para>The <parameter>scheme</parameter> passed to <function>ne_session_create</function> is lower-cased internally from &neon; 0.37.0 onward, so passing <literal>"HtTpS"</literal> and <literal>"https"</literal> are equivalent. In earlier releases, the scheme is case-sensitive.</para>
+        
+      </refsect1>
+
+      <refsect1>
 	<title>See Also</title>
 
 	<para><xref linkend="ne_ssl_set_verify"/>, <xref linkend="ne_ssl_trust_cert"/>, <xref linkend="ne_sock_init"/>, <xref linkend="ne_set_session_flag"/>, <xref linkend="ne_session_proxy"/></para>
