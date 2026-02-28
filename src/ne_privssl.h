@@ -62,7 +62,7 @@ ne__ssl_clicert_exkey_import(const unsigned char *der,
                              size_t der_len,
                              const RSA_METHOD *method);
 
-ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain);
+NE_PRIVATE ne_ssl_certificate *ne__ssl_make_chain(STACK_OF(X509) *chain);
 
 #endif /* HAVE_OPENSSL */
 
@@ -114,8 +114,8 @@ ne__ssl_clicert_exkey_import(const unsigned char *der, size_t der_len,
                              gnutls_privkey_sign_func sign_func, void *userdata);
 #endif
 
-ne_ssl_certificate *ne__ssl_make_chain(gnutls_session_t sock,
-                                       gnutls_certificate_credentials_t crd);
+NE_PRIVATE ne_ssl_certificate *ne__ssl_make_chain(gnutls_session_t sock,
+                                                  gnutls_certificate_credentials_t crd);
 
 #endif /* HAVE_GNUTLS */
 
