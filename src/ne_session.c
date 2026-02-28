@@ -508,7 +508,7 @@ void ne_fill_server_uri(ne_session *sess, ne_uri *uri)
 void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri)
 {
     if (sess->proxies) {
-        struct host_info *hi = sess->nexthop ? sess->nexthop : sess->proxies;
+        const struct host_info *hi = sess->nexthop ? sess->nexthop : sess->proxies;
 
         if (hi->proxy == PROXY_HTTP) {
             uri->host = ne_strdup(hi->hostname);

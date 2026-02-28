@@ -87,7 +87,7 @@ struct ne_session_s {
     struct host_info *prev_proxy;
 
     /* Pointer to the active .server or .proxies as appropriate: */
-    struct host_info *nexthop;
+    const struct host_info *nexthop;
 
     /* Local address to which sockets should be bound. */
     const ne_inet_addr *local_addr;
