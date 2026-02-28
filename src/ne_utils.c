@@ -150,6 +150,10 @@ const char *ne_version_string(void)
 
 #define LAST_COMPAT_ZERO_MINOR (27)
 
+#if NE_VERSION_MAJOR > 0
+#error update ne_version_match for 1.x compatibility
+#endif
+
 int ne_version_match(int major, int minor)
 {
     return !
