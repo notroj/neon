@@ -75,10 +75,12 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: dnf update -y && dnf install -y autoconf make expat-devel 
+      - run: dnf update -y && dnf install -y autoconf make expat-devel
                   openssl openssl-devel krb5-devel libtool zlib-devel gawk
+      - if: contains(matrix.image, 'fedora')
+        run: dnf install -y libntlm-devel
       - uses: actions/checkout@v3
       - run: ./autogen.sh
-      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi ${{ contains(matrix.image, 'fedora') && '--with-libntlm' || '' }}
       - run: make -j`nproc`
       - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
