@@ -221,9 +221,9 @@ struct ne_socket_s {
      * bytes which remain to be consumed in ->buffer (from ->bufpos),
      * and is hence always <= RDBUFSIZ. */
     char *bufpos;
-    size_t bufavail;
 #define RDBUFSIZ 4096
     char buffer[RDBUFSIZ];
+    size_t bufavail;
     /* Error string. */
     char error[192];
 };
