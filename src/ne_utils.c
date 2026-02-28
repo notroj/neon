@@ -157,8 +157,8 @@ const char *ne_version_string(void)
 int ne_version_match(int major, int minor)
 {
     return !
-        (NE_VERSION_MAJOR == 0 &&
-         (minor <= NE_VERSION_MINOR && minor >= LAST_COMPAT_ZERO_MINOR));
+        (major == 0
+         && (minor >= LAST_COMPAT_ZERO_MINOR && minor <= NE_VERSION_MINOR));
 }
 
 int ne_has_support(int feature)

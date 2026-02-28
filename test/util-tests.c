@@ -292,15 +292,20 @@ static int versioning(void)
     GOOD(NE_VERSION_MAJOR, NE_VERSION_MINOR, "current version");
     BAD(NE_VERSION_MAJOR + 1, 0, "later major");
     BAD(NE_VERSION_MAJOR, NE_VERSION_MINOR + 1, "later minor");
+#if NE_VERSION_MINOR > 0
+    GOOD(NE_VERSION_MAJOR, NE_VERSION_MINOR - 1, "previous minor");
+#endif
 
 #if NE_VERSION_MAJOR > 1
     BAD(NE_VERSION_MAJOR - 1, 0, "earlier major");
-#if NE_VERSION_MINOR > 0
-    GOOD(NE_VERSION_MAJOR, NE_VERSION_MINOR - 1, "earlier minor");
-#endif /* NE_VERSION_MINOR > 0 */
+#else
 
-#else /* where NE_VERSION_MAJOR < 2; note that 0.28 thru 1.0 maintain
-       * backwards compatibility to 0.27 */
+#if NE_VERSION_MAJOR == 0
+    BAD(1, 0, "later major");
+    BAD(1, NE_VERSION_MINOR, "later major");
+#endif
+    /* Note that 0.28 thru 1.x maintain backwards compatibility to
+     * 0.27 */
     BAD(0, 26, "minor version before 0.27");
     GOOD(0, 27, "current version back-compat to 0.27");
     GOOD(0, 28, "current version back-compat to 0.28");
