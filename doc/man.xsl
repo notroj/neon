@@ -36,14 +36,11 @@
           <xsl:otherwise>3</xsl:otherwise>
         </xsl:choose>
       </xsl:variable>
-      <xsl:call-template name="inline.charseq">
-        <xsl:with-param name="content">
-          <xsl:value-of select="$target"/>
-          <xsl:text>(</xsl:text>
-          <xsl:value-of select="$manvolnum"/>
-          <xsl:text>)</xsl:text>
-        </xsl:with-param>
-      </xsl:call-template>
+      <xsl:text>\fB</xsl:text>
+      <xsl:value-of select="$target"/>
+      <xsl:text>\fR(</xsl:text>
+      <xsl:value-of select="$manvolnum"/>
+      <xsl:text>)</xsl:text>
     </xsl:when>
     <xsl:otherwise>
       <xsl:apply-imports/>
