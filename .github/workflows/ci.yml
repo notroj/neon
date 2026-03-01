@@ -83,6 +83,8 @@ jobs:
         run: dnf install -y libntlm-devel
       - uses: actions/checkout@v3
       - run: ./autogen.sh
-      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi ${{ contains(matrix.image, 'fedora') && '--with-libntlm' || '' }}
+      - run: ./configure --with-ssl=openssl --with-expat --enable-debug --with-gssapi
+                         ${{ contains(matrix.image, 'fedora') && '--with-libntlm' || '' }}
+                         --enable-warnings=error --without-pakchois
       - run: make -j`nproc`
       - run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
