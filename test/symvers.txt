@@ -91,6 +91,7 @@ ne_iaddr_get_scope@@NEON_0_34
 ne_iaddr_make
 ne_iaddr_parse
 ne_iaddr_print
+ne_iaddr_put@@NEON_0_37
 ne_iaddr_raw@@NEON_0_29
 ne_iaddr_reverse
 ne_iaddr_set_scope@@NEON_0_34
