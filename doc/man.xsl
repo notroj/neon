@@ -22,4 +22,33 @@
 
 <xsl:param name="man.authors.section.enabled">0</xsl:param>
 
+<xsl:template match="xref">
+  <xsl:variable name="target" select="id(@linkend)"/>
+  <xsl:choose>
+    <!-- Target is a refname element inside a refentry -->
+    <xsl:when test="$target/self::refname">
+      <xsl:variable name="refentry" select="$target/ancestor::refentry"/>
+      <xsl:variable name="manvolnum">
+        <xsl:choose>
+          <xsl:when test="$refentry/refmeta/manvolnum">
+            <xsl:value-of select="$refentry/refmeta/manvolnum"/>
+          </xsl:when>
+          <xsl:otherwise>3</xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <xsl:call-template name="inline.charseq">
+        <xsl:with-param name="content">
+          <xsl:value-of select="$target"/>
+          <xsl:text>(</xsl:text>
+          <xsl:value-of select="$manvolnum"/>
+          <xsl:text>)</xsl:text>
+        </xsl:with-param>
+      </xsl:call-template>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:apply-imports/>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
 </xsl:stylesheet>
