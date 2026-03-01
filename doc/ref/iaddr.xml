@@ -81,7 +81,7 @@ typedef enum {
 
       <funcprototype>
         <funcdef>void <function>ne_iaddr_free</function></funcdef>
-        <paramdef>const ne_inet_addr *<parameter>ia</parameter></paramdef>
+        <paramdef>ne_inet_addr *<parameter>ia</parameter></paramdef>
       </funcprototype>
 
     </funcsynopsis>
@@ -166,7 +166,9 @@ typedef enum {
     <parameter>buffer</parameter> parameter, and never &null;.</para>
 
     <para><function>ne_iaddr_put</function> returns the passed in
-    <parameter>ia</parameter> parameter and never &null;.</para>
+    <parameter>ia</parameter> parameter, or &null; if the address type
+    passed is not supported (for instance on a platform which does not
+    support IPv6).</para>
 
   </refsect1>
 

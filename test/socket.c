@@ -234,9 +234,10 @@ static int resolve_ipv6(void)
 
 static const unsigned char raw_127[4] = "\x7f\0\0\01", /* 127.0.0.1 */
     raw6_nuls[16] = /* :: */ "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+static const unsigned char
+raw6_cafe[16] = /* feed::cafe */ "\xfe\xed\0\0\0\0\0\0\0\0\0\0\0\0\xca\xfe";
 #ifdef TEST_IPV6
 static const unsigned char 
-raw6_cafe[16] = /* feed::cafe */ "\xfe\xed\0\0\0\0\0\0\0\0\0\0\0\0\xca\xfe",
 raw6_babe[16] = /* cafe:babe:: */ "\xca\xfe\xba\xbe\0\0\0\0\0\0\0\0\0\0\0\0";
 #endif
 
@@ -399,6 +400,9 @@ static int addr_put(void)
     ia2 = ne_iaddr_put(ia, ne_iaddr_ipv6, raw6_cafe);
     ONN("new pointer returned after _put", ia2 != ia);
     ONN("bogus ne_iaddr_typeof return", ne_iaddr_typeof(ia) != ne_iaddr_ipv6);
+#else
+    ia2 = ne_iaddr_put(ia, ne_iaddr_ipv6, raw6_cafe);
+    ONN("new pointer must return NULL for IPv6", ia2 != NULL);
 #endif
 
     ne_iaddr_free(ia);

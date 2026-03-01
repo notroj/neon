@@ -1690,7 +1690,7 @@ ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port)
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
 {
     ne_inet_addr *ia;
-#if !defined(AF_INET6) || !defined(USE_GETADDRINFO)
+#if !defined(USE_GETADDRINFO)
     /* fail if IPv6 address is given if IPv6 is not supported. */
     if (type == ne_iaddr_ipv6)
 	return NULL;
@@ -1700,8 +1700,8 @@ ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw)
 
 ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type, const unsigned char *raw)
 {
-    if (ia->ai_addr) ne_free(ia->ai_addr);
 #ifdef USE_GETADDRINFO
+    if (ia->ai_addr) ne_free(ia->ai_addr);
     /* ai_protocol and ai_socktype aren't used by connect_socket() so
      * ignore them here. (for now) */
     if (type == ne_iaddr_ipv4) {
@@ -1729,8 +1729,11 @@ ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type, const unsigned 
     }
 #endif
 #else /* !USE_GETADDRINFO */
+    /* fail if IPv6 address is given if IPv6 is not supported. */
+    if (type == ne_iaddr_ipv6)
+        return NULL;
     memcpy(&ia->s_addr, raw, sizeof ia->s_addr);
-#endif    
+#endif /* USE_GETADDRINFO */
     return ia;
 }
 

@@ -113,8 +113,9 @@ typedef enum {
 ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
 
 /* Change an existing network address object to a new raw byte
- * representation of given 'type'. The raw data must be of length
- * 4 bytes for an IPv4 address, or 16 bytes for an IPv6 address. */
+ * representation of given 'type'. The raw data must be of length 4
+ * bytes for an IPv4 address, or 16 bytes for an IPv6 address. Returns
+ * NULL if the address type is not supported, or else 'ia'. */
 ne_inet_addr *ne_iaddr_put(ne_inet_addr *ia, ne_iaddr_type type,
                            const unsigned char *raw);
 
