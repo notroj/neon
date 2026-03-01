@@ -411,6 +411,10 @@ AC_CACHE_CHECK([for library containing $1], [ne_cv_libsfor_$1], [
       ne__prologue="#include <libintl.h>"
       ne__code="bindtextdomain(\"\",\"\");"
       ;;
+    gethostbyname)
+      ne__prologue="#include <netdb.h>"
+      ne__code="gethostbyname(\"\");"
+      ;;
     *)
       ne__prologue=""
       ne__code="$1();"
@@ -714,8 +718,7 @@ NE_LARGEFILE
 AC_REPLACE_FUNCS(strcasecmp)
 
 AC_CHECK_FUNCS([signal setvbuf setsockopt stpcpy poll fcntl getsockopt \
-                explicit_bzero sendmsg gettimeofday gmtime_r if_nametoindex \
-                if_indextoname getrandom])
+                explicit_bzero sendmsg gettimeofday gmtime_r getrandom])
 
 if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
   AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
@@ -753,6 +756,7 @@ NE_SEARCH_LIBS(getaddrinfo, nsl,,
 
 if test $ne_enable_gai = yes; then
    NE_ENABLE_SUPPORT(IPV6, [IPv6 support is enabled])
+   NE_CHECK_FUNCS([if_nametoindex if_indextoname])
    AC_DEFINE(USE_GETADDRINFO, 1, [Define if getaddrinfo() should be used])
    AC_CACHE_CHECK([for working AI_ADDRCONFIG], [ne_cv_gai_addrconfig], [
    AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <netdb.h>
