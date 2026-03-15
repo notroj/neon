@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sitecopy 0.11.3\n"
 "Report-Msgid-Bugs-To: https://github.com/notroj/neon\n"
-"POT-Creation-Date: 2026-03-01 16:00+0000\n"
+"POT-Creation-Date: 2026-03-15 08:52+0000\n"
 "PO-Revision-Date: 2002-01-13 13:37+0100\n"
 "Last-Translator: Thomas Schultz <tststs@gmx.de>\n"
 "Language-Team: de\n"
@@ -229,7 +229,7 @@ msgstr ""
 msgid "unrecognized errors (%u)"
 msgstr ""
 
-#: src/ne_gnutls.c:965 src/ne_openssl.c:486
+#: src/ne_gnutls.c:965 src/ne_openssl.c:496
 msgid "Server certificate was missing commonName attribute in subject name"
 msgstr ""
 
@@ -238,7 +238,7 @@ msgstr ""
 msgid "Could not verify server certificate: %s"
 msgstr "Konnte nicht in diese Datei schreiben: %s"
 
-#: src/ne_gnutls.c:998 src/ne_openssl.c:477
+#: src/ne_gnutls.c:998 src/ne_openssl.c:487
 #, c-format
 msgid "Certificate verification error: %s"
 msgstr ""
