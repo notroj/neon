@@ -39,7 +39,7 @@ LIBTEST = libtest.la
 LIBNEON = $(top_builddir)/src/libneon.la
 
 LIBTOOL = @LIBTOOL@ --silent
-TEST_LDFLAGS = @TEST_LDFLAGS@
+TEST_LDFLAGS = -no-undefined @TEST_LDFLAGS@
 LINK = $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(TEST_LDFLAGS)
 COMPILE = $(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 
