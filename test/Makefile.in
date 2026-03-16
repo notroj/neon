@@ -167,6 +167,9 @@ socket-ssl: socket-ssl.lo $(LIBTEST)
 resolve: resolve.lo $(LIBNEON)
 	$(LINK) -o $@ resolve.lo $(LIBNEON)
 
+echtest: echtest.lo $(LIBNEON)
+	$(LINK) -o $@ echtest.lo $(LIBNEON)
+
 common/tests.lo: $(srcdir)/common/tests.c $(OBJDEPS)
 common/child.lo: $(srcdir)/common/child.c $(OBJDEPS) 
 utils.lo: $(srcdir)/utils.c $(OBJDEPS)
