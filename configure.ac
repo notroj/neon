@@ -133,7 +133,7 @@ AC_ARG_ENABLE(tests-install,
 # If test suite installation is not required, it's more
 # efficient to link the test programs using -no-install:
 if test "$enable_tests_install" = "no"; then
-  TEST_LDFLAGS="-no-install"
+  TEST_LDFLAGS="$TEST_LDFLAGS -no-install"
 fi
 
 AC_SUBST(TEST_LDFLAGS)
