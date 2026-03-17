@@ -21,9 +21,11 @@ ne_addr_canonical@@NEON_0_30
 ne_addr_destroy
 ne_addr_error
 ne_addr_first
+ne_addr_getdata@@NEON_0_38
 ne_addr_next
 ne_addr_resolve
 ne_addr_result
+ne_addr_ttl@@NEON_0_38
 ne_ascii_to_md5
 ne_asctime_parse
 ne_base64
@@ -258,6 +260,7 @@ ne_ssl_context_create
 ne_ssl_context_destroy
 ne_ssl_context_get_flag@@NEON_0_30
 ne_ssl_context_keypair
+ne_ssl_context_resolve_ech@@NEON_0_38
 ne_ssl_context_set_ccprovide@@NEON_0_37
 ne_ssl_context_set_clicert@@NEON_0_37
 ne_ssl_context_set_flag

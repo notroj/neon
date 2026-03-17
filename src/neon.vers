@@ -79,6 +79,10 @@ NEON_0_37 {
     ne_get_response_trailer;
     ne_version_library;
     ne_iaddr_put;
+};
+
+NEON_0_38 {
     ne_addr_ttl;
     ne_addr_getdata;
+    ne_ssl_context_resolve_ech;
 };
