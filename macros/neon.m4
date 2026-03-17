@@ -1035,7 +1035,7 @@ yes|openssl)
 
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
-   NE_CHECK_FUNCS(SSL_CIPHER_standard_name ASN1_TIME_to_tm timegm)
+   NE_CHECK_FUNCS(SSL_CIPHER_standard_name ASN1_TIME_to_tm timegm SSL_set1_ech_config_list)
    if test "$ne_cv_lib_ssl110" = "yes"; then
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])
@@ -1278,6 +1278,12 @@ if test "x$with_ldns" != "xno"; then
 else
    NE_DISABLE_SUPPORT(LDNS, [ldns support not enabled])
 fi
+
+if test "${ac_cv_func_SSL_set1_ech_config_list}X${NE_FLAG_LDNS}" = "yesXyes"; then
+   AC_DEFINE([HAVE_ECH], 1, [Define if ECH lookup is supported])
+   AC_MSG_NOTICE([TLS ECH support is enabled])
+fi
+
 ])
 
 dnl Adds an --enable-warnings argument to configure to allow enabling
