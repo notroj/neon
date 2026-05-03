@@ -3,7 +3,7 @@
 
 # neon
 
-_neon_ is an HTTP and WebDAV client library, with a C language API.
+_neon_ is an HTTP/1.1 and WebDAV client library, with a C language API.
 
 GitHub: https://github.com/notroj/neon | Web: https://notroj.github.io/neon/
 
@@ -42,17 +42,35 @@ licensed under the terms of the GNU GPL; see test/COPYING for terms.
 The autoconf macros in the "macros" directory are under a less
 restrictive license, see each file for details.
 
+## Building neon
+
+Grab the latest neon release tarball from https://notroj.github.io/neon/ and build 
+as follows:
+
+```bash
+./configure --with-ssl=openssl --prefix=/path/to/install
+make
+make check
+```
+
+Third-party libraries are required for certain features:
+
+- _expat_ or _libxml2_ for XML parsing and WebDAV support (https://github.com/libexpat/libexpat or https://github.com/gnome/libxml2)
+- _OpenSSL_ or _GnuTLS_ for SSL/TLS support (https://openssl-library.org/ or https://gnutls.org/)
+- _Libntlm_ for NTLM authentication support (https://gitlab.com/gsasl/libntlm)
+- _GSSAPI_ libraries from a Kerberos distribution for Negotiate authentication
+- _zlib_ for compressed response support (https://github.com/madler/zlib)
+- _libproxy_ for system proxy support (see https://github.com/libproxy/libproxy)
+
 ~~~
-neon is Copyright (C) 1999-2025 Joe Orton
+neon is Copyright (C) 1999-2026 Joe Orton
 Portions are:
 Copyright (C) Aleix Conchillo Flaque
 Copyright (C) Arfrever Frehtes Taifersar Arahesis
 Copyright (C) Arun Garg
-Copyright (C) Daniel Stenberg
 Copyright (C) Free Software Foundation, Inc.
 Copyright (C) Henrik Holst
 Copyright (C) Jiang Lei
-Copyright (C) Kai Sommerfeld
 Copyright (C) Karl Ove Hufthammer.
 Copyright (C) Michael Sobolev
 Copyright (C) Nobuyuki Tsuchimura
