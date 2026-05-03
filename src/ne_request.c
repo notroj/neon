@@ -55,9 +55,6 @@
 
 #include "ne_private.h"
 
-#define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
-if (sret < 0) return aborted(req, msg, sret); } while (0)
-
 #define EOL "\r\n"
 
 struct body_reader {
@@ -1341,17 +1338,19 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
         return NE_OK;
     }
 
-    buf += n;
-    buflen -= n;
-
     /* Per RFC9112§5.2, append any folded headers extended over
-     * multiple lines. */
-    while (buflen > 0) {
-	char ch;
+     * multiple lines (if there is space in the buffer). */
+    while ((size_t)n < buflen) {
+        char ch;
 
-	/* Collect any extra lines into buffer */
-	SOCK_ERR(req, ne_sock_peek(sock, &ch, 1),
-		 _("Error reading response headers"));
+        buf += n;
+        buflen -= n;
+
+        /* Collect any extra lines into buffer */
+        n = ne_sock_peek(sock, &ch, 1);
+        if (n <= 0) {
+            return aborted(req, _("Error reading response headers"), n);
+        }
 
 	if (ch != ' ' && ch != '\t') {
 	    /* No continuation of this header: stop reading. */
@@ -1365,10 +1364,6 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
 	}
 
         buf[0] = ' '; /* replacing \t */
-
-	/* ready for the next line. */
-	buf += n;
-	buflen -= n;
     }
 
     ne_set_error(req->session, _("Response header too long"));
