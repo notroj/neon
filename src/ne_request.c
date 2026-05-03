@@ -489,13 +489,7 @@ static ne_buffer *initial_request_headers(ne_request *req)
     else if (!sess->is_http11 && !sess->any_proxy_http) {
         ne_buffer_czappend(hdrs, 
                            "Keep-Alive: " EOL
-                          "Connection: TE, Keep-Alive" EOL);
-    } 
-    else if (!req->session->is_http11 && !sess->any_proxy_http) {
-        ne_buffer_czappend(hdrs, 
-                           "Keep-Alive: " EOL
-                           "Proxy-Connection: Keep-Alive" EOL
-                           "Connection: TE" EOL);
+                           "Connection: TE, Keep-Alive" EOL);
     } 
     else {
         ne_buffer_czappend(hdrs, "Connection: TE" EOL);
