@@ -678,6 +678,19 @@ static int response_headers(void)
     return OK;
 }
 
+/* MUST from https://www.rfc-editor.org/rfc/rfc9110.html#section-5.5-5 */
+static int response_header_nul(void)
+{
+    static const char response[] = RESP200 "Nul-Buffer: foo\0bar\rbaz\r\n"
+        TE_CHUNKED "\r\n" ABCDE_CHUNKS;
+    struct string resp;
+
+    resp.data = (char *)response;
+    resp.len = sizeof response - 1;
+
+    return expect_header_value("Nul-Buffer", "foo bar baz", serve_sstring, &resp);
+}
+
 static int post_send_retry(ne_request *req, void *userdata, 
                            const ne_status *status)
 {
@@ -2512,6 +2525,7 @@ ne_test tests[] = {
     T(close_not_retried),
     T(send_progress),
     T(response_headers),
+    T(response_header_nul),
     T(reset_headers),
     T(iterate_none),
     T(iterate_many),
