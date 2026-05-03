@@ -957,8 +957,8 @@ void ne_request_destroy(ne_request *req)
 }
 
 /* Read an HTTP message line following RFC 9112§2.2, returning <0 on
- * error, >= 0 for line length excluding trailing CRLF. Bare CR are
- * converted to spaces. */
+ * error, >= 0 for line length excluding trailing CRLF. Bare CR and
+ * NUL bytes are converted to spaces. */
 static ssize_t read_message_line(ne_socket *sock, char *const buf, size_t buflen)
 {
     ssize_t len = ne_sock_readline(sock, buf, buflen);
@@ -985,9 +985,9 @@ static ssize_t read_message_line(ne_socket *sock, char *const buf, size_t buflen
             len -= 1;
         }
 
-        /* Replace any bare CRs. */
+        /* Replace any bare CR or NUL characters. */
         while (p >= buf) {
-            if (*p == '\r') *p = ' ';
+            if (*p == '\r' || *p == '\0') *p = ' ';
             p--;
         }
     }
