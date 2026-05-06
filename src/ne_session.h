@@ -111,6 +111,9 @@ typedef enum ne_session_flag_e {
                          * messages without strict requirements
                          * introduced in RFC 7230 and later. */
 
+    NE_SESSFLAG_TLS_ECH, /* enable this flag to enable use of the
+                          * TLS Encrypted Client Hello extension. */
+
     NE_SESSFLAG_LAST /* enum sentinel value */
 } ne_session_flag;
 

@@ -36,6 +36,9 @@
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
+#ifdef HAVE_ECH
+#include <openssl/ech.h>
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define HAVE_OPENSSL110
@@ -620,6 +623,11 @@ ne_ssl_context *ne_ssl_context_create(int mode)
         SSL_CTX_sess_set_new_cb(ctx->ctx, new_ssl_session);
         SSL_CTX_sess_set_remove_cb(ctx->ctx, remove_ssl_session);
         SSL_CTX_set_session_cache_mode(ctx->ctx, SSL_SESS_CACHE_CLIENT|SSL_SESS_CACHE_NO_INTERNAL);
+
+        {
+            unsigned char h1[] = "\x08" "http/1.1";
+            SSL_CTX_set_alpn_protos(ctx->ctx, h1, sizeof(h1)-1);
+        }
     }
     else /* mode == NE_SSL_CTX_SERVER */ {
         char sidctx[128];
@@ -722,6 +730,9 @@ int ne_ssl_context_set_versions(ne_ssl_context *ctx, enum ne_ssl_protocol min,
 
 void ne_ssl_context_destroy(ne_ssl_context *ctx)
 {
+#ifdef HAVE_ECH
+    if (ctx->ech) ne_free(ctx->ech);
+#endif
     SSL_CTX_free(ctx->ctx);
     if (ctx->sess)
         SSL_SESSION_free(ctx->sess);

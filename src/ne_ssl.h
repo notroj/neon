@@ -265,6 +265,11 @@ int ne_ssl_context_keypair(ne_ssl_context *ctx,
  * be destroyed by the caller.  */
 void ne_ssl_context_set_clicert(ne_ssl_context *ctx, const ne_ssl_client_cert *cc);
 
+/* Client mode: lookup HTTPS record for ECH, if ECH has not already
+ * been configured for the context. flags must be zero. */
+int ne_ssl_context_resolve_ech(ne_ssl_context *ctx, const char *hostname,
+                               unsigned int flags);
+
 /* Callback used to load a client certificate on demand.  If dncount
  * is > 0, the 'dnames' array dnames[0] through dnames[dncount-1]
  * gives the list of CA names which the server indicated were

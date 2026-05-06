@@ -39,7 +39,7 @@ LIBTEST = libtest.la
 LIBNEON = $(top_builddir)/src/libneon.la
 
 LIBTOOL = @LIBTOOL@ --silent
-TEST_LDFLAGS = @TEST_LDFLAGS@
+TEST_LDFLAGS = -no-undefined @TEST_LDFLAGS@
 LINK = $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(TEST_LDFLAGS)
 COMPILE = $(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 
@@ -166,6 +166,9 @@ socket-ssl: socket-ssl.lo $(LIBTEST)
 
 resolve: resolve.lo $(LIBNEON)
 	$(LINK) -o $@ resolve.lo $(LIBNEON)
+
+echtest: echtest.lo $(LIBNEON)
+	$(LINK) -o $@ echtest.lo $(LIBNEON)
 
 common/tests.lo: $(srcdir)/common/tests.c $(OBJDEPS)
 common/child.lo: $(srcdir)/common/child.c $(OBJDEPS) 

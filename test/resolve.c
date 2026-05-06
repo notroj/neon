@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "ne_socket.h"
 
@@ -29,6 +30,7 @@ int main(int argc, char **argv)
     ne_sock_addr *addr;
     char buf[256];
     int ret = 0;
+    int flags = 0;
 
     if (argc < 2) {
 	printf("Usage: %s hostname\n", argv[0]);
@@ -40,20 +42,40 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    addr = ne_addr_resolve(argv[1], 0);
+    if (argc == 3) {
+        if (strcmp(argv[2], "https") == 0)
+            flags |= NE_ADDR_HTTPS;
+        else if (strcmp(argv[2], "canon") == 0)
+            flags |= NE_ADDR_CANON;
+    }
+
+    addr = ne_addr_resolve(argv[1], flags);
     if (ne_addr_result(addr)) {
 	printf("Could not resolve `%s': %s\n", argv[1],
 	       ne_addr_error(addr, buf, sizeof buf));
 	ret = 2;
-    } else {
-	const ne_inet_addr *ia;
-	printf("Resolved `%s' OK:", argv[1]);
-	for (ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr)) {
-	    printf(" <%s>", ne_iaddr_print(ia, buf, sizeof buf));
-	}
-	putchar('\n');
     }
-    ne_addr_destroy(addr);
+    else {
+        const ne_inet_addr *ia;
 
+        printf("Resolved `%s':\n", argv[1]);
+
+        for (ia = ne_addr_first(addr); ia; ia = ne_addr_next(addr)) {
+            unsigned int ttl = ne_addr_ttl(addr);
+
+            if (flags & NE_ADDR_HTTPS) {
+                const ne_addr_data *d = ne_addr_getdata(addr, NE_ADDR_SVCB);
+
+                printf(" <%s> priority %d - %s (ttl %u)\n", d->svcb.target,
+                       d->svcb.priority, d->svcb.params, ttl);
+            }
+            else
+                printf(" <%s> (ttl %u)\n", ne_iaddr_print(ia, buf, sizeof buf),
+                       ttl);
+        }
+    }
+
+    ne_addr_destroy(addr);
+    ne_sock_exit();
     return ret;
 }
