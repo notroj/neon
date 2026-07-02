@@ -918,30 +918,39 @@ static int to_end(ne_socket *sock)
 } while (0)
 #define TO_FINISH return to_end(sock)
 
-#ifndef TEST_CONNECT_TIMEOUT
-#define TEST_CONNECT_TIMEOUT 0
-#endif
-#if TEST_CONNECT_TIMEOUT
-
 /* No obvious way to reliably test a connect() timeout.  But
  * www.example.com seems to drop packets on ports other than 80 so
- * that actually works pretty well.  Disabled by default. */
+ * that actually works pretty well. Using an address from the IPv4
+ * reserved ranges in RFC 5737 is also a good option. Disabled by
+ * default. */
 static int connect_timeout(void)
 {
-    static const unsigned char example_dot_com[] = "\xC0\x00\x22\xA6";
-    ne_socket *sock = ne_sock_create();
-    ne_inet_addr *ia = ne_iaddr_make(ne_iaddr_ipv4, example_dot_com);
+    ne_sock_addr *sa;
+    ne_socket *sock;
+    const char *hostname = getenv("TEST_CONNECT_TIMEOUT");
 
+    if (!hostname || !*hostname) {
+        t_context("not testing connect() timeout cases");
+        return SKIP;
+    }
+
+    sa = ne_addr_resolve(hostname, 0);
+    ONV(ne_addr_result(sa),
+	("failed to resolve '%s': %s", hostname,
+         ne_addr_error(sa, buffer, sizeof buffer)));
+
+    sock = ne_sock_create();
     ne_sock_connect_timeout(sock, 1);
 
-    TO_OP(ne_sock_connect(sock, ia, 8080));
+    to_start = time(NULL);
+    TO_OP(ne_sock_connect(sock, ne_addr_first(sa), 8080));
+    to_finish = time(NULL);
 
-    ne_iaddr_free(ia);
+    ne_addr_destroy(sa);
     ne_sock_close(sock);
 
     return OK;
 }
-#endif
 
 static int peek_timeout(void)
 {
@@ -1753,9 +1762,7 @@ ne_test tests[] = {
     T(read_reset),
     T(bidi),
 #endif
-#if TEST_CONNECT_TIMEOUT
     T(connect_timeout),
-#endif
     T(read_timeout),
     T(peek_timeout),
     T(readline_timeout),
