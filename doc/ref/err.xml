@@ -58,7 +58,7 @@ occur whilst using the HTTP session.</para>
       <refsect1>
         <title>Return value</title>
 
-        <para><function>ne_set_error</function> returns a constant
+        <para><function>ne_get_error</function> returns a
         &nul;-terminated string.  In the default English locale, the
         returned string will <emphasis>not</emphasis> have a
         terminating <quote>.</quote> period character.</para>
