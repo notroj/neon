@@ -855,6 +855,11 @@ fail:
     return ret;
 }
 
+/* Sanity limit for the delta-seconds form of Retry-After: ten years,
+ * in seconds.  Values beyond this are rejected rather than added to
+ * the current time, to avoid overflowing time_t. */
+#define RETRY_AFTER_MAX_DELTA (60UL * 60 * 24 * 365 * 10)
+
 time_t ne_get_response_retry_after(ne_request *req)
 {
     char *val, *endp;
@@ -866,7 +871,7 @@ time_t ne_get_response_retry_after(ne_request *req)
 
     errno = 0;
     abs = strtoul(val, &endp, 10);
-    if (errno == 0 && abs != ULONG_MAX && *endp == '\0') {
+    if (errno == 0 && *endp == '\0' && abs <= RETRY_AFTER_MAX_DELTA) {
         ret = time(NULL) + abs;
     }
     else {
