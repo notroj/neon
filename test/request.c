@@ -2544,7 +2544,10 @@ static int retry_after(void)
         /* Regression test: a huge but validly-parseable delta-seconds
          * value must not be allowed to overflow when added to the
          * current time; it should be rejected as invalid. */
-        { "18446744000000000000", 0, 0 }
+        { "18446744000000000000", 0, 0 },
+        /* Regression test: delta-seconds is 1*DIGIT per RFC 9110§10.2.3;
+         * a leading sign is not permitted and must be rejected. */
+        { "+100", 0, 0 }
     };
     unsigned n;
 
