@@ -2540,7 +2540,11 @@ static int retry_after(void)
         { "100", 100, 0 },
         { "4242", 4242, 0 },
         { "blah", 0, 0 },
-        { "Fri, 31 Dec 1999 23:59:59 GMT", 0, 946684799 }
+        { "Fri, 31 Dec 1999 23:59:59 GMT", 0, 946684799 },
+        /* Regression test: a huge but validly-parseable delta-seconds
+         * value must not be allowed to overflow when added to the
+         * current time; it should be rejected as invalid. */
+        { "18446744000000000000", 0, 0 }
     };
     unsigned n;
 
