@@ -29,14 +29,16 @@
       </listitem>
       
       <listitem>
-        <para>memory consumption attack against the PROPFIND code
-        using an unbounded number of properties (propstat elements)
-        per resource</para>
+        <para>memory consumption attack against the
+        <literal>PROPFIND</literal> code using an unbounded number of
+        properties (<sgmltag>propstat</sgmltag> elements) per
+        resource</para>
       </listitem>
 
       <listitem>
-        <para>memory consumption attack against the PROPFIND code
-        using an unbounded CDATA element in a "flat property"
+        <para>memory consumption attack against the
+        <literal>PROPFIND</literal> code using an unbounded
+        <literal>CDATA</literal> element in a "flat property"
         value</para>
       </listitem>
     </itemizedlist>
@@ -58,12 +60,12 @@
     <para>When using a connection secured by SSL/TLS, it is necessary
     for clients to verify that the X.509 certificate presented by the
     server matches the server's expected identity.  The algorithm
-    required for this purpose is described in <ulink url="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110</ulink> and <ulink url="https://www.rfc-editor.org/rfc/rfc9110">RFC 6125</ulink>,
+    required for this purpose is described in <ulink url="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110</ulink> and <ulink url="https://www.rfc-editor.org/rfc/rfc6125">RFC 6125</ulink>,
     and is implemented by &neon; in the following manner:</para>
     
     <orderedlist>
       <listitem>
-        <para>the <literal>host</literal> argument passed to <xref
+        <para>the <parameter>host</parameter> argument passed to <xref
         linkend="ne_session_create"/> is the expected identity of the
         server</para>
       </listitem>
@@ -73,16 +75,17 @@
         literal (e.g. <literal>"198.51.100.42"</literal> or
         <literal>"[2001:db8::42]"</literal>), it is compared
         <emphasis>only</emphasis> to any
-        <emphasis>iPAddress</emphasis> subjectAltName values
+        <literal>iPAddress</literal> subjectAltName values
         present</para>
       </listitem>
 
       <listitem>
         <para>otherwise, the <parameter>host</parameter> parameter is
         treated as a DNS hostname, and is compared with any
-        <emphasis>dNSName</emphasis> subjectAltName values if present;
+        <literal>dNSName</literal> subjectAltName values if present;
         if none match the hostname is compared with the most specific
-        commonName attribute in the Subject name.</para>
+        <literal>commonName</literal> attribute in the Subject
+        name.</para>
       </listitem>
     </orderedlist>
     
@@ -104,7 +107,7 @@
     <title>Control character insertion in error messages</title>
     
     <para>Where error messages (as returned by
-    (<xref linkend="ne_get_error"/>) contain data supplied by the
+    <xref linkend="ne_get_error"/>) contain data supplied by the
     server, the untrusted data is sanitised to remove both control
     characters and non-ASCII characters.  This prevents any attacks
     where such error messages are exposed to the user and can
