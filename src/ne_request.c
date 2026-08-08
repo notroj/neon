@@ -1200,7 +1200,10 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
     /* Hack to allow ShoutCast-style servers, if requested. */
     if (req->session->flags[NE_SESSFLAG_ICYPROTO]
         && strncmp(buffer, "ICY ", 4) == 0 && strlen(buffer) > 8
-        && buffer[7] == ' ') {
+        && buffer[7] == ' '
+        && buffer[4] >= '0' && buffer[4] <= '9'
+        && buffer[5] >= '0' && buffer[5] <= '9'
+        && buffer[6] >= '0' && buffer[6] <= '9') {
         status->code = atoi(buffer + 4);
         status->major_version = 1;
         status->minor_version = 0;
