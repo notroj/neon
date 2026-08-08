@@ -871,7 +871,10 @@ time_t ne_get_response_retry_after(ne_request *req)
 
     errno = 0;
     abs = strtoul(val, &endp, 10);
-    if (errno == 0 && *endp == '\0' && abs <= RETRY_AFTER_MAX_DELTA) {
+    /* delta-seconds is 1*DIGIT (RFC 9110§10.2.3); strtoul() also
+     * accepts a leading sign, which must be rejected here. */
+    if (*val >= '0' && *val <= '9'
+        && errno == 0 && *endp == '\0' && abs <= RETRY_AFTER_MAX_DELTA) {
         ret = time(NULL) + abs;
     }
     else {
