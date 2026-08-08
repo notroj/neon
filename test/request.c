@@ -1923,16 +1923,99 @@ static int hook_self_destroy(void)
 static int icy_protocol(void)
 {
     ne_session *sess;
-    
+
     CALL(make_session(&sess, single_serve_string,
                       "ICY 200 OK\r\n"
                       "Content-Length: 0\r\n\r\n"));
 
     ne_set_session_flag(sess, NE_SESSFLAG_ICYPROTO, 1);
-    
+
     ONREQ(any_request(sess, "/foo"));
 
     return destroy_and_wait(sess);
+}
+
+/* Check that the fields of an ICY status-line are parsed correctly
+ * when the ICY protocol hack is enabled. */
+static int icy_status_fields(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    const ne_status *status;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "ICY 200 OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+
+    ne_set_session_flag(sess, NE_SESSFLAG_ICYPROTO, 1);
+
+    req = ne_request_create(sess, "GET", "/foo");
+    ONREQ(ne_request_dispatch(req));
+
+    status = ne_get_status(req);
+
+    ONV(status->code != 200,
+        ("status code was %d not 200", status->code));
+    ONV(status->klass != 2,
+        ("status class was %d not 2", status->klass));
+    ONV(status->major_version != 1 || status->minor_version != 0,
+        ("HTTP version was %d.%d not 1.0",
+         status->major_version, status->minor_version));
+    ONV(strcmp(status->reason_phrase, "OK") != 0,
+        ("reason phrase was `%s' not `OK'", status->reason_phrase));
+
+    ne_request_destroy(req);
+
+    return destroy_and_wait(sess);
+}
+
+/* Check that the ICY status-line hack is not applied unless the
+ * NE_SESSFLAG_ICYPROTO session flag is explicitly enabled; an ICY
+ * status-line should fail to parse as a normal HTTP status-line. */
+static int icy_disabled(void)
+{
+    ne_session *sess;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "ICY 200 OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+
+    ret = any_request(sess, "/foo");
+    ONV(ret != NE_ERROR, ("request failed with %d not NE_ERROR", ret));
+    ne_close_connection(sess);
+    ONV(strstr(ne_get_error(sess),
+               "Could not parse response status line") == NULL,
+        ("session error was `%s'", ne_get_error(sess)));
+
+    ne_session_destroy(sess);
+    return OK;
+}
+
+/* Regression test: an ICY status-line whose "code" field is not all
+ * digits (but otherwise matches the expected "ICY xxx " shape) must
+ * be rejected as a parse failure, not accepted with a garbage code
+ * and class derived from the non-digit byte. */
+static int icy_bad_code(void)
+{
+    ne_session *sess;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      "ICY abc OK\r\n"
+                      "Content-Length: 0\r\n\r\n"));
+
+    ne_set_session_flag(sess, NE_SESSFLAG_ICYPROTO, 1);
+
+    ret = any_request(sess, "/foo");
+    ONV(ret != NE_ERROR, ("request succeeded with %d not NE_ERROR", ret));
+    ne_close_connection(sess);
+    ONV(strstr(ne_get_error(sess),
+               "Could not parse response status line") == NULL,
+        ("session error was `%s'", ne_get_error(sess)));
+
+    ne_session_destroy(sess);
+    return OK;
 }
 
 static int status(void)
@@ -2560,6 +2643,9 @@ ne_test tests[] = {
     T(hooks),
     T(hook_self_destroy),
     T(icy_protocol),
+    T(icy_status_fields),
+    T(icy_disabled),
+    T(icy_bad_code),
     T(status),
     T(status_chunked),
     T(local_addr),
