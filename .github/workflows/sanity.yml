@@ -7,12 +7,14 @@ on:
     - '*.x'
     paths-ignore:
     - '**/*.md'
+    - '!SECURITY.md'
   pull_request:
     branches:
     - master
     - '*.x'
     paths-ignore:
     - '**/*.md'
+    - '!SECURITY.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,3 +34,6 @@ jobs:
       - run: make -C src check-incl
       - run: make -C src check-c++
       - run: make docs
+      - run: cp SECURITY.md /tmp/SECURITY.md.committed
+      - run: rm -f SECURITY.md && make SECURITY.md
+      - run: diff -u /tmp/SECURITY.md.committed SECURITY.md
