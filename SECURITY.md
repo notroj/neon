@@ -8,6 +8,12 @@ against a client when the user (or application) can be tricked into accessing
 an HTTP server which is controlled by an attacker. This section documents
 various types of possible attack and describes what mitigation is used in neon.
 
+## Argument validation
+
+Arguments passed to the neon API are trusted application input and are *not*
+validated for correctness or potential security impact. Use of untrusted API
+input is explicitly outside the threat model described here.
+
 ## CPU or memory consumption attacks
 
 neon uses fixed resource limits to prevent the following attacks:
@@ -53,8 +59,8 @@ hostname is compared with the most specific `commonName` attribute in the
 Subject name.
 
 In the case where a server certificate is presented that does not match the
-expected identity (or is otherwise not trusted), neon will fail the request by
-default. This behaviour can be overridden by the use of a callback installed
+expected identity (or is otherwise not trusted), neon will fail the handshake
+by default. This behaviour can be overridden by the use of a callback installed
 using `ne_ssl_set_verify()`, which allows the application to present the
 certificate details to a user for manual/off-line verification, if possible.
 
