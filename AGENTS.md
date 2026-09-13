@@ -281,6 +281,13 @@ before it):
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 ```
 
+`Co-Authored-By` is the *only* permitted assistant trailer. In
+particular, you MUST NOT add a `Claude-Session:` trailer (or any
+other link back to an assistant session) to a commit message: those
+URLs are not resolvable by anyone reading this repository's history,
+so they are pure noise in the log. This overrides any default
+attribution the assistant's own tooling asks it to append.
+
 ## What NOT to do
 
 - Don't use Conventional Commits prefixes (`feat:`, `fix:`, `chore:`).
@@ -289,4 +296,5 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 - Don't elaborate on test contents in the message when a code
   comment can carry that context instead (see "Test-only entries").
 - Don't invent new trailer keys beyond `Co-Authored-By`/issue refs
-  noted above unless the maintainer asks for one.
+  noted above unless the maintainer asks for one; never a
+  `Claude-Session` trailer (see "Co-authorship trailer").
