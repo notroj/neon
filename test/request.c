@@ -2592,6 +2592,59 @@ static int retry_after(void)
     return OK;
 }
 
+/* Test that a body reader registered with ne_accept_always is passed
+ * the response body whatever the status-class, whilst one registered
+ * with ne_accept_2xx is only passed 2xx response bodies. */
+static int acceptors(void)
+{
+    static const struct {
+        const char *ctx;
+        const char *response;
+        const char *body; /* expected response body. */
+        int is_2xx;
+    } ts[] = {
+        { "200 response",
+          RESP200 "Content-Length: 5\r\n\r\n" "abcde",
+          "abcde", 1 },
+        { "404 response",
+          "HTTP/1.1 404 Not Found\r\n" "Content-Length: 5\r\n\r\n" "fghij",
+          "fghij", 0 },
+        { "chunked 500 response",
+          "HTTP/1.1 500 Borked\r\n" TE_CHUNKED "\r\n" ABCDE_CHUNKS,
+          "abcde", 0 }
+    };
+    unsigned n;
+
+    for (n = 0; n < sizeof(ts)/sizeof(ts[0]); n++) {
+        ne_session *sess;
+        ne_request *req;
+        ne_buffer *always = ne_buffer_create(), *twoxx = ne_buffer_create();
+
+        CALL(make_session(&sess, single_serve_string, (void *)ts[n].response));
+
+        req = ne_request_create(sess, "GET", "/");
+        ne_add_response_body_reader(req, ne_accept_always, collector, always);
+        ne_add_response_body_reader(req, ne_accept_2xx, collector, twoxx);
+
+        ONREQ(ne_request_dispatch(req));
+
+        ONV(strcmp(always->data, ts[n].body) != 0,
+            ("%s: ne_accept_always reader got '%s' not '%s'",
+             ts[n].ctx, always->data, ts[n].body));
+
+        ONV(strcmp(twoxx->data, ts[n].is_2xx ? ts[n].body : "") != 0,
+            ("%s: ne_accept_2xx reader got '%s' not '%s'", ts[n].ctx,
+             twoxx->data, ts[n].is_2xx ? ts[n].body : ""));
+
+        ne_request_destroy(req);
+        ne_buffer_destroy(always);
+        ne_buffer_destroy(twoxx);
+        CALL(destroy_and_wait(sess));
+    }
+
+    return OK;
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2676,5 +2729,6 @@ ne_test tests[] = {
 #endif
     T(targets),
     T(retry_after),
+    T(acceptors),
     T(NULL)
 };
