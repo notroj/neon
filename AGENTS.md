@@ -26,6 +26,101 @@ case, run it against the unmodified code to see it fail, then apply
 the fix and re-run to see it pass, before considering the change
 done.
 
+# Writing a new feature
+
+Follow this sequence for any new public API feature (a new function,
+or a meaningful extension to an existing one):
+
+1. Produce an API design — the proposed function signature(s),
+   header placement, and semantics — and present it for review
+   before writing any implementation.
+
+2. Write a stub implementation of any new public function(s):
+   declared in the header, minimally defined to fail (e.g. return an
+   error or unimplemented status), so that the test binaries can
+   actually be built and linked against it.
+
+3. Write test cases against the API, before implementing it for real
+   (see "Building and running tests" above); they should fail
+   against the stub as a natural red step. Cover the behaviour that
+   will be documented in step 5 thoroughly, not just the happy path
+   — argument edge cases, error returns, and any security-relevant
+   behaviour (bounds/limits, untrusted-input handling, etc.).
+
+4. Implement the API. If this adds new public symbols, see "Adding
+   new symbols to the API" below for updating `src/neon.vers` and
+   `test/symvers.txt`.
+
+5. Document the API: add a new `<refentry>` under `doc/ref/`
+   (following an existing file there as a template — `<refmeta>`,
+   `<refnamediv>`, `<refsynopsisdiv>`/`<funcsynopsis>`, then
+   `<refsect1>` blocks such as "Description", "Return value",
+   "Examples", "See also"), then hook it into `doc/manual.xml`: add
+   an `<!ENTITY refXXX SYSTEM "ref/XXX.xml">` declaration alongside
+   the others near the top, and reference it with `&refXXX;` inside
+   the `<reference>` element, near related entries, with a trailing
+   `<!-- function_name -->` comment as the existing entries do.
+
+# Adding new symbols to the API
+
+neon exports its public API via a libtool versioning script
+(`src/neon.vers`); every new public symbol (a function, or other
+external identifier declared in a public header without
+`NE_PRIVATE`) must be added there, and to `test/symvers.txt`, or CI's
+`test/checksyms.sh` check will fail. Internal-only symbols marked
+`NE_PRIVATE` (`src/ne_defs.h`), and the conventional `ne__foo`
+double-underscore internal names, are never exported and need
+neither.
+
+## `src/neon.vers`
+
+Symbols are grouped into blocks by the release that introduced them,
+e.g.:
+
+```
+NEON_0_37 {
+    ne_strlower;
+    ...
+};
+```
+
+Check whether the last block's version has already shipped (look for
+a matching `Changes in release 0.NN.x` entry in `NEWS`, or compare
+against `NE_VERSION_MINOR` in `macros/neon.m4`). A released block's
+symbol set is part of the shared library's ABI and must never change:
+
+- If the last block is for a version that's **already released**,
+  close it (it should already end with `};`) and open a **new**
+  block for the next minor version, e.g. `NEON_0_38 { ... };`, and
+  add the new symbol(s) there.
+- If the last block is for the **current unreleased** development
+  version, just add the new symbol inside its existing braces.
+
+## `test/symvers.txt`
+
+This is the flat, sorted list of every expected exported symbol,
+each with the version block it belongs to appended as `@@NEON_0_NN`
+(symbols that predate this scheme, from 0.28.x and earlier, have no
+`@@` suffix — that only ever applies to old symbols, never new ones).
+Insert the new symbol in its correct sorted position (plain `sort`,
+`LC_ALL=C`, so e.g. `ne_207_*` sorts before `ne_accept_*`), with the
+`@@NEON_0_NN` suffix matching whichever block it was just added to
+in `src/neon.vers`.
+
+## Verifying
+
+`test/checksyms.sh` does a byte-exact `cmp` between `test/symvers.txt`
+and the actual `nm -D`-exported symbols from the built shared library
+— an out-of-order insertion, a missing entry, or a wrong/missing
+version suffix all fail it. Build the shared library, then run it
+directly (this is also what `ci.yml` runs in CI):
+
+```
+./configure --enable-shared ...
+make -j`nproc`
+test/checksyms.sh src/.libs/libneon.so
+```
+
 # Commit message format
 
 This project uses a GNU ChangeLog-style commit message convention
