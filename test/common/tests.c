@@ -53,7 +53,10 @@
 char test_context[BUFSIZ];
 int have_context = 0;
 
-static FILE *child_debug, *debug;
+static FILE *debug;
+#ifndef NEON_NO_TEST_CHILD
+static FILE *child_debug;
+#endif
 
 char **test_argv;
 int test_argc;
@@ -224,6 +227,7 @@ int main(int argc, char *argv[])
                     strerror(errno));
             return -1;
         }
+#ifndef NEON_NO_TEST_CHILD
         child_debug = fopen("child.log", "a");
         if (child_debug == NULL) {
             fprintf(stderr, "%s: Could not open child.log: %s\n", test_suite,
@@ -231,6 +235,7 @@ int main(int argc, char *argv[])
             fclose(debug);
             return -1;
         }
+#endif
     }
 
     if (tests[0].fn == NULL) {
@@ -466,10 +471,12 @@ int main(int argc, char *argv[])
 	fails = 1;
     }
        
+#ifndef NEON_NO_TEST_CHILD
     if (child_debug && fclose(child_debug)) {
 	fprintf(stderr, "Error closing child.log: %s\n", strerror(errno));
 	fails = 1;
     }
+#endif
 
     ne_sock_exit();
     
