@@ -34,10 +34,6 @@
 #include <string.h>
 #endif
 
-#ifdef WIN32
-#include <windows.h> /* for TIME_ZONE_INFORMATION */
-#endif
-
 #include "ne_alloc.h"
 #include "ne_dates.h"
 #include "ne_string.h"
@@ -64,39 +60,42 @@ static const char short_months[12][4] = {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
-#if defined(HAVE_STRUCT_TM_TM_GMTOFF)
-#define GMTOFF(t) ((t).tm_gmtoff)
-#elif defined(HAVE_STRUCT_TM___TM_GMTOFF)
-#define GMTOFF(t) ((t).__tm_gmtoff)
-#elif defined(WIN32)
-#define GMTOFF(t) (gmt_to_local_win32())
-#elif defined(HAVE_TIMEZONE)
-/* FIXME: the following assumes fixed dst offset of 1 hour */
-#define GMTOFF(t) (-timezone + ((t).tm_isdst > 0 ? 3600 : 0))
-#else
-/* FIXME: work out the offset anyway. */
-#define GMTOFF(t) (0)
-#endif
-
-#ifdef WIN32
-time_t gmt_to_local_win32(void)
+/* Converts broken-down UTC time 'gmt' to a time_t, independent of
+ * the local timezone.  tm_mon must be in the range 0-11; other
+ * fields are normalized if out of range.  Returns (time_t)-1 if
+ * tm_mon is invalid or the result cannot be represented. */
+static time_t tm_to_time(struct tm *gmt)
 {
-    TIME_ZONE_INFORMATION tzinfo;
-    DWORD dwStandardDaylight;
-    long bias;
-
-    dwStandardDaylight = GetTimeZoneInformation(&tzinfo);
-    bias = tzinfo.Bias;
-
-    if (dwStandardDaylight == TIME_ZONE_ID_STANDARD)
-        bias += tzinfo.StandardBias;
-    
-    if (dwStandardDaylight == TIME_ZONE_ID_DAYLIGHT)
-        bias += tzinfo.DaylightBias;
-    
-    return (- bias * 60);
-}
+#ifndef HAVE_TIMEGM
+    long y = gmt->tm_year + 1900L, m = gmt->tm_mon + 1;
+    long era, yoe, doy, doe, days;
 #endif
+
+    /* timegm() would normalize an out-of-range month. */
+    if (gmt->tm_mon < 0 || gmt->tm_mon > 11)
+        return (time_t)-1;
+
+#ifdef HAVE_TIMEGM
+    return timegm(gmt);
+#else
+    /* Days since 1970-01-01, using Howard Hinnant's days_from_civil
+     * algorithm, which treats March as the first month of the year
+     * so that the leap day falls at the end. */
+    if (m <= 2) y--;
+    era = (y >= 0 ? y : y - 399) / 400;
+    yoe = y - era * 400;
+    doy = (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + gmt->tm_mday - 1;
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    days = era * 146097 + doe - 719468;
+
+    /* Range of a 32-bit time_t is roughly +/- 24855 days. */
+    if (sizeof(time_t) < 8 && (days < -24855 || days > 24855))
+        return (time_t)-1;
+
+    return (time_t)days * 86400 + gmt->tm_hour * 3600L
+        + gmt->tm_min * 60L + gmt->tm_sec;
+#endif
+}
 
 char *ne_rfc1123_date(time_t anytime) {
     struct tm gmt;
@@ -129,7 +128,7 @@ time_t ne_iso8601_parse(const char *date)
     struct tm gmt = {0};
     int off_hour, off_min;
     double sec;
-    off_t fix;
+    long fix;
     time_t result;
 
     /*  it goes: ISO8601: 2001-01-01T12:30:00+03:30 */
@@ -160,11 +159,12 @@ time_t ne_iso8601_parse(const char *date)
     }
 
     gmt.tm_year -= 1900;
-    gmt.tm_isdst = -1;
     gmt.tm_mon--;
 
-    result = mktime(&gmt) + fix;
-    return result + GMTOFF(gmt);
+    result = tm_to_time(&gmt);
+    if (result == (time_t)-1)
+        return result;
+    return result + fix;
 }
 
 time_t ne_rfc1123_parse(const char *date) 
@@ -172,8 +172,7 @@ time_t ne_rfc1123_parse(const char *date)
     struct tm gmt = {0};
     char wkday[4], mon[4];
     int n;
-    time_t result;
-    
+
     /* it goes: Sun, 06 Nov 1994 08:49:37 GMT */
     if (sscanf(date, IMFFIX_FORMAT,
                wkday, &gmt.tm_mday, mon, &gmt.tm_year, &gmt.tm_hour,
@@ -185,11 +184,9 @@ time_t ne_rfc1123_parse(const char *date)
 	if (strcmp(mon, short_months[n]) == 0)
 	    break;
     /* tm_mon comes out as 12 if the month is corrupt, which is desired,
-     * since the mktime will then fail */
+     * since tm_to_time will then fail */
     gmt.tm_mon = n;
-    gmt.tm_isdst = -1;
-    result = mktime(&gmt);
-    return result + GMTOFF(gmt);
+    return tm_to_time(&gmt);
 }
 
 /* Takes a string containing a RFC1036-style date and returns the time_t */
@@ -198,7 +195,6 @@ time_t ne_rfc1036_parse(const char *date)
     struct tm gmt = {0};
     int n;
     char wkday[11], mon[4];
-    time_t result;
 
     /* RFC850/1036 style dates: Sunday, 06-Nov-94 08:49:37 GMT */
     n = sscanf(date, RFC1036_FORMAT,
@@ -212,16 +208,14 @@ time_t ne_rfc1036_parse(const char *date)
 	if (strcmp(mon, short_months[n]) == 0)
 	    break;
     /* tm_mon comes out as 12 if the month is corrupt, which is desired,
-     * since the mktime will then fail */
+     * since tm_to_time will then fail */
 
     /* Defeat Y2K bug. */
     if (gmt.tm_year < 50)
 	gmt.tm_year += 100;
 
     gmt.tm_mon = n;
-    gmt.tm_isdst = -1;
-    result = mktime(&gmt);
-    return result + GMTOFF(gmt);
+    return tm_to_time(&gmt);
 }
 
 
@@ -233,7 +227,6 @@ time_t ne_asctime_parse(const char *date)
     struct tm gmt = {0};
     int n;
     char wkday[4], mon[4];
-    time_t result;
 
     if (sscanf(date, ASCTIME_FORMAT,
                wkday, mon, &gmt.tm_mday, 
@@ -246,11 +239,9 @@ time_t ne_asctime_parse(const char *date)
 	if (strcmp(mon, short_months[n]) == 0)
 	    break;
     /* tm_mon comes out as 12 if the month is corrupt, which is desired,
-     * since the mktime will then fail */
+     * since tm_to_time will then fail */
     gmt.tm_mon = n;
-    gmt.tm_isdst = -1;
-    result = mktime(&gmt);
-    return result + GMTOFF(gmt);
+    return tm_to_time(&gmt);
 }
 
 time_t ne_httpdate_parse(const char *date)

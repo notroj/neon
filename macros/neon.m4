@@ -718,7 +718,8 @@ NE_LARGEFILE
 AC_REPLACE_FUNCS(strcasecmp)
 
 AC_CHECK_FUNCS([signal setvbuf setsockopt stpcpy poll fcntl getsockopt \
-                explicit_bzero sendmsg gettimeofday gmtime_r getrandom])
+                explicit_bzero sendmsg gettimeofday gmtime_r getrandom \
+                timegm])
 
 if test "x${ac_cv_func_poll}${ac_cv_header_sys_poll_h}y" = "xyesyesy"; then
   AC_DEFINE([NE_USE_POLL], 1, [Define if poll() should be used])
@@ -1027,7 +1028,7 @@ yes|openssl)
 
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl097, 0.9.7, 0x00907000L)
    NE_CHECK_OPENSSLVER(ne_cv_lib_ssl110, 1.1.0, 0x10100000L)
-   NE_CHECK_FUNCS(SSL_CIPHER_standard_name ASN1_TIME_to_tm timegm)
+   NE_CHECK_FUNCS(SSL_CIPHER_standard_name ASN1_TIME_to_tm)
    if test "$ne_cv_lib_ssl110" = "yes"; then
       NE_ENABLE_SUPPORT(SSL, [SSL support enabled, using OpenSSL $NE_SSL_VERSION])
       AC_DEFINE(HAVE_OPENSSL11, 1, [Enable OpenSSL 1.1 support])

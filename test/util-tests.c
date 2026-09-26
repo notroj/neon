@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#include <time.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -219,10 +220,28 @@ static const struct {
     { "2001-06-08T22:59:46.9Z", 992041186, d_iso8601 },
     { "2001-06-08T26:00:46+03:01", 992041186, d_iso8601 },
     { "2001-06-08T20:58:46-02:01", 992041186, d_iso8601 },
+    /* Times which fall in the "spring forward" DST gap in some of
+     * the local timezones used by the dates_timezones test; the
+     * local time equal to the UTC time does not exist there. */
+    { "Sun, 25 Mar 2001 01:30:00 GMT", 985483800, d_rfc1123 },
+    { "Sunday, 25-Mar-01 01:30:00 GMT", 985483800, d_rfc1036 },
+    { "Sun Mar 25 01:30:00 2001", 985483800, d_asctime },
+    { "2001-03-25T01:30:00Z", 985483800, d_iso8601 },
+    { "Sun, 11 Mar 2001 02:30:00 GMT", 984277800, d_rfc1123 },
+    { "Sun, 07 Oct 2001 02:15:00 GMT", 1002420900, d_rfc1123 },
+    /* Ambiguous local times in the "fall back" DST transition. */
+    { "Sun, 28 Oct 2001 01:30:00 GMT", 1004232600, d_rfc1123 },
+    /* Leap day in a 400-year leap year, and a pre-1970 date. */
+    { "Tue, 29 Feb 2000 12:00:00 GMT", 951825600, d_rfc1123 },
+    { "Sun, 20 Jul 1969 20:17:40 GMT", -14182940, d_rfc1123 },
+#if SIZEOF_TIME_T == 8
+    /* 2100 is not a leap year. */
+    { "Mon, 01 Mar 2100 00:00:00 GMT", 4107542400, d_rfc1123 },
+#endif
     { NULL }
 };
 
-static int parse_dates(void)
+static int check_dates(const char *tz)
 {
     int n;
 
@@ -238,15 +257,58 @@ static int parse_dates(void)
 	default: res = -1; break;
 	}
 	
-	ONV(res == -1, ("date %d parse", n));
+	ONV(res == -1, ("date %d parse in TZ=%s", n, tz));
 	
 #define FT "%" NE_FMT_TIME_T
 	ONV(res != good_dates[n].time, (
-	    "date %d incorrect (" FT " not " FT ")", n,
-	    res, good_dates[n].time));
+	    "date %d [%s] incorrect in TZ=%s (" FT " not " FT ")", n,
+	    str, tz, res, good_dates[n].time));
     }
 
     return OK;
+}
+
+static int parse_dates(void)
+{
+    const char *tz = getenv("TZ");
+
+    return check_dates(tz ? tz : "(unset)");
+}
+
+/* Date parsing must be independent of the local timezone. Uses POSIX
+ * TZ strings so as not to depend on the system tz database. */
+static int dates_timezones(void)
+{
+    static const char *const zones[] = {
+        "UTC0",
+        "GMT0BST,M3.5.0/1,M10.5.0", /* Europe/London */
+        "EST5EDT,M3.2.0,M11.1.0", /* America/New_York */
+        "LHST-10:30LHDT-11,M10.1.0,M4.1.0", /* Australia/Lord_Howe: 30m DST */
+        "NPT-5:45", /* Asia/Kathmandu */
+        "XST12", /* -12:00 */
+        "YST-14", /* +14:00 */
+        NULL
+    };
+    const char *orig = getenv("TZ");
+    char *saved = orig ? ne_strdup(orig) : NULL;
+    int n, ret = OK;
+
+    for (n = 0; ret == OK && zones[n] != NULL; n++) {
+        setenv("TZ", zones[n], 1);
+        tzset();
+        ret = check_dates(zones[n]);
+    }
+
+    if (saved) {
+        setenv("TZ", saved, 1);
+        ne_free(saved);
+    }
+    else {
+        unsetenv("TZ");
+    }
+    tzset();
+
+    return ret;
 }
 
 #define BAD_DATE(format, result) \
@@ -259,6 +321,10 @@ static int bad_dates(void)
     static const char *dates[] = {
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "Friday, 08-Jun-01",
+        /* Invalid month names. */
+        "Sun, 06 Foo 1994 08:49:37 GMT",
+        "Sunday, 06-Foo-94 08:49:37 GMT",
+        "Sun Foo  6 08:49:37 1994",
     };
     size_t n;
     
@@ -414,6 +480,7 @@ ne_test tests[] = {
     T(md5_alignment),
     T(md5_read),
     T(parse_dates),
+    T(dates_timezones),
     T(bad_dates),
     T(versioning),
     T(version_string),
