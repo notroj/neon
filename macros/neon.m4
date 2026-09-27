@@ -264,6 +264,48 @@ m4_if([$2], [],
   AC_MSG_NOTICE([$2])])
 ])
 
+dnl Test the version of the neon library being used, bundled or
+dnl external; must be used after the library has been configured.
+dnl As with NE_MINIMUM_VERSION, if a major-version of 0 and
+dnl minor-version of 27 or later is given, neon 1.x is treated as
+dnl compatible. Usage:
+dnl   NE_IF_VERSION(major-version, minor-version,
+dnl                 [ACTIONS-IF-AT-LEAST], [ACTIONS-IF-OLDER])
+AC_DEFUN([NE_IF_VERSION], [
+m4_bmatch([$1], [^[0-9]+$], [],
+  [m4_fatal([NE_IF_VERSION: invalid major version '$1'])])
+m4_bmatch([$2], [^[0-9]+$], [],
+  [m4_fatal([NE_IF_VERSION: invalid minor version '$2'])])
+AS_IF([test "x$NE_VERSION_MAJOR" = "x" || test "x$NE_VERSION_MINOR" = "x"],
+  [AC_MSG_ERROR([[NE_IF_VERSION] used before the neon library was configured])])
+if test "$NE_VERSION_MAJOR" -eq $1 && test "$NE_VERSION_MINOR" -ge $2; then
+   ne_if_version=yes
+elif test $1 -eq 0 && test $2 -ge 27 && test "$NE_VERSION_MAJOR" -eq 1; then
+   # neon 1.x maintains backwards compat to neon 0.27.x
+   ne_if_version=yes
+else
+   ne_if_version=no
+fi
+AS_IF([test "$ne_if_version" = "yes"], [$3], [$4])
+])
+
+dnl Test whether a feature is supported by the neon library being
+dnl used, bundled or external; must be used after the library has been
+dnl configured. The feature name is as used by "neon-config --support":
+dnl one of ssl, dav, i18n, gssapi, libpxy, zlib, lfs, ipv6, ts_ssl.
+dnl Usage:
+dnl   NE_IF_SUPPORT(feature, [ACTIONS-IF-SUPPORTED], [ACTIONS-IF-NOT])
+AC_DEFUN([NE_IF_SUPPORT], [
+m4_case(m4_tolower([$1]),
+  [ssl], [], [dav], [], [i18n], [], [gssapi], [], [libpxy], [],
+  [zlib], [], [lfs], [], [ipv6], [], [ts_ssl], [],
+  [m4_fatal([NE_IF_SUPPORT: unknown feature '$1'])])
+AS_CASE(["$NE_FLAG_[]m4_toupper([$1])"],
+  [yes], [$2],
+  [no], [$3],
+  [AC_MSG_ERROR([[NE_IF_SUPPORT]($1) used before the neon library was configured])])
+])
+
 AC_DEFUN([NEON_USE_EXTERNAL], [
 # Configure to use an external neon, given a neon-config script
 # found at $NEON_CONFIG.
