@@ -69,7 +69,30 @@
 	<para>This means the bundled neon source directory (called 'libneon')
 	is used if no neon is found on the system, and the standard XML
 	parser search is used.</para>
-	
+
+	<para>Once the library has been configured, whether bundled or
+	external, the NE_IF_VERSION and NE_IF_SUPPORT macros can be
+	used to test the version of the library, and whether a given
+	feature is supported, respectively:</para>
+
+<programlisting>NE_IF_VERSION(major, minor, [actions-if-at-least], [actions-if-older])
+NE_IF_SUPPORT(feature, [actions-if-supported], [actions-if-not])</programlisting>
+
+	<para>The feature name passed to NE_IF_SUPPORT is one of those
+	used by <literal>neon-config --support</literal>:
+	<literal>ssl</literal>, <literal>dav</literal>,
+	<literal>i18n</literal>, <literal>gssapi</literal>,
+	<literal>libpxy</literal>, <literal>zlib</literal>,
+	<literal>lfs</literal>, <literal>ipv6</literal> or
+	<literal>ts_ssl</literal>.  As with NE_MINIMUM_VERSION, neon
+	1.x satisfies a NE_IF_VERSION test for 0.27 or later.  For
+	example, to enable a feature only if neon 0.37 or later is
+	used, built with SSL support:</para>
+
+<programlisting>NE_IF_VERSION([0], [37],
+  [NE_IF_SUPPORT([ssl], [myapp_ssl=yes], [myapp_ssl=no])],
+  [myapp_ssl=no])</programlisting>
+
       </sect1>
 
       <sect1 id="example">
