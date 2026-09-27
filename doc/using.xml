@@ -83,11 +83,11 @@ NE_IF_SUPPORT(feature, [actions-if-supported], [actions-if-not])</programlisting
 	<literal>ssl</literal>, <literal>dav</literal>,
 	<literal>i18n</literal>, <literal>gssapi</literal>,
 	<literal>libpxy</literal>, <literal>zlib</literal>,
-	<literal>lfs</literal>, <literal>ipv6</literal> or
-	<literal>ts_ssl</literal>.  As with NE_MINIMUM_VERSION, neon
-	1.x satisfies a NE_IF_VERSION test for 0.27 or later.  For
-	example, to enable a feature only if neon 0.37 or later is
-	used, built with SSL support:</para>
+	<literal>lfs</literal>, <literal>ipv6</literal>,
+	<literal>ts_ssl</literal> or <literal>ntlm</literal>.  As with
+	NE_MINIMUM_VERSION, neon 1.x satisfies a NE_IF_VERSION test
+	for 0.27 or later.  For example, to enable a feature only if
+	neon 0.37 or later is used, built with SSL support:</para>
 
 <programlisting>NE_IF_VERSION([0], [37],
   [NE_IF_SUPPORT([ssl], [myapp_ssl=yes], [myapp_ssl=no])],

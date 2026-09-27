@@ -292,13 +292,14 @@ AS_IF([test "$ne_if_version" = "yes"], [$3], [$4])
 dnl Test whether a feature is supported by the neon library being
 dnl used, bundled or external; must be used after the library has been
 dnl configured. The feature name is as used by "neon-config --support":
-dnl one of ssl, dav, i18n, gssapi, libpxy, zlib, lfs, ipv6, ts_ssl.
+dnl one of ssl, dav, i18n, gssapi, libpxy, zlib, lfs, ipv6, ts_ssl,
+dnl ntlm.
 dnl Usage:
 dnl   NE_IF_SUPPORT(feature, [ACTIONS-IF-SUPPORTED], [ACTIONS-IF-NOT])
 AC_DEFUN([NE_IF_SUPPORT], [
 m4_case(m4_tolower([$1]),
   [ssl], [], [dav], [], [i18n], [], [gssapi], [], [libpxy], [],
-  [zlib], [], [lfs], [], [ipv6], [], [ts_ssl], [],
+  [zlib], [], [lfs], [], [ipv6], [], [ts_ssl], [], [ntlm], [],
   [m4_fatal([NE_IF_SUPPORT: unknown feature '$1'])])
 AS_CASE(["$NE_FLAG_[]m4_toupper([$1])"],
   [yes], [$2],
@@ -329,6 +330,7 @@ NEON_CHECK_VERSION([
     NEON_CHECK_SUPPORT([ipv6], [IPV6], [IPv6])
     NEON_CHECK_SUPPORT([lfs], [LFS], [LFS])
     NEON_CHECK_SUPPORT([ts_ssl], [TS_SSL], [thread-safe SSL])
+    NEON_CHECK_SUPPORT([ntlm], [NTLM], [NTLM])
     neon_got_library=yes
     if test $NE_FLAG_LFS = yes; then
        NEON_FORMAT(off64_t)
