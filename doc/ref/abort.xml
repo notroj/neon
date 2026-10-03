@@ -1,0 +1,88 @@
+<refentry id="refabort">
+
+  <refmeta>
+    <refentrytitle>ne_session_abort</refentrytitle>
+    <manvolnum>3</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname id="ne_session_abort">ne_session_abort</refname>
+    <refpurpose>abort a request in progress</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+
+    <funcsynopsis>
+
+      <funcsynopsisinfo>#include &lt;ne_session.h&gt;</funcsynopsisinfo>
+
+      <funcprototype>
+        <funcdef>void <function>ne_session_abort</function></funcdef>
+        <paramdef>ne_session *<parameter>session</parameter></paramdef>
+      </funcprototype>
+
+    </funcsynopsis>
+
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para>The <function>ne_session_abort</function> function aborts a
+    request in progress for the given session. The request will fail
+    with the error code <errorcode>NE_ABORTED</errorcode> at the next
+    point at which the abort is detected, and the connection will be
+    closed.</para>
+
+    <para><function>ne_session_abort</function> is async-signal safe,
+    and may be called from a signal handler, or from a thread other
+    than the one issuing the request, provided that the session object
+    is not destroyed concurrently. The function itself performs no I/O
+    and allocates no memory; it merely records the abort for the
+    request layer to act upon.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Notes</title>
+
+    <para>A request which is blocked reading from or writing to the
+    connection is not interrupted; the abort takes effect once that
+    operation completes or times out. If the operation fails first,
+    the request fails with the error code for that failure (for
+    example <errorcode>NE_TIMEOUT</errorcode>) and the abort remains
+    pending.</para>
+
+    <para>The abort is consumed by the first request operation which
+    detects it. If no request is in progress when
+    <function>ne_session_abort</function> is called, the next request
+    using the session will fail with
+    <errorcode>NE_ABORTED</errorcode>; a subsequent request will then
+    proceed as normal.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Return value</title>
+
+    <para>The <function>ne_session_abort</function> function returns no
+    value.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>History</title>
+
+    <para><function>ne_session_abort</function> is available in
+    &neon; 0.38.0 and later.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para><xref linkend="ne_request_dispatch"/>, <xref
+    linkend="ne_close_connection"/>, <xref linkend="ne_get_error"/>.</para>
+
+  </refsect1>
+
+</refentry>

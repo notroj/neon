@@ -166,6 +166,11 @@ struct ne_request_s {
     unsigned int method_is_head;
     unsigned int can_persist;
 
+    /* Non-zero if an abort of this request has been detected and
+     * consumed; recorded here since ne_read_response_block() can only
+     * return -1 and loses the NE_* code. */
+    int aborted;
+
     int flags[NE_REQFLAG_LAST];
 
     ne_session *session;
@@ -228,6 +233,27 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
     ne_close_connection(sess);
     return ret;
 }
+
+/* Returns non-zero (NE_ABORTED) and closes the connection if the
+ * session has been aborted via ne_session_abort(), else returns zero.
+ * The session abort flag is consumed. */
+static int check_aborted(ne_request *req)
+{
+    ne_session *sess = req->session;
+
+    if (!sess->aborted) return 0;
+
+    sess->aborted = 0;
+    req->aborted = 1;
+    NE_DEBUG(NE_DBG_HTTP, "req: Request aborted.\n");
+    ne_set_error(sess, _("Request aborted"));
+    ne_close_connection(sess);
+
+    return NE_ABORTED;
+}
+
+/* Error code to use for a failed response body read. */
+#define RESP_ERR(req) ((req)->aborted ? NE_ABORTED : NE_ERROR)
 
 static void notify_status(ne_session *sess, ne_session_status status)
 {
@@ -414,8 +440,12 @@ static int send_request_body(ne_request *req, int retry)
         ne_close_connection(sess);
         return NE_ERROR;
     }
-    
+
+    if (check_aborted(req)) return NE_ABORTED;
+
     while ((bytes = req->body_cb(req->body_ud, start, buflen)) > 0) {
+        if (check_aborted(req)) return NE_ABORTED;
+
         req->session->status.sr.progress += bytes;
         if (chunked) {
             /* Overwrite the buffer prefix with the appropriate chunk
@@ -451,6 +481,8 @@ static int send_request_body(ne_request *req, int retry)
         ne_close_connection(sess);
         return NE_ERROR;
     }
+
+    if (check_aborted(req)) return NE_ABORTED;
 
     if (chunked) {
         if (chunknum == 0)
@@ -1005,7 +1037,9 @@ static int read_response_block(ne_request *req, struct ne_response *resp,
 {
     ne_socket *const sock = req->session->socket;
     ssize_t readlen;
-    
+
+    if (check_aborted(req)) return NE_ABORTED;
+
     switch (resp->mode) {
     case R_CHUNKED:
         /* Chunked transfer-encoding: chunk syntax is "SIZE CRLF CHUNK
@@ -1253,6 +1287,8 @@ static int send_request(ne_request *req, const ne_buffer *request)
     time_t timeout = INTERIM_TIMEOUT(req);
     ssize_t sret;
 
+    if (check_aborted(req)) return NE_ABORTED;
+
     /* Send the Request-Line and headers */
     NE_DEBUG(NE_DBG_HTTP, "Sending request-line and headers:\n");
     /* Open the connection if necessary */
@@ -1284,6 +1320,8 @@ static int send_request(ne_request *req, const ne_buffer *request)
     while ((ret = read_status_line(req, status, retry)) == NE_OK
            && status->klass == 1) {
         struct interim_handler *ih;
+
+        if (check_aborted(req)) return NE_ABORTED;
 
 	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response.\n", status->code);
 	retry = 0; /* successful read() => never retry now. */
@@ -1466,6 +1504,8 @@ static int read_header_fields(ne_request *req, field_hash **fields)
         char *pnt, ch;
         unsigned int hash = 0;
 
+        if (check_aborted(req)) return NE_ABORTED;
+
         /* Parse field-line per RFC9110§5:
          *    field-line   = field-name ":" OWS field-value OWS
          * where field-name is defined as a token, RFC9110§5.1. */
@@ -1538,6 +1578,8 @@ int ne_begin_request(ne_request *req)
     const char *value;
     struct hook *hk;
     int ret, forced_closure = 0;
+
+    req->aborted = 0;
 
     /* If a non-idempotent request is sent on a persisted connection,
      * then it is impossible to distinguish between a server failure
@@ -1691,6 +1733,8 @@ int ne_end_request(ne_request *req)
     struct hook *hk;
     int ret = NE_OK;
 
+    if (check_aborted(req)) return NE_ABORTED;
+
     if (req->resp.mode == R_CHUNKED) {
         /* Read headers in chunked trailer, lazy-init the array. Per
          * RFC9110§6.5, trailer fields are stored separately. */
@@ -1740,7 +1784,7 @@ int ne_read_response_to_fd(ne_request *req, int fd)
         } while (len > 0);
     }
     
-    return len == 0 ? NE_OK : NE_ERROR;
+    return len == 0 ? NE_OK : RESP_ERR(req);
 }
 
 int ne_read_response_to_buffer(ne_request *req, char *buf, size_t *buflen)
@@ -1761,7 +1805,7 @@ int ne_read_response_to_buffer(ne_request *req, char *buf, size_t *buflen)
             break;
         }
         else if (rlen < 0) {
-            ret = NE_ERROR;
+            ret = RESP_ERR(req);
         }
     }
 
@@ -1771,7 +1815,7 @@ int ne_read_response_to_buffer(ne_request *req, char *buf, size_t *buflen)
         if ((rlen = ne_read_response_block(req, &ch, sizeof ch)) == 0)
             *buflen = ptr - buf; /* success, entire response read. */
         else if (rlen < 0)
-            ret = NE_ERROR;
+            ret = RESP_ERR(req);
         else /* rlen > 0 => more response to read, fail */ {
             ret = NE_FAILED;
             ne_set_error(req->session, _("Response buffer size too small"));
@@ -1789,7 +1833,7 @@ int ne_discard_response(ne_request *req)
         len = ne_read_response_block(req, req->respbuf, sizeof req->respbuf);
     } while (len > 0);
     
-    return len == 0 ? NE_OK : NE_ERROR;
+    return len == 0 ? NE_OK : RESP_ERR(req);
 }
 
 int ne_request_dispatch(ne_request *req) 

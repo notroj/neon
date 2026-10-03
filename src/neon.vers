@@ -80,3 +80,7 @@ NEON_0_37 {
     ne_version_library;
     ne_iaddr_put;
 };
+
+NEON_0_38 {
+    ne_session_abort;
+};

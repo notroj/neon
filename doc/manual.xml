@@ -42,6 +42,7 @@
 <!ENTITY refconfig SYSTEM "ref/config.xml">
 
 <!ENTITY refsess SYSTEM "ref/sess.xml">
+<!ENTITY refabort SYSTEM "ref/abort.xml">
 <!ENTITY refsessflags SYSTEM "ref/sessflags.xml">
 <!ENTITY referr SYSTEM "ref/err.xml">
 <!ENTITY refopts SYSTEM "ref/opts.xml">
@@ -194,6 +195,7 @@ ignoring the WebDAV support if desired.</para>
     &refiaddr; <!-- ne_iaddr_make -->
     &refalloc; <!-- ne_malloc -->
     &refsess; <!-- ne_session_create -->
+    &refabort; <!-- ne_session_abort -->
     &refproxy; <!-- ne_session_proxy -->
     &refsessflags; <!-- ne_set_session_flag -->
     &refreq; <!-- ne_request_create -->

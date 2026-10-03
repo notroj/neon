@@ -25,6 +25,16 @@
 #ifndef NE_PRIVATE_H
 #define NE_PRIVATE_H
 
+/* sig_atomic_t is mandated by C89 (ISO C90 7.7), but follow the
+ * convention used elsewhere of testing for the header; without signal
+ * support a plain int suffices. */
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#define NE_ATOMIC_T sig_atomic_t
+#else
+#define NE_ATOMIC_T int
+#endif
+
 #include "ne_request.h"
 #include "ne_socket.h"
 #include "ne_ssl.h"
@@ -73,6 +83,11 @@ struct ne_session_s {
     
     /* non-zero if connection has persisted beyond one request. */
     int persisted;
+
+    /* Set non-zero by ne_session_abort(); only ever read or written
+     * as a single atomic access since it may be modified from a
+     * signal handler. */
+    volatile NE_ATOMIC_T aborted;
 
     int is_http11; /* >0 if connected server is known to be
 		    * HTTP/1.1 compliant. */
