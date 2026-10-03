@@ -38,6 +38,7 @@ NE_BEGIN_DECLS
 #define NE_FAILED (7) /* The precondition failed */
 #define NE_RETRY (8) /* Retry request (ne_end_request ONLY) */
 #define NE_REDIRECT (9) /* See ne_redirect.h */
+#define NE_ABORTED (10) /* Request aborted via ne_session_abort() */
 
 /* Opaque object representing a single HTTP request. */
 typedef struct ne_request_s ne_request;
@@ -212,6 +213,7 @@ time_t ne_get_response_retry_after(ne_request *req)
  *  - NE_AUTH, NE_PROXYAUTH for a server or proxy server authentication error
  *  - NE_CONNECT if connection could not be established
  *  - NE_TIMEOUT if an timeout occurred sending or reading from the server
+ *  - NE_ABORTED if the request was aborted via ne_session_abort()
  *  - NE_ERROR for other fatal dispatch errors
  * On any error, the session error string is set.  On success or
  * authentication error, the actual response-status can be retrieved using

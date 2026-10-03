@@ -522,6 +522,12 @@ const char *ne_get_error(ne_session *sess)
     return sess->error;
 }
 
+void ne_session_abort(ne_session *sess)
+{
+    /* Must remain async-signal safe: nothing but this store. */
+    sess->aborted = 1;
+}
+
 void ne_close_connection(ne_session *sess)
 {
     if (sess->connected) {
