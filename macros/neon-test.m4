@@ -31,7 +31,7 @@ AC_BEFORE([$0], [NEON_XML_PARSER])
 
 AC_CHECK_HEADERS(sys/time.h signal.h stdint.h locale.h sys/endian.h endian.h)
 
-AC_CHECK_FUNCS(pipe isatty usleep shutdown setlocale gethostname)
+AC_CHECK_FUNCS(pipe isatty usleep shutdown setlocale gethostname alarm)
 
 AC_REQUIRE([NE_FIND_AR])
 

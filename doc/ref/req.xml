@@ -152,6 +152,11 @@ returns a pointer to a request object (and never &null;).</para>
 	      <simpara>A timeout occurred while waiting for the server to respond.</simpara>
 	    </listitem>
 	  </varlistentry>
+	  <varlistentry><term><errorcode>NE_ABORTED</errorcode></term>
+	    <listitem>
+	      <simpara>The request was aborted using <xref linkend="ne_session_abort"/>.</simpara>
+	    </listitem>
+	  </varlistentry>
 	  <varlistentry><term><errorcode>NE_REDIRECT</errorcode></term>
 	    <listitem>
 	      <simpara>A valid redirect was retuerned. <emphasis>Note:</emphasis> Only returned if redirect handling is registered for the session using <xref linkend="ne_redirect_register"/>.</simpara>

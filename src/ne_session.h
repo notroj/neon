@@ -50,6 +50,21 @@ void ne_session_destroy(ne_session *sess);
  * session. */
 void ne_close_connection(ne_session *sess);
 
+/* Abort any request in progress on the session.  The request will
+ * fail with NE_ABORTED at the next point at which the abort is
+ * detected, and the connection will be closed.
+ *
+ * This function is async-signal safe and may be called from a signal
+ * handler delivered in the thread which is using the session.  Note
+ * that a request blocked in a read or write on the connection is not
+ * interrupted; the abort takes effect once that operation completes
+ * or times out.
+ *
+ * The abort is consumed by the first request operation which detects
+ * it; if no request is in progress, the next request using this
+ * session will fail with NE_ABORTED. */
+void ne_session_abort(ne_session *sess);
+
 /* Configure an HTTP proxy server for the session.  This function will
  * override (remove) any proxy servers previously configured, and must
  * be called before any requests are created using this session. */

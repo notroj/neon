@@ -63,6 +63,7 @@ ne_hook_destroy_session
 ne_hook_post_headers
 ne_hook_post_send
 ne_hook_pre_send
+ne_session_abort
 ne_session_create
 ne_session_destroy
 ne_session_proxy
