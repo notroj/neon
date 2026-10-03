@@ -174,6 +174,7 @@ ne_response_trailer_iterate@@NEON_0_37
 ne_rfc1036_parse
 ne_rfc1123_date
 ne_rfc1123_parse
+ne_session_abort@@NEON_0_38
 ne_session_create
 ne_session_destroy
 ne_session_proxy

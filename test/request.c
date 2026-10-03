@@ -32,6 +32,9 @@
 #endif
 #include <fcntl.h>
 #include <errno.h>
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 
 #include "ne_request.h"
 #include "ne_socket.h"
@@ -2645,6 +2648,208 @@ static int acceptors(void)
     return OK;
 }
 
+struct abort_args {
+    ne_session *sess;
+    int count;
+};
+
+/* Request body provider which aborts the session whilst the body is
+ * being sent. */
+static ssize_t abort_body_provider(void *userdata, char *buf, size_t buflen)
+{
+    struct abort_args *args = userdata;
+
+    if (buf == NULL) {
+        args->count = 0;
+        return 0;
+    }
+
+    if (buflen < 10) return -1;
+
+    /* Provide exactly the declared body length, so that a failure to
+     * detect the abort fails the test rather than looping. */
+    if (++args->count > 2) return 0;
+
+    if (args->count == 2)
+        ne_session_abort(args->sess);
+
+    memcpy(buf, "0123456789", 10);
+
+    return 10;
+}
+
+/* Abort the session from a request body provider callback; the
+ * request must fail with NE_ABORTED. */
+static int abort_during_send(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    struct abort_args args = { NULL, 0 };
+    int ret;
+
+    /* sleepy_server never reads the request, but the headers and the
+     * single body block written before the abort is detected both fit
+     * in the socket buffers, so nothing blocks here. */
+    CALL(make_session(&sess, sleepy_server, NULL));
+    args.sess = sess;
+
+    req = ne_request_create(sess, "PUT", "/abort/send");
+    ne_set_request_body_provider(req, 20, abort_body_provider, &args);
+
+    ret = ne_request_dispatch(req);
+    CALL(reap_server());
+
+    ONV(ret != NE_ABORTED,
+        ("request failed with %d not NE_ABORTED: %s", ret, ne_get_error(sess)));
+    ONV(strstr(ne_get_error(sess), "aborted") == NULL,
+        ("error string was `%s', expected `aborted'", ne_get_error(sess)));
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
+/* Response body reader which aborts the session on first invocation. */
+static int abort_body_reader(void *userdata, const char *buf, size_t len)
+{
+    struct abort_args *args = userdata;
+
+    if (len > 0 && ++args->count == 1)
+        ne_session_abort(args->sess);
+
+    return 0;
+}
+
+/* Abort the session from a response body reader callback; the request
+ * must fail with NE_ABORTED even though the rest of the response has
+ * already been received. */
+static int abort_during_read(void)
+{
+    struct abort_args args = { NULL, 0 };
+    ne_session *sess;
+    ne_request *req;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      RESP200 "Content-Length: 5\r\n\r\n" "abcde"));
+    args.sess = sess;
+
+    req = ne_request_create(sess, "GET", "/abort/read");
+    ne_add_response_body_reader(req, ne_accept_always, abort_body_reader,
+                                &args);
+
+    ret = ne_request_dispatch(req);
+    CALL(reap_server());
+
+    ONV(ret != NE_ABORTED,
+        ("request failed with %d not NE_ABORTED: %s", ret, ne_get_error(sess)));
+    ONV(strstr(ne_get_error(sess), "aborted") == NULL,
+        ("error string was `%s', expected `aborted'", ne_get_error(sess)));
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
+#if defined(HAVE_SIGNAL) && defined(HAVE_ALARM) && defined(HAVE_USLEEP)
+static ne_session *alarm_sess;
+
+static void abort_on_alarm(int signo)
+{
+    ne_session_abort(alarm_sess);
+}
+#endif
+
+/* Length of the response body served one byte at a time by
+ * abort_in_signal().  minisleep() delays 500us per byte given
+ * usleep(), so ~2Kb/s: long enough that the alarm fires whilst the
+ * body is still being read, but bounded so that a failure to abort
+ * fails the test rather than looping.  Without usleep() the delay is
+ * a whole second per byte, hence the HAVE_USLEEP guard. */
+#define ABORT_BODY_LEN (6000)
+
+/* Abort the session from a signal handler whilst a response body is
+ * being read, which is the documented async-signal-safe use of
+ * ne_session_abort(). */
+static int abort_in_signal(void)
+{
+#if defined(HAVE_SIGNAL) && defined(HAVE_ALARM) && defined(HAVE_USLEEP)
+    static char response[ABORT_BODY_LEN + 128];
+    struct string resp;
+    ne_session *sess;
+    ne_request *req;
+    size_t hlen;
+    int ret;
+
+    hlen = ne_snprintf(response, sizeof response,
+                       RESP200 "Content-Length: %d\r\n\r\n", ABORT_BODY_LEN);
+    memset(response + hlen, 'x', ABORT_BODY_LEN);
+    resp.data = response;
+    resp.len = hlen + ABORT_BODY_LEN;
+
+    CALL(make_session(&sess, serve_sstring_slowly, &resp));
+    alarm_sess = sess;
+
+    req = ne_request_create(sess, "GET", "/abort/signal");
+
+    signal(SIGALRM, abort_on_alarm);
+    alarm(1);
+
+    ret = ne_request_dispatch(req);
+
+    alarm(0);
+    signal(SIGALRM, SIG_DFL);
+    alarm_sess = NULL;
+
+    CALL(reap_server());
+
+    ONV(ret != NE_ABORTED,
+        ("request failed with %d not NE_ABORTED: %s", ret, ne_get_error(sess)));
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+#else
+    t_context("no signal, alarm or usleep support");
+    return SKIP;
+#endif
+}
+
+/* An abort delivered whilst no request is in flight is consumed by
+ * the next request, which must fail with NE_ABORTED before the
+ * connection is opened; the request after that must then succeed. */
+static int abort_when_idle(void)
+{
+    ne_session *sess;
+    ne_request *req;
+    int ret;
+
+    CALL(make_session(&sess, single_serve_string,
+                      RESP200 "Content-Length: 0\r\n\r\n"));
+
+    ne_session_abort(sess);
+
+    req = ne_request_create(sess, "GET", "/abort/idle");
+    ret = ne_request_dispatch(req);
+    ne_request_destroy(req);
+
+    ONV(ret != NE_ABORTED,
+        ("request failed with %d not NE_ABORTED: %s", ret, ne_get_error(sess)));
+
+    /* The abort has been consumed, so this must now succeed, using
+     * the response which the server has been waiting to serve. */
+    ONREQ(any_request(sess, "/abort/idle-second"));
+
+    CALL(await_server());
+
+    ne_session_destroy(sess);
+
+    return OK;
+}
+
 /* TODO: test that ne_set_notifier(, NULL, NULL) DTRT too. */
 
 ne_test tests[] = {
@@ -2730,5 +2935,9 @@ ne_test tests[] = {
     T(targets),
     T(retry_after),
     T(acceptors),
+    T(abort_during_send),
+    T(abort_during_read),
+    T(abort_in_signal),
+    T(abort_when_idle),
     T(NULL)
 };
