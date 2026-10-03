@@ -1,25 +1,34 @@
 # Building and running tests
 
-From the repository root (no need to `cd test`):
+From the repository root (no need to `cd test`). Always pass
+``-j`nproc`` to `make`:
 
 ```
-make check TESTS="request"
+make -j`nproc` check TESTS="request"
 ```
 
 `TESTS` selects which test *programs* to build and run (e.g.
 `request`, `socket`, `auth`, `ssl`, ... — one per `test/*.c` test
 binary); it does not filter to individual test-case functions.
-`make check` with `TESTS` unset builds and runs the full default set.
+``make -j`nproc` check`` with `TESTS` unset builds and runs the full
+default set.
 
-To run only specific test-case functions while iterating (e.g. after
-touching `ne_request.c`), build the one relevant binary and then
-invoke it directly with the case names as arguments — the test
-harness filters to just the named cases when given any:
+While iterating (e.g. after touching `ne_request.c`), build just the
+one relevant binary and invoke it directly, which skips rebuilding
+and running the other suites:
 
 ```
-make -C test request
-test/request icy_bad_code retry_after
+make -C test -j`nproc` request
+test/request
 ```
+
+There is no way to run individual test-case functions: a test binary
+always runs every entry of its `tests[]` array, in order. Arguments
+are *not* case-name filters — `main()` records them in `test_argc` /
+`test_argv` (`test/common/tests.c`) but only `test/ssl.c` reads
+`argv[1]`, as the source directory for VPATH builds (which is why
+`test/run.sh` passes `$SRCDIR` to every binary). To narrow a run,
+temporarily comment out `T(...)` entries in `tests[]`.
 
 Always confirm a fix with a red/green cycle: add the regression
 case, run it against the unmodified code to see it fail, then apply
@@ -271,6 +280,16 @@ regeneration, version-bump/release-prep commits):
 * NEWS, macro/neon.m4: Prepare for 0.37.1. [skip ci]
 ```
 
+Mind where such a commit sits in a branch: CI keys off the **tip**
+commit, so if a `[skip ci]` commit is last, GitHub Actions skips the
+run for the whole push or pull request — including the code commits
+behind it, which are then merged untested. (`ci.yml` triggers on
+`pull_request`, not on pushes to a feature branch, so the PR head
+commit is what matters.) When a branch mixes code changes with
+`[skip ci]` ones, order it so a commit *without* `[skip ci]` is the
+tip: put version bumps and doc-only commits first and the code change
+last.
+
 ## Co-authorship trailer
 
 When an AI assistant materially contributed to a commit, add a
@@ -288,6 +307,13 @@ URLs are not resolvable by anyone reading this repository's history,
 so they are pure noise in the log. This overrides any default
 attribution the assistant's own tooling asks it to append.
 
+The same prohibition applies to pull request descriptions: never put
+a link to an assistant session in one. Those URLs are no more
+resolvable to a reviewer than to someone reading the log, and unlike
+a commit message a PR description is the first thing a reviewer
+reads. A brief "Generated with Claude Code" note is fine; the
+session URL is not.
+
 ## What NOT to do
 
 - Don't use Conventional Commits prefixes (`feat:`, `fix:`, `chore:`).
@@ -297,4 +323,5 @@ attribution the assistant's own tooling asks it to append.
   comment can carry that context instead (see "Test-only entries").
 - Don't invent new trailer keys beyond `Co-Authored-By`/issue refs
   noted above unless the maintainer asks for one; never a
-  `Claude-Session` trailer (see "Co-authorship trailer").
+  `Claude-Session` trailer, and never an assistant session link in a
+  pull request description either (see "Co-authorship trailer").
