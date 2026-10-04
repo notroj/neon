@@ -1862,7 +1862,7 @@ void ne_add_proxy_auth(ne_session *sess, unsigned protocol,
 void ne_add_auth(ne_session *sess, unsigned protocol,
                  ne_auth_provide new_creds, void *userdata)
 {
-    auth_register(sess, 0, protocol, &ah_proxy_class, HOOK_PROXY_ID,
+    auth_register(sess, 1, protocol, &ah_proxy_class, HOOK_PROXY_ID,
                   NULL, new_creds, userdata);
     auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
                   NULL, new_creds, userdata);

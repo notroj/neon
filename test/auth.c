@@ -84,8 +84,8 @@ static int auth_provide_cb(void *userdata, int attempt,
         NE_DEBUG(NE_DBG_HTTP, "Got wrong realm '%s'!\n", realm);
         return -1;
     }
-    strcpy(un, alt_username);
-    strcpy(pw, password);
+    ne_strnzcpy(un, alt_username ? alt_username : username, buflen);
+    ne_strnzcpy(pw, password, buflen);
     return attempt;
 }
 
@@ -426,6 +426,7 @@ static void dup_header(char *header)
 #define PARM_OPTSTAR     (0x0400) /* use OPTIONS * */
 #define PARM_PARSEQOP    (0x0800) /* use qop-value parsing test */
 #define PARM_TRAILER     (0x1000) /* use chunked trailers for Auth-Info */
+#define PARM_PROVIDE     (0x2000) /* register creds via ne_add_auth() */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -963,11 +964,14 @@ static int test_digest(struct digest_parms *parms)
     if ((parms->flags & PARM_PROXY)) {
         CALL(proxied_session_server(&sess, "http", "www.example.com", 80,
                                     serve_digest, parms));
-        ne_set_proxy_auth(sess, auth_cb, NULL);
+        if ((parms->flags & PARM_PROVIDE))
+            ne_add_auth(sess, proto, auth_provide_cb, NULL);
+        else
+            ne_set_proxy_auth(sess, auth_cb, NULL);
     } 
     else {
         CALL(session_server(&sess, serve_digest, parms));
-        if ((parms->flags & PARM_ALTUSER))
+        if ((parms->flags & (PARM_ALTUSER|PARM_PROVIDE)))
             ne_add_auth(sess, proto, auth_provide_cb, NULL);
         else
             ne_add_server_auth(sess, proto, auth_cb, NULL);
@@ -1023,6 +1027,11 @@ static int digest(void)
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROXY, 1, 0, fail_not },
         /* Proxy + nextnonce */
         { "WallyWorld", "this-is-also-a-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_PROXY, 1, 0, fail_not },
+        /* Proxy auth registered via ne_add_auth() rather than the
+         * deprecated ne_set_proxy_auth(). */
+        { "WallyWorld", "yet-another-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROXY|PARM_PROVIDE, 1, 0, fail_not },
+        /* ... and server auth likewise. */
+        { "WallyWorld", "one-more-nonce", "opaque-string", NULL, ALG_MD5, PARM_RFC2617|PARM_PROVIDE, 1, 0, fail_not },
 
         /* OPTIONS * test */
         { "WallyWorld", "options-nonce", "new-opaque", NULL, ALG_MD5, PARM_RFC2617|PARM_USERHASH|PARM_OPTSTAR, 1, 0, fail_not },
