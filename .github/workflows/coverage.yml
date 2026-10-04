@@ -1,0 +1,66 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+    - master
+    - '*.x'
+    paths-ignore:
+    - 'doc/**'
+    - NEWS
+    - '**/*.md'
+  pull_request:
+    branches:
+    - master
+    - '*.x'
+    paths-ignore:
+    - 'doc/**'
+    - NEWS
+    - '**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: gcov coverage report
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - run: sudo apt-get update && sudo apt-get -y install libkrb5-dev
+    - run: ./autogen.sh
+    # One maximal-feature configuration, so that as much of the library
+    # as possible is reachable by the test suite; -O0 keeps gcov's line
+    # and branch attribution faithful to the source.
+    # Static-only so that the .gcno/.gcda files land in src/ next to
+    # the sources, where the gcov invocation below looks for them.
+    - run: ./configure --with-ssl=openssl --with-expat --with-gssapi
+                       --enable-debug --enable-static --disable-shared
+                       CFLAGS="-g -O0 --coverage" LDFLAGS="--coverage"
+    - run: make -j`nproc`
+    # Record the result rather than failing here, so that a coverage
+    # report is still produced for a run with failing tests.
+    - name: make check
+      id: check
+      continue-on-error: true
+      run: make -j`nproc` check TEST_QUIET=0 TEST_COLOUR=1
+                                TEST_CONNECT_TIMEOUT=192.0.2.1
+    - if: steps.check.outcome == 'failure'
+      run: if test -f test/debug.log; then cat test/debug.log; fi
+
+    - name: Report coverage
+      if: always()
+      run: sh test/ci-coverage-report.sh >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload .gcov files
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: coverage-gcov
+        path: '*.gcov'
+        if-no-files-found: warn
+
+    # Fail the job for a failing test run, after the report is in place.
+    - if: steps.check.outcome == 'failure'
+      run: exit 1
