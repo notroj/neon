@@ -1233,7 +1233,6 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
     char *hdr, *pnt, *key, *val;
     auth_qop qop = auth_qop_none;
     char *nextnonce, *rspauth, *cnonce, *nc, *qop_value;
-    unsigned int nonce_count;
     int ret = NE_OK;
 
     nextnonce = rspauth = cnonce = nc = qop_value = NULL;
@@ -1263,20 +1262,26 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
         }
     }
 
-    if (qop_value && qop != auth_qop_auth && sess->qop == auth_qop_auth) {
-        /* The request was sent with qop=auth, so this is the only
-         * qop-value the server can apply to the response; treating an
-         * unrecognized value as a 2069-style header would silently
-         * skip the mutual authentication checks below. */
+    /* An RFC 2069-style A-I header defines only the nextnonce
+     * parameter, handled below, so none of the mutual authentication
+     * checks apply to it.  Everything else is 2617/7616-style, for
+     * which rspauth, cnonce and nc MUST all be present and are
+     * verified here.
+     *
+     * Note this is keyed on the qop the client sent, not on the qop
+     * parameter of the A-I header: the latter is optional, since RFC
+     * 7616 3.5 only says the server SHOULD echo it back, whereas the
+     * other three are required if the request used qop=auth. */
+    if (sess->qop == auth_qop_none) {
+        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: 2069-style A-I header.\n");
+    }
+    else if (qop_value && qop != auth_qop_auth) {
+        /* qop=auth was sent, so that is the only qop-value the server
+         * can apply to the response. */
         ret = NE_ERROR;
         ne_set_error(sess->sess, _("Digest mutual authentication failure: "
                                    "unknown quality-of-protection '%s'"),
                      qop_value);
-    }
-    else if (qop == auth_qop_none) {
-        /* The 2069-style A-I header only has the entity and nextnonce
-         * parameters. */
-        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: 2069-style A-I header.\n");
     }
     else if (!rspauth || !cnonce || !nc) {
         ret = NE_ERROR;
@@ -1288,9 +1293,10 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
         ne_set_error(sess->sess, _("Digest mutual authentication failure: "
                                    "client nonce mismatch"));
     }
-    else if (nc) {
+    else {
+        unsigned int nonce_count;
         const char *ptr;
-        
+
         nonce_count = ne_strhextoul(nc, &ptr);
         if (*ptr != '\0' || errno) {
             ret = NE_ERROR;
@@ -1303,34 +1309,34 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
                                        "nonce count mismatch (%u not %u)"),
                          nonce_count, sess->nonce_count);
         }
-    }
+        else {
+            /* Everything required is present and consistent, so
+             * finally verify the response-digest field. */
+            unsigned int hash = sess->alg->hash;
+            char *h_a2, *response;
 
-    /* Finally, for qop=auth cases, if everything else is OK, verify
-     * the response-digest field. */    
-    if (qop == auth_qop_auth && ret == NE_OK) {
-        char *h_a2, *response;
-        unsigned int hash = sess->alg->hash;
+            h_a2 = ne_strhash(hash, ":", req->target, NULL);
+            response = ne_strhash(hash, sess->h_a1, ":", sess->response_rhs,
+                                  ":", h_a2, NULL);
+            ne_free(h_a2);
+            ne_free(sess->response_rhs);
+            sess->response_rhs = NULL;
 
-        h_a2 = ne_strhash(hash, ":", req->target, NULL);
-        response = ne_strhash(hash, sess->h_a1, ":", sess->response_rhs,
-                              ":", h_a2, NULL);
-        ne_free(h_a2);
-        ne_free(sess->response_rhs);
-        sess->response_rhs = NULL;
+            /* And... do they match? */
+            ret = ne_strcasecmp(response, rspauth) == 0 ? NE_OK : NE_ERROR;
 
-        /* And... do they match? */
-        ret = ne_strcasecmp(response, rspauth) == 0 ? NE_OK : NE_ERROR;
-        
-        NE_DEBUG(NE_DBG_HTTPAUTH, "auth: response-digest match: %s "
-                 "(expected [%s] vs actual [%s])\n", 
-                 ret == NE_OK ? "yes" : "no", response, rspauth);
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: response-digest match: %s "
+                     "(expected [%s] vs actual [%s])\n",
+                     ret == NE_OK ? "yes" : "no", response, rspauth);
 
-        if (ret) {
-            ne_set_error(sess->sess, _("Digest mutual authentication failure: "
-                                       "request-digest mismatch"));
+            if (ret) {
+                ne_set_error(sess->sess,
+                             _("Digest mutual authentication failure: "
+                               "request-digest mismatch"));
+            }
+
+            ne_free(response);
         }
-
-        ne_free(response);
     }
 
     /* Check for a nextnonce */

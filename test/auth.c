@@ -427,6 +427,7 @@ static void dup_header(char *header)
 #define PARM_PARSEQOP    (0x0800) /* use qop-value parsing test */
 #define PARM_TRAILER     (0x1000) /* use chunked trailers for Auth-Info */
 #define PARM_PROVIDE     (0x2000) /* register creds via ne_add_auth() */
+#define PARM_AI_NOQOP    (0x4000) /* omit qop= from the A-I header */
 
 struct digest_parms {
     const char *realm, *nonce, *opaque, *domain;
@@ -728,7 +729,7 @@ static char *make_authinfo_header(struct digest_state *state,
         }
         if (parms->failure == fail_ai_bad_qop)
             ne_buffer_czappend(buf, "qop=\"foobar\"");
-        else
+        else if ((parms->flags & PARM_AI_NOQOP) == 0)
             ne_buffer_czappend(buf, "qop=\"auth\"");
     }
 
@@ -1008,6 +1009,9 @@ static int digest(void)
         { "WallyWorld", "this-is-a-nonce", "opaque-thingy", NULL, ALG_MD5, PARM_RFC2617 | PARM_AINFO | PARM_NEXTNONCE, 20, 0, fail_not },
         /* ... with qop parsing tests. */
         { "WallyWorld", "qop-parsing-test", NULL, NULL, ALG_MD5, PARM_RFC2617 | PARM_PARSEQOP, 1, 0, fail_not },
+        /* ... with qop= omitted from the A-I header, which is optional
+         * per RFC 7616 section 3.5; rspauth must still verify. */
+        { "WallyWorld", "no-qop-in-ainfo", NULL, NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_AI_NOQOP, 1, 0, fail_not },
         /* next-nonce, use chunked trailers. */
         { "WallyWorld", "chunked-trailer", NULL, NULL, ALG_MD5, PARM_RFC2617|PARM_AINFO|PARM_TRAILER|PARM_NEXTNONCE, 20, 0, fail_not },
 
@@ -1141,6 +1145,7 @@ static int digest_failures(void)
     static const struct {
         enum digest_failure mode;
         const char *message;
+        unsigned flags; /* extra flags OR'ed into parms.flags */
     } fails[] = {
         { fail_ai_bad_nc, "nonce count mismatch" },
         { fail_ai_bad_nc_syntax, "could not parse nonce count" },
@@ -1150,6 +1155,12 @@ static int digest_failures(void)
         { fail_ai_omit_digest, "missing parameters" },
         { fail_ai_omit_cnonce, "missing parameters" },
         { fail_ai_bad_qop, "unknown quality-of-protection" },
+        /* qop= is optional in the Authentication-Info header (RFC 7616
+         * section 3.5), but the request was sent with qop=auth, so
+         * rspauth, cnonce and nc must still be present and verified. */
+        { fail_ai_bad_digest, "digest mismatch", PARM_AI_NOQOP },
+        { fail_ai_bad_cnonce, "client nonce mismatch", PARM_AI_NOQOP },
+        { fail_ai_omit_digest, "missing parameters", PARM_AI_NOQOP },
         { fail_bogus_alg, "unknown algorithm" },
         { fail_req0_stale, "initial Digest challenge was stale" },
         { fail_req0_2069_stale, "initial Digest challenge was stale" },
@@ -1170,7 +1181,7 @@ static int digest_failures(void)
         unsigned protocol = NE_AUTH_DIGEST;
 
         parms.failure = fails[n].mode;
-        parms.flags = PARM_AINFO;
+        parms.flags = PARM_AINFO | fails[n].flags;
 
         if (parms.failure == fail_req0_2069_stale) protocol |= NE_AUTH_LEGACY_DIGEST;
 
