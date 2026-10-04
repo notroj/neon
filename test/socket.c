@@ -1287,6 +1287,140 @@ static int block_timeout(void)
     TO_FINISH;
 }
 
+/* Interrupt callback state: the callback fires once it has been
+ * invoked 'fire_at' times, counting invocations in 'calls'. */
+struct intr_state {
+    int calls, fire_at;
+};
+
+static int intr_cb(void *userdata)
+{
+    struct intr_state *st = userdata;
+
+    return ++st->calls >= st->fire_at;
+}
+
+/* Connect to a server which never sends anything, with a read
+ * timeout long enough that an interrupt is distinguishable from a
+ * timeout, and register the interrupt callback. */
+static int intr_begin(ne_socket **sock, struct intr_state *st)
+{
+    CALL(begin(sock, sleepy_server, NULL));
+    ne_sock_read_timeout(*sock, 5);
+    ne_sock_set_intr(*sock, intr_cb, st);
+    to_start = time(NULL);
+    return OK;
+}
+
+static int intr_end(ne_socket *sock, ssize_t ret, int maxsecs)
+{
+    to_finish = time(NULL);
+    reap_server();
+    ONV(ret != NE_SOCK_INTR,
+        ("operation was not interrupted: got %" NE_FMT_SSIZE_T " (%s)",
+         ret, ne_sock_error(sock)));
+    ONV(to_finish - to_start > maxsecs,
+        ("interrupt took %ld seconds", (long)(to_finish - to_start)));
+    ONN("close failed", ne_sock_close(sock));
+    return OK;
+}
+
+/* A callback which fires at once abandons a read before blocking. */
+static int intr_read(void)
+{
+    struct intr_state st = { 0, 1 };
+    ne_socket *sock;
+    ssize_t ret;
+
+    CALL(intr_begin(&sock, &st));
+    ret = ne_sock_read(sock, buffer, 1);
+    ONV(ret == NE_SOCK_INTR && strcmp(ne_sock_error(sock),
+                                      "Operation interrupted") != 0,
+        ("unexpected error string: %s", ne_sock_error(sock)));
+    return intr_end(sock, ret, 1);
+}
+
+/* The callback is consulted again during a long wait, without any
+ * signal being delivered: here it fires on its third invocation,
+ * which must happen well within the 5 second read timeout. */
+static int intr_slice(void)
+{
+    struct intr_state st = { 0, 3 };
+    ne_socket *sock;
+    ssize_t ret;
+
+    CALL(intr_begin(&sock, &st));
+    ret = ne_sock_read(sock, buffer, 1);
+    ONV(st.calls != 3, ("callback invoked %d times, not 3", st.calls));
+    return intr_end(sock, ret, 4);
+}
+
+static int intr_peek(void)
+{
+    struct intr_state st = { 0, 1 };
+    ne_socket *sock;
+
+    CALL(intr_begin(&sock, &st));
+    return intr_end(sock, ne_sock_peek(sock, buffer, 1), 1);
+}
+
+static int intr_readline(void)
+{
+    struct intr_state st = { 0, 1 };
+    ne_socket *sock;
+
+    CALL(intr_begin(&sock, &st));
+    return intr_end(sock, ne_sock_readline(sock, buffer, sizeof buffer), 1);
+}
+
+static int intr_block(void)
+{
+    struct intr_state st = { 0, 1 };
+    ne_socket *sock;
+
+    CALL(intr_begin(&sock, &st));
+    return intr_end(sock, ne_sock_block(sock, 5), 1);
+}
+
+/* Registering a NULL callback removes it: the read must then run to
+ * the (1 second) timeout and never consult the old callback. */
+static int intr_unset(void)
+{
+    struct intr_state st = { 0, 1 };
+    TO_BEGIN;
+    ne_sock_set_intr(sock, intr_cb, &st);
+    ne_sock_set_intr(sock, NULL, NULL);
+    TO_OP(ne_sock_read(sock, buffer, 1));
+    ONV(st.calls != 0, ("removed callback invoked %d times", st.calls));
+    TO_FINISH;
+}
+
+/* A read satisfied from the internal read buffer does not block, so
+ * must not consult the callback (as documented). */
+static int intr_buffered(void)
+{
+    struct intr_state st = { 0, 1 };
+    ne_socket *sock;
+    DECL(hello, "abcde");
+    ssize_t avail, ret;
+
+    CALL(begin(&sock, serve_sstring, &hello));
+    /* Fill the read buffer; peek returns however many bytes are now
+     * buffered, which is what the subsequent read must deliver. */
+    avail = ne_sock_peek(sock, buffer, sizeof buffer);
+    ONV(avail <= 0, ("peek failed: %s", ne_sock_error(sock)));
+    ne_sock_set_intr(sock, intr_cb, &st);
+    ret = ne_sock_read(sock, buffer, avail);
+    reap_server();
+    ONV(ret != avail, ("read gave %" NE_FMT_SSIZE_T " not %" NE_FMT_SSIZE_T
+                       ": %s", ret, avail, ne_sock_error(sock)));
+    ONV(memcmp(buffer, "abcde", avail) != 0, ("read gave wrong data"));
+    ONV(st.calls != 0, ("callback invoked %d times for buffered read",
+                        st.calls));
+    ONN("close failed", ne_sock_close(sock));
+    return OK;
+}
+
 #ifndef SOCKET_SSL
 /* Waits for EOF from read-side and then sends "abcd". */
 static int serve_shutdown(ne_socket *sock, void *userdata)
@@ -1768,6 +1902,13 @@ ne_test tests[] = {
     T(readline_timeout),
     T(fullread_timeout),
     T(block_timeout),
+    T(intr_read),
+    T(intr_slice),
+    T(intr_peek),
+    T(intr_readline),
+    T(intr_block),
+    T(intr_unset),
+    T(intr_buffered),
     T(socks_proxy),
     T(fail_socks),
     T(scopes),

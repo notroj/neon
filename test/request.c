@@ -2753,7 +2753,7 @@ static int abort_during_read(void)
     return OK;
 }
 
-#if defined(HAVE_SIGNAL) && defined(HAVE_ALARM) && defined(HAVE_USLEEP)
+#if defined(HAVE_SIGNAL) && defined(HAVE_ALARM)
 static ne_session *alarm_sess;
 
 static void abort_on_alarm(int signo)
@@ -2814,6 +2814,59 @@ static int abort_in_signal(void)
     return OK;
 #else
     t_context("no signal, alarm or usleep support");
+    return SKIP;
+#endif
+}
+
+/* Abort the session from a signal handler whilst the request is
+ * blocked in poll() waiting for a response which never comes; the
+ * request must fail with NE_ABORTED promptly rather than waiting for
+ * the read timeout.  This is what the socket interrupt callback
+ * registered by the request layer buys. */
+static int abort_in_poll(void)
+{
+#if defined(HAVE_SIGNAL) && defined(HAVE_ALARM)
+    ne_session *sess;
+    ne_request *req;
+    time_t start, finish;
+    int ret;
+
+    /* sleepy_server accepts the connection then sleeps for 10
+     * seconds, so the request blocks in poll() reading the status
+     * line. */
+    CALL(make_session(&sess, sleepy_server, NULL));
+    alarm_sess = sess;
+
+    /* Longer than the alarm, so a failure to interrupt the poll shows
+     * up as a timeout rather than an abort. */
+    ne_set_read_timeout(sess, 5);
+
+    req = ne_request_create(sess, "GET", "/abort/poll");
+
+    signal(SIGALRM, abort_on_alarm);
+    alarm(1);
+
+    time(&start);
+    ret = ne_request_dispatch(req);
+    time(&finish);
+
+    alarm(0);
+    signal(SIGALRM, SIG_DFL);
+    alarm_sess = NULL;
+
+    CALL(reap_server());
+
+    ONV(ret != NE_ABORTED,
+        ("request failed with %d not NE_ABORTED: %s", ret, ne_get_error(sess)));
+    ONN("blocked poll was not interrupted, or very slow machine",
+        finish - start > 3);
+
+    ne_request_destroy(req);
+    ne_session_destroy(sess);
+
+    return OK;
+#else
+    t_context("no signal or alarm support");
     return SKIP;
 #endif
 }
@@ -2938,6 +2991,7 @@ ne_test tests[] = {
     T(abort_during_send),
     T(abort_during_read),
     T(abort_in_signal),
+    T(abort_in_poll),
     T(abort_when_idle),
     T(NULL)
 };

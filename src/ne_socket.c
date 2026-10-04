@@ -194,7 +194,10 @@ struct iofns {
      * bytes written on success, or <0 on error. */
     ssize_t (*swrite)(ne_socket *s, const char *buf, size_t len);
     /* Wait up to 'n' seconds for socket to become readable.  Returns
-     * 0 when readable, otherwise NE_SOCK_TIMEOUT or NE_SOCK_ERROR. */
+     * 0 when readable, otherwise a negative NE_SOCK_* error code;
+     * NE_SOCK_TIMEOUT if 'n' seconds elapse, NE_SOCK_INTR if the
+     * interrupt callback fired, or any error code from error_ossl()
+     * or error_gnutls() for the TLS implementations. */
     int (*readable)(ne_socket *s, int n);
     /* Write up to 'count' blocks described by 'vector' to socket.
      * Return number of bytes written on success, or <0 on error. */
@@ -212,6 +215,9 @@ struct ne_socket_s {
     void *progress_ud;
     int rdtimeout, cotimeout; /* timeouts */
     const struct iofns *ops;
+    /* Interrupt callback, see ne_sock_set_intr(). */
+    ne_sock_intr_fn intr_fn;
+    void *intr_ud;
 #ifdef NE_HAVE_SSL
     ne_ssl_socket ssl;
 #endif
@@ -383,51 +389,80 @@ void ne_sock_exit(void)
     }
 }
 
-/* Await readability (rdwr = 0) or writability (rdwr != 0) for socket
- * fd for secs seconds.  Returns <0 on error, zero on timeout, >0 if
- * data is available. */
-static int raw_poll(int fdno, int rdwr, int secs)
+/* Returns non-zero if a blocking operation on the socket should be
+ * interrupted; see ne_sock_set_intr(). */
+static int interrupted(ne_socket *sock)
 {
-    int ret;
+    return sock->intr_fn != NULL && sock->intr_fn(sock->intr_ud);
+}
+
+/* Maximum length of a single poll()/select() wait, in seconds; this
+ * bounds how long a pending interrupt can go unnoticed. */
+#define POLL_SLICE (1)
+
+/* Await readability (rdwr = 0) or writability (rdwr != 0) for the
+ * given fd for secs seconds.  The wait is performed in slices of at
+ * most POLL_SLICE seconds, with the socket's interrupt callback
+ * tested before each slice, so that a pending interrupt is noticed
+ * promptly.  Returns NE_SOCK_INTR if the callback fired, <0 on
+ * error, zero on timeout, >0 if the fd is ready. */
+static int raw_poll(ne_socket *sock, int fdno, int rdwr, int secs)
+{
+    int ret, remain = secs;
 #ifdef NE_USE_POLL
+    /* Note that secs <= 0 means wait indefinitely here. */
+    const int forever = secs <= 0;
     struct pollfd fds;
-    int timeout = secs > 0 ? secs * 1000 : -1;
 
     fds.fd = fdno;
     fds.events = rdwr == 0 ? POLLIN : POLLOUT;
-    fds.revents = 0;
-
-    do {
-        ret = poll(&fds, 1, timeout);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
 #else
+    /* Note that only secs < 0 means wait indefinitely here. */
+    const int forever = secs < 0;
     fd_set rdfds, wrfds, exfds;
-    struct timeval timeout, *tvp = (secs >= 0 ? &timeout : NULL);
-
-    /* Init the fd set */
-    FD_ZERO(&rdfds);
-    FD_ZERO(&wrfds);
-    FD_ZERO(&exfds);
-
-    /* Note that (amazingly) the FD_SET macro does not expand
-     * correctly on Netware if not inside a compound statement
-     * block. */
-    if (rdwr == 0) {
-        FD_SET(fdno, &rdfds);
-    } else {
-        FD_SET(fdno, &wrfds);
-    }
-    FD_SET(fdno, &exfds);
-
-    if (tvp) {
-        tvp->tv_sec = secs;
-        tvp->tv_usec = 0;
-    }
-    do {
-	ret = select(fdno + 1, &rdfds, &wrfds, &exfds, tvp);
-    } while (ret < 0 && NE_ISINTR(ne_errno));
+    struct timeval tv;
 #endif
-    return ret;
+
+    for (;;) {
+        int slice = (forever || remain > POLL_SLICE) ? POLL_SLICE : remain;
+
+        if (interrupted(sock)) return NE_SOCK_INTR;
+
+#ifdef NE_USE_POLL
+        fds.revents = 0;
+        ret = poll(&fds, 1, slice * 1000);
+#else
+        /* Init the fd sets.  Note that (amazingly) the FD_SET macro
+         * does not expand correctly on Netware if not inside a
+         * compound statement block. */
+        FD_ZERO(&rdfds);
+        FD_ZERO(&wrfds);
+        FD_ZERO(&exfds);
+
+        if (rdwr == 0) {
+            FD_SET(fdno, &rdfds);
+        } else {
+            FD_SET(fdno, &wrfds);
+        }
+        FD_SET(fdno, &exfds);
+
+        /* Both the fd sets and the timeout are reinitialized for
+         * every call, since select() may modify either. */
+        tv.tv_sec = slice;
+        tv.tv_usec = 0;
+
+	ret = select(fdno + 1, &rdfds, &wrfds, &exfds, &tv);
+#endif
+        if (ret > 0) return ret; /* fd is ready */
+
+        if (ret < 0 && !NE_ISINTR(ne_errno)) return ret; /* failed */
+
+        /* Either this slice timed out, or the wait was interrupted by
+         * a signal.  A signal does not consume any of the caller's
+         * timeout, it merely gives the interrupt callback above an
+         * early look. */
+        if (ret == 0 && !forever && (remain -= slice) <= 0) return 0;
+    }
 }
 
 int ne_sock_block(ne_socket *sock, int n)
@@ -503,9 +538,13 @@ ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t buflen)
 /* Await data on raw fd in socket. */
 static int readable_raw(ne_socket *sock, int secs)
 {
-    int ret = raw_poll(sock->fd, 0, secs);
+    int ret = raw_poll(sock, sock->fd, 0, secs);
 
-    if (ret < 0) {
+    if (ret == NE_SOCK_INTR) {
+        set_error(sock, _("Operation interrupted"));
+        return NE_SOCK_INTR;
+    }
+    else if (ret < 0) {
 	set_strerror(sock, ne_errno);
 	return NE_SOCK_ERROR;
     }
@@ -648,7 +687,11 @@ static int readable_ossl(ne_socket *sock, int secs)
      * of app data. */
     while (!SSL_pending(sock_ssl(sock))) {
 	ret = readable_raw(sock, secs);
-	if (ret == NE_SOCK_TIMEOUT) {
+	if (ret) {
+            /* Propagate every error, not just NE_SOCK_TIMEOUT: 'ret'
+             * is overwritten below, so a code which is not returned
+             * here is lost, and for a persistent condition such as
+             * NE_SOCK_INTR this loop would never terminate. */
 	    return ret;
 	}
         
@@ -1381,7 +1424,7 @@ static int timed_connect(ne_socket *sock, int fd,
         if (ret == -1) {
             errnum = ne_errno;
             if (NE_ISINPROGRESS(errnum)) {
-                ret = raw_poll(fd, 1, sock->cotimeout);
+                ret = raw_poll(sock, fd, 1, sock->cotimeout);
                 if (ret > 0) { /* poll got data */
                     socklen_t len = sizeof(errnum);
                     
@@ -1403,6 +1446,9 @@ static int timed_connect(ne_socket *sock, int fd,
                 } else if (ret == 0) { /* poll timed out */
                     set_error(sock, _("Connection timed out"));
                     ret = NE_SOCK_TIMEOUT;
+                }
+                else if (ret == NE_SOCK_INTR) { /* interrupted */
+                    set_error(sock, _("Operation interrupted"));
                 } else /* poll failed */ {
                     set_strerror(sock, errno);
                     ret = NE_SOCK_ERROR;
@@ -1801,6 +1847,12 @@ int ne_sock_fd(const ne_socket *sock)
 void ne_sock_read_timeout(ne_socket *sock, int timeout)
 {
     sock->rdtimeout = timeout;
+}
+
+void ne_sock_set_intr(ne_socket *sock, ne_sock_intr_fn fn, void *userdata)
+{
+    sock->intr_fn = fn;
+    sock->intr_ud = userdata;
 }
 
 void ne_sock_connect_timeout(ne_socket *sock, int timeout)

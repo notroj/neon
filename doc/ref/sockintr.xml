@@ -1,0 +1,94 @@
+<refentry id="refsockintr">
+
+  <refmeta>
+    <refentrytitle>ne_sock_set_intr</refentrytitle>
+    <manvolnum>3</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname id="ne_sock_set_intr">ne_sock_set_intr</refname>
+    <refpurpose>interrupt blocking socket operations</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+
+    <funcsynopsis>
+
+      <funcsynopsisinfo>#include &lt;ne_socket.h&gt;
+
+typedef int (*ne_sock_intr_fn)(void *userdata);
+</funcsynopsisinfo>
+
+      <funcprototype>
+        <funcdef>void <function>ne_sock_set_intr</function></funcdef>
+        <paramdef>ne_socket *<parameter>socket</parameter></paramdef>
+        <paramdef>ne_sock_intr_fn <parameter>fn</parameter></paramdef>
+        <paramdef>void *<parameter>userdata</parameter></paramdef>
+      </funcprototype>
+
+    </funcsynopsis>
+
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para>The <function>ne_sock_set_intr</function> function registers
+    a callback which is invoked whilst waiting for the socket to
+    become ready during a blocking read or connect operation. If the
+    callback returns non-zero, the operation in progress is abandoned
+    and fails with <errorcode>NE_SOCK_INTR</errorcode>. If
+    <parameter>fn</parameter> is &null;, any callback previously
+    registered for the socket is removed.</para>
+
+    <para>The callback is invoked from inside the blocking operation,
+    and may be invoked repeatedly — at least once a second — for a
+    single operation. It must therefore return promptly, must not
+    block, and must not perform any operation on the socket.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Notes</title>
+
+    <para>Write operations are not interruptible, and the callback is
+    not invoked for a read which can be satisfied from the socket's
+    internal read buffer.</para>
+
+    <para>For an SSL/TLS connection, the callback is only consulted
+    whilst waiting for data to arrive on the socket. A read which is
+    blocked inside the TLS library waiting for the remainder of a
+    partially received record is not interruptible, nor is the TLS
+    handshake.</para>
+
+    <para>Subject to those exceptions, since the callback is consulted
+    at least once a second, a blocking operation is abandoned within
+    approximately one second of the callback beginning to return
+    non-zero, regardless of whether the platform delivers an
+    <literal>EINTR</literal> to interrupt the wait.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Return value</title>
+
+    <para>The <function>ne_sock_set_intr</function> function returns no
+    value.</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>History</title>
+
+    <para><function>ne_sock_set_intr</function> is available in
+    &neon; 0.38.0 and later.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para><xref linkend="ne_session_abort"/>.</para>
+
+  </refsect1>
+
+</refentry>

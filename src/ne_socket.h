@@ -44,6 +44,9 @@ NE_BEGIN_DECLS
 #define NE_SOCK_TRUNC (-5)
 /* Retry operation later. */
 #define NE_SOCK_RETRY (-6)
+/* Operation was interrupted by the callback registered using
+ * ne_sock_set_intr(). */
+#define NE_SOCK_INTR (-7)
 
 /* ne_socket represents a TCP socket. */
 typedef struct ne_socket_s ne_socket;
@@ -281,6 +284,30 @@ void ne_sock_set_error(ne_socket *sock, const char *format, ...)
 /* Set read timeout for socket, in seconds; must be a non-zero
  * positive integer. */
 void ne_sock_read_timeout(ne_socket *sock, int timeout);
+
+/* Callback type used by ne_sock_set_intr(); returns non-zero if the
+ * socket operation in progress should be interrupted. */
+typedef int (*ne_sock_intr_fn)(void *userdata);
+
+/* Register a callback which is invoked whilst waiting for the socket
+ * to become ready during a blocking read or TCP connect operation.  If
+ * the callback returns non-zero, the operation in progress is
+ * abandoned and fails with NE_SOCK_INTR.  If 'fn' is NULL, any
+ * callback previously registered is removed.
+ *
+ * The callback is invoked from inside the blocking operation, and may
+ * be invoked repeatedly (at least once a second) for a single
+ * operation: it must return promptly, must not block, and must not
+ * use the socket.
+ *
+ * Note that write operations are not interruptible, and that the
+ * callback is not invoked for a read which is satisfied from the
+ * socket's internal read buffer.  For an SSL/TLS connection, the
+ * callback is only consulted whilst waiting for data to arrive: a
+ * read blocked inside the TLS library waiting for the remainder of a
+ * partially received record, or the TLS handshake, is not
+ * interruptible. */
+void ne_sock_set_intr(ne_socket *sock, ne_sock_intr_fn fn, void *userdata);
 
 /* Set connect timeout for socket, in seconds; must be a positive
  * integer.  If a timeout of 'zero' is used then then no explicit
