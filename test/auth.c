@@ -449,6 +449,7 @@ struct digest_parms {
         fail_ai_omit_cnonce,
         fail_ai_omit_digest,
         fail_ai_omit_nc,
+        fail_ai_bad_qop,
         fail_outside_domain,
         fail_2069_weak
     } failure;
@@ -725,7 +726,10 @@ static char *make_authinfo_header(struct digest_state *state,
             ne_buffer_concat(buf, "nextnonce=\"", state->nonce, "\", ", NULL);
             state->nc = 1;
         }
-        ne_buffer_czappend(buf, "qop=\"auth\"");
+        if (parms->failure == fail_ai_bad_qop)
+            ne_buffer_czappend(buf, "qop=\"foobar\"");
+        else
+            ne_buffer_czappend(buf, "qop=\"auth\"");
     }
 
     ne_free(digest);
@@ -1145,6 +1149,7 @@ static int digest_failures(void)
         { fail_ai_omit_nc, "missing parameters" },
         { fail_ai_omit_digest, "missing parameters" },
         { fail_ai_omit_cnonce, "missing parameters" },
+        { fail_ai_bad_qop, "unknown quality-of-protection" },
         { fail_bogus_alg, "unknown algorithm" },
         { fail_req0_stale, "initial Digest challenge was stale" },
         { fail_req0_2069_stale, "initial Digest challenge was stale" },
@@ -1244,6 +1249,10 @@ static int fail_challenge(void)
           "incompatible algorithm in Digest challenge" },
         { "Digest algorithm=MD5, qop=auth, nonce=\"foo\", realm=\"foo\", "
           "domain=\"http://[::1/\"", "could not parse domain" },
+        /* A bogus userhash value is ignored, leaving an otherwise
+         * valid challenge. */
+        { "Digest algorithm=MD5, qop=auth, nonce=\"foo\", realm=\"foo\", "
+          "userhash=bogus", "rejected Digest challenge" },
 
         /* Multiple challenge failure cases: */
         { "Basic, Digest realm=\"foo\", algorithm=MD5, qop=auth",
@@ -1257,6 +1266,9 @@ static int fail_challenge(void)
           "Basic realm='foo'",
           "ignored WhizzBangAuth challenge, rejected Basic challenge" },
         { "", "could not parse challenge" },
+        /* auth-param with an empty key: tokenize() must fail rather
+         * than treat the '=' as the start of a challenge token. */
+        { "=foo", "could not parse challenge" },
 
         /* neon 0.26.x regression in "attempt" handling. */
         { "Basic realm=\"foo\", " 

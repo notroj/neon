@@ -1263,7 +1263,17 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
         }
     }
 
-    if (qop == auth_qop_none) {
+    if (qop_value && qop != auth_qop_auth && sess->qop == auth_qop_auth) {
+        /* The request was sent with qop=auth, so this is the only
+         * qop-value the server can apply to the response; treating an
+         * unrecognized value as a 2069-style header would silently
+         * skip the mutual authentication checks below. */
+        ret = NE_ERROR;
+        ne_set_error(sess->sess, _("Digest mutual authentication failure: "
+                                   "unknown quality-of-protection '%s'"),
+                     qop_value);
+    }
+    else if (qop == auth_qop_none) {
         /* The 2069-style A-I header only has the entity and nextnonce
          * parameters. */
         NE_DEBUG(NE_DBG_HTTPAUTH, "auth: 2069-style A-I header.\n");
