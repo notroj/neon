@@ -83,4 +83,5 @@ NEON_0_37 {
 
 NEON_0_38 {
     ne_session_abort;
+    ne_sock_set_intr;
 };

@@ -45,12 +45,16 @@
   <refsect1>
     <title>Notes</title>
 
-    <para>A request which is blocked reading from or writing to the
-    connection is not interrupted; the abort takes effect once that
-    operation completes or times out. If the operation fails first,
-    the request fails with the error code for that failure (for
-    example <errorcode>NE_TIMEOUT</errorcode>) and the abort remains
-    pending.</para>
+    <para>A request which is blocked waiting to read from the
+    connection is interrupted within approximately one second; for an
+    SSL connection, this excludes a read which is blocked inside the
+    TLS library waiting for the remainder of a partially received
+    record, and the TLS handshake. A
+    request which is blocked writing to the connection is not
+    interrupted; the abort takes effect once that write completes. If
+    the write fails first, the request fails with the error code for
+    that failure (for example <errorcode>NE_TIMEOUT</errorcode>) and
+    the abort remains pending.</para>
 
     <para>The abort is consumed by the first request operation which
     detects it. If no request is in progress when
@@ -80,7 +84,8 @@
     <title>See also</title>
 
     <para><xref linkend="ne_request_dispatch"/>, <xref
-    linkend="ne_close_connection"/>, <xref linkend="ne_get_error"/>.</para>
+    linkend="ne_close_connection"/>, <xref linkend="ne_get_error"/>,
+    <xref linkend="ne_sock_set_intr"/>.</para>
 
   </refsect1>
 

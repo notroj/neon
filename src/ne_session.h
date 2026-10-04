@@ -55,10 +55,13 @@ void ne_close_connection(ne_session *sess);
  * detected, and the connection will be closed.
  *
  * This function is async-signal safe and may be called from a signal
- * handler delivered in the thread which is using the session.  Note
- * that a request blocked in a read or write on the connection is not
- * interrupted; the abort takes effect once that operation completes
- * or times out.
+ * handler delivered in the thread which is using the session.  A
+ * request blocked waiting to read from the connection is interrupted
+ * within about a second (for an SSL connection, except whilst the TLS
+ * library waits for the remainder of a partially received record, or
+ * during the TLS handshake); a request blocked writing to the
+ * connection is not interrupted, and the abort then takes effect once
+ * that write completes.
  *
  * The abort is consumed by the first request operation which detects
  * it; if no request is in progress, the next request using this

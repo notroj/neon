@@ -232,6 +232,7 @@ ne_sock_readline
 ne_sock_read_timeout
 ne_sock_sessid
 ne_sock_set_error
+ne_sock_set_intr
 ne_sock_shutdown
 ne_add_auth
 ne_add_proxy_auth

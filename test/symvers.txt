@@ -230,6 +230,7 @@ ne_sock_read_timeout
 ne_sock_readline
 ne_sock_sessid
 ne_sock_set_error@@NEON_0_29
+ne_sock_set_intr@@NEON_0_38
 ne_sock_shutdown@@NEON_0_32
 ne_ssl_cert_cmp
 ne_ssl_cert_digest

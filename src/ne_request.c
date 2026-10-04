@@ -178,6 +178,15 @@ struct ne_request_s {
 };
 
 static int open_connection(ne_session *sess);
+
+/* Interrupt callback used for all session sockets; reports a pending
+ * ne_session_abort() without consuming it. */
+static int session_interrupted(void *userdata)
+{
+    ne_session *sess = userdata;
+
+    return sess->aborted;
+}
 static int read_header_fields(ne_request *req, field_hash **fields);
 
 /* Returns hash value for header 'name', converting it to lower-case
@@ -194,6 +203,32 @@ static inline unsigned int hash_and_lower(char *name)
 
     return hash;
 }
+
+/* Consume a pending abort of the session: sets the session error
+ * string, closes the connection, and returns NE_ABORTED. */
+static int consume_abort(ne_session *sess)
+{
+    sess->aborted = 0;
+    NE_DEBUG(NE_DBG_HTTP, "req: Request aborted.\n");
+    ne_set_error(sess, _("Request aborted"));
+    ne_close_connection(sess);
+
+    return NE_ABORTED;
+}
+
+/* Returns non-zero (NE_ABORTED) and closes the connection if the
+ * session has been aborted via ne_session_abort(), else returns zero.
+ * The session abort flag is consumed. */
+static int check_aborted(ne_request *req)
+{
+    if (!req->session->aborted) return 0;
+
+    req->aborted = 1;
+    return consume_abort(req->session);
+}
+
+/* Error code to use for a failed response body read. */
+#define RESP_ERR(req) ((req)->aborted ? NE_ABORTED : NE_ERROR)
 
 /* Abort a request due to an non-recoverable HTTP protocol error,
  * whilst doing 'doing'.  'code', if non-zero, is the socket error
@@ -220,6 +255,14 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
 	ne_set_error(sess, _("%s: connection timed out"), doing);
 	ret = NE_TIMEOUT;
 	break;
+    case NE_SOCK_INTR:
+        /* The socket interrupt callback only reports a pending abort;
+         * check_aborted() consumes it, sets the error string and
+         * closes the connection.  Note RETRY_RET() must never treat
+         * this code as retriable: an aborted request must not be
+         * silently resent on a new connection. */
+        if (check_aborted(req)) return NE_ABORTED;
+        /* fallthrough */
     case NE_SOCK_ERROR:
     case NE_SOCK_RESET:
     case NE_SOCK_TRUNC:
@@ -233,27 +276,6 @@ static int aborted(ne_request *req, const char *doing, ssize_t code)
     ne_close_connection(sess);
     return ret;
 }
-
-/* Returns non-zero (NE_ABORTED) and closes the connection if the
- * session has been aborted via ne_session_abort(), else returns zero.
- * The session abort flag is consumed. */
-static int check_aborted(ne_request *req)
-{
-    ne_session *sess = req->session;
-
-    if (!sess->aborted) return 0;
-
-    sess->aborted = 0;
-    req->aborted = 1;
-    NE_DEBUG(NE_DBG_HTTP, "req: Request aborted.\n");
-    ne_set_error(sess, _("Request aborted"));
-    ne_close_connection(sess);
-
-    return NE_ABORTED;
-}
-
-/* Error code to use for a failed response body read. */
-#define RESP_ERR(req) ((req)->aborted ? NE_ABORTED : NE_ERROR)
 
 static void notify_status(ne_session *sess, ne_session_status status)
 {
@@ -1929,6 +1951,12 @@ static int do_connect(ne_session *sess, struct host_info *host)
         return NE_ERROR;
     }
 
+    /* Allow blocking I/O on this socket to be interrupted by
+     * ne_session_abort(); registered before the connect so that the
+     * connect, any SOCKS or CONNECT handshake, the TLS handshake and
+     * all request I/O are covered. */
+    ne_sock_set_intr(sess->socket, session_interrupted, sess);
+
     if (sess->cotimeout)
 	ne_sock_connect_timeout(sess->socket, sess->cotimeout);
 
@@ -1959,6 +1987,12 @@ static int do_connect(ne_session *sess, struct host_info *host)
 
     if (ret) {
         const char *msg;
+
+        if (ret == NE_SOCK_INTR && sess->aborted) {
+            ne_sock_close(sess->socket);
+            sess->socket = NULL;
+            return consume_abort(sess);
+        }
 
         if (host->proxy == PROXY_NONE)
             msg = _("Could not connect to server");
