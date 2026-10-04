@@ -1900,7 +1900,16 @@ static int remove_sess(void *userdata, gnutls_datum_t key)
 
 static int set_priority(ne_socket *sock, ne_ssl_context *ctx)
 {
-    gnutls_set_default_priority(sock_ssl(sock));
+    int ret = gnutls_set_default_priority(sock_ssl(sock));
+
+    /* This fails if e.g. the system priority file cannot be read;
+     * no handshake can succeed without priorities. */
+    if (ret != GNUTLS_E_SUCCESS) {
+        ne_snprintf(sock->error, sizeof sock->error,
+                    _("SSL error: failed to set default priorities: %s"),
+                    gnutls_strerror(ret));
+        return NE_SOCK_ERROR;
+    }
 
 #ifdef HAVE_GNUTLS_SET_DEFAULT_PRIORITY_APPEND
     if (ctx->priority) {
@@ -1917,6 +1926,19 @@ static int set_priority(ne_socket *sock, ne_ssl_context *ctx)
 #endif
 
     return 0;
+}
+
+/* Discard the GnuTLS session of a socket for which set_priority()
+ * failed.  Leaving the session attached is unsafe: ne_sock_close()
+ * would call gnutls_bye() on it via ne_sock_shutdown(), which crashes
+ * inside GnuTLS for a session with no priorities set.  (A session
+ * whose handshake failed later is left attached, since gnutls_bye()
+ * then works and sends a closure alert which the peer can report.) */
+static void discard_session(ne_socket *sock)
+{
+    gnutls_deinit(sock_ssl(sock));
+    sock_ssl(sock) = NULL;
+    sock->ops = &iofns_raw;
 }
 
 #endif
@@ -1945,6 +1967,7 @@ int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx)
     gnutls_init(&ssl, GNUTLS_SERVER);
     sock_ssl(sock) = ssl;
     if (set_priority(sock, ctx)) {
+        discard_session(sock);
         return NE_SOCK_ERROR;
     }
 
@@ -2036,6 +2059,7 @@ int ne_sock_handshake(ne_socket *sock, ne_ssl_context *ctx,
     gnutls_init(&sock_ssl(sock), GNUTLS_CLIENT);
 
     if (set_priority(sock, ctx)) {
+        discard_session(sock);
         return NE_SOCK_ERROR;
     }
 
