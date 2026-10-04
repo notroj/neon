@@ -1,6 +1,6 @@
 /* 
    HTTP Authentication routines
-   Copyright (C) 1999-2024, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2026, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -1744,11 +1744,13 @@ static void free_auth(void *cookie)
     ne_free(sess);
 }
 
-static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
-                          const struct auth_class *ahc, const char *id,
+static void auth_register(ne_session *sess, unsigned protomask,
+                          const struct auth_class *ahc,
                           ne_auth_creds old_creds, ne_auth_provide new_creds,
                           void *userdata)
 {
+    const int isproxy = ahc == &ah_proxy_class;
+    const char *id = ahc->id;
     auth_session *ahs;
     struct auth_handler **hdl;
 
@@ -1851,45 +1853,39 @@ static void auth_register(ne_session *sess, int isproxy, unsigned protomask,
 
 void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 0, NE_AUTH_DEFAULT, &ah_server_class, HOOK_SERVER_ID,
-                  creds, NULL, userdata);
+    auth_register(sess, NE_AUTH_DEFAULT, &ah_server_class, creds, NULL, userdata);
 }
 
 void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 1, NE_AUTH_DEFAULT, &ah_proxy_class, HOOK_PROXY_ID,
-                  creds, NULL, userdata);
+    auth_register(sess, NE_AUTH_DEFAULT, &ah_proxy_class, creds, NULL, userdata);
 }
 
 void ne_add_server_auth(ne_session *sess, unsigned protocol, 
                         ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
-                  creds, NULL, userdata);
+    auth_register(sess, protocol, &ah_server_class, creds, NULL, userdata);
 }
 
 void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
                        ne_auth_creds creds, void *userdata)
 {
-    auth_register(sess, 1, protocol, &ah_proxy_class, HOOK_PROXY_ID,
-                  creds, NULL, userdata);
+    auth_register(sess, protocol, &ah_proxy_class, creds, NULL, userdata);
 }
 
 void ne_add_auth(ne_session *sess, unsigned protocol,
                  ne_auth_provide new_creds, void *userdata)
 {
-    auth_register(sess, 1, protocol, &ah_proxy_class, HOOK_PROXY_ID,
-                  NULL, new_creds, userdata);
-    auth_register(sess, 0, protocol, &ah_server_class, HOOK_SERVER_ID,
-                  NULL, new_creds, userdata);
+    auth_register(sess, protocol, &ah_proxy_class, NULL, new_creds, userdata);
+    auth_register(sess, protocol, &ah_server_class, NULL, new_creds, userdata);
 }
 
 void ne_forget_auth(ne_session *sess)
 {
     auth_session *as;
-    if ((as = ne_get_session_private(sess, HOOK_SERVER_ID)) != NULL)
+    if ((as = ne_get_session_private(sess, ah_server_class.id)) != NULL)
 	clean_session(as);
-    if ((as = ne_get_session_private(sess, HOOK_PROXY_ID)) != NULL)
+    if ((as = ne_get_session_private(sess, ah_proxy_class.id)) != NULL)
 	clean_session(as);
 }
 
