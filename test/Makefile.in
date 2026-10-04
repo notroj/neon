@@ -158,7 +158,7 @@ $(LIBTEST): $(LIBOBJS)
 	$(COMPILE) -c $< -o $@
 
 # Recompile socket.c with SOCKET_SSL defined
-socket-ssl.lo: $(srcdir)/socket.c $(HDRS)
+socket-ssl.lo: $(srcdir)/socket.c $(OBJDEPS)
 	$(COMPILE) -DSOCKET_SSL -c $(srcdir)/socket.c -o $@
 
 socket-ssl: socket-ssl.lo $(LIBTEST)
@@ -190,6 +190,10 @@ redirect.lo: $(srcdir)/redirect.c $(OBJDEPS)
 basic.lo: $(srcdir)/basic.c $(OBJDEPS)
 ssl.lo: $(srcdir)/ssl.c $(OBJDEPS)
 lock.lo: $(srcdir)/lock.c $(OBJDEPS)
+xml.lo: $(srcdir)/xml.c $(OBJDEPS)
+xmlreq.lo: $(srcdir)/xmlreq.c $(OBJDEPS)
+twooh7.lo: $(srcdir)/twooh7.c $(OBJDEPS)
+resolve.lo: $(srcdir)/resolve.c $(OBJDEPS)
 largefile.lo: $(srcdir)/largefile.c $(OBJDEPS)
 
 auth: auth.lo $(DEPS)
