@@ -1,7 +1,7 @@
 # Building and running tests
 
-From the repository root (no need to `cd test`). Always pass
-``-j`nproc`` to `make`:
+From the repository root (no need to `cd test`), always passing
+`` -j`nproc` `` to `make`:
 
 ```
 make -j`nproc` check TESTS="request"
@@ -10,7 +10,7 @@ make -j`nproc` check TESTS="request"
 `TESTS` selects which test *programs* to build and run (e.g.
 `request`, `socket`, `auth`, `ssl`, ... — one per `test/*.c` test
 binary); it does not filter to individual test-case functions.
-``make -j`nproc` check`` with `TESTS` unset builds and runs the full
+`` make -j`nproc` check `` with `TESTS` unset builds and runs the full
 default set.
 
 While iterating (e.g. after touching `ne_request.c`), narrow `TESTS`
