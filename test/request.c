@@ -2238,7 +2238,7 @@ static int send_length(void)
     ne_buffer *buf = ne_buffer_create();
 
     fd = open("foobar.txt", O_RDONLY);
-    ONV(fd < 0, ("open random.txt failed: %s", strerror(errno)));
+    ONV(fd < 0, ("open foobar.txt failed: %s", strerror(errno)));
 
     CALL(make_session(&sess, serve_mirror, NULL));
 

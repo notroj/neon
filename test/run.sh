@@ -13,7 +13,9 @@ MALLOC_CHECK_=2
 MALLOC_PERTURB_=`expr $RANDOM % 255 2>/dev/null`
 export MALLOC_CHECK_ MALLOC_PERTURB_
 
-export GNUTLS_SYSTEM_PRIORITY_FILE=$PWD/neon.prio
+# neon.prio lives in the source directory, which differs from $PWD
+# for a VPATH build.
+export GNUTLS_SYSTEM_PRIORITY_FILE=${SRCDIR:-$PWD}/neon.prio
 
 export TEST_QUIET=${TEST_QUIET:-1}
 KEEP_GOING=${KEEP_GOING:-0}
