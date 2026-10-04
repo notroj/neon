@@ -331,3 +331,28 @@ session URL is not.
   noted above unless the maintainer asks for one; never a
   `Claude-Session` trailer, and never an assistant session link in a
   pull request description either (see "Co-authorship trailer").
+
+# Pull request descriptions
+
+Keep a PR description to **one short paragraph**: the single thing a
+reviewer needs that the commits don't already tell them — usually the
+root cause of a bug, or why an approach was chosen. The commits are
+right there in the PR, so don't restate them.
+
+Wrap assistant-generated prose in a Markdown blockquote (`> ` on
+every line), so a reviewer can see at a glance which text was written
+by an assistant and which by a human.
+
+Specifically, leave out:
+
+- A file-by-file or commit-by-commit summary; that is exactly what
+  the ChangeLog-style commit messages already carry.
+- Test-plan narration: which case is the regression test, the error
+  it used to fail with, pass/skip counts. Report that in the chat if
+  it's worth saying, and let CI speak for the rest.
+- Notes about unrelated commits that happen to ride along on the
+  branch.
+- Anything already in a commit message, reworded.
+- An assistant session link (see "Co-authorship trailer" above). A
+  brief "Generated with Claude Code" note after the quoted paragraph
+  is fine.
