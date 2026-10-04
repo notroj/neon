@@ -34,6 +34,7 @@
 
 #include "ne_request.h"
 #include "ne_socket.h"
+#include "ne_string.h"
 #include "ne_ssl.h"
 #include "ne_auth.h"
 
@@ -1308,6 +1309,15 @@ static int apt_creds(void *userdata, const char *realm, int attempt,
     return attempt;
 }
 
+static int apt_provide(void *userdata, int attempt, unsigned protocol,
+                       const char *realm, char *username, char *password,
+                       size_t buflen)
+{
+    ne_strnzcpy(username, "foo", buflen);
+    ne_strnzcpy(password, "bar", buflen);
+    return attempt;
+}
+
 /* Test for using SSL over a CONNECT tunnel via a proxy server which
  * requires authentication.  Broke briefly between 0.23.x and
  * 0.24.0. */
@@ -1333,6 +1343,40 @@ static int auth_proxy_tunnel(void)
     ne_set_proxy_auth(sess, apt_creds, NULL);
     ne_ssl_trust_cert(sess, def_ca_cert);
     
+    CALL(any_2xx_request(sess, "/foobar"));
+
+    return destroy_and_wait(sess);
+}
+
+/* As auth_proxy_tunnel, but registering the credentials callback with
+ * ne_add_auth() rather than ne_set_proxy_auth().  ne_add_auth() must
+ * set up the proxy auth handler identically, so that a 407 challenge
+ * to the CONNECT request is answered; it passed isproxy=0 for the
+ * proxy registration in <= 0.36.x, which left the proxy auth session
+ * in the AUTH_NOTCONNECT context, so no CONNECT challenge was ever
+ * handled. */
+static int auth_proxy_tunnel_provide(void)
+{
+    struct ssl_server_args args = {SERVER_CERT, NULL};
+    struct tunnel_args tunnel;
+    ne_session *sess;
+
+    tunnel.first_response =
+        "HTTP/1.0 407 I WANT MORE BISCUITS\r\n"
+        "Server: auth_proxy_tunnel_provide\r\n"
+        "Proxy-Authenticate: Basic realm=\"bigbluesea\"\r\n"
+        "Connection: close\r\n" "\r\n";
+    tunnel.second_response = "HTTP/1.1 200 OK\r\n"
+        "Server: auth_proxy_tunnel_provide r2\r\n\r\n";
+    tunnel.iteration = 0;
+    tunnel.args = &args;
+
+    CALL(proxied_multi_session_server(2, &sess, "https", "localhost", 443,
+                                      serve_auth_tunnel, &tunnel));
+
+    ne_add_auth(sess, NE_AUTH_BASIC, apt_provide, NULL);
+    ne_ssl_trust_cert(sess, def_ca_cert);
+
     CALL(any_2xx_request(sess, "/foobar"));
 
     return destroy_and_wait(sess);
@@ -2094,6 +2138,7 @@ ne_test tests[] = {
     T(fail_tunnel),
     T(proxy_tunnel),
     T(auth_proxy_tunnel),
+    T(auth_proxy_tunnel_provide),
     T(auth_tunnel_creds),
     T(auth_tunnel_fail),
 
