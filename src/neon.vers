@@ -3,7 +3,6 @@
 
 NEON_0_29 {
     ne_iaddr_raw;
-    ne_sock_writev;
     ne_sock_fullwritev;
     ne_sock_set_error;
     ne_sock_proxy;
